@@ -2,9 +2,21 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+
+    <!-- NuGet Information -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>runfo</ToolCommandName>
     <PackageVersion>0.4.1</PackageVersion>
+    <PackageDescription>Tool for quickly analyzing Azure Pipelines Build failures.</PackageDescription>
+    <PackageLongDescription>
+    
+      Tool for quickly analyzing Azure Pipelines Build failures
+
+      Can search timelines, test failures, logs and helix. Has ability for fine grained queries
+      and ability to group by builds, tests, jobs, etc ... 
+
+      Full info at https://github.com/jaredpar/devops-util/blob/master/runfo/README.md
+    </PackageLongDescription>
   </PropertyGroup>
 
   <ItemGroup>
