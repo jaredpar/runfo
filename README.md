@@ -1,2 +1,4 @@
-# devops-util
-Collection of utilities for working with our devops infrastructure
+Azure Experiments
+======
+
+This is a project for me to experiment with Azure.
