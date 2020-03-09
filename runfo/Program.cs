@@ -11,15 +11,40 @@ public class Program
 {
     internal static async Task<int> Main(string[] args)
     {
+        var token = Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN");
+        var disableCache = false;
+        var optionSet = new OptionSet()
+        {
+            { "t|token=", "The Azure DevOps personal access token", t => token = t },
+            { "dc|disable-cache", "Disable caching", dc => disableCache = dc is object }
+        };
+
         try
         {
-            var runtimeInfo = new RuntimeInfo(await GetPersonalAccessToken());
+            args = optionSet.Parse(args).ToArray();
+            if (token is null)
+            {
+                token = await GetPersonalAccessTokenFromFile();
+            }
+
+            var runtimeInfo = new RuntimeInfo(token);
+
             if (args.Length == 0)
             {
                 await runtimeInfo.PrintBuildResults(Array.Empty<string>());
                 return ExitSuccess;
             }
 
+            return await RunCommand(runtimeInfo, args);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            return ExitFailure;
+        }
+
+        async Task<int> RunCommand(RuntimeInfo runtimeInfo, string[] args)
+        {
             var command = args[0].ToLower();
             var commandArgs = args.Skip(1);
             switch (command)
@@ -50,13 +75,8 @@ public class Program
                     return ExitFailure;
             }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-            return ExitFailure;
-        }
 
-        static void ShowHelp()
+        void ShowHelp()
         {
             Console.WriteLine("runfo");
             Console.WriteLine("\tstatus\t\tPrint build definition status");
@@ -68,22 +88,9 @@ public class Program
             Console.WriteLine("\tsearch-timeline\t\tSerach timeline info");
             Console.WriteLine("\tsearch-helix\t\tSerach helix logs");
             Console.WriteLine("\ttimeline\t\tdump the timeline");
-        }
-
-        async Task<string> GetPersonalAccessToken()
-        { 
-            string token = Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN");
-            var optionSet = new OptionSet()
-            {
-                { "t|token=", "The Azure DevOps personal access token", t => token = t },
-            };
-
-            args = optionSet.Parse(args).ToArray();
-            if (token is null)
-            {
-                token = await GetPersonalAccessTokenFromFile();
-            }
-            return token;
+            Console.WriteLine();
+            Console.WriteLine("=== Global Options ===");
+            optionSet.WriteOptionDescriptions(Console.Out);
         }
     }
 
