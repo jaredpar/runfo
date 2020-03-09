@@ -307,7 +307,7 @@ internal sealed class RuntimeInfo
             Console.WriteLine("|---|---|---|");
         }
 
-        var found = await SearchTimelines(Server, builds, nameRegex, textRegex, buildLog);
+        var found = await SearchBuildLogs(Server, builds, nameRegex, textRegex);
         foreach (var tuple in found)
         {
             var build = tuple.Build;
@@ -333,61 +333,6 @@ internal sealed class RuntimeInfo
         Console.WriteLine($"Impacted {found.Count} jobs");
 
         return ExitSuccess;
-
-        Task<List<(Build Build, TimelineRecord TimelineRecord, string Line)>> SearchTimelines(
-            DevOpsServer server,
-            IEnumerable<Build> builds,
-            Regex nameRegex,
-            Regex textRegex,
-            bool buildLogs)
-        {
-            return buildLogs
-                ? SearchBuildLogs(server, builds, nameRegex, textRegex)
-                : SearchTimelineIssues(server, builds, nameRegex, textRegex);
-        }
-
-        static async Task<List<(Build Build, TimelineRecord TimelineRecord, string Line)>> SearchTimelineIssues(
-            DevOpsServer server,
-            IEnumerable<Build> builds,
-            Regex nameRegex,
-            Regex textRegex)
-        {
-            var list = new List<(Build Build, TimelineRecord TimelineRecord, string Line)>();
-            foreach (var build in builds)
-            {
-                var timeline = await server.GetTimelineAsync(build.Project.Name, build.Id);
-                if (timeline is null)
-                {
-                    continue;
-                }
-
-                var records = timeline.Records.Where(r => nameRegex is null || nameRegex.IsMatch(r.Name));
-                foreach (var record in records)
-                {
-                    if (record.Issues is null)
-                    {
-                        continue;
-                    }
-
-                    string line = null;
-                    foreach (var issue in record.Issues)
-                    {
-                        if (textRegex.IsMatch(issue.Message))
-                        {
-                            line = issue.Message;
-                            break;
-                        }
-                    }
-
-                    if (line is object)
-                    {
-                        list.Add((build, record, line));
-                    }
-                }
-            }
-
-            return list;
-        }
 
         static async Task<List<(Build Build, TimelineRecord TimelineRecord, string Line)>> SearchBuildLogs(
             DevOpsServer server,

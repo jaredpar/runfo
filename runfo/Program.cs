@@ -83,17 +83,17 @@ public class Program
         void ShowHelp()
         {
             Console.WriteLine("runfo");
-            Console.WriteLine("  status\t\tPrint build definition status");
-            Console.WriteLine("  definitions\tPrint build definition info");
-            Console.WriteLine("  builds\t\tPrint builds");
-            Console.WriteLine("  pr-builds\t\tPrint builds for a given pull request");
-            Console.WriteLine("  tests\t\tPrint build test failures");
-            Console.WriteLine("  helix\t\tPrint helix logs for build");
-            Console.WriteLine("  search-timeline\t\tSerach timeline info");
-            Console.WriteLine("  search-helix\t\tSerach helix logs");
-            Console.WriteLine("  search-buildlog\t\tSerach build logs");
-            Console.WriteLine("  timeline\t\tdump the timeline");
-            Console.WriteLine("  clear-cache\t\tclear out the cache");
+            Console.WriteLine("  status            Print build definition status");
+            Console.WriteLine("  definitions       Print build definition info");
+            Console.WriteLine("  builds            Print builds");
+            Console.WriteLine("  pr-builds         Print builds for a given pull request");
+            Console.WriteLine("  tests             Print build test failures");
+            Console.WriteLine("  helix             Print helix logs for build");
+            Console.WriteLine("  search-timeline   Search timeline info");
+            Console.WriteLine("  search-helix      Search helix logs");
+            Console.WriteLine("  search-buildlog   Search build logs");
+            Console.WriteLine("  timeline          Dump the timeline");
+            Console.WriteLine("  clear-cache       Clear out the cache");
             Console.WriteLine();
             Console.WriteLine("=== Global Options ===");
             optionSet.WriteOptionDescriptions(Console.Out);
