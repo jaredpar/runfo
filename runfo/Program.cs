@@ -27,7 +27,7 @@ public class Program
                 token = await GetPersonalAccessTokenFromFile();
             }
 
-            var runtimeInfo = new RuntimeInfo(token);
+            var runtimeInfo = new RuntimeInfo(token, cacheable: !disableCache);
 
             if (args.Length == 0)
             {
@@ -69,6 +69,10 @@ public class Program
                     return await runtimeInfo.PrintSearchTimeline(commandArgs);
                 case "search-helix":
                     return await runtimeInfo.PrintSearchHelix(commandArgs);
+                case "search-buildlog":
+                    return await runtimeInfo.PrintSearchBuildLogs(commandArgs);
+                case "clear-cache":
+                    return runtimeInfo.ClearCache();
                 default:
                     Console.WriteLine($"Error: {command} is not recognized as a valid command");
                     ShowHelp();
@@ -79,15 +83,17 @@ public class Program
         void ShowHelp()
         {
             Console.WriteLine("runfo");
-            Console.WriteLine("\tstatus\t\tPrint build definition status");
-            Console.WriteLine("\tdefinitions\tPrint build definition info");
-            Console.WriteLine("\tbuilds\t\tPrint builds");
-            Console.WriteLine("\tpr-builds\t\tPrint builds for a given pull request");
-            Console.WriteLine("\ttests\t\tPrint build test failures");
-            Console.WriteLine("\thelix\t\tPrint helix logs for build");
-            Console.WriteLine("\tsearch-timeline\t\tSerach timeline info");
-            Console.WriteLine("\tsearch-helix\t\tSerach helix logs");
-            Console.WriteLine("\ttimeline\t\tdump the timeline");
+            Console.WriteLine("  status\t\tPrint build definition status");
+            Console.WriteLine("  definitions\tPrint build definition info");
+            Console.WriteLine("  builds\t\tPrint builds");
+            Console.WriteLine("  pr-builds\t\tPrint builds for a given pull request");
+            Console.WriteLine("  tests\t\tPrint build test failures");
+            Console.WriteLine("  helix\t\tPrint helix logs for build");
+            Console.WriteLine("  search-timeline\t\tSerach timeline info");
+            Console.WriteLine("  search-helix\t\tSerach helix logs");
+            Console.WriteLine("  search-buildlog\t\tSerach build logs");
+            Console.WriteLine("  timeline\t\tdump the timeline");
+            Console.WriteLine("  clear-cache\t\tclear out the cache");
             Console.WriteLine();
             Console.WriteLine("=== Global Options ===");
             optionSet.WriteOptionDescriptions(Console.Out);

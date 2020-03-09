@@ -31,9 +31,11 @@ internal sealed class RuntimeInfo
 
     internal DevOpsServer Server;
 
-    internal RuntimeInfo(string personalAccessToken = null)
+    internal RuntimeInfo(string personalAccessToken = null, bool cacheable = false)
     {
-        Server = new CachingDevOpsServer("dnceng", personalAccessToken);
+        Server = cacheable
+            ? new CachingDevOpsServer(RuntimeInfoUtil.CacheDirectory, "dnceng", personalAccessToken)
+            : new DevOpsServer("dnceng", personalAccessToken);
     }
 
     internal async Task PrintBuildResults(IEnumerable<string> args)
@@ -65,6 +67,12 @@ internal sealed class RuntimeInfo
 
             Console.WriteLine();
         }
+    }
+
+    internal int ClearCache()
+    {
+        Directory.Delete(RuntimeInfoUtil.CacheDirectory, recursive: true);
+        return ExitSuccess;
     }
 
     internal async Task<int> PrintSearchHelix(IEnumerable<string> args)
@@ -158,19 +166,122 @@ internal sealed class RuntimeInfo
         }
     }
 
-    // TODO: split out search build logs to separate command
     internal async Task<int> PrintSearchTimeline(IEnumerable<string> args)
     {
         string name = null;
         string text = null;
-        bool buildLog = false;
         bool markdown = false;
         var optionSet = new BuildSearchOptionSet()
         {
             { "n|name=", "name regex to match in results", n => name = n },
             { "v|value=", "text to search for", t => text = t },
             { "m|markdown", "print output in markdown", m => markdown = m is object },
-            { "bl|buildlog", "search the build log files, not issues", (bool b) => buildLog = b},
+        };
+
+        ParseAll(optionSet, args);
+
+        if (text is null)
+        {
+            Console.WriteLine("Must provide a text argument to search for");
+            optionSet.WriteOptionDescriptions(Console.Out);
+            return ExitFailure;
+        }
+
+        var builds = await ListBuildsAsync(optionSet);
+        var textRegex = new Regex(text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        Regex nameRegex = null;
+        if (name is object)
+        {
+            nameRegex = new Regex(name, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        }
+
+        if (markdown)
+        {
+            Console.WriteLine("|Build|Kind|Timeline Record|");
+            Console.WriteLine("|---|---|---|");
+        }
+
+        var found = await SearchTimelineIssues(Server, builds, nameRegex, textRegex);
+        foreach (var tuple in found)
+        {
+            var build = tuple.Build;
+            if (markdown)
+            {
+                var kind = "Rolling";
+                if (DevOpsUtil.GetPullRequestNumber(build) is int pr)
+                {
+                    kind = $"PR https://github.com/{build.Repository.Id}/pull/{pr}";
+                }
+                Console.WriteLine($"|[{build.Id}]({DevOpsUtil.GetBuildUri(build)})|{kind}|{tuple.TimelineRecord.Name}|");
+            }
+            else
+            {
+                Console.WriteLine(DevOpsUtil.GetBuildUri(build));
+            }
+        }
+
+        var foundBuildCount = found.GroupBy(x => x.Build.Id).Count();
+        Console.WriteLine();
+        Console.WriteLine($"Evaluated {builds.Count} builds");
+        Console.WriteLine($"Impacted {foundBuildCount} bulids");
+        Console.WriteLine($"Impacted {found.Count} jobs");
+
+        return ExitSuccess;
+
+        async Task<List<(Build Build, TimelineRecord TimelineRecord, string Line)>> SearchTimelineIssues(
+            DevOpsServer server,
+            IEnumerable<Build> builds,
+            Regex nameRegex,
+            Regex textRegex)
+        {
+            var list = new List<(Build Build, TimelineRecord TimelineRecord, string Line)>();
+            foreach (var build in builds)
+            {
+                var timeline = await server.GetTimelineAsync(build.Project.Name, build.Id);
+                if (timeline is null)
+                {
+                    continue;
+                }
+
+                var records = timeline.Records.Where(r => nameRegex is null || nameRegex.IsMatch(r.Name));
+                foreach (var record in records)
+                {
+                    if (record.Issues is null)
+                    {
+                        continue;
+                    }
+
+                    string line = null;
+                    foreach (var issue in record.Issues)
+                    {
+                        if (textRegex.IsMatch(issue.Message))
+                        {
+                            line = issue.Message;
+                            break;
+                        }
+                    }
+
+                    if (line is object)
+                    {
+                        list.Add((build, record, line));
+                    }
+                }
+            }
+
+            return list;
+        }
+
+    }
+
+    internal async Task<int> PrintSearchBuildLogs(IEnumerable<string> args)
+    {
+        string name = null;
+        string text = null;
+        bool markdown = false;
+        var optionSet = new BuildSearchOptionSet()
+        {
+            { "n|name=", "name regex to match in results", n => name = n },
+            { "v|value=", "text to search for", t => text = t },
         };
 
         ParseAll(optionSet, args);

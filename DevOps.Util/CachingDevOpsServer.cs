@@ -20,10 +20,10 @@ namespace DevOps.Util
     {
         internal string CacheDirectory { get; }
 
-        public CachingDevOpsServer(string organization, string personalAccessToken)
+        public CachingDevOpsServer(string cacheDirectory, string organization, string personalAccessToken)
             : base(organization, personalAccessToken)
         {
-            CacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "runfo");
+            CacheDirectory = cacheDirectory;
         }
 
         protected override async Task<string> GetJsonResult(string uri, bool cacheable = false)
