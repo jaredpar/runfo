@@ -173,7 +173,7 @@ namespace DevOps.Util
         public Task<Timeline> GetTimelineAsync(string project, int buildId)
         {
             var builder = GetBuilder(project, $"build/builds/{buildId}/timeline");
-            return GetJsonResult<Timeline>(builder);
+            return GetJsonResult<Timeline>(builder, cacheable: true);
         }
 
         public Task<Timeline> GetTimelineAsync(Build build) => GetTimelineAsync(build.Project.Name, build.Id);
@@ -182,7 +182,7 @@ namespace DevOps.Util
         {
             var builder = GetBuilder(project, $"build/builds/{buildId}/timeline/{timelineId}");
             builder.AppendInt("changeId", changeId);
-            return GetJsonResult<Timeline>(builder);
+            return GetJsonResult<Timeline>(builder, cacheable: true);
         }
 
         public Task<List<BuildArtifact>> ListArtifactsAsync(string project, int buildId)
@@ -287,7 +287,7 @@ namespace DevOps.Util
             builder.AppendList("outcomes", outcomes);
             builder.AppendInt("$top", top);
             builder.AppendInt("$skip", skip);
-            return GetJsonArrayResult<TestCaseResult>(builder);
+            return GetJsonArrayResult<TestCaseResult>(builder, cacheable: true);
         }
 
         public Task<TestAttachment[]> GetTestCaseResultAttachmentsAsync(
@@ -330,17 +330,27 @@ namespace DevOps.Util
 
         private RequestBuilder GetBuilder(string project, string apiPath) => new RequestBuilder(Organization, project, apiPath);
 
-        private async Task<string> GetJsonResult(string url) => (await GetJsonResultAndContinuationToken(url).ConfigureAwait(false)).Body;
-
-        private async Task<T> GetJsonResult<T>(RequestBuilder builder)
+        protected async Task<string> GetJsonResultCore(string uri)
         {
-            var json = await GetJsonResult(builder.ToString()).ConfigureAwait(false);
+            var message = CreateHttpRequestMessage(uri);
+            message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            return responseBody;
+        }
+
+        protected virtual Task<string> GetJsonResult(string uri, bool cacheable = false) => GetJsonResultCore(uri);
+
+        private async Task<T> GetJsonResult<T>(RequestBuilder builder, bool cacheable = false)
+        {
+            var json = await GetJsonResult(builder.ToString(), cacheable).ConfigureAwait(false);
             return JsonConvert.DeserializeObject<T>(json);
         }
 
-        private async Task<T[]> GetJsonArrayResult<T>(RequestBuilder builder)
+        private async Task<T[]> GetJsonArrayResult<T>(RequestBuilder builder, bool cacheable = false)
         {
-            var json = await GetJsonResult(builder.ToString()).ConfigureAwait(false);
+            var json = await GetJsonResult(builder.ToString(), cacheable).ConfigureAwait(false);
             var root = JObject.Parse(json);
             var array = (JArray)root["value"];
             return array.ToObject<T[]>();
@@ -366,7 +376,7 @@ namespace DevOps.Util
         public Task DownloadFileAsync(string uri, Stream destinationStream) =>
             DownloadFileCoreAsync(uri, destinationStream);
 
-        protected virtual async Task DownloadFileCoreAsync(string uri, Stream destinationStream)
+        private async Task DownloadFileCoreAsync(string uri, Stream destinationStream)
         {
             using (var response = await GetAsync(uri).ConfigureAwait(false))
             {

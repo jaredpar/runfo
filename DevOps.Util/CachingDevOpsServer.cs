@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
 
@@ -25,31 +26,26 @@ namespace DevOps.Util
             CacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "runfo");
         }
 
-        protected override Task DownloadZipFileCoreAsync(string uri, Stream destinationStream) =>
-            CacheFileDownloadAsync(uri, destinationStream, base.DownloadZipFileCoreAsync);
-
-        protected override Task DownloadFileCoreAsync(string uri, Stream destinationStream) =>
-            CacheFileDownloadAsync(uri, destinationStream, base.DownloadFileCoreAsync);
-
-        private async Task CacheFileDownloadAsync(string uri, Stream destinationStream, Func<string, Stream, Task> downloadFunc)
+        protected override async Task<string> GetJsonResult(string uri, bool cacheable = false)
         {
-            var key = GetKey(uri);
-            lock (this)
+            if (!cacheable)
             {
-                File.AppendAllLines(Path.Combine(CacheDirectory, "list.txt"), new[] { $"{key} {uri}" });
+                return await base.GetJsonResultCore(uri);
             }
 
-            var fileStream = TryOpenCacheFile(key);
+            var key = GetKey(uri);
+            using var fileStream = TryOpenCacheFile(key);
             if (fileStream is object)
             {
-                await fileStream.CopyToAsync(destinationStream).ConfigureAwait(false);
-                return;
+                using var reader = new StreamReader(fileStream, Encoding.UTF8);
+                return await reader.ReadToEndAsync();
             }
-
-            using var cacheStream = new MemoryStream();
-            await downloadFunc(uri, cacheStream).ConfigureAwait(false);
-            await SaveCacheFile(key, cacheStream);
-            await cacheStream.CopyToAsync(destinationStream).ConfigureAwait(false);
+            else
+            {
+                var response = await base.GetJsonResultCore(uri);
+                await SaveCacheFile(key, Encoding.UTF8.GetBytes(response));
+                return response;
+            }
         }
 
         private FileStream TryOpenCacheFile(string key)
@@ -72,22 +68,19 @@ namespace DevOps.Util
         }
 
 
-        private async Task SaveCacheFile(string key, MemoryStream stream)
+        private async Task SaveCacheFile(string key, byte[] bytes)
         {
-            stream.Position = 0;
             try
             {
                 Directory.CreateDirectory(CacheDirectory);
                 var filePath = Path.Combine(CacheDirectory, key);
                 using var cacheStream = File.Open(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
-                await stream.CopyToAsync(cacheStream).ConfigureAwait(false);
+                await cacheStream.WriteAsync(bytes, 0, bytes.Length, CancellationToken.None).ConfigureAwait(false);
             }
             catch
             {
                 // Don't worry about cache errors
             }
-
-            stream.Position = 0;
         }
 
         private string GetKey(string uri)

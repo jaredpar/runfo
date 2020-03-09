@@ -33,7 +33,7 @@ internal sealed class RuntimeInfo
 
     internal RuntimeInfo(string personalAccessToken = null)
     {
-        Server = new DevOpsServer("dnceng", personalAccessToken);
+        Server = new CachingDevOpsServer("dnceng", personalAccessToken);
     }
 
     internal async Task PrintBuildResults(IEnumerable<string> args)
