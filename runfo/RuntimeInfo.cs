@@ -278,10 +278,13 @@ internal sealed class RuntimeInfo
         string name = null;
         string text = null;
         bool markdown = false;
+        bool trace = false;
         var optionSet = new BuildSearchOptionSet()
         {
             { "n|name=", "name regex to match in results", n => name = n },
             { "v|value=", "text to search for", t => text = t },
+            { "m|markdown", "print output in markdown", m => markdown = m is object },
+            { "tr|trace", "trace the records searched", t => trace = t is object },
         };
 
         ParseAll(optionSet, args);
@@ -307,7 +310,7 @@ internal sealed class RuntimeInfo
             Console.WriteLine("|---|---|---|");
         }
 
-        var found = await SearchBuildLogs(Server, builds, nameRegex, textRegex);
+        var (found, recordCount) = await SearchBuildLogs(Server, builds, nameRegex, textRegex, trace);
         foreach (var tuple in found)
         {
             var build = tuple.Build;
@@ -331,19 +334,22 @@ internal sealed class RuntimeInfo
         Console.WriteLine($"Evaluated {builds.Count} builds");
         Console.WriteLine($"Impacted {foundBuildCount} bulids");
         Console.WriteLine($"Impacted {found.Count} jobs");
+        Console.WriteLine($"Searched {recordCount} records");
 
         return ExitSuccess;
 
-        static async Task<List<(Build Build, TimelineRecord TimelineRecord, string Line)>> SearchBuildLogs(
+        static async Task<(List<(Build Build, TimelineRecord TimelineRecord, string Line)>, int Count)> SearchBuildLogs(
             DevOpsServer server,
             IEnumerable<Build> builds,
             Regex nameRegex,
-            Regex textRegex)
+            Regex textRegex,
+            bool trace)
         {
             // Deliberately iterating the build serially vs. using AsParallel because othewise we 
             // end up sending way too many requests to AzDO. Eventually it will begin rate limiting
             // us.
             var list = new List<(Build Build, TimelineRecord TimelineRecord, string Line)>();
+            var count = 0;
             foreach (var build in builds)
             {
                 var timeline = await server.GetTimelineAsync(build.Project.Name, build.Id);
@@ -351,15 +357,22 @@ internal sealed class RuntimeInfo
                 {
                     continue;
                 }
-                var records = timeline.Records.Where(r => nameRegex is null || nameRegex.IsMatch(r.Name));
-                var all = (await SearchTimelineRecords(server, records, textRegex)).Select(x => (build, x.TimelineRecord, x.Line));
+                var records = timeline.Records.Where(r => nameRegex is null || nameRegex.IsMatch(r.Name)).ToList();
+                count += records.Count;
+                var all = (await SearchTimelineRecords(server, build, records, textRegex, trace))
+                    .Select(x => (build, x.TimelineRecord, x.Line));
                 list.AddRange(all);
             }
 
-            return list;
+            return (list, count);
         }
 
-        static async Task<IEnumerable<(TimelineRecord TimelineRecord, string Line)>> SearchTimelineRecords(DevOpsServer server, IEnumerable<TimelineRecord> records, Regex textRegex)
+        static async Task<IEnumerable<(TimelineRecord TimelineRecord, string Line)>> SearchTimelineRecords(
+            DevOpsServer server,
+            Build build,
+            IEnumerable<TimelineRecord> records,
+            Regex textRegex,
+            bool trace)
         {
             var hashSet = new HashSet<string>();
             foreach (var record in records)
@@ -367,9 +380,7 @@ internal sealed class RuntimeInfo
                 if (record.Log is object && !hashSet.Add(record.Log.Url))
                 {
                     Console.WriteLine("duplicate");
-
                 }
-
             }
 
             var all = records
@@ -379,7 +390,18 @@ internal sealed class RuntimeInfo
                     var tuple = await SearchTimelineRecord(server, r, textRegex);
                     return (tuple.IsMatch, TimelineRecord: r, tuple.Line);
                 });
-            return (await RuntimeInfoUtil.ToList(all))
+
+            var list = await RuntimeInfoUtil.ToList(all);
+            if (trace)
+            {
+                Console.WriteLine(DevOpsUtil.GetBuildUri(build));
+                foreach (var tuple in list)
+                {
+                    Console.WriteLine($"  {tuple.TimelineRecord.Name} {tuple.IsMatch} {tuple.Line}");
+                }
+            }
+
+            return list
                 .Where(x => x.IsMatch)
                 .Select(x => (x.TimelineRecord, x.Line));
         }

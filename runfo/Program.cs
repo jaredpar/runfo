@@ -15,7 +15,7 @@ public class Program
         var disableCache = false;
         var optionSet = new OptionSet()
         {
-            { "t|token=", "The Azure DevOps personal access token", t => token = t },
+            { "token=", "The Azure DevOps personal access token", t => token = t },
             { "dc|disable-cache", "Disable caching", dc => disableCache = dc is object }
         };
 
