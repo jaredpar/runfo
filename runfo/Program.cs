@@ -71,6 +71,9 @@ public class Program
                     return await runtimeInfo.PrintSearchHelix(commandArgs);
                 case "search-buildlog":
                     return await runtimeInfo.PrintSearchBuildLogs(commandArgs);
+                case "yml":
+                case "yaml":
+                    return await runtimeInfo.PrintBuildYaml(commandArgs);
                 case "clear-cache":
                     return runtimeInfo.ClearCache();
                 default:
@@ -93,6 +96,7 @@ public class Program
             Console.WriteLine("  search-helix      Search helix logs");
             Console.WriteLine("  search-buildlog   Search build logs");
             Console.WriteLine("  timeline          Dump the timeline");
+            Console.WriteLine("  yaml              Dump the YML for a build");
             Console.WriteLine("  clear-cache       Clear out the cache");
             Console.WriteLine();
             Console.WriteLine("=== Global Options ===");

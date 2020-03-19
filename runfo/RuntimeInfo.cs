@@ -675,6 +675,20 @@ internal sealed class RuntimeInfo
         return ExitSuccess;
     }
 
+    internal async Task<int> PrintBuildYaml(IEnumerable<string> args)
+    {
+        var optionSet = new BuildSearchOptionSet();
+        ParseAll(optionSet, args);
+
+        foreach (var build in await ListBuildsAsync(optionSet))
+        {
+            var log = await Server.GetBuildLogAsync(build.Project.Name, build.Id, logId: 1);
+            Console.WriteLine(log);
+        }
+
+        return ExitSuccess;
+    }
+
     internal async Task<int> PrintPullRequestBuilds(IEnumerable<string> args)
     {
         string repository = null;
