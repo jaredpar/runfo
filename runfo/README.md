@@ -14,47 +14,58 @@ The token can be passed to the tool in two ways:
 1. By using the `-token` command line argument
 2. Using the `%RUNFO_AZURE_TOKEN%` environment variable
 
+## Build filtering 
+All commands that search builds use the same set of arguments to define the 
+set of builds being searched:
+
+- `definition`: the build definition id or name to get builds from
+- `count`: count of builds to search. Default is `5`
+- `pr`: include PR builds in the search
+- `project`: the project to look for builds and definitions. Default is `public`
+- `after`: filter to builds after the given date
+- `before`: filter to builds before the given date
+
+The common pattern is to search the most recent hundred builds in a given 
+definition to find occurances of a failure. For example:
+
+```cmd
+> runfo search-timeline -d runtime -c 100 -pr -v "Central Directory Record"
+```
+
+This will search the last 100 builds from the runtime build definition for any
+failures that have the text "Central Directory Record".
+
 ## Commands
+These are the most common commands used to search for failures. More are 
+available and all have help available by using the `-help` argument.
 
-### status
-Dumps out the info from all of our CI jobs and their current  pass / fail state. 
+### search-timeline
+This command will search the timeline of the builds looking for a particular
+piece of text. There are two ways to filter the results:
 
+- `name`: only search records matching this name. Default is search all 
+records
+- `value`: find records whose issues match the following string
+
+For example here is how we commonly filtered the Docker 126 exit code issue.
+
+```cmd
+> runfo search-timeline -d runtime -c 100 -pr -v "Exit Code 126"
 ```
-P:\random\dotnet\Azure\runfo> runfo status
-runtime                0%  NNNNN
-coreclr                0%  NNNNN
-libraries              0%  NNNNN
-libraries windows      0%  NNNNN
-libraries linux        0%  NNNNN
-libraries osx          0%  NNNNN
-crossgen2              0%  NNNNN
-```
 
-It is handy for showing the friendly name of all the build definitions that are
-being tracked.
+The `-markdown` argument will print the output using markdown tables.
 
 ### tests
-This dumps the test information for the provided build definition (default to 
-last five CI builds). Essentially it will enumerate the last five builds for a
-given definition and dump all of the data for it with a custom grouping.
+This dumps the test information for the provided builds. Essentially it will 
+enumerate all of the builds and dump test failure information based on the 
+provided grouping. The grouping can be changed by passing the following
+arguments to the `-group` switch:
 
-Example command for getting a quick run down on test failures in dotnet/runtime
+- `builds`: group the failures based on the build they occurred in
+- `jobs`: group the failures by the job they occurred in
+- `tests`: group the failures by the test name
 
-``` cmd
-> runfo tests -d runtime -v 
-```
-
-Supported options:
-
-| Option | Description |
-| --- | --- | 
-| grouping | how to group the test output: builds, tests or jobs |
-| definition | Build definition to print for. Can be number or friendly name |
-| count | Count of builds to see data for | 
-| verbose | Verbose output |
-
-The most interesting flag though is -g for grouping. This lets you group the
-test failures by different categories. Example of where this can be useful: 
+Example of grouping by jobs:
 
 ```cmd
 P:\> runfo tests -d runtime -c 5 -g jobs
@@ -71,13 +82,16 @@ Notice that the Alpine.38.Arm64 job failed on 5 builds which is also the
 amount we’re limiting the results too. So pretty good bet this configuration is 
 busted in some way that requires investigation. 
 
-### helix
+When investigating a particular test failure you can use `-name` to limit the
+results to test failures matching the provided name regex.
+
+### search-helix
 This command dumps all of the console and core URIs for a given build. Using
--v you can also get it to dump the console log content directly to the console
+`-value` you can also get it to dump the console log content directly to the console
 (instead of having to click through the output):
 
 ```
-P:> runfo helix -b 505640
+P:> runfo search-helix -b 505640
 Console Logs
 https://helix.dot.net/api/2019-06-17/jobs/6afd25d6-b672-4525-bcb3-92be7581046a/workitems/System.Security.Cryptography.OpenSsl.Tests/files/console.929d7000.log
 https://helix.dot.net/api/2019-06-17/jobs/3cd49f06-a2f6-4a87-bda4-d33be9b16f83/workitems/System.Runtime.Tests/files/console.7fdd181f.log
@@ -98,7 +112,7 @@ wanted a quick and dirty tool for looking at test failures only as that’s the
 biggest source of flakiness that we directly control as a team.
 
 ### I looked at the code and you should be ashamed of the hackery!
-A: Indeed I am ashamed. I’ve used more SelectMany calls and Tuples in this 
+Indeed I am ashamed. I’ve used more SelectMany calls and Tuples in this 
 tool as I did in the rest of my career combined :smile:
 
 
