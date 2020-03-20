@@ -29,13 +29,22 @@ public class Program
 
             var runtimeInfo = new RuntimeInfo(token, cacheable: !disableCache);
 
-            if (args.Length == 0)
+            // Kick off a collection of the file system cache
+            var collectTask = runtimeInfo.CollectCache();
+            try
             {
-                await runtimeInfo.PrintBuildResults(Array.Empty<string>());
-                return ExitSuccess;
-            }
+                if (args.Length == 0)
+                {
+                    await runtimeInfo.PrintBuildResults(Array.Empty<string>());
+                    return ExitSuccess;
+                }
 
-            return await RunCommand(runtimeInfo, args);
+                return await RunCommand(runtimeInfo, args);
+            }
+            finally
+            {
+                await collectTask;
+            }
         }
         catch (Exception ex)
         {

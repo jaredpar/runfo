@@ -75,6 +75,41 @@ internal sealed class RuntimeInfo
         return ExitSuccess;
     }
 
+    internal async Task CollectCache()
+    {
+        try
+        {
+            await Task.Yield();
+            Directory.CreateDirectory(RuntimeInfoUtil.CacheDirectory);
+            var now = DateTime.UtcNow;
+            var limit = TimeSpan.FromDays(1);
+            var filePaths = Directory.EnumerateFiles(
+                RuntimeInfoUtil.CacheDirectory,
+                "*",
+                new EnumerationOptions() { RecurseSubdirectories = true });
+            foreach (var filePath in filePaths)
+            {
+                await Task.Yield();
+                try
+                {
+                    var fileInfo = new FileInfo(filePath);
+                    if (now - fileInfo.CreationTimeUtc >= limit)
+                    {
+                        File.Delete(filePath);
+                    }
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine($"Error deleting {filePath}: {ex.Message}");
+                }
+            }
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Cannot clear cache: {ex.Message}");
+        }
+    }
+
     internal async Task<int> PrintSearchHelix(IEnumerable<string> args)
     {
         string text = null;
