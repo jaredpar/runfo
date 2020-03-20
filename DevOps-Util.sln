@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DevOps.Util", "DevOps.Util\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DevOps.Util.UnitTests", "DevOps.Util.UnitTests\DevOps.Util.UnitTests.csproj", "{3E97648B-B843-42F0-A436-3B5EF032B774}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DevOpsFun", "DevOpsFun\DevOpsFun.csproj", "{9972CB62-D44B-42C5-8F82-B73682C62EC9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "scratch", "scratch\scratch.csproj", "{9972CB62-D44B-42C5-8F82-B73682C62EC9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevOps.Functions", "DevOps.Functions\DevOps.Functions.csproj", "{929EAB16-C5A0-4EAC-AB7B-8ED5412F167C}"
 EndProject

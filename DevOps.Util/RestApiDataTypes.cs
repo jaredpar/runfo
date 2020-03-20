@@ -177,7 +177,8 @@ namespace DevOps.Util
     /// </summary>
     public enum QueueOptions
     {
-        // TODO
+        None,
+        DoNotRun
     }
 
     /// <summary>

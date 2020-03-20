@@ -74,16 +74,17 @@ namespace QueryFun
         private static async Task Scratch()
         {
             var server = new DevOpsServer("dnceng", await GetToken("dnceng"));
-            await foreach (var build in server.EnumerateBuildsAsync("public", queryOrder: BuildQueryOrder.FinishTimeDescending, statusFilter: BuildStatus.Completed))
+            await foreach (var build in server.EnumerateBuildsAsync("public", queryOrder: BuildQueryOrder.FinishTimeDescending, statusFilter: BuildStatus.Completed, top: 1000))
             {
                 try
                 {
-
-
+                    if (build.ValidationResults.Any(x => x.Result == DevOps.Util.ValidationResult.Error && x.Message.Contains("Could not get the latest")))
+                    {
+                        Console.WriteLine(DevOpsUtil.GetBuildUri(build));
+                    }
                 }
                 catch (System.Exception)
                 {
-                    
                     throw;
                 }
             }

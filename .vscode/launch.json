@@ -5,27 +5,27 @@
    "version": "0.2.0",
    "configurations": [
         {
-            "name": "DevOpsFun",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build",
-            // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/Binaries/Debug/DevOpsFun/netcoreapp3.1/DevOpsFun.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/DevOpsFun",
-            // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
-            "console": "internalConsole",
-            "stopAtEntry": true
-        },
-        {
             "name": "runfo",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/Binaries/Debug/runfo/netcoreapp3.1/runfo.dll",
-            "args": ["search-buildlog", "-c", "5", "-d", "runtime", "-trace"],
+            "args": ["builds", "-b", "567314"],
             "cwd": "${workspaceFolder}/runfo",
+            // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
+            "console": "internalConsole",
+            "stopAtEntry": true
+        },
+        {
+            "name": "scratch",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            // If you have changed target frameworks, make sure to update the program path.
+            "program": "${workspaceFolder}/Binaries/Debug/scratch/netcoreapp3.1/scratch.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/scratch",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
             "stopAtEntry": true
