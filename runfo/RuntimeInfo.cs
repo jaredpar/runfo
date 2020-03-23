@@ -1193,14 +1193,18 @@ internal sealed class RuntimeInfo
             builds.AddRange(collection);
         }
 
+        // When doing before / after comparisons always use QueueTime. The StartTime parameter
+        // in REST refers to when the latest build attempt started, not the original. Using that
+        // means the jobs returned can violate the before / after constraint. The queue time is
+        // consistent though and can be reliably used for filtering
         if (before.HasValue)
         {
-            builds = builds.Where(b => b.GetStartTime() is DateTime d && d <= before.Value).ToList();
+            builds = builds.Where(b => b.GetQueueTime() is DateTimeOffset d && d <= before.Value).ToList();
         }
 
         if (after.HasValue)
         {
-            builds = builds.Where(b => b.GetStartTime() is DateTime d && d >= after.Value).ToList();
+            builds = builds.Where(b => b.GetQueueTime() is DateTimeOffset d && d >= after.Value).ToList();
         }
 
         return builds;

@@ -16,9 +16,9 @@ internal sealed class BuildSearchOptionSet : OptionSet
 
     internal string Repository { get; set; }
 
-    internal DateTime? Before { get; set; }
+    internal DateTimeOffset? Before { get; set; }
 
-    internal DateTime? After { get; set; }
+    internal DateTimeOffset? After { get; set; }
 
     internal bool IncludePullRequests { get; set; }
 

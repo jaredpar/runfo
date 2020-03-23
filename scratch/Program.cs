@@ -74,7 +74,7 @@ namespace QueryFun
         private static async Task Scratch()
         {
             var server = new DevOpsServer("dnceng", await GetToken("dnceng"));
-            await foreach (var build in server.EnumerateBuildsAsync("public", queryOrder: BuildQueryOrder.FinishTimeDescending, statusFilter: BuildStatus.Completed, top: 1000))
+            await foreach (var build in server.EnumerateBuildsAsync("internal", queryOrder: BuildQueryOrder.FinishTimeDescending, statusFilter: BuildStatus.Completed, top: 500))
             {
                 try
                 {
