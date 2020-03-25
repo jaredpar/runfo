@@ -606,6 +606,34 @@ internal sealed class RuntimeInfo
         return ExitSuccess;
     }
 
+    internal async Task<int> PrintArtifacts(IEnumerable<string> args)
+    {
+        var optionSet = new BuildSearchOptionSet();
+        ParseAll(optionSet, args);
+
+        var kb = 1_024;
+        var mb = kb * kb;
+        Console.WriteLine("Build     Total      Average    Max");
+        Console.WriteLine(new string('=', 50));
+        foreach (var build in await ListBuildsAsync(optionSet))
+        {
+            var artifacts = await Server.ListArtifactsAsync(build.Project.Name, build.Id);
+            var sizes = artifacts
+                .Select(x => x.GetByteSize() is int i ? (double?)i : null)
+                .Where(x => x.HasValue)
+                .Select(x => x.Value / mb);
+
+            double? max = sizes.Max();
+            double? sum = sizes.Sum();
+            double? average = sizes.Average();
+
+            Console.WriteLine($"{build.Id,-9} {sum,-10:N2} {average,-10:N2} {max,-10:N2}");
+        }
+        Console.WriteLine(new string('=', 50));
+        Console.WriteLine("Sizes are MB");
+        return ExitSuccess;
+    }
+
     internal async Task<int> PrintTimeline(IEnumerable<string> args)
     {
         int? depth = null;

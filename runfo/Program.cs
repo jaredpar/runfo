@@ -64,6 +64,8 @@ public class Program
                 case "status":
                     await runtimeInfo.PrintBuildResults(commandArgs);
                     return ExitSuccess;
+                case "artifacts":
+                    return await runtimeInfo.PrintArtifacts(commandArgs);
                 case "builds":
                     return await runtimeInfo.PrintBuilds(commandArgs);
                 case "pr-builds":
@@ -97,6 +99,7 @@ public class Program
             Console.WriteLine("runfo");
             Console.WriteLine("  status            Print build definition status");
             Console.WriteLine("  definitions       Print build definition info");
+            Console.WriteLine("  artifacts         Print artifact info for a given build");
             Console.WriteLine("  builds            Print builds");
             Console.WriteLine("  pr-builds         Print builds for a given pull request");
             Console.WriteLine("  tests             Print build test failures");
