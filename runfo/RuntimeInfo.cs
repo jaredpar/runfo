@@ -210,7 +210,7 @@ internal sealed class RuntimeInfo
         var optionSet = new BuildSearchOptionSet()
         {
             { "n|name=", "Search only records matching this name", n => name = n },
-            { "task=", "Search only tasks matching this name", t => task = t },
+            { "t|task=", "Search only tasks matching this name", t => task = t },
             { "v|value=", "text to search for", t => text = t },
             { "m|markdown", "print output in markdown", m => markdown = m is object },
         };
@@ -608,30 +608,97 @@ internal sealed class RuntimeInfo
 
     internal async Task<int> PrintArtifacts(IEnumerable<string> args)
     {
-        var optionSet = new BuildSearchOptionSet();
+        var list = false;
+        int top = 10;
+        var optionSet = new BuildSearchOptionSet()
+        {
+            { "l|list", "detailed artifact listing", l => list = l is object },
+            { "t|top", "print top <count> artifacts in list" , (int t) => top = t},
+        };
+
         ParseAll(optionSet, args);
 
         var kb = 1_024;
         var mb = kb * kb;
-        Console.WriteLine("Build     Total      Average    Max");
-        Console.WriteLine(new string('=', 50));
-        foreach (var build in await ListBuildsAsync(optionSet))
+        var builds = await GetInfo();
+
+        if (list)
         {
-            var artifacts = await Server.ListArtifactsAsync(build.Project.Name, build.Id);
+            PrintList();
+        }
+        else
+        {
+            PrintSummary();
+        }
+
+        return ExitSuccess;
+
+        async Task<List<(Build Build, List<BuildArtifact> artifacts)>> GetInfo()
+        {
+            var list = new List<(Build Build, List<BuildArtifact> artifacts)>();
+            foreach (var build in await ListBuildsAsync(optionSet))
+            {
+                var artifacts = await Server.ListArtifactsAsync(build.Project.Name, build.Id);
+                list.Add((build, artifacts));
+            }
+
+            return list;
+        }
+
+        (double Total, double Average, double Max) GetArtifactInfo(List<BuildArtifact> artifacts)
+        {
             var sizes = artifacts
                 .Select(x => x.GetByteSize() is int i ? (double?)i : null)
                 .Where(x => x.HasValue)
                 .Select(x => x.Value / mb);
+            if (!sizes.Any())
+            {
+                return (0, 0, 0);
+            }
 
-            double? max = sizes.Max();
-            double? sum = sizes.Sum();
-            double? average = sizes.Average();
-
-            Console.WriteLine($"{build.Id,-9} {sum,-10:N2} {average,-10:N2} {max,-10:N2}");
+            double total = sizes.Sum();
+            double average = sizes.Average();
+            double max = sizes.Max();
+            return (Total: total, Average: average, Max: max);
         }
-        Console.WriteLine(new string('=', 50));
-        Console.WriteLine("Sizes are MB");
-        return ExitSuccess;
+
+        void PrintSummary()
+        {
+            Console.WriteLine("Build     Total      Average    Max");
+            Console.WriteLine(new string('=', 50));
+            foreach (var (build, artifacts) in builds)
+            {
+                var (total, average, max) = GetArtifactInfo(artifacts);
+                Console.WriteLine($"{build.Id,-9} {total,-10:N2} {average,-10:N2} {max,-10:N2}");
+            }
+            Console.WriteLine(new string('=', 50));
+            Console.WriteLine("Sizes are MB");
+        }
+
+        void PrintList()
+        {
+            foreach (var (build, artifacts) in builds)
+            {
+                var (total, average, max) = GetArtifactInfo(artifacts);
+
+                Console.WriteLine(DevOpsUtil.GetBuildUri(build));
+                Console.WriteLine("Stats");
+                Console.WriteLine($"  Total   {total:N2}");
+                Console.WriteLine($"  Average {average:N2}");
+                Console.WriteLine($"  Max     {max:N2}");
+
+                var sorted = artifacts
+                    .Where(x => x.GetByteSize().HasValue)
+                    .Select(x => (Artifact: x, Size: (double)x.GetByteSize() / mb))
+                    .OrderByDescending(x => x.Size)
+                    .Take(top);
+                Console.WriteLine("Detailed");
+                foreach (var (artifact, size) in sorted)
+                {
+                    Console.WriteLine($"  {size,-10:N2} {artifact.Name}");
+                }
+            }
+        }
     }
 
     internal async Task<int> PrintTimeline(IEnumerable<string> args)
