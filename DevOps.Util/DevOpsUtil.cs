@@ -47,7 +47,6 @@ namespace DevOps.Util
             return both[1];
         }
 
-
         public static string GetRepositoryOrganization(Build build)
         {
             var both = build.Repository.Id.Split(new[] { '/' });
@@ -75,6 +74,29 @@ namespace DevOps.Util
             {
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Returns the uncompressed byte size of the artifact
+        /// </summary>
+        public static int? GetArtifactByteSize(BuildArtifact buildArtifact)
+        {
+            if (buildArtifact.Resource is object &&
+                buildArtifact.Resource.Properties is object)
+            {
+                try
+                {
+                    dynamic properties = buildArtifact.Resource.Properties;
+                    return (int)properties.artifactsize;
+                }
+                catch
+                {
+                    // Okay if dynamic information is not available
+                    return null;
+                }
+            }
+
+            return null;
         }
     }
 }

@@ -74,20 +74,18 @@ namespace QueryFun
         private static async Task Scratch()
         {
             var server = new DevOpsServer("dnceng", await GetToken("dnceng"));
-            await foreach (var build in server.EnumerateBuildsAsync("internal", queryOrder: BuildQueryOrder.FinishTimeDescending, statusFilter: BuildStatus.Completed, top: 500))
-            {
-                try
-                {
-                    if (build.ValidationResults.Any(x => x.Result == DevOps.Util.ValidationResult.Error && x.Message.Contains("Could not get the latest")))
-                    {
-                        Console.WriteLine(DevOpsUtil.GetBuildUri(build));
-                    }
-                }
-                catch (System.Exception)
-                {
-                    throw;
-                }
-            }
+            var build = await server.GetBuildAsync("public", 572488);
+            var all = await server.ListArtifactsAsync("public", 572488);
+            var sum = all
+                .Select(x => x.GetByteSize())
+                .Where(x => x.HasValue)
+                .Select(x => (double)x)
+                .Sum();
+            var kb = 1_024;
+            var mb = kb * kb;
+            var gb = mb * kb;
+            Console.WriteLine(gb);
+            Console.WriteLine(sum / gb);
         }
 
         private static async Task Scratch2()
