@@ -613,7 +613,7 @@ internal sealed class RuntimeInfo
         var optionSet = new BuildSearchOptionSet()
         {
             { "l|list", "detailed artifact listing", l => list = l is object },
-            { "t|top", "print top <count> artifacts in list" , (int t) => top = t},
+            { "t|top=", "print top <count> artifacts in list" , (int t) => top = t},
         };
 
         ParseAll(optionSet, args);
