@@ -16,6 +16,13 @@ namespace DevOps.Util
             var uri = $"https://{organization}.visualstudio.com/{project}/_build?definitionId={definitionId}";
             return new Uri(uri);
         }
+
+        public static Uri GetBuildDefinitionUri(Build build) =>
+            GetBuildDefinitionUri(
+                GetOrganization(build),
+                build.Project.Name,
+                build.Definition.Id);
+
         public static string GetOrganization(Build build)
         {
             // TODO: this will fail when the URI is in the dev.azure.com form. Should fix.

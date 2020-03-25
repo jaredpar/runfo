@@ -224,6 +224,7 @@ internal sealed class RuntimeInfo
             return ExitFailure;
         }
 
+        var hadDefinition = optionSet.Definitions.Any();
         var builds = await ListBuildsAsync(optionSet);
         var textRegex = new Regex(text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
         Regex nameRegex = null;
@@ -240,7 +241,18 @@ internal sealed class RuntimeInfo
 
         if (markdown)
         {
+            if (!hadDefinition)
+            {
+                Console.Write("|Definition");
+            }
+
             Console.WriteLine("|Build|Kind|Timeline Record|");
+
+            if (!hadDefinition)
+            {
+                Console.Write("|---");
+            }
+
             Console.WriteLine("|---|---|---|");
         }
 
@@ -250,6 +262,13 @@ internal sealed class RuntimeInfo
             var build = tuple.Build;
             if (markdown)
             {
+                if (!hadDefinition)
+                {
+                    var definitionName = TryGetDefinitionName(build, out var n) ? n : build.Definition.Id.ToString();
+                    var definitionUri = DevOpsUtil.GetBuildDefinitionUri(build);
+                    Console.Write($"|[{definitionName}]({definitionUri})");
+                }
+
                 var kind = "Rolling";
                 if (DevOpsUtil.GetPullRequestNumber(build) is int pr)
                 {
@@ -955,11 +974,11 @@ internal sealed class RuntimeInfo
             }
             else
             {
-                GroupByTestsConsole(collection);
+                await GroupByTestsConsole(collection);
             }
         }
 
-        void GroupByTestsConsole(BuildTestInfoCollection collection)
+        async Task GroupByTestsConsole(BuildTestInfoCollection collection)
         {
             var all = collection
                 .GetTestCaseTitles()
@@ -984,6 +1003,14 @@ internal sealed class RuntimeInfo
                         var testRun = helixTestRunResult.TestRun;
                         var count = testRunList.Count(t => t.TestRun.Name == testRun.Name);
                         Console.WriteLine($"{GetIndent(2)}{count}\t{testRun.Name}");
+                    }
+
+                    Console.WriteLine($"{GetIndent(1)}Helix Logs");
+                    foreach (var (build, helixLogInfo) in await GetHelixLogs(collection, testCaseTitle))
+                    {
+                        Console.WriteLine($"{GetIndent(2)} console {helixLogInfo.ConsoleUri}");
+                        Console.WriteLine($"{GetIndent(2)} core {helixLogInfo.CoreDumpUri}");
+                        Console.WriteLine($"{GetIndent(2)} test results {helixLogInfo.TestResultsUri}");
                     }
                 }
             }
@@ -1166,6 +1193,23 @@ internal sealed class RuntimeInfo
     {
         var collection = await DotNetUtil.ListDotNetTestRunsAsync(Server, build, TestOutcome.Failed);
         return new BuildTestInfo(build, collection.SelectMany(x => x.TestCaseResults).ToList());
+    }
+
+    private bool TryGetDefinitionName(Build build, out string name)
+    {
+        var project = build.Project.Name;
+        var id = build.Definition.Id;
+        foreach (var tuple in BuildDefinitions)
+        {
+            if (tuple.Project == project && tuple.DefinitionId == id)
+            {
+                name = tuple.BuildName;
+                return true;
+            }
+        }
+
+        name = null;
+        return false;
     }
 
     private bool TryGetDefinitionId(string definition, out string project, out int definitionId)
