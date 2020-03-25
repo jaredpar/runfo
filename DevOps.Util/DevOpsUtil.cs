@@ -98,5 +98,23 @@ namespace DevOps.Util
 
             return null;
         }
+
+        public static BuildArtifactKind GetArtifactKind(BuildArtifact buildArtifact)
+        {
+            if (buildArtifact.Resource is object &&
+                buildArtifact.Resource.Type is object)
+            {
+                try
+                {
+                    return (BuildArtifactKind)Enum.Parse(typeof(BuildArtifactKind), buildArtifact.Resource.Type);
+                }
+                catch
+                {
+                    return BuildArtifactKind.Unknown;
+                }
+            }
+
+            return BuildArtifactKind.Unknown;
+        }
     }
 }

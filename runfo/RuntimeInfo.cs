@@ -695,7 +695,8 @@ internal sealed class RuntimeInfo
                 Console.WriteLine("Detailed");
                 foreach (var (artifact, size) in sorted)
                 {
-                    Console.WriteLine($"  {size,-10:N2} {artifact.Name}");
+                    var mark = artifact.GetKind() != BuildArtifactKind.PipelineArtifact ? '?' : ' ';
+                    Console.WriteLine($"  {size,8:N2}{mark}   {artifact.Name}");
                 }
             }
         }

@@ -74,8 +74,7 @@ namespace QueryFun
         private static async Task Scratch()
         {
             var server = new DevOpsServer("dnceng", await GetToken("dnceng"));
-            var build = await server.GetBuildAsync("public", 572488);
-            var all = await server.ListArtifactsAsync("public", 572488);
+            var all = await server.ListArtifactsAsync("internal", 572208);
             var sum = all
                 .Select(x => x.GetByteSize())
                 .Where(x => x.HasValue)
@@ -86,6 +85,10 @@ namespace QueryFun
             var gb = mb * kb;
             Console.WriteLine(gb);
             Console.WriteLine(sum / gb);
+            foreach (var a in all)
+            {
+                Console.WriteLine($"{a.Name} {a.GetByteSize()}");
+            }
         }
 
         private static async Task Scratch2()
