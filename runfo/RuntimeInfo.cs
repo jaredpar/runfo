@@ -1128,7 +1128,8 @@ internal sealed class RuntimeInfo
             {
                 var suffix = "";
                 var testCaseResult = testResult.TestCaseResult;
-                if (testCaseResult.FailingSince.Build.Id != build.Id)
+                if (testCaseResult.FailingSince is object &&
+                    testCaseResult.FailingSince.Build.Id != build.Id)
                 {
                     suffix = $"(since {testCaseResult.FailingSince.Build.Id})";
                 }
