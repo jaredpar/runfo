@@ -205,10 +205,12 @@ internal sealed class RuntimeInfo
     {
         string name = null;
         string text = null;
+        string task = null;
         bool markdown = false;
         var optionSet = new BuildSearchOptionSet()
         {
-            { "n|name=", "name regex to match in results", n => name = n },
+            { "n|name=", "Search only records matching this name", n => name = n },
+            { "task=", "Search only tasks matching this name", t => task = t },
             { "v|value=", "text to search for", t => text = t },
             { "m|markdown", "print output in markdown", m => markdown = m is object },
         };
@@ -230,13 +232,19 @@ internal sealed class RuntimeInfo
             nameRegex = new Regex(name, RegexOptions.Compiled | RegexOptions.IgnoreCase);
         }
 
+        Regex taskRegex = null;
+        if (task is object)
+        {
+            taskRegex = new Regex(task, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        }
+
         if (markdown)
         {
             Console.WriteLine("|Build|Kind|Timeline Record|");
             Console.WriteLine("|---|---|---|");
         }
 
-        var found = await SearchTimelineIssues(Server, builds, nameRegex, textRegex);
+        var found = await SearchTimelineIssues(Server, builds, nameRegex, taskRegex, textRegex);
         foreach (var tuple in found)
         {
             var build = tuple.Build;
@@ -267,6 +275,7 @@ internal sealed class RuntimeInfo
             DevOpsServer server,
             IEnumerable<Build> builds,
             Regex nameRegex,
+            Regex taskRegex,
             Regex textRegex)
         {
             var list = new List<(Build Build, TimelineRecord TimelineRecord, string Line)>();
@@ -278,7 +287,9 @@ internal sealed class RuntimeInfo
                     continue;
                 }
 
-                var records = timeline.Records.Where(r => nameRegex is null || nameRegex.IsMatch(r.Name));
+                var records = timeline.Records
+                    .Where(r => nameRegex is null || nameRegex.IsMatch(r.Name))
+                    .Where(r => r.Task is null || taskRegex is null || taskRegex.IsMatch(r.Task.Name));
                 foreach (var record in records)
                 {
                     if (record.Issues is null)
@@ -662,17 +673,17 @@ internal sealed class RuntimeInfo
                 }
 
                 PrintRecord("Record", depth, current);
+                if (issues && current.Issues is object)
+                {
+                    var indent = GetIndent(depth + 1);
+                    foreach (var issue in current.Issues)
+                    {
+                        Console.WriteLine($"{indent}{issue.Type} {issue.Category} {issue.Message}");
+                    }
+                }
+
                 foreach (var record in records.Where(x => x.ParentId == current.Id))
                 {
-                    if (issues && record.Issues is object)
-                    {
-                        var indent = GetIndent(depth + 1);
-                        foreach (var issue in record.Issues)
-                        {
-                            Console.WriteLine($"{indent}{issue.Type} {issue.Category} {issue.Message}");
-                        }
-                    }
-
                     /*
                     if (record.Details is object)
                     {
@@ -701,7 +712,7 @@ internal sealed class RuntimeInfo
 
                 var indent = GetIndent(depth);
                 var duration = RuntimeInfoUtil.TryGetDuration(record.StartTime, record.FinishTime);
-                Console.WriteLine($"{indent}{kind} {record.Name} ({duration}) {record.Result}");
+                Console.WriteLine($"{indent}{kind} {record.Name} ({duration}) ({record.Task?.Name}) {record.Result}");
             }
 
             string GetIndent(int depth) => new string(' ', depth * 2);
@@ -713,7 +724,7 @@ internal sealed class RuntimeInfo
     internal async Task<int> PrintBuildYaml(IEnumerable<string> args)
     {
         var optionSet = new BuildSearchOptionSet();
-        ParseAll(optionSet, args);
+       ParseAll(optionSet, args);
 
         foreach (var build in await ListBuildsAsync(optionSet))
         {
