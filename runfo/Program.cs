@@ -71,6 +71,7 @@ public class Program
                 case "pr-builds":
                     return await runtimeInfo.PrintPullRequestBuilds(commandArgs);
                 case "tests":
+                case "search-tests":
                     return await runtimeInfo.PrintFailedTests(commandArgs);
                 case "helix":
                     return await runtimeInfo.PrintHelix(commandArgs);
@@ -106,6 +107,7 @@ public class Program
             Console.WriteLine("  helix             Print helix logs for build");
             Console.WriteLine("  search-timeline   Search timeline info");
             Console.WriteLine("  search-helix      Search helix logs");
+            Console.WriteLine("  search-buildlog   Search build logs");
             Console.WriteLine("  search-buildlog   Search build logs");
             Console.WriteLine("  timeline          Dump the timeline");
             Console.WriteLine("  yaml              Dump the YML for a build");

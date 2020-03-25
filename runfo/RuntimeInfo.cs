@@ -890,10 +890,10 @@ internal sealed class RuntimeInfo
         bool verbose = false;
         bool markdown = false;
         string name = null;
-        string grouping = "builds";
+        string grouping = "tests";
         var optionSet = new BuildSearchOptionSet()
         {
-            { "g|grouping=", "output grouping: builds*, tests, jobs", g => grouping = g },
+            { "g|grouping=", "output grouping: tests*, builds, jobs", g => grouping = g },
             { "m|markdown", "output in markdown", m => markdown = m  is object },
             { "n|name=", "name regex to match in results", n => name = n },
             { "v|verbose", "verobes output", d => verbose = d is object },
@@ -1346,7 +1346,10 @@ internal sealed class RuntimeInfo
             queryOrder: BuildQueryOrder.FinishTimeDescending);
         await foreach (var build in builds)
         {
-            if (build.Reason == BuildReason.PullRequest && !includePullRequests)
+            var isUserDriven = 
+                build.Reason == BuildReason.PullRequest || 
+                build.Reason == BuildReason.Manual;
+            if (isUserDriven && !includePullRequests)
             {
                 continue;
             }
