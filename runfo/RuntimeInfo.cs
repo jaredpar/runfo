@@ -27,6 +27,7 @@ internal sealed class RuntimeInfo
             ("roslyn-integration", "public", 245),
             ("aspnet", "public", 278),
             ("sdk", "public", 136),
+            ("winforms", "public", 267),
         };
 
     internal DevOpsServer Server;
