@@ -127,6 +127,7 @@ internal sealed class RuntimeInfo
             return ExitFailure;
         }
 
+        var badLogList = new List<string>();
         var textRegex = new Regex(text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
         var collection = await ListBuildTestInfosAsync(optionSet);
         var found = collection
@@ -151,6 +152,11 @@ internal sealed class RuntimeInfo
             Console.WriteLine($"|[{build.Id}]({DevOpsUtil.GetBuildUri(build)})|{kind}|[console.log]({helixLogInfo.ConsoleUri})|");
         }
 
+        foreach (var line in badLogList)
+        {
+            Console.WriteLine(line);
+        }
+
         return ExitSuccess;
 
         async Task<HelixLogInfo> SearchBuild(BuildTestInfo buildTestInfo)
@@ -172,7 +178,7 @@ internal sealed class RuntimeInfo
                 }
                 catch
                 {
-                    Console.WriteLine($"Unable to download helix logs for {build.Id} {workItem.HelixInfo.JobId}");
+                    badLogList.Add($"Unable to download helix logs for {build.Id} {workItem.HelixInfo.JobId}");
                 }
             }
 
