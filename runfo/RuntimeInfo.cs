@@ -271,7 +271,7 @@ internal sealed class RuntimeInfo
             {
                 if (!hadDefinition)
                 {
-                    var definitionName = TryGetDefinitionName(build, out var n) ? n : build.Definition.Id.ToString();
+                    var definitionName = GetDefinitionName(build);
                     var definitionUri = DevOpsUtil.GetBuildDefinitionUri(build);
                     Console.Write($"|[{definitionName}]({definitionUri})");
                 }
@@ -901,11 +901,13 @@ internal sealed class RuntimeInfo
             repositoryId: repository,
             branchName: $"refs/pull/{number.Value}/merge",
             repositoryType: "github");
+        builds = builds.OrderByDescending(b => b.Id);
 
-        Console.WriteLine($"Definition Build    Result       Url");
+        Console.WriteLine($"Definition           Build    Result       Url");
         foreach (var build in builds)
         {
-            Console.WriteLine($"{build.Definition.Id,-10} {build.Id,-8} {build.Result,-12} {DevOpsUtil.GetBuildUri(build)}");
+            var name = GetDefinitionName(build);
+            Console.WriteLine($"{name,-20} {build.Id,-8} {build.Result,-12} {DevOpsUtil.GetBuildUri(build)}");
         }
 
         return ExitSuccess;
@@ -1201,6 +1203,11 @@ internal sealed class RuntimeInfo
         var collection = await DotNetUtil.ListDotNetTestRunsAsync(Server, build, TestOutcome.Failed);
         return new BuildTestInfo(build, collection.SelectMany(x => x.TestCaseResults).ToList());
     }
+
+    private string GetDefinitionName(Build build) => 
+        TryGetDefinitionName(build, out var name) 
+            ? name
+            : build.Definition.Name.ToString();
 
     private bool TryGetDefinitionName(Build build, out string name)
     {
