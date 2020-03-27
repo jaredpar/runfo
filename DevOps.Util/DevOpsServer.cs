@@ -340,7 +340,7 @@ namespace DevOps.Util
             return responseBody;
         }
 
-        protected virtual Task<string> GetJsonResult(string uri, bool cacheable = false) => GetJsonResultCore(uri);
+        public virtual Task<string> GetJsonResult(string uri, bool cacheable = false) => GetJsonResultCore(uri);
 
         private async Task<T> GetJsonResult<T>(RequestBuilder builder, bool cacheable = false)
         {
@@ -422,7 +422,7 @@ namespace DevOps.Util
             return message;
         }
 
-        private Task<HttpResponseMessage> GetAsync(string uri)
+        public Task<HttpResponseMessage> GetAsync(string uri)
         {
             var message = CreateHttpRequestMessage(uri, HttpMethod.Get);
             return HttpClient.SendAsync(message);

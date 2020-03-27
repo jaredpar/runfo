@@ -78,7 +78,7 @@ namespace DevOps.Util.DotNet
         /// <summary>
         /// Parse out the UploadFileResults file to get the console and core URIs
         /// </summary>
-        public static async Task<HelixLogInfo> GetHelixLogInfoAsync(Stream resultsStream)
+        private static async Task<HelixLogInfo> GetHelixLogInfoAsync(string runClientUri, Stream resultsStream)
         {
             string consoleUri = null;
             string coreUri = null;
@@ -105,6 +105,7 @@ namespace DevOps.Util.DotNet
             }
 
             return new HelixLogInfo(
+                runClientUri: runClientUri,
                 consoleUri: consoleUri,
                 coreDumpUri: coreUri,
                 testResultsUri: testResultsUri);
@@ -120,7 +121,8 @@ namespace DevOps.Util.DotNet
                 return HelixLogInfo.Empty;
             }
 
-            return await GetHelixLogInfoAsync(stream);
+            var runClientUri = await GetRunClientUri(server, workItem.HelixInfo);
+            return await GetHelixLogInfoAsync(runClientUri, stream);
         }
 
         public static async Task<string> GetHelixConsoleText(
@@ -137,6 +139,32 @@ namespace DevOps.Util.DotNet
             {
                 return ex.Message;
             }
+        }
+
+        private static async Task<string> GetRunClientUri(
+            DevOpsServer server,
+            HelixInfo helixInfo)
+        {
+            try
+            {
+                var uri = $"https://helix.dot.net/api/2019-06-17/jobs/{helixInfo.JobId}/workitems/{helixInfo.WorkItemName}/";
+                var json = await server.GetJsonResult(uri, cacheable: true);
+                dynamic d = JObject.Parse(json);
+                foreach (dynamic log in d.Logs)
+                {
+                    if (log.Module == "run_client.py")
+                    {
+                        return log.Uri;
+                    }
+                }
+                
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+
         }
     }
 }

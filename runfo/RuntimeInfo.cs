@@ -1017,10 +1017,13 @@ internal sealed class RuntimeInfo
                     Console.WriteLine($"{GetIndent(1)}Helix Logs");
                     foreach (var (build, helixLogInfo) in await GetHelixLogs(collection, testCaseTitle))
                     {
-                        Console.WriteLine($"{GetIndent(2)} console {helixLogInfo.ConsoleUri}");
-                        Console.WriteLine($"{GetIndent(2)} core {helixLogInfo.CoreDumpUri}");
-                        Console.WriteLine($"{GetIndent(2)} test results {helixLogInfo.TestResultsUri}");
+                        Console.WriteLine($"{GetIndent(2)} run_client.py {GetUri(helixLogInfo.RunClientUri)}");
+                        Console.WriteLine($"{GetIndent(2)} console       {GetUri(helixLogInfo.ConsoleUri)}");
+                        Console.WriteLine($"{GetIndent(2)} core          {GetUri(helixLogInfo.CoreDumpUri)}");
+                        Console.WriteLine($"{GetIndent(2)} test results  {GetUri(helixLogInfo.TestResultsUri)}");
                     }
+
+                    string GetUri(string uri) => uri ?? "null";
                 }
             }
         }
@@ -1052,20 +1055,21 @@ internal sealed class RuntimeInfo
                 }
 
                 Console.WriteLine($"### Helix Logs");
-                Console.WriteLine("|Build|Pull Request|Console|Core|Test Results|");
-                Console.WriteLine("| --- | --- | --- | --- | --- |");
+                Console.WriteLine("|Build|Pull Request|Console|Core|Test Results|Run Client|");
+                Console.WriteLine("| --- | --- | --- | --- | --- | --- |");
                 foreach (var (build, helixLogInfo) in await GetHelixLogs(collection, testCaseTitle))
                 {
                     var uri = DevOpsUtil.GetBuildUri(build);
                     var pr = GetPullRequestColumn(build);
                     Console.Write($"|[#{build.Id}]({uri})|{pr}");
-                    PrintUri(helixLogInfo.ConsoleUri, "console");
+                    PrintUri(helixLogInfo.ConsoleUri, "console.log");
                     PrintUri(helixLogInfo.CoreDumpUri, "core");
                     PrintUri(helixLogInfo.TestResultsUri, "testResults.xml");
+                    PrintUri(helixLogInfo.RunClientUri, "run_client.py");
                     Console.WriteLine("|");
                 }
 
-                static void PrintUri(string uri, string defaultDisplayName)
+                static void PrintUri(string uri, string displayName)
                 {
                     if (uri is null)
                     {
@@ -1073,21 +1077,7 @@ internal sealed class RuntimeInfo
                         return;
                     }
 
-                    try
-                    {
-                        if (Uri.TryCreate(uri, UriKind.Absolute, out var realUri))
-                        {
-                            var name = Path.GetFileName(realUri.LocalPath);
-                            Console.Write($"|[{name}]({uri})");
-                            return;
-                        }
-                    }
-                    catch
-                    {
-                        // Badly formatted URI
-                    }
-
-                    Console.Write($"|[{defaultDisplayName}]({uri})");
+                    Console.Write($"|[{displayName}]({uri})");
                 }
 
                 static string EscapeAtSign(string text) => text.Replace("@", "@<!-- -->");

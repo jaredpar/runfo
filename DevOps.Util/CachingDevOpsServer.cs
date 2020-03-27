@@ -26,7 +26,7 @@ namespace DevOps.Util
             CacheDirectory = cacheDirectory;
         }
 
-        protected override async Task<string> GetJsonResult(string uri, bool cacheable = false)
+        public override async Task<string> GetJsonResult(string uri, bool cacheable = false)
         {
             if (!cacheable)
             {
