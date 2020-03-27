@@ -824,10 +824,7 @@ internal sealed class RuntimeInfo
 
             void PrintRecord(string kind, int depth, TimelineRecord record)
             {
-                if (failed && !(
-                        record.Result == TaskResult.Failed ||
-                        record.Result == TaskResult.Canceled ||
-                        record.Result == TaskResult.Abandoned))
+                if (failed && record.Result != TaskResult.Failed)
                 {
                     return;
                 }
