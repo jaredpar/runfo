@@ -1284,8 +1284,14 @@ internal sealed class RuntimeInfo
         var project = optionSet.Project ?? BuildSearchOptionSet.DefaultProject;
         var searchCount = optionSet.SearchCount ?? BuildSearchOptionSet.DefaultSearchCount;
         var repository = optionSet.Repository;
+        var branch = optionSet.Branch;
         var before = optionSet.Before;
         var after = optionSet.After;
+
+        if (branch is object && !branch.StartsWith("refs"))
+        {
+            branch = $"refs/heads/{branch}";
+        }
 
         var builds = new List<Build>();
         if (optionSet.BuildIds.Count > 0)
@@ -1293,6 +1299,12 @@ internal sealed class RuntimeInfo
             if (optionSet.Repository is object)
             {
                 OptionFailure("Cannot specify builds and repository", optionSet);
+                throw CreateBadOptionException();
+            }
+
+            if (optionSet.Branch is object)
+            {
+                OptionFailure("Cannot specify builds and branch", optionSet);
                 throw CreateBadOptionException();
             }
 
@@ -1331,6 +1343,7 @@ internal sealed class RuntimeInfo
                     searchCount,
                     definitions: new[] { definitionId },
                     repositoryId: repository,
+                    branchName: branch,
                     includePullRequests: optionSet.IncludePullRequests);
                 builds.AddRange(collection);
             }
@@ -1342,6 +1355,7 @@ internal sealed class RuntimeInfo
                 searchCount,
                 definitions: null,
                 repositoryId: repository,
+                branchName: branch,
                 includePullRequests: optionSet.IncludePullRequests);
             builds.AddRange(collection);
         }
@@ -1380,13 +1394,20 @@ internal sealed class RuntimeInfo
         }
     }
 
-    private async Task<List<Build>> ListBuildsAsync(string project, int count, int[] definitions = null, string repositoryId = null, bool includePullRequests = false)
+    private async Task<List<Build>> ListBuildsAsync(
+        string project,
+        int count,
+        int[] definitions = null,
+        string repositoryId = null,
+        string branchName = null,
+        bool includePullRequests = false)
     {
         var list = new List<Build>();
         var builds = Server.EnumerateBuildsAsync(
             project,
             definitions: definitions,
             repositoryId: repositoryId,
+            branchName: branchName,
             statusFilter: BuildStatus.Completed,
             queryOrder: BuildQueryOrder.FinishTimeDescending);
         await foreach (var build in builds)
