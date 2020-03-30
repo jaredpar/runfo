@@ -733,11 +733,13 @@ internal sealed class RuntimeInfo
         int? depth = null;
         bool issues = false;
         bool failed = false;
+        bool verbose = false;
         var optionSet = new BuildSearchOptionSet()
         {
             { "depth=", "depth to print to", (int d) => depth = d },
-            { "issues", "print issues", i => issues = i is object },
+            { "issues", "print recrods that have issues", i => issues = i is object },
             { "failed", "print records that failed", f => failed = f is object },
+            { "v|verbose", "print issues with records", v => verbose = v is object },
         };
 
         ParseAll(optionSet, args);
@@ -752,59 +754,47 @@ internal sealed class RuntimeInfo
                 return ExitFailure;
             }
 
-            DumpTimeline(Server, timeline, depth, issues, failed);
+            DumpTimeline(Server, timeline, depth, issues, failed, verbose);
         }
 
-        static void DumpTimeline(DevOpsServer server, Timeline timeline, int? depthLimit, bool issues, bool failed)
+        static void DumpTimeline(DevOpsServer server, Timeline timeline, int? depthLimit, bool issues, bool failed, bool verbose)
         {
-            var records = timeline.Records;
-            var map = new Dictionary<string, List<TimelineRecord>>();
-
-            // Each stage will have a different root
-            var roots = new List<TimelineRecord>();
-            foreach (var record in records)
+            var tree = TimelineTree.Create(timeline);
+            if (issues)
             {
-                if (string.IsNullOrEmpty(record.ParentId))
-                {
-                    roots.Add(record);
-                    continue;
-                }
-
-                if (!map.TryGetValue(record.ParentId, out var list))
-                {
-                    list = new List<TimelineRecord>();
-                    map.Add(record.ParentId, list);
-                }
-                list.Add(record);
+                tree = tree.Filter(x => x.Issues is object);
             }
 
-            foreach (var root in roots.OrderBy(x => x.Order))
+            if (failed)
             {
-                PrintRecord("Root", depth: 0, root);
-                foreach (var topRecord in timeline.Records.Where(x => x.ParentId == root.Id).OrderBy(x => x.Name))
-                {
-                    DumpRecord(topRecord, 1);
-                }
+                tree = tree.Filter(x => x.Result == TaskResult.Failed);
             }
 
-            void DumpRecord(TimelineRecord current, int depth)
+            foreach (var root in tree.Roots)
+            {
+                DumpRecord(root, 0);
+            }
+
+            void DumpRecord(TimelineTree.TimelineNode current, int depth)
             {
                 if (depth > depthLimit == true)
                 {
                     return;
                 }
 
-                PrintRecord("Record", depth, current);
-                if (issues && current.Issues is object)
+                var record = current.TimelineRecord;
+                var kind = current.ParentNode is object ? "Record" : "Root";
+                PrintRecord(kind, depth, record);
+                if ((issues || verbose) && record.Issues is object)
                 {
                     var indent = GetIndent(depth + 1);
-                    foreach (var issue in current.Issues)
+                    foreach (var issue in record.Issues)
                     {
                         Console.WriteLine($"{indent}{issue.Type} {issue.Category} {issue.Message}");
                     }
                 }
 
-                foreach (var record in records.Where(x => x.ParentId == current.Id))
+                foreach (var child in current.Children)
                 {
                     /*
                     if (record.Details is object)
@@ -817,18 +807,12 @@ internal sealed class RuntimeInfo
                     }
                     */
 
-                    DumpRecord(record, depth + 1);
+                    DumpRecord(child, depth + 1);
                 }
-
             }
 
             void PrintRecord(string kind, int depth, TimelineRecord record)
             {
-                if (failed && record.Result != TaskResult.Failed)
-                {
-                    return;
-                }
-
                 var indent = GetIndent(depth);
                 var duration = RuntimeInfoUtil.TryGetDuration(record.StartTime, record.FinishTime);
                 Console.WriteLine($"{indent}{kind} {record.Name} ({duration}) ({record.Task?.Name}) {record.Result}");

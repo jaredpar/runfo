@@ -123,5 +123,17 @@ namespace DevOps.Util
 
             return BuildArtifactKind.Unknown;
         }
+
+        public static DateTimeOffset? ConvertRestTime(string time)
+        {
+            if (time is null || !DateTime.TryParse(time, out var dateTime))
+            {
+                return null;
+            }
+
+            dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+            return new DateTimeOffset(dateTime);
+        }
+
     }
 }
