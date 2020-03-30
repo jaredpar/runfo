@@ -12,6 +12,8 @@ internal sealed class BuildSearchOptionSet : OptionSet
 
     internal List<string> Definitions { get; set; } = new List<string>();
 
+    internal List<int> ExcludedBuildIds { get; set; } = new List<int>();
+
     internal int? SearchCount { get; set; }
 
     internal string Repository { get; set; }
@@ -37,5 +39,6 @@ internal sealed class BuildSearchOptionSet : OptionSet
         Add("r|repository=", "filter to repository", r => Repository = r);
         Add("br|branch=", "filter to builds against this branch", b => Branch = b);
         Add("b|build=", "build id to print tests for", b => BuildIds.Add(b));
+        Add("e|exclude=", "exclude build ids from the results", (int b) => ExcludedBuildIds.Add(b));
     }
 }

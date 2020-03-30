@@ -1344,6 +1344,12 @@ internal sealed class RuntimeInfo
             builds.AddRange(collection);
         }
 
+        // Exclude out the builds that are complicating results
+        foreach (var excludedBuildId in optionSet.ExcludedBuildIds)
+        {
+            builds = builds.Where(x => x.Id != excludedBuildId).ToList();
+        }
+
         // When doing before / after comparisons always use QueueTime. The StartTime parameter
         // in REST refers to when the latest build attempt started, not the original. Using that
         // means the jobs returned can violate the before / after constraint. The queue time is
