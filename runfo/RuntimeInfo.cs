@@ -734,11 +734,13 @@ internal sealed class RuntimeInfo
         bool issues = false;
         bool failed = false;
         bool verbose = false;
+        string name = null;
         var optionSet = new BuildSearchOptionSet()
         {
             { "depth=", "depth to print to", (int d) => depth = d },
             { "issues", "print recrods that have issues", i => issues = i is object },
             { "failed", "print records that failed", f => failed = f is object },
+            { "n|name=", "record name to search for", n => name = n},
             { "v|verbose", "print issues with records", v => verbose = v is object },
         };
 
@@ -783,14 +785,15 @@ internal sealed class RuntimeInfo
                 }
 
                 var record = current.TimelineRecord;
-                var kind = current.ParentNode is object ? "Record" : "Root";
-                PrintRecord(kind, depth, record);
+                PrintRecord(depth, record);
                 if ((issues || verbose) && record.Issues is object)
                 {
                     var indent = GetIndent(depth + 1);
                     foreach (var issue in record.Issues)
                     {
-                        Console.WriteLine($"{indent}{issue.Type} {issue.Category} {issue.Message}");
+                        var category = issue.Category;
+                        category = string.IsNullOrEmpty(category) ? "" : $" {category}";
+                        Console.WriteLine($"{indent}{issue.Type}{category}: {issue.Message}");
                     }
                 }
 
@@ -811,11 +814,11 @@ internal sealed class RuntimeInfo
                 }
             }
 
-            void PrintRecord(string kind, int depth, TimelineRecord record)
+            void PrintRecord(int depth, TimelineRecord record)
             {
                 var indent = GetIndent(depth);
                 var duration = RuntimeInfoUtil.TryGetDuration(record.StartTime, record.FinishTime);
-                Console.WriteLine($"{indent}{kind} {record.Name} ({duration}) ({record.Task?.Name}) {record.Result}");
+                Console.WriteLine($"{indent}{record.Name} ({duration}) ({record.Task?.Name}) {record.Result}");
             }
 
             string GetIndent(int depth) => new string(' ', depth * 2);
