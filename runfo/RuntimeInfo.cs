@@ -292,7 +292,7 @@ internal sealed class RuntimeInfo
         var foundBuildCount = found.GroupBy(x => x.Build.Id).Count();
         Console.WriteLine();
         Console.WriteLine($"Evaluated {builds.Count} builds");
-        Console.WriteLine($"Impacted {foundBuildCount} bulids");
+        Console.WriteLine($"Impacted {foundBuildCount} builds");
         Console.WriteLine($"Impacted {found.Count} jobs");
 
         return ExitSuccess;
@@ -404,7 +404,7 @@ internal sealed class RuntimeInfo
         var foundBuildCount = found.GroupBy(x => x.Build.Id).Count();
         Console.WriteLine();
         Console.WriteLine($"Evaluated {builds.Count} builds");
-        Console.WriteLine($"Impacted {foundBuildCount} bulids");
+        Console.WriteLine($"Impacted {foundBuildCount} builds");
         Console.WriteLine($"Impacted {found.Count} jobs");
         Console.WriteLine($"Searched {recordCount} records");
 
