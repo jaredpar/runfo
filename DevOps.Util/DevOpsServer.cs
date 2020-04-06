@@ -258,7 +258,7 @@ namespace DevOps.Util
             builder.AppendUri("buildUri", buildUri);
             builder.AppendInt("$skip", top);
             builder.AppendInt("$top", top);
-            return GetJsonArrayResult<TestRun>(builder);
+            return GetJsonArrayResult<TestRun>(builder, cacheable: true);
         }
 
         public Task<TestRun[]> ListTestRunsAsync(
@@ -275,7 +275,23 @@ namespace DevOps.Util
                 top: top);
         }
 
-        public Task<TestCaseResult[]> ListTestResultsAsync(
+        public async Task<List<TestCaseResult>> ListTestResultsAsync(
+            string project,
+            int runId,
+            TestOutcome[] outcomes = null,
+            int? skip = null,
+            int? top = null)
+        {
+            var list = new List<TestCaseResult>();
+            await foreach (var item in EnumerateTestResultsAsync(project, runId, outcomes, skip, top).ConfigureAwait(false))
+            {
+                list.Add(item);
+            }
+
+            return list;
+        }
+
+        public async IAsyncEnumerable<TestCaseResult> EnumerateTestResultsAsync(
             string project,
             int runId,
             TestOutcome[] outcomes = null,
@@ -283,11 +299,34 @@ namespace DevOps.Util
             int? top = null)
         {
             EnsurePersonalAuthorizationTokenForTests();
-            var builder = GetBuilder(project, $"test/runs/{runId}/results");
-            builder.AppendList("outcomes", outcomes);
-            builder.AppendInt("$top", top);
-            builder.AppendInt("$skip", skip);
-            return GetJsonArrayResult<TestCaseResult>(builder, cacheable: true);
+
+            // The majority of the AzDO REST APIs use a continuation token to indicate
+            // that pagination is needed to get more data from the call. For some reason
+            // the test APIs do not do that. Instead they limit the return result to 1,000
+            // items. Hence we must query while the return is 1,000 items and update the 
+            // skip count to do pagination
+            const int pageCount = 1_000; 
+            while (true)
+            {
+                var builder = GetBuilder(project, $"test/runs/{runId}/results");
+                builder.AppendList("outcomes", outcomes);
+                builder.AppendInt("$top", top);
+                builder.AppendInt("$skip", skip);
+
+                var result = await GetJsonArrayResult<TestCaseResult>(builder, cacheable: true).ConfigureAwait(true);
+                foreach (var item in result)
+                {
+                    yield return item;
+                }
+
+                if (result?.Length < pageCount)
+                {
+                    break;
+                }
+
+                skip ??= 0;
+                skip += pageCount;
+            }
         }
 
         public Task<TestAttachment[]> GetTestCaseResultAttachmentsAsync(

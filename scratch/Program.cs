@@ -74,21 +74,17 @@ namespace QueryFun
         private static async Task Scratch()
         {
             var server = new DevOpsServer("dnceng", await GetToken("dnceng"));
-            var all = await server.ListArtifactsAsync("internal", 572208);
-            var sum = all
-                .Select(x => x.GetByteSize())
-                .Where(x => x.HasValue)
-                .Select(x => (double)x)
-                .Sum();
-            var kb = 1_024;
-            var mb = kb * kb;
-            var gb = mb * kb;
-            Console.WriteLine(gb);
-            Console.WriteLine(sum / gb);
-            foreach (var a in all)
+            var all = await server.ListTestRunsAsync("public", 585853);
+            var spanish = all.Where(x => x.Name == "Windows Desktop Spanish").First();
+            var testCases = await server.ListTestResultsAsync("public", spanish.Id);
+
+            var sorted = testCases.Select(x => (FullName: x.AutomatedTestName, Duration: TimeSpan.FromMilliseconds(x.DurationInMs))).OrderByDescending(x => x.Duration);
+            var builder = new StringBuilder();
+            foreach (var testCase in sorted)
             {
-                Console.WriteLine($"{a.Name} {a.GetByteSize()}");
+                builder.AppendLine($"{testCase.FullName},{testCase.Duration}");
             }
+            File.WriteAllText(@"p:\temp\data.csv", builder.ToString());
         }
 
         private static async Task Scratch2()
