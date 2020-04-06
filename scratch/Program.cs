@@ -75,16 +75,35 @@ namespace QueryFun
         {
             var server = new DevOpsServer("dnceng", await GetToken("dnceng"));
             var all = await server.ListTestRunsAsync("public", 585853);
+            var debug = all.Where(x => x.Name == "Windows Desktop Debug Test32").First();
             var spanish = all.Where(x => x.Name == "Windows Desktop Spanish").First();
-            var testCases = await server.ListTestResultsAsync("public", spanish.Id);
 
-            var sorted = testCases.Select(x => (FullName: x.AutomatedTestName, Duration: TimeSpan.FromMilliseconds(x.DurationInMs))).OrderByDescending(x => x.Duration);
-            var builder = new StringBuilder();
-            foreach (var testCase in sorted)
+            await Write(debug, @"p:\temp\data-debug-class.csv");
+            await Write(spanish, @"p:\temp\data-spanish-class.csv");
+
+            async Task Write(TestRun testRun, string filePath)
             {
-                builder.AppendLine($"{testCase.FullName},{testCase.Duration}");
+                var testCases = await server.ListTestResultsAsync("public", testRun.Id);
+
+                var sorted = testCases
+                    .Select(x => (ClassName: GetClassName(x), Duration:x.DurationInMs))
+                    .GroupBy(x => x.ClassName)
+                    .OrderBy(x => x.Key);
+
+                var builder = new StringBuilder();
+                foreach (var group in sorted)
+                {
+                    var time = TimeSpan.FromMilliseconds(group.Sum(x => x.Duration));
+                    builder.AppendLine($"{group.Key},{time}");
+                }
+                File.WriteAllText(filePath, builder.ToString());
             }
-            File.WriteAllText(@"p:\temp\data.csv", builder.ToString());
+
+            static string GetClassName(TestCaseResult testCaseResult)
+            {
+                var index = testCaseResult.AutomatedTestName.LastIndexOf('.');
+                return testCaseResult.AutomatedTestName.Substring(0, index - 1);
+            }
         }
 
         private static async Task Scratch2()
