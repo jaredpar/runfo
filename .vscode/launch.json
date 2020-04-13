@@ -31,6 +31,17 @@
             "stopAtEntry": true
         },
         {
+            "name": "status",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            // If you have changed target frameworks, make sure to update the program path.
+            "program": "${workspaceFolder}/Binaries/Debug/DevOps.Status/netcoreapp3.1/DevOps.Status.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false
+        },
+        {
             "name": ".NET Core Attach",
             "type": "coreclr",
             "request": "attach",

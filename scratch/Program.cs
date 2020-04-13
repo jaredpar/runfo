@@ -70,8 +70,13 @@ namespace QueryFun
 
             throw new Exception($"Could not find token with name {name}");
         }
-
         private static async Task Scratch()
+        {
+            var server = new DevOpsServer("dnceng", await GetToken("dnceng"));
+            var build = await server.GetBuildAsync("public", 593105);
+        }
+
+        private static async Task DumpTestTimesCsv()
         {
             var server = new DevOpsServer("dnceng", await GetToken("dnceng"));
             var all = await server.ListTestRunsAsync("public", 585853);
