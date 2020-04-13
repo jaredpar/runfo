@@ -38,7 +38,7 @@
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/Binaries/Debug/DevOps.Status/netcoreapp3.1/DevOps.Status.dll",
             "args": [],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/DevOps.Status",
             "stopAtEntry": false
         },
         {
