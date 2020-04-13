@@ -1,10 +1,34 @@
 ﻿@page
+@using Octokit
 @model IndexModel
 @{
     ViewData["Title"] = "Home page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+@{
+    void DumpTable(string title, List<Issue> issues)
+    {
+        <h3>@title</h3>
+        foreach (var issue in issues)
+        {
+            string typeName = "Blocking";
+            string typeClass = "badge badge-danger";
+            if (issue.Labels.Any(x => x.Name == "intermittent"))
+            {
+                typeName = "Warning";
+                typeClass = "badge badge-warning";
+            }
+            <div>
+                <span class="@typeClass">@typeName</span>
+                <span> @issue.Number </span>
+                <span><a href=@issue.HtmlUrl>@issue.Title</a></span>
+            </div>
+            <div></div>
+        }
+    }
+
+    DumpTable("Official Builds", Model.BlockingOfficial);
+    DumpTable("CI Builds", Model.BlockingNormal);
+    DumpTable("CI Optional Builds", Model.BlockingNormalOptional);
+    DumpTable("Outerloop", Model.BlockingOuterloop);
+}

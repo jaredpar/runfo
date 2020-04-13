@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
-
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+     <TargetFramework>netcoreapp3.1</TargetFramework>
+     <UserSecretsId>67c4a872-5dd7-422a-acad-fdbe907ace33</UserSecretsId>
   </PropertyGroup>
 
-
-
+  <ItemGroup>
+    <PackageReference Include="Octokit" Version="0.47.0" />
+  </ItemGroup>
 </Project>
