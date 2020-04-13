@@ -39,7 +39,18 @@
             "program": "${workspaceFolder}/Binaries/Debug/DevOps.Status/netcoreapp3.1/DevOps.Status.dll",
             "args": [],
             "cwd": "${workspaceFolder}/DevOps.Status",
-            "stopAtEntry": false
+            "stopAtEntry": false,
+            // Enable launching a web browser when ASP.NET Core starts. For more information: https://aka.ms/VSCode-CS-LaunchJson-WebBrowser
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "^\\s*Now listening on:\\s+(https?://\\S+)"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/DevOps.Status/Views"
+            }
         },
         {
             "name": ".NET Core Attach",
