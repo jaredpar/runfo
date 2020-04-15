@@ -8,7 +8,7 @@
 @{
     void DumpTable(string title, List<Issue> issues)
     {
-        <h3>@title</h3>
+        var items = new List<(string TypeName, string TypeClass, Issue Issue)>();
         foreach (var issue in issues)
         {
             string typeName = "Blocking";
@@ -18,13 +18,19 @@
                 typeName = "Warning";
                 typeClass = "badge badge-warning";
             }
-            <div>
-                <span class="@typeClass">@typeName</span>
-                <span> @issue.Number </span>
-                <span><a href=@issue.HtmlUrl>@issue.Title</a></span>
-            </div>
-            <div></div>
+            items.Add((typeName, typeClass, issue));
         }
+
+        <h3>@title</h3>
+        <ul class="list-group">
+        @foreach (var tuple in items)
+        {
+            <li class="list-group-item">
+                <span class="@tuple.TypeClass">@tuple.TypeName</span>
+                <a href=@tuple.Issue.HtmlUrl>@tuple.Issue.Title</a>
+            </li>
+        }
+        </ul>
     }
 
     DumpTable("Official Builds", Model.BlockingOfficial);
