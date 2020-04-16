@@ -1232,6 +1232,12 @@ internal sealed partial class RuntimeInfo
         optionSet.WriteOptionDescriptions(Console.Out);
     }
 
+    private static Exception OptionFailureWithException(string message, OptionSet optionSet)
+    {
+        OptionFailure(message, optionSet);
+        return CreateBadOptionException();
+    }
+
     private static void OptionFailureDefinition(string definition, OptionSet optionSet)
     {
         Console.WriteLine($"{definition} is not a valid definition name or id");
@@ -1243,6 +1249,9 @@ internal sealed partial class RuntimeInfo
 
         optionSet.WriteOptionDescriptions(Console.Out);
     }
+
+
+    private static Exception CreateBadOptionException() => new Exception("Bad option");
 
     // The logs for the failure always exist on the associated work item, not on the 
     // individual test result
@@ -1293,13 +1302,12 @@ internal sealed partial class RuntimeInfo
 
             foreach (var buildInfo in optionSet.BuildIds)
             {
-                if (!TryGetBuildId(buildInfo, out var buildProject, out var buildId))
+                if (!TryGetBuildId(optionSet, buildInfo, out var buildProject, out var buildId))
                 {
                     OptionFailure($"Cannot convert {buildInfo} to build id", optionSet);
                     throw CreateBadOptionException();
                 }
 
-                buildProject ??= project;
                 var build = await Server.GetBuildAsync(buildProject, buildId);
                 builds.Add(build);
             }
@@ -1358,23 +1366,32 @@ internal sealed partial class RuntimeInfo
         }
 
         return builds;
+    }
 
-        static Exception CreateBadOptionException() => new Exception("Bad option");
 
-        static bool TryGetBuildId(string build, out string project, out int buildId)
+    private static bool TryGetBuildId(BuildSearchOptionSet optionSet, string build, out string project, out int buildId)
+    {
+        var defaultProject = optionSet.Project ?? BuildSearchOptionSet.DefaultProject;
+        return TryGetBuildId(build, defaultProject, out project, out buildId);
+    }
+
+    private static bool TryGetBuildId(string build, string defaultProject, out string project, out int buildId)
+    {
+        project = null;
+
+        var index = build.IndexOf(':');
+        if (index >= 0)
         {
-            project = null;
-
-            var index = build.IndexOf(':');
-            if (index >= 0)
-            {
-                var both = build.Split(new[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
-                build = both[0];
-                project = both[1];
-            }
-
-            return int.TryParse(build, out buildId);
+            var both = build.Split(new[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
+            build = both[0];
+            project = both[1];
         }
+        else
+        {
+            project = defaultProject;
+        }
+
+        return int.TryParse(build, out buildId);
     }
 
     private async Task<List<Build>> ListBuildsAsync(

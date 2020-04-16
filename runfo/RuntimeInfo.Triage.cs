@@ -14,51 +14,125 @@ using static RuntimeInfoUtil;
 
 internal sealed partial class RuntimeInfo
 {
-    internal async Task<int> Triage(IEnumerable<string> args)
+    private enum Reason
     {
-        using var context = new Model.RuntimeInfoDbContext();
-        var optionSet = new BuildSearchOptionSet();
-        var extra = optionSet.Parse(args);
-        if (extra.Count == 0)
+        Azure,
+        Helix,
+        Build,
+        Test,
+        Other
+    }
+
+    internal async Task<int> Triage(List<string> args)
+    {
+        using var context = new RuntimeInfoDbContext();
+        string command;
+        if (args.Count == 0)
         {
-            optionSet.WriteOptionDescriptions(Console.Out);
-            var text = string.Join(' ', extra);
-            throw new Exception($"Extra arguments: {text}");
+            command = "list";
+        }
+        else
+        {
+            command = args[0];
+            args = args.Skip(1).ToList();
         }
 
-        switch (extra[0])
+        switch (command)
         {
             case "list":
-                await RunList();
+                await RunList(args);
+                break;
+            case "reason":
+                RunReason(args);
                 break;
             default:
-                Console.WriteLine($"Unrecognized option {extra}");
+                Console.WriteLine($"Unrecognized option {command}");
                 break;
         }
 
         return ExitSuccess;
 
-        async Task RunList()
+        async Task RunList(List<string> args)
         {
-            foreach (var build in await GetBuilds())
+            using var context = new RuntimeInfoDbContext();
+            var optionSet = new BuildSearchOptionSet();
+            ParseAll(optionSet, args);
+            foreach (var build in await GetUntriagedBuilds(optionSet, context))
             {
                 Console.WriteLine($"{build.Id} {DevOpsUtil.GetBuildUri(build)}");
             }
         }
 
-        async Task<IEnumerable<Build>> GetBuilds()
+        void RunReason(List<string> args)
         {
-            var list = await ListBuildsAsync(optionSet);
-            return list.Where(x => !IsTriaged(x));
+            string reason = null;
+            string issue = null;
+            string buildInfo = null;
+            var optionSet = new OptionSet()
+            {
+                { "r|reason=", "Azure,Helix,Build,Test,Other", (string r) => reason = r },
+                { "i|issue=", "issue uri", (string i) => issue = i },
+                { "b|build=", "build to add a reason", (string b) => buildInfo = b},
+            };
+
+            ParseAll(optionSet, args);
+
+            if (reason == null || !Enum.TryParse<Reason>(reason, ignoreCase: true, out var reasonValue))
+            {
+                throw OptionFailureWithException("Need to provide a reason", optionSet);
+            }
+
+            if (!TryGetBuildId(buildInfo, BuildSearchOptionSet.DefaultProject, out var project, out var buildId))
+            {
+                throw OptionFailureWithException("Need a valid build", optionSet);
+            }
+
+            var triageBuild = GetOrCreateTriageBuild(project, buildId);
+            var triageReason = new TriageReason()
+            {
+                Reason = reasonValue.ToString(),
+                IssueUri = issue,
+                TriageBuildId = triageBuild.Id,
+                TriageBuild = triageBuild,
+            };
+            context.TriageReasons.Add(triageReason);
+            context.SaveChanges();
         }
 
-        bool IsTriaged(Build build)
+        async Task<IEnumerable<Build>> GetUntriagedBuilds(BuildSearchOptionSet optionSet, RuntimeInfoDbContext context)
+        {
+            var list = await ListBuildsAsync(optionSet);
+            return list.Where(x => !IsTriaged(x, context));
+        }
+
+        bool IsTriaged(Build build, RuntimeInfoDbContext context)
         {
             var key = RuntimeInfoModelUtil.GetTriageBuildKey(build);
             var triagedBuild = context.TriageBuilds
                 .Where(x => x.Id == key)
                 .FirstOrDefault();
             return triagedBuild?.IsComplete == true;
+        }
+
+        TriageBuild GetOrCreateTriageBuild(string project, int buildId)
+        {
+            var organization = Server.Organization;
+            var key = RuntimeInfoModelUtil.GetTriageBuildKey(organization, project, buildId);
+            var triageBuild = context.TriageBuilds.SingleOrDefault(x => x.Id == key);
+            if (triageBuild is null)
+            {
+                triageBuild = new TriageBuild()
+                {
+                    Id = key,
+                    Organization = organization,
+                    Project = project,
+                    BuildNumber = buildId
+                };
+                context.TriageBuilds.Add(triageBuild);
+                context.SaveChanges();
+            }
+
+            return triageBuild;
         }
     }
 }

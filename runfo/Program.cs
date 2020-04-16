@@ -84,7 +84,7 @@ public class Program
                 case "search-buildlog":
                     return await runtimeInfo.PrintSearchBuildLogs(commandArgs);
                 case "triage":
-                    return await runtimeInfo.Triage(commandArgs);
+                    return await runtimeInfo.Triage(commandArgs.ToList());
                 case "yml":
                 case "yaml":
                     return await runtimeInfo.PrintBuildYaml(commandArgs);
