@@ -901,6 +901,7 @@ internal sealed class RuntimeInfo
     {
         bool verbose = false;
         bool markdown = false;
+        bool includeAllTests = false;
         string name = null;
         string grouping = "tests";
         var optionSet = new BuildSearchOptionSet()
@@ -908,12 +909,13 @@ internal sealed class RuntimeInfo
             { "g|grouping=", "output grouping: tests*, builds, jobs", g => grouping = g },
             { "m|markdown", "output in markdown", m => markdown = m  is object },
             { "n|name=", "name regex to match in results", n => name = n },
+            { "at|all-tests", "output in markdown", at => includeAllTests = at is object },
             { "v|verbose", "verobes output", d => verbose = d is object },
         };
 
         ParseAll(optionSet, args);
 
-        var collection = await ListBuildTestInfosAsync(optionSet);
+        var collection = await ListBuildTestInfosAsync(optionSet, includeAllTests);
         await PrintFailureInfo(collection, grouping, name, verbose, markdown);
         return ExitSuccess;
     }
@@ -1165,19 +1167,7 @@ internal sealed class RuntimeInfo
         var list = await RuntimeInfoUtil.ToList(query);
         return list;
     }
-
-    private async Task<BuildTestInfo> GetBuildTestInfoAsync(string project, int buildId)
-    {
-        var build = await Server.GetBuildAsync(project, buildId);
-        return await GetBuildTestInfoAsync(build);
-    }
-
-    private async Task<BuildTestInfo> GetBuildTestInfoAsync(Build build)
-    {
-        var collection = await DotNetUtil.ListDotNetTestRunsAsync(Server, build, TestOutcome.Failed);
-        return new BuildTestInfo(build, collection.SelectMany(x => x.TestCaseResults).ToList());
-    }
-
+    
     private string GetDefinitionName(Build build) => 
         TryGetDefinitionName(build, out var name) 
             ? name
@@ -1424,14 +1414,20 @@ internal sealed class RuntimeInfo
         return list;
     }
 
-    private async Task<BuildTestInfoCollection> ListBuildTestInfosAsync(BuildSearchOptionSet optionSet)
+    private async Task<BuildTestInfoCollection> ListBuildTestInfosAsync(BuildSearchOptionSet optionSet, bool includeAllTests = false)
     {
+        TestOutcome[] outcomes = includeAllTests
+            ? null
+            : new[] { TestOutcome.Failed };
+
         var list = new List<BuildTestInfo>();
         foreach (var build in await ListBuildsAsync(optionSet))
         {
             try
             {
-                list.Add(await GetBuildTestInfoAsync(build));
+                var collection = await DotNetUtil.ListDotNetTestRunsAsync(Server, build, outcomes);
+                var buildTestInfo = new BuildTestInfo(build, collection.SelectMany(x => x.TestCaseResults).ToList());
+                list.Add(buildTestInfo);
             }
             catch (Exception ex)
             {
