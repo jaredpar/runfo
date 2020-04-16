@@ -83,6 +83,8 @@ public class Program
                     return await runtimeInfo.PrintSearchHelix(commandArgs);
                 case "search-buildlog":
                     return await runtimeInfo.PrintSearchBuildLogs(commandArgs);
+                case "triage":
+                    return await runtimeInfo.Triage(commandArgs);
                 case "yml":
                 case "yaml":
                     return await runtimeInfo.PrintBuildYaml(commandArgs);

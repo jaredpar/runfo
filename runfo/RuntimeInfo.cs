@@ -11,7 +11,7 @@ using DevOps.Util.DotNet;
 using Mono.Options;
 using static RuntimeInfoUtil;
 
-internal sealed class RuntimeInfo
+internal sealed partial class RuntimeInfo
 {
     internal static readonly (string BuildName, string Project, int DefinitionId)[] BuildDefinitions = new[]
         {
