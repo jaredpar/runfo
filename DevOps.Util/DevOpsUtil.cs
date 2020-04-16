@@ -11,6 +11,12 @@ namespace DevOps.Util
 {
     public static class DevOpsUtil
     {
+        public static BuildKey GetBuildKey(Build build)
+        {
+            var organization = GetOrganization(build);
+            return new BuildKey(organization, build.Project.Name, build.Id);
+        }
+
         public static Uri GetBuildDefinitionUri(string organization, string project, int definitionId)
         {
             var uri = $"https://{organization}.visualstudio.com/{project}/_build?definitionId={definitionId}";
