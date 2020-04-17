@@ -24,7 +24,7 @@ public class Program
             args = optionSet.Parse(args).ToArray();
             if (token is null)
             {
-                token = await GetPersonalAccessTokenFromFile();
+                token = await GetPersonalAccessTokenFromFile("dnceng");
             }
 
             var runtimeInfo = new RuntimeInfo(token, cacheable: !disableCache);
@@ -121,7 +121,7 @@ public class Program
     }
 
     // TODO: need to make this usable by others
-    private static async Task<string> GetPersonalAccessTokenFromFile()
+    internal static async Task<string> GetPersonalAccessTokenFromFile(string name)
     {
         try
         {
@@ -129,7 +129,7 @@ public class Program
             foreach (var line in lines)
             {
                 var split = line.Split(':', count: 2);
-                if ("dnceng" == split[0])
+                if (name == split[0])
                 {
                     return split[1];
                 }

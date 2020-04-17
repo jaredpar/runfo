@@ -10,7 +10,7 @@ internal static class RuntimeInfoUtil
     internal const int ExitSuccess = 0;
     internal const int ExitFailure = 1;
 
-    internal static readonly string CacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "runfo");
+    internal static readonly string CacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "runfo", "json");
 
     internal static void ParseAll(OptionSet optionSet, IEnumerable<string> args)
     {
