@@ -10,12 +10,12 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/bin/Debug/netcoreapp3.1/runfo.dll",
-            "args": ["search-timeline", "-b", "585548", "-v", "General Extraction failed for file"],
+            "program": "${workspaceFolder}/runfo/bin/Debug/netcoreapp3.1/runfo.dll",
+            "args": ["triage", "auto"],
             "cwd": "${workspaceFolder}/runfo",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
-            "stopAtEntry": true
+            "stopAtEntry": false,
         },
         {
             "name": "scratch",
@@ -23,7 +23,7 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFoldern}/bin/Debug/netcoreapp3.1/scratch.dll",
+            "program": "${workspaceFoldern}/scratch/bin/Debug/netcoreapp3.1/scratch.dll",
             "args": [],
             "cwd": "${workspaceFolder}/scratch",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
@@ -36,7 +36,7 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/bin/Debug/netcoreapp3.1/DevOps.Status.dll",
+            "program": "${workspaceFolder}/DevOps.Status/bin/Debug/netcoreapp3.1/DevOps.Status.dll",
             "args": [],
             "cwd": "${workspaceFolder}/DevOps.Status",
             "stopAtEntry": false,

@@ -13,6 +13,8 @@ using static RuntimeInfoUtil;
 
 internal sealed partial class RuntimeInfo
 {
+    // TODO: May want to hoist this into another type along with the default for
+    // the project (currently lives on BuildSearchOptionSet)
     internal static readonly (string BuildName, string Project, int DefinitionId)[] BuildDefinitions = new[]
         {
             ("runtime", "public", 686),
@@ -30,13 +32,16 @@ internal sealed partial class RuntimeInfo
             ("winforms", "public", 267),
         };
 
-    internal DevOpsServer Server;
+    internal DevOpsServer Server { get; }
+
+    internal RuntimeQueryUtil QueryUtil { get; }
 
     internal RuntimeInfo(string personalAccessToken = null, bool cacheable = false)
     {
         Server = cacheable
             ? new CachingDevOpsServer(RuntimeInfoUtil.CacheDirectory, "dnceng", personalAccessToken)
             : new DevOpsServer("dnceng", personalAccessToken);
+        QueryUtil = new RuntimeQueryUtil(Server);
     }
 
     internal async Task PrintBuildResults(IEnumerable<string> args)
@@ -52,7 +57,7 @@ internal sealed partial class RuntimeInfo
         var data = BuildDefinitions
             .AsParallel()
             .AsOrdered()
-            .Select(async t => (t.BuildName, t.DefinitionId, await ListBuildsAsync(t.Project, count, new[] { t.DefinitionId })));
+            .Select(async t => (t.BuildName, t.DefinitionId, await QueryUtil.ListBuildsAsync(t.Project, count, new[] { t.DefinitionId })));
 
         foreach (var task in data)
         {
@@ -130,7 +135,7 @@ internal sealed partial class RuntimeInfo
 
         var badLogList = new List<string>();
         var textRegex = new Regex(text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        var collection = await ListBuildTestInfosAsync(optionSet);
+        var collection = await QueryUtil.ListBuildTestInfosAsync(optionSet);
         var found = collection
             .AsParallel()
             .Select(async b => (b.Build, await SearchBuild(b)));
@@ -232,19 +237,7 @@ internal sealed partial class RuntimeInfo
         }
 
         var hadDefinition = optionSet.Definitions.Any();
-        var builds = await ListBuildsAsync(optionSet);
-        var textRegex = new Regex(text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        Regex nameRegex = null;
-        if (name is object)
-        {
-            nameRegex = new Regex(name, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        }
-
-        Regex taskRegex = null;
-        if (task is object)
-        {
-            taskRegex = new Regex(task, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        }
+        var builds = await QueryUtil.ListBuildsAsync(optionSet);
 
         if (markdown)
         {
@@ -263,7 +256,7 @@ internal sealed partial class RuntimeInfo
             Console.WriteLine("|---|---|---|");
         }
 
-        var found = await SearchTimelineIssues(Server, builds, nameRegex, taskRegex, textRegex);
+        var found = await QueryUtil.SearchTimelineAsync(builds, text, name, task);
         foreach (var tuple in found)
         {
             var build = tuple.Build;
@@ -297,52 +290,6 @@ internal sealed partial class RuntimeInfo
 
         return ExitSuccess;
 
-        async Task<List<(Build Build, TimelineRecord TimelineRecord, string Line)>> SearchTimelineIssues(
-            DevOpsServer server,
-            IEnumerable<Build> builds,
-            Regex nameRegex,
-            Regex taskRegex,
-            Regex textRegex)
-        {
-            var list = new List<(Build Build, TimelineRecord TimelineRecord, string Line)>();
-            foreach (var build in builds)
-            {
-                var timeline = await server.GetTimelineAsync(build.Project.Name, build.Id);
-                if (timeline is null)
-                {
-                    continue;
-                }
-
-                var records = timeline.Records
-                    .Where(r => nameRegex is null || nameRegex.IsMatch(r.Name))
-                    .Where(r => r.Task is null || taskRegex is null || taskRegex.IsMatch(r.Task.Name));
-                foreach (var record in records)
-                {
-                    if (record.Issues is null)
-                    {
-                        continue;
-                    }
-
-                    string line = null;
-                    foreach (var issue in record.Issues)
-                    {
-                        if (textRegex.IsMatch(issue.Message))
-                        {
-                            line = issue.Message;
-                            break;
-                        }
-                    }
-
-                    if (line is object)
-                    {
-                        list.Add((build, record, line));
-                    }
-                }
-            }
-
-            return list;
-        }
-
     }
 
     internal async Task<int> PrintSearchBuildLogs(IEnumerable<string> args)
@@ -368,7 +315,7 @@ internal sealed partial class RuntimeInfo
             return ExitFailure;
         }
 
-        var builds = await ListBuildsAsync(optionSet);
+        var builds = await QueryUtil.ListBuildsAsync(optionSet);
         var textRegex = new Regex(text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
         Regex nameRegex = null;
         if (name is object)
@@ -546,7 +493,7 @@ internal sealed partial class RuntimeInfo
 
         ParseAll(optionSet, args);
 
-        foreach (var buildTestInfo in await ListBuildTestInfosAsync(optionSet))
+        foreach (var buildTestInfo in await QueryUtil.ListBuildTestInfosAsync(optionSet))
         {
             var list = await GetHelixLogsAsync(buildTestInfo, includeConsoleText: verbose);
             Console.WriteLine("Console Logs");
@@ -621,7 +568,7 @@ internal sealed partial class RuntimeInfo
         var optionSet = new BuildSearchOptionSet();
         ParseAll(optionSet, args);
 
-        foreach (var build in await ListBuildsAsync(optionSet))
+        foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
         {
             var uri = DevOpsUtil.GetBuildUri(build);
             var prId = DevOpsUtil.GetPullRequestNumber(build);
@@ -662,7 +609,7 @@ internal sealed partial class RuntimeInfo
         async Task<List<(Build Build, List<BuildArtifact> artifacts)>> GetInfo()
         {
             var list = new List<(Build Build, List<BuildArtifact> artifacts)>();
-            foreach (var build in await ListBuildsAsync(optionSet))
+            foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
             {
                 var artifacts = await Server.ListArtifactsAsync(build.Project.Name, build.Id);
                 list.Add((build, artifacts));
@@ -746,7 +693,7 @@ internal sealed partial class RuntimeInfo
 
         ParseAll(optionSet, args);
 
-        foreach (var build in await ListBuildsAsync(optionSet))
+        foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
         {
             Console.WriteLine(DevOpsUtil.GetBuildUri(build));
             var timeline = await Server.GetTimelineAsync(build.Project.Name, build.Id);
@@ -832,7 +779,7 @@ internal sealed partial class RuntimeInfo
         var optionSet = new BuildSearchOptionSet();
        ParseAll(optionSet, args);
 
-        foreach (var build in await ListBuildsAsync(optionSet))
+        foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
         {
             var log = await Server.GetBuildLogAsync(build.Project.Name, build.Id, logId: 1);
             Console.WriteLine(log);
@@ -859,9 +806,9 @@ internal sealed partial class RuntimeInfo
         IEnumerable<int> definitions = null;
         if (definition is object)
         {
-            if (!TryGetDefinitionId(definition, out string definitionProject, out int definitionId))
+            if (!RuntimeQueryUtil.TryGetDefinitionId(definition, out string definitionProject, out int definitionId))
             {
-                OptionFailureDefinition(definition, optionSet);
+                OptionUtil.OptionFailureDefinition(definition, optionSet);
                 return ExitFailure;
             }
 
@@ -915,7 +862,7 @@ internal sealed partial class RuntimeInfo
 
         ParseAll(optionSet, args);
 
-        var collection = await ListBuildTestInfosAsync(optionSet, includeAllTests);
+        var collection = await QueryUtil.ListBuildTestInfosAsync(optionSet, includeAllTests);
         await PrintFailureInfo(collection, grouping, name, verbose, markdown);
         return ExitSuccess;
     }
@@ -1190,270 +1137,9 @@ internal sealed partial class RuntimeInfo
         return false;
     }
 
-    private bool TryGetDefinitionId(string definition, out string project, out int definitionId)
-    {
-        definitionId = 0;
-        project = null;
-
-        if (definition is null)
-        {
-            return false;
-        }
-
-        var index = definition.IndexOf(':');
-        if (index >= 0)
-        {
-            var both = definition.Split(new[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
-            definition = both[0];
-            project = both[1];
-        }
-
-        if (int.TryParse(definition, out definitionId))
-        {
-            return true;
-        }
-
-        foreach (var (name, p, id) in BuildDefinitions)
-        {
-            if (name == definition)
-            {
-                definitionId = id;
-                project = p;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static void OptionFailure(string message, OptionSet optionSet)
-    {
-        Console.WriteLine(message);
-        optionSet.WriteOptionDescriptions(Console.Out);
-    }
-
-    private static Exception OptionFailureWithException(string message, OptionSet optionSet)
-    {
-        OptionFailure(message, optionSet);
-        return CreateBadOptionException();
-    }
-
-    private static void OptionFailureDefinition(string definition, OptionSet optionSet)
-    {
-        Console.WriteLine($"{definition} is not a valid definition name or id");
-        Console.WriteLine("Supported definition names");
-        foreach (var (name, _, id) in BuildDefinitions)
-        {
-            Console.WriteLine($"{id}\t{name}");
-        }
-
-        optionSet.WriteOptionDescriptions(Console.Out);
-    }
-
-
-    private static Exception CreateBadOptionException() => new Exception("Bad option");
-
     // The logs for the failure always exist on the associated work item, not on the 
     // individual test result
     private async Task<HelixLogInfo> GetHelixLogInfoAsync(HelixWorkItem workItem) => await HelixUtil.GetHelixLogInfoAsync(Server, workItem);
 
     private static string GetIndent(int level) => level == 0 ? string.Empty : new string(' ', level * 2);
-
-    private async Task<List<Build>> ListBuildsAsync(BuildSearchOptionSet optionSet)
-    {
-        if (optionSet.BuildIds.Count > 0 && optionSet.Definitions.Count > 0)
-        {
-            OptionFailure("Cannot specify builds and definitions", optionSet);
-            throw CreateBadOptionException();
-        }
-
-        var project = optionSet.Project ?? BuildSearchOptionSet.DefaultProject;
-        var searchCount = optionSet.SearchCount ?? BuildSearchOptionSet.DefaultSearchCount;
-        var repository = optionSet.Repository;
-        var branch = optionSet.Branch;
-        var before = optionSet.Before;
-        var after = optionSet.After;
-
-        if (branch is object && !branch.StartsWith("refs"))
-        {
-            branch = $"refs/heads/{branch}";
-        }
-
-        var builds = new List<Build>();
-        if (optionSet.BuildIds.Count > 0)
-        {
-            if (optionSet.Repository is object)
-            {
-                OptionFailure("Cannot specify builds and repository", optionSet);
-                throw CreateBadOptionException();
-            }
-
-            if (optionSet.Branch is object)
-            {
-                OptionFailure("Cannot specify builds and branch", optionSet);
-                throw CreateBadOptionException();
-            }
-
-            if (optionSet.SearchCount is object)
-            {
-                OptionFailure("Cannot specify builds and count", optionSet);
-                throw CreateBadOptionException();
-            }
-
-            foreach (var buildInfo in optionSet.BuildIds)
-            {
-                if (!TryGetBuildId(optionSet, buildInfo, out var buildProject, out var buildId))
-                {
-                    OptionFailure($"Cannot convert {buildInfo} to build id", optionSet);
-                    throw CreateBadOptionException();
-                }
-
-                var build = await Server.GetBuildAsync(buildProject, buildId);
-                builds.Add(build);
-            }
-        }
-        else if (optionSet.Definitions.Count > 0)
-        {
-            foreach (var definition in optionSet.Definitions)
-            {
-                if (!TryGetDefinitionId(definition, out var definitionProject, out var definitionId))
-                {
-                    OptionFailureDefinition(definition, optionSet);
-                    throw CreateBadOptionException();
-                }
-
-                definitionProject ??= project;
-                var collection = await ListBuildsAsync(
-                    definitionProject,
-                    searchCount,
-                    definitions: new[] { definitionId },
-                    repositoryId: repository,
-                    branchName: branch,
-                    includePullRequests: optionSet.IncludePullRequests);
-                builds.AddRange(collection);
-            }
-        }
-        else
-        {
-            var collection = await ListBuildsAsync(
-                project,
-                searchCount,
-                definitions: null,
-                repositoryId: repository,
-                branchName: branch,
-                includePullRequests: optionSet.IncludePullRequests);
-            builds.AddRange(collection);
-        }
-
-        // Exclude out the builds that are complicating results
-        foreach (var excludedBuildId in optionSet.ExcludedBuildIds)
-        {
-            builds = builds.Where(x => x.Id != excludedBuildId).ToList();
-        }
-
-        // When doing before / after comparisons always use QueueTime. The StartTime parameter
-        // in REST refers to when the latest build attempt started, not the original. Using that
-        // means the jobs returned can violate the before / after constraint. The queue time is
-        // consistent though and can be reliably used for filtering
-        if (before.HasValue)
-        {
-            builds = builds.Where(b => b.GetQueueTime() is DateTimeOffset d && d <= before.Value).ToList();
-        }
-
-        if (after.HasValue)
-        {
-            builds = builds.Where(b => b.GetQueueTime() is DateTimeOffset d && d >= after.Value).ToList();
-        }
-
-        return builds;
-    }
-
-
-    private static bool TryGetBuildId(BuildSearchOptionSet optionSet, string build, out string project, out int buildId)
-    {
-        var defaultProject = optionSet.Project ?? BuildSearchOptionSet.DefaultProject;
-        return TryGetBuildId(build, defaultProject, out project, out buildId);
-    }
-
-    private static bool TryGetBuildId(string build, string defaultProject, out string project, out int buildId)
-    {
-        project = null;
-
-        var index = build.IndexOf(':');
-        if (index >= 0)
-        {
-            var both = build.Split(new[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
-            build = both[0];
-            project = both[1];
-        }
-        else
-        {
-            project = defaultProject;
-        }
-
-        return int.TryParse(build, out buildId);
-    }
-
-    private async Task<List<Build>> ListBuildsAsync(
-        string project,
-        int count,
-        int[] definitions = null,
-        string repositoryId = null,
-        string branchName = null,
-        bool includePullRequests = false)
-    {
-        var list = new List<Build>();
-        var builds = Server.EnumerateBuildsAsync(
-            project,
-            definitions: definitions,
-            repositoryId: repositoryId,
-            branchName: branchName,
-            statusFilter: BuildStatus.Completed,
-            queryOrder: BuildQueryOrder.FinishTimeDescending);
-        await foreach (var build in builds)
-        {
-            var isUserDriven = 
-                build.Reason == BuildReason.PullRequest || 
-                build.Reason == BuildReason.Manual;
-            if (isUserDriven && !includePullRequests)
-            {
-                continue;
-            }
-
-            list.Add(build);
-
-            if (list.Count >= count)
-            {
-                break;
-            }
-        }
-
-        return list;
-    }
-
-    private async Task<BuildTestInfoCollection> ListBuildTestInfosAsync(BuildSearchOptionSet optionSet, bool includeAllTests = false)
-    {
-        TestOutcome[] outcomes = includeAllTests
-            ? null
-            : new[] { TestOutcome.Failed };
-
-        var list = new List<BuildTestInfo>();
-        foreach (var build in await ListBuildsAsync(optionSet))
-        {
-            try
-            {
-                var collection = await DotNetUtil.ListDotNetTestRunsAsync(Server, build, outcomes);
-                var buildTestInfo = new BuildTestInfo(build, collection.SelectMany(x => x.TestCaseResults).ToList());
-                list.Add(buildTestInfo);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Cannot get test info for {build.Id} {DevOpsUtil.GetBuildUri(build)}");
-                Console.WriteLine(ex.Message);
-            }
-        }
-
-        return new BuildTestInfoCollection(new ReadOnlyCollection<BuildTestInfo>(list));
-    }
-
 }

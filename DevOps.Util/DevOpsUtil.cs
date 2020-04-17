@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace DevOps.Util
@@ -15,6 +16,20 @@ namespace DevOps.Util
         {
             var organization = GetOrganization(build);
             return new BuildKey(organization, build.Project.Name, build.Id);
+        }
+
+        public static bool TryParseBuildKey(Uri uri, out BuildKey buildKey)
+        {
+            var regex = new Regex(@"https://dev.azure.com/(\w+)/(\w+)/.*buildId=(\d+)");
+            var match = regex.Match(uri.ToString());
+            if (match.Success && int.TryParse(match.Groups[3].Value, out var buildId))
+            {
+                buildKey = new BuildKey(match.Groups[1].Value, match.Groups[2].Value, buildId);
+                return true;
+            }
+
+            buildKey = default;
+            return false;
         }
 
         public static Uri GetBuildDefinitionUri(string organization, string project, int definitionId)

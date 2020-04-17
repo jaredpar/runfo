@@ -11,21 +11,13 @@ using DevOps.Util.DotNet;
 using Mono.Options;
 using Model;
 using static RuntimeInfoUtil;
+using static OptionUtil;
 
 internal sealed partial class RuntimeInfo
 {
-    private enum Reason
-    {
-        Azure,
-        Helix,
-        Build,
-        Test,
-        Other
-    }
-
     internal async Task<int> Triage(List<string> args)
     {
-        using var context = new RuntimeInfoDbContext();
+        using var triageUtil = new TriageUtil();
         string command;
         if (args.Count == 0)
         {
@@ -45,6 +37,12 @@ internal sealed partial class RuntimeInfo
             case "reason":
                 RunReason(args);
                 break;
+            case "complete":
+                RunComplete(args);
+                break;
+            case "auto":
+                await RunAutoTriage(args);
+                break;
             default:
                 Console.WriteLine($"Unrecognized option {command}");
                 break;
@@ -54,13 +52,41 @@ internal sealed partial class RuntimeInfo
 
         async Task RunList(List<string> args)
         {
-            using var context = new RuntimeInfoDbContext();
-            var optionSet = new BuildSearchOptionSet();
-            ParseAll(optionSet, args);
-            foreach (var build in await GetUntriagedBuilds(optionSet))
+            var showAll = false;
+            var optionSet = new BuildSearchOptionSet()
             {
-                Console.WriteLine($"{build.Id} {DevOpsUtil.GetBuildUri(build)}");
+                { "a|all", "show all builds", a => showAll = a is object },
+            };
+
+            ParseAll(optionSet, args);
+            foreach (var build in await GetUntriagedBuilds(optionSet, showAll))
+            {
+                var key = RuntimeInfoModelUtil.GetTriageBuildKey(build);
+                var reasons = triageUtil.Context.TriageReasons
+                    .Where(x => x.TriageBuildId == key)
+                    .Select(x => x.Reason.ToString());
+                var reason = string.Join(',', reasons);
+
+                Console.WriteLine($"{DevOpsUtil.GetBuildUri(build)} {reason}");
             }
+        }
+
+        void RunComplete(List<string> args)
+        {
+            var optionSet = new TriageOptionSet();
+            ParseAll(optionSet, args);
+            foreach (var key in ListBuildKeys(optionSet))
+            {
+                var triageBuild = triageUtil.GetOrCreateTriageBuild(key);
+                triageBuild.IsComplete = true;
+            }
+            triageUtil.Context.SaveChanges();
+        }
+
+        async Task RunAutoTriage(List<string> args)
+        {
+            var autoTriageUtil = new AutoTriageUtil(Server);
+            await autoTriageUtil.Triage();
         }
 
         void RunReason(List<string> args)
@@ -75,19 +101,19 @@ internal sealed partial class RuntimeInfo
 
             ParseAll(optionSet, args);
 
-            if (reason == null || !Enum.TryParse<Reason>(reason, ignoreCase: true, out var reasonValue))
+            if (reason == null || !Enum.TryParse<TriageReasonItem>(reason, ignoreCase: true, out var reasonValue))
             {
                 throw OptionFailureWithException("Need to provide a reason", optionSet);
             }
 
             foreach (var key in ListBuildKeys(optionSet))
             {
-                if (IsReason(key, reason,  issue))
+                if (triageUtil.IsReason(key, reason,  issue))
                 {
                     continue;
                 }
 
-                var triageBuild = GetOrCreateTriageBuild(key);
+                var triageBuild = triageUtil.GetOrCreateTriageBuild(key);
                 var triageReason = new TriageReason()
                 {
                     Reason = reasonValue.ToString(),
@@ -96,53 +122,23 @@ internal sealed partial class RuntimeInfo
                     TriageBuild = triageBuild,
                 };
 
-                context.TriageReasons.Add(triageReason);
+                triageUtil.Context.TriageReasons.Add(triageReason);
             }
-            context.SaveChanges();
+            triageUtil.Context.SaveChanges();
         }
 
-        async Task<IEnumerable<Build>> GetUntriagedBuilds(BuildSearchOptionSet optionSet)
+        async Task<IEnumerable<Build>> GetUntriagedBuilds(BuildSearchOptionSet optionSet, bool showAll = false)
         {
-            var list = await ListBuildsAsync(optionSet);
-            return list.Where(x => !IsTriaged(x));
-        }
-
-        bool IsReason(BuildKey key, string reason, string issue)
-        {
-            var triageKey = RuntimeInfoModelUtil.GetTriageBuildKey(key);
-            return context.TriageReasons
-                .Where(x => x.TriageBuildId == triageKey && x.Reason == reason && x.IssueUri == issue)
-                .Any();
-        }
-
-        bool IsTriaged(Build build)
-        {
-            var key = RuntimeInfoModelUtil.GetTriageBuildKey(build);
-            var triagedBuild = context.TriageBuilds
-                .Where(x => x.Id == key)
-                .FirstOrDefault();
-            return triagedBuild?.IsComplete == true;
-        }
-
-        TriageBuild GetOrCreateTriageBuild(BuildKey key)
-        {
-            var triageKey = RuntimeInfoModelUtil.GetTriageBuildKey(key);
-            var triageBuild = context.TriageBuilds.SingleOrDefault(x => x.Id == triageKey);
-            if (triageBuild is null)
+            IEnumerable<Build> list = await QueryUtil.ListBuildsAsync(optionSet);
+            list = list.Where(x => x.Result != BuildResult.Succeeded);
+            if (!showAll)
             {
-                triageBuild = new TriageBuild()
-                {
-                    Id = triageKey,
-                    Organization = key.Organization,
-                    Project = key.Project,
-                    BuildNumber = key.Id
-                };
-                context.TriageBuilds.Add(triageBuild);
-                context.SaveChanges();
+                list = list.Where(x => triageUtil.IsTriaged(x));
             }
 
-            return triageBuild;
+            return list;
         }
+
     }
 
     private List<BuildKey> ListBuildKeys(TriageOptionSet optionSet)
@@ -150,12 +146,24 @@ internal sealed partial class RuntimeInfo
         var list = new List<BuildKey>();
         foreach (var build in optionSet.BuildIds)
         {
-            if (!TryGetBuildId(build, TriageOptionSet.DefaultProject, out var project, out var buildId))
+            if (!RuntimeQueryUtil.TryGetBuildId(build, TriageOptionSet.DefaultProject, out var project, out var buildId))
             {
                 throw OptionFailureWithException("Need a valid build", optionSet);
             }
 
             list.Add(new BuildKey(Server.Organization, project, buildId));
+        }
+
+        foreach (var filePath in optionSet.FilePaths)
+        {
+            foreach (var line in File.ReadAllLines(filePath))
+            {
+                if (Uri.TryCreate(line.Trim(), UriKind.Absolute, out var uri) &&
+                    DevOpsUtil.TryParseBuildKey(uri, out var buildKey))
+                {
+                    list.Add(buildKey);
+                }
+            }
         }
 
         return list;
