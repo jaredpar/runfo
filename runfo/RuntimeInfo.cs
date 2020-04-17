@@ -910,7 +910,7 @@ internal sealed class RuntimeInfo
             { "m|markdown", "output in markdown", m => markdown = m  is object },
             { "n|name=", "name regex to match in results", n => name = n },
             { "at|all-tests", "output in markdown", at => includeAllTests = at is object },
-            { "v|verbose", "verobes output", d => verbose = d is object },
+            { "v|verbose", "verbose output", d => verbose = d is object },
         };
 
         ParseAll(optionSet, args);
