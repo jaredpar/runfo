@@ -11,6 +11,23 @@ using DevOps.Util;
 using DevOps.Util.DotNet;
 using static OptionUtil;
 
+internal class SearchTimelineResult
+{
+    internal Build Build { get; }
+    internal TimelineRecord TimelineRecord { get; }
+    internal string Line { get; }
+
+    internal SearchTimelineResult(
+        Build build,
+        TimelineRecord timelineRecord,
+        string line)
+    {
+        Build = build;
+        TimelineRecord = timelineRecord;
+        Line = line;
+    }
+}
+
 internal sealed class RuntimeQueryUtil
 {
     internal DevOpsServer Server { get; }
@@ -20,7 +37,7 @@ internal sealed class RuntimeQueryUtil
         Server = server;
     }
 
-    internal Task<List<(Build Build, TimelineRecord TimelineRecord, string Line)>> SearchTimelineAsync(
+    internal Task<List<SearchTimelineResult>> SearchTimelineAsync(
         IEnumerable<Build> builds,
         string text,
         string? name = null,
@@ -43,13 +60,13 @@ internal sealed class RuntimeQueryUtil
         return SearchTimelineAsync(builds, textRegex, nameRegex, taskRegex);
     }
 
-    internal async Task<List<(Build Build, TimelineRecord TimelineRecord, string Line)>> SearchTimelineAsync(
+    internal async Task<List<SearchTimelineResult>> SearchTimelineAsync(
         IEnumerable<Build> builds,
         Regex text,
         Regex? name = null,
         Regex? task = null)
     {
-        var list = new List<(Build Build, TimelineRecord TimelineRecord, string Line)>();
+        var list = new List<SearchTimelineResult>();
         foreach (var build in builds)
         {
             var timeline = await Server.GetTimelineAsync(build.Project.Name, build.Id).ConfigureAwait(false);
@@ -80,7 +97,7 @@ internal sealed class RuntimeQueryUtil
 
                 if (line is object)
                 {
-                    list.Add((build, record, line));
+                    list.Add(new SearchTimelineResult(build, record, line));
                 }
             }
         }

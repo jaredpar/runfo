@@ -36,6 +36,8 @@ internal sealed partial class RuntimeInfo
 
     internal RuntimeQueryUtil QueryUtil { get; }
 
+    private ReportBuilder ReportBuilder { get; } = new ReportBuilder();
+
     internal RuntimeInfo(string personalAccessToken = null, bool cacheable = false)
     {
         Server = cacheable
@@ -238,58 +240,14 @@ internal sealed partial class RuntimeInfo
 
         var hadDefinition = optionSet.Definitions.Any();
         var builds = await QueryUtil.ListBuildsAsync(optionSet);
-
-        if (markdown)
-        {
-            if (!hadDefinition)
-            {
-                Console.Write("|Definition");
-            }
-
-            Console.WriteLine("|Build|Kind|Timeline Record|");
-
-            if (!hadDefinition)
-            {
-                Console.Write("|---");
-            }
-
-            Console.WriteLine("|---|---|---|");
-        }
-
         var found = await QueryUtil.SearchTimelineAsync(builds, text, name, task);
-        foreach (var tuple in found)
-        {
-            var build = tuple.Build;
-            if (markdown)
-            {
-                if (!hadDefinition)
-                {
-                    var definitionName = GetDefinitionName(build);
-                    var definitionUri = DevOpsUtil.GetBuildDefinitionUri(build);
-                    Console.Write($"|[{definitionName}]({definitionUri})");
-                }
-
-                var kind = "Rolling";
-                if (DevOpsUtil.GetPullRequestNumber(build) is int pr)
-                {
-                    kind = $"PR https://github.com/{build.Repository.Id}/pull/{pr}";
-                }
-                Console.WriteLine($"|[{build.Id}]({DevOpsUtil.GetBuildUri(build)})|{kind}|{tuple.TimelineRecord.Name}|");
-            }
-            else
-            {
-                Console.WriteLine(DevOpsUtil.GetBuildUri(build));
-            }
-        }
-
-        var foundBuildCount = found.GroupBy(x => x.Build.Id).Count();
-        Console.WriteLine();
-        Console.WriteLine($"Evaluated {builds.Count} builds");
-        Console.WriteLine($"Impacted {foundBuildCount} builds");
-        Console.WriteLine($"Impacted {found.Count} jobs");
+        Console.WriteLine(ReportBuilder.BuildSearchTimeline(
+            found,
+            builds.Count,
+            markdown,
+            includeDefinition: !hadDefinition));
 
         return ExitSuccess;
-
     }
 
     internal async Task<int> PrintSearchBuildLogs(IEnumerable<string> args)
@@ -1115,12 +1073,14 @@ internal sealed partial class RuntimeInfo
         return list;
     }
     
-    private string GetDefinitionName(Build build) => 
+    // TODO: move to a type that owns the named definitions
+    internal static string GetDefinitionName(Build build) => 
         TryGetDefinitionName(build, out var name) 
             ? name
             : build.Definition.Name.ToString();
 
-    private bool TryGetDefinitionName(Build build, out string name)
+    // TODO: move to a type that owns the named definitions
+    internal static bool TryGetDefinitionName(Build build, out string name)
     {
         var project = build.Project.Name;
         var id = build.Definition.Id;

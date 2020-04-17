@@ -28,6 +28,16 @@ internal sealed class AutoTriageUtil
             new GitHubIssueKey("dotnet", "runtime", 34015),
             buildQuery: "-d runtime -c 100 -pr",
             text: "Failed to install dotnet");
+        await DoSearchTimeline(
+            TriageReasonItem.Infra,
+            new GitHubIssueKey("dotnet", "runtime", 34015),
+            buildQuery: "-d runtime-official -c 20",
+            text: "Failed to install dotnet");
+        await DoSearchTimeline(
+            TriageReasonItem.Infra,
+            new GitHubIssueKey("dotnet", "runtime", 35074),
+            buildQuery: "-d runtime -c 100 -pr",
+            text: "HTTP request to.*api.nuget.org.*timed out");
     }
 
     private async Task DoSearchTimeline(TriageReasonItem reason, GitHubIssueKey issueKey, string buildQuery, string text)
