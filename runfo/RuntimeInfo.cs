@@ -10,31 +10,13 @@ using DevOps.Util;
 using DevOps.Util.DotNet;
 using Mono.Options;
 using static RuntimeInfoUtil;
+using static DevOps.Util.DotNet.OptionSetUtil;
 
 internal sealed partial class RuntimeInfo
 {
-    // TODO: May want to hoist this into another type along with the default for
-    // the project (currently lives on BuildSearchOptionSet)
-    internal static readonly (string BuildName, string Project, int DefinitionId)[] BuildDefinitions = new[]
-        {
-            ("runtime", "public", 686),
-            ("runtime-official", "internal", 679),
-            ("coreclr", "public", 655),
-            ("libraries", "public", 675),
-            ("libraries windows", "public", 676),
-            ("libraries linux", "public", 677),
-            ("libraries osx", "public", 678),
-            ("crossgen2", "public", 701),
-            ("roslyn", "public", 15),
-            ("roslyn-integration", "public", 245),
-            ("aspnet", "public", 278),
-            ("sdk", "public", 136),
-            ("winforms", "public", 267),
-        };
-
     internal DevOpsServer Server { get; }
 
-    internal RuntimeQueryUtil QueryUtil { get; }
+    internal DotNetQueryUtil QueryUtil { get; }
 
     private ReportBuilder ReportBuilder { get; } = new ReportBuilder();
 
@@ -43,7 +25,7 @@ internal sealed partial class RuntimeInfo
         Server = cacheable
             ? new CachingDevOpsServer(RuntimeInfoUtil.CacheDirectory, "dnceng", personalAccessToken)
             : new DevOpsServer("dnceng", personalAccessToken);
-        QueryUtil = new RuntimeQueryUtil(Server);
+        QueryUtil = new DotNetQueryUtil(Server);
     }
 
     internal async Task PrintBuildResults(IEnumerable<string> args)
@@ -56,7 +38,7 @@ internal sealed partial class RuntimeInfo
 
         ParseAll(optionSet, args);
 
-        var data = BuildDefinitions
+        var data = DotNetUtil.BuildDefinitions
             .AsParallel()
             .AsOrdered()
             .Select(async t => (t.BuildName, t.DefinitionId, await QueryUtil.ListBuildsAsync(t.Project, count, new[] { t.DefinitionId })));
@@ -514,7 +496,7 @@ internal sealed partial class RuntimeInfo
 
     internal void PrintBuildDefinitions()
     {
-        foreach (var (name, project, definitionId) in BuildDefinitions)
+        foreach (var (name, project, definitionId) in DotNetUtil.BuildDefinitions)
         {
             var uri = DevOpsUtil.GetBuildDefinitionUri(Server.Organization, project, definitionId);
             Console.WriteLine($"{name,-20}{uri}");
@@ -764,9 +746,9 @@ internal sealed partial class RuntimeInfo
         IEnumerable<int> definitions = null;
         if (definition is object)
         {
-            if (!RuntimeQueryUtil.TryGetDefinitionId(definition, out string definitionProject, out int definitionId))
+            if (!DotNetUtil.TryGetDefinitionId(definition, out string definitionProject, out int definitionId))
             {
-                OptionUtil.OptionFailureDefinition(definition, optionSet);
+                OptionSetUtil.OptionFailureDefinition(definition, optionSet);
                 return ExitFailure;
             }
 
@@ -795,7 +777,7 @@ internal sealed partial class RuntimeInfo
         Console.WriteLine($"Definition           Build    Result       Url");
         foreach (var build in builds)
         {
-            var name = GetDefinitionName(build);
+            var name = DotNetUtil.GetDefinitionName(build);
             Console.WriteLine($"{name,-20} {build.Id,-8} {build.Result,-12} {DevOpsUtil.GetBuildUri(build)}");
         }
 
@@ -1073,30 +1055,6 @@ internal sealed partial class RuntimeInfo
         return list;
     }
     
-    // TODO: move to a type that owns the named definitions
-    internal static string GetDefinitionName(Build build) => 
-        TryGetDefinitionName(build, out var name) 
-            ? name
-            : build.Definition.Name.ToString();
-
-    // TODO: move to a type that owns the named definitions
-    internal static bool TryGetDefinitionName(Build build, out string name)
-    {
-        var project = build.Project.Name;
-        var id = build.Definition.Id;
-        foreach (var tuple in BuildDefinitions)
-        {
-            if (tuple.Project == project && tuple.DefinitionId == id)
-            {
-                name = tuple.BuildName;
-                return true;
-            }
-        }
-
-        name = null;
-        return false;
-    }
-
     // The logs for the failure always exist on the associated work item, not on the 
     // individual test result
     private async Task<HelixLogInfo> GetHelixLogInfoAsync(HelixWorkItem workItem) => await HelixUtil.GetHelixLogInfoAsync(Server, workItem);

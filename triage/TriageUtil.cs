@@ -9,6 +9,21 @@ using System.Threading.Tasks;
 using DevOps.Util;
 using Model;
 
+internal enum TriageReasonItem
+{
+    Azure,
+    Helix,
+
+    NuGet,
+
+    // General infrastructure owned by the .NET Team
+    Infra,
+
+    Build,
+    Test,
+    Other
+}
+
 
 // TODO: this class is designed to work when there is only one DB writer 
 // occurring. That's a design flaw. Need to fix.
@@ -83,19 +98,4 @@ internal sealed class TriageUtil : IDisposable
 
         return triageBuild;
     }
-}
-
-internal enum TriageReasonItem
-{
-    Azure,
-    Helix,
-
-    NuGet,
-
-    // General infrastructure owned by the .NET Team
-    Infra,
-
-    Build,
-    Test,
-    Other
 }

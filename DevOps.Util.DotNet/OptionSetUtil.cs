@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Mono.Options;
 
 namespace DevOps.Util.DotNet
@@ -33,5 +34,17 @@ namespace DevOps.Util.DotNet
 
 
         public static Exception CreateBadOptionException() => new Exception("Bad option");
+
+        public static void ParseAll(OptionSet optionSet, IEnumerable<string> args)
+        {
+            var extra = optionSet.Parse(args);
+            if (extra.Count != 0)
+            {
+                optionSet.WriteOptionDescriptions(Console.Out);
+                var text = string.Join(' ', extra);
+                throw new Exception($"Extra arguments: {text}");
+            }
+        }
+
     }
 }

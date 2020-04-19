@@ -20,6 +20,8 @@ namespace DevOps.Util.DotNet
         public const string ProjectName = "public";
         public const int BuildDefinitionId = 15;
 
+        // TODO: remove the SQL connections here. This library should be about querying information about our
+        // builds, not be responsible for storing it.
         public SqlConnection SqlConnection { get; }
         public DevOpsServer DevOpsServer { get; }
         public ILogger Logger { get; }

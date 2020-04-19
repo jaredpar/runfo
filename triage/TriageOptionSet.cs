@@ -1,6 +1,7 @@
 
 using System;
 using System.Collections.Generic;
+using DevOps.Util.DotNet;
 using Mono.Options;
 
 internal sealed class TriageOptionSet : OptionSet

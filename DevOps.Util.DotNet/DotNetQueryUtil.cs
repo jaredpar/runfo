@@ -14,13 +14,13 @@ namespace DevOps.Util.DotNet
 {
     using static OptionSetUtil;
 
-    internal class SearchTimelineResult
+    public class SearchTimelineResult
     {
-        internal Build Build { get; }
-        internal TimelineRecord TimelineRecord { get; }
-        internal string Line { get; }
+        public Build Build { get; }
+        public TimelineRecord TimelineRecord { get; }
+        public string Line { get; }
 
-        internal SearchTimelineResult(
+        public SearchTimelineResult(
             Build build,
             TimelineRecord timelineRecord,
             string line)
@@ -31,16 +31,16 @@ namespace DevOps.Util.DotNet
         }
     }
 
-    internal sealed class RuntimeQueryUtil
+    public sealed class DotNetQueryUtil
     {
-        internal DevOpsServer Server { get; }
+        public DevOpsServer Server { get; }
 
-        internal RuntimeQueryUtil(DevOpsServer server)
+        public DotNetQueryUtil(DevOpsServer server)
         {
             Server = server;
         }
 
-        internal Task<List<SearchTimelineResult>> SearchTimelineAsync(
+        public Task<List<SearchTimelineResult>> SearchTimelineAsync(
             IEnumerable<Build> builds,
             string text,
             string? name = null,
@@ -63,7 +63,7 @@ namespace DevOps.Util.DotNet
             return SearchTimelineAsync(builds, textRegex, nameRegex, taskRegex);
         }
 
-        internal async Task<List<SearchTimelineResult>> SearchTimelineAsync(
+        public async Task<List<SearchTimelineResult>> SearchTimelineAsync(
             IEnumerable<Build> builds,
             Regex text,
             Regex? name = null,
@@ -108,7 +108,7 @@ namespace DevOps.Util.DotNet
             return list;
         }
 
-        internal async Task<List<Build>> ListBuildsAsync(
+        public async Task<List<Build>> ListBuildsAsync(
             string project,
             int count,
             int[]? definitions = null,
@@ -145,7 +145,7 @@ namespace DevOps.Util.DotNet
             return list;
         }
 
-        internal async Task<List<Build>> ListBuildsAsync(string buildQuery)
+        public async Task<List<Build>> ListBuildsAsync(string buildQuery)
         {
             var optionSet = new BuildSearchOptionSet();
             if (optionSet.Parse(buildQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries)).Count != 0)
@@ -156,7 +156,7 @@ namespace DevOps.Util.DotNet
             return await ListBuildsAsync(optionSet).ConfigureAwait(false);
         }
 
-        internal async Task<List<Build>> ListBuildsAsync(BuildSearchOptionSet optionSet)
+        public async Task<List<Build>> ListBuildsAsync(BuildSearchOptionSet optionSet)
         {
             if (optionSet.BuildIds.Count > 0 && optionSet.Definitions.Count > 0)
             {
@@ -213,7 +213,7 @@ namespace DevOps.Util.DotNet
             {
                 foreach (var definition in optionSet.Definitions)
                 {
-                    if (!TryGetDefinitionId(definition, out var definitionProject, out var definitionId))
+                    if (!DotNetUtil.TryGetDefinitionId(definition, out var definitionProject, out var definitionId))
                     {
                         OptionFailureDefinition(definition, optionSet);
                         throw CreateBadOptionException();
@@ -265,13 +265,13 @@ namespace DevOps.Util.DotNet
             return builds;
         }
 
-        internal static bool TryGetBuildId(BuildSearchOptionSet optionSet, string build, [NotNullWhen(true)] out string? project, out int buildId)
+        public static bool TryGetBuildId(BuildSearchOptionSet optionSet, string build, [NotNullWhen(true)] out string? project, out int buildId)
         {
             var defaultProject = optionSet.Project ?? BuildSearchOptionSet.DefaultProject;
             return TryGetBuildId(build, defaultProject, out project, out buildId);
         }
 
-        internal static bool TryGetBuildId(string build, string defaultProject, [NotNullWhen(true)] out string? project, out int buildId)
+        public static bool TryGetBuildId(string build, string defaultProject, [NotNullWhen(true)] out string? project, out int buildId)
         {
             project = null;
 
@@ -288,42 +288,6 @@ namespace DevOps.Util.DotNet
             }
 
             return int.TryParse(build, out buildId);
-        }
-
-        internal static bool TryGetDefinitionId(string definition, [NotNullWhen(true)] out string? project, out int definitionId)
-        {
-            definitionId = 0;
-            project = null;
-
-            if (definition is null)
-            {
-                return false;
-            }
-
-            var index = definition.IndexOf(':');
-            if (index >= 0)
-            {
-                var both = definition.Split(new[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
-                definition = both[0];
-                project = both[1]!;
-            }
-
-            if (int.TryParse(definition, out definitionId))
-            {
-                return true;
-            }
-
-            foreach (var (name, p, id) in DotNetUtil.BuildDefinitions)
-            {
-                if (name == definition)
-                {
-                    definitionId = id;
-                    project = p;
-                    return true;
-                }
-            }
-
-            return false;
         }
 
     }

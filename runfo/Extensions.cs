@@ -12,18 +12,18 @@ using DevOps.Util.DotNet;
 
 internal static class Extensions
 {
-    internal static async Task<BuildTestInfoCollection> ListBuildTestInfosAsync(DotNetQueryUtil queryUtil, BuildSearchOptionSet optionSet, bool includeAllTests = false)
+    internal static async Task<BuildTestInfoCollection> ListBuildTestInfosAsync(this DotNetQueryUtil queryUtil, BuildSearchOptionSet optionSet, bool includeAllTests = false)
     {
         TestOutcome[]? outcomes = includeAllTests
             ? null
             : new[] { TestOutcome.Failed };
 
         var list = new List<BuildTestInfo>();
-        foreach (var build in await ListBuildsAsync(optionSet).ConfigureAwait(false))
+        foreach (var build in await queryUtil.ListBuildsAsync(optionSet).ConfigureAwait(false))
         {
             try
             {
-                var collection = await DotNetUtil.ListDotNetTestRunsAsync(Server, build, outcomes);
+                var collection = await DotNetUtil.ListDotNetTestRunsAsync(queryUtil.Server, build, outcomes);
                 var buildTestInfo = new BuildTestInfo(build, collection.SelectMany(x => x.TestCaseResults).ToList());
                 list.Add(buildTestInfo);
             }

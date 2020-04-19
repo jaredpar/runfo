@@ -15,12 +15,14 @@ using Octokit;
 internal sealed class AutoTriageUtil
 {
     internal DevOpsServer Server { get; }
-    internal RuntimeQueryUtil QueryUtil { get; }
+    internal GitHubClient GitHubClient { get; }
+    internal DotNetQueryUtil QueryUtil { get; }
 
-    internal AutoTriageUtil(DevOpsServer server)
+    internal AutoTriageUtil(DevOpsServer server, GitHubClient gitHubClient)
     {
         Server = server;
-        QueryUtil = new RuntimeQueryUtil(server);
+        GitHubClient = gitHubClient;
+        QueryUtil = new DotNetQueryUtil(server);
     }
 
     internal async Task Triage()
@@ -81,8 +83,7 @@ internal sealed class AutoTriageUtil
     {
         try
         {
-            var gitHubClient = await CreateGitHubClient();
-            var issueClient = gitHubClient.Issue;
+            var issueClient = GitHubClient.Issue;
             var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Id);
             if (TryUpdateIssueText(reportBody, issue.Body, out var newIssueBody))
             {
@@ -145,13 +146,5 @@ internal sealed class AutoTriageUtil
             newIssueText = null;
             return false;
         }
-    }
-
-    private async Task<GitHubClient> CreateGitHubClient()
-    {
-        var client = new GitHubClient(new ProductHeaderValue("RuntimeStatusPage"));
-        var token = await Program.GetPersonalAccessTokenFromFile("github");
-        client.Credentials = new Credentials("jaredpar", token);
-        return client;
     }
 }

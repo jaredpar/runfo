@@ -12,17 +12,6 @@ internal static class RuntimeInfoUtil
 
     internal static readonly string CacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "runfo", "json");
 
-    internal static void ParseAll(OptionSet optionSet, IEnumerable<string> args)
-    {
-        var extra = optionSet.Parse(args);
-        if (extra.Count != 0)
-        {
-            optionSet.WriteOptionDescriptions(Console.Out);
-            var text = string.Join(' ', extra);
-            throw new Exception($"Extra arguments: {text}");
-        }
-    }
-
     internal static TimeSpan? TryGetDuration(string startTime, string finishTime)
     {
         if (startTime is null ||

@@ -10,12 +10,29 @@ using DevOps.Util;
 using DevOps.Util.DotNet;
 using Mono.Options;
 using Model;
-using static OptionUtil;
+using Octokit;
+using static DevOps.Util.DotNet.OptionSetUtil;
 
 internal static class Program
 {
-    internal static async Task<int> Main(string args)
+    internal const int ExitSuccess = 0;
+    internal const int ExitFailure = 1;
+
+    internal static async Task<int> Main(string[] args) => await MainCore(args.ToList());
+
+    internal static async Task<int> MainCore(List<string> args)
     {
+        var azdoToken = Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN");
+        var gitHubToken = Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN");
+        var cacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "runfo", "json");
+
+        var server = new CachingDevOpsServer(cacheDirectory, "dnceng", azdoToken);
+        var gitHubClient = new GitHubClient(new ProductHeaderValue("RuntimeStatusPage"));
+        var queryUtil = new DotNetQueryUtil(server);
+
+        // TODO: should not hard code jaredpar here
+        gitHubClient.Credentials = new Credentials("jaredpar", gitHubToken);
+
         using var triageUtil = new TriageUtil();
         string command;
         if (args.Count == 0)
@@ -84,7 +101,7 @@ internal static class Program
 
         async Task RunAutoTriage(List<string> args)
         {
-            var autoTriageUtil = new AutoTriageUtil(Server);
+            var autoTriageUtil = new AutoTriageUtil(server, gitHubClient);
             await autoTriageUtil.Triage();
         }
 
@@ -128,7 +145,7 @@ internal static class Program
 
         async Task<IEnumerable<Build>> GetUntriagedBuilds(BuildSearchOptionSet optionSet, bool showAll = false)
         {
-            IEnumerable<Build> list = await QueryUtil.ListBuildsAsync(optionSet);
+            IEnumerable<Build> list = await queryUtil.ListBuildsAsync(optionSet);
             list = list.Where(x => x.Result != BuildResult.Succeeded);
             if (!showAll)
             {
@@ -138,33 +155,32 @@ internal static class Program
             return list;
         }
 
-    }
-
-    private List<BuildKey> ListBuildKeys(TriageOptionSet optionSet)
-    {
-        var list = new List<BuildKey>();
-        foreach (var build in optionSet.BuildIds)
+        List<BuildKey> ListBuildKeys(TriageOptionSet optionSet)
         {
-            if (!RuntimeQueryUtil.TryGetBuildId(build, TriageOptionSet.DefaultProject, out var project, out var buildId))
+            var list = new List<BuildKey>();
+            foreach (var build in optionSet.BuildIds)
             {
-                throw OptionFailureWithException("Need a valid build", optionSet);
+                if (!DotNetQueryUtil.TryGetBuildId(build, TriageOptionSet.DefaultProject, out var project, out var buildId))
+                {
+                    throw OptionFailureWithException("Need a valid build", optionSet);
+                }
+
+                list.Add(new BuildKey(server.Organization, project, buildId));
             }
 
-            list.Add(new BuildKey(Server.Organization, project, buildId));
-        }
-
-        foreach (var filePath in optionSet.FilePaths)
-        {
-            foreach (var line in File.ReadAllLines(filePath))
+            foreach (var filePath in optionSet.FilePaths)
             {
-                if (Uri.TryCreate(line.Trim(), UriKind.Absolute, out var uri) &&
-                    DevOpsUtil.TryParseBuildKey(uri, out var buildKey))
+                foreach (var line in File.ReadAllLines(filePath))
                 {
-                    list.Add(buildKey);
+                    if (Uri.TryCreate(line.Trim(), UriKind.Absolute, out var uri) &&
+                        DevOpsUtil.TryParseBuildKey(uri, out var buildKey))
+                    {
+                        list.Add(buildKey);
+                    }
                 }
             }
-        }
 
-        return list;
+            return list;
+        }
     }
 }
