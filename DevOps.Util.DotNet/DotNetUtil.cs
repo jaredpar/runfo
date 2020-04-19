@@ -14,6 +14,23 @@ namespace DevOps.Util.DotNet
 {
     public static class DotNetUtil
     {
+        public static readonly (string BuildName, string Project, int DefinitionId)[] BuildDefinitions = new[]
+            {
+                ("runtime", "public", 686),
+                ("runtime-official", "internal", 679),
+                ("coreclr", "public", 655),
+                ("libraries", "public", 675),
+                ("libraries windows", "public", 676),
+                ("libraries linux", "public", 677),
+                ("libraries osx", "public", 678),
+                ("crossgen2", "public", 701),
+                ("roslyn", "public", 15),
+                ("roslyn-integration", "public", 245),
+                ("aspnet", "public", 278),
+                ("sdk", "public", 136),
+                ("winforms", "public", 267),
+            };
+
         /// <summary>
         /// Normalize the branch name so that has the short human readable form of the branch
         /// name

@@ -16,6 +16,7 @@ namespace DevOps.Util.DotNet
     /// </summary>
     public sealed class CloneTimeUtil : IDisposable
     {
+        // TODO: remove hard coded project name
         public const string ProjectName = "public";
         public const int BuildDefinitionId = 15;
 

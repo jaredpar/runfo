@@ -10,12 +10,11 @@ using DevOps.Util;
 using DevOps.Util.DotNet;
 using Mono.Options;
 using Model;
-using static RuntimeInfoUtil;
 using static OptionUtil;
 
-internal sealed partial class RuntimeInfo
+internal static class Program
 {
-    internal async Task<int> Triage(List<string> args)
+    internal static async Task<int> Main(string args)
     {
         using var triageUtil = new TriageUtil();
         string command;
