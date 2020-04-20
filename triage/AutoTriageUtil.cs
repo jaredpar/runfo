@@ -29,6 +29,18 @@ internal sealed class AutoTriageUtil
     {
         await DoSearchTimeline(
             TriageReasonItem.Infra,
+            new GitHubIssueKey("dotnet", "core-eng", 9635),
+            updateIssue: true,
+            buildQuery: "-d runtime -c 50 -pr",
+            text: "unable to load shared library 'advapi32.dll' or one of its dependencies");
+        await DoSearchTimeline(
+            TriageReasonItem.Infra,
+            new GitHubIssueKey("dotnet", "core-eng", 9634),
+            updateIssue: true,
+            buildQuery: "-c 600 -pr",
+            text: "HTTP request to.*api.nuget.org.*timed out");
+        await DoSearchTimeline(
+            TriageReasonItem.Infra,
             new GitHubIssueKey("dotnet", "runtime", 35074),
             updateIssue: true,
             buildQuery: "-d runtime -c 100 -pr",
@@ -72,10 +84,11 @@ internal sealed class AutoTriageUtil
         // recent query.
         if (updateIssue)
         {
+            // TODO: need to avoid redundant updates here
             var reportBuilder = new ReportBuilder();
             var reportBody = reportBuilder.BuildSearchTimeline(searchTimelineResults, builds.Count, markdown: true, includeDefinition: false);
             var status = await UpdateIssue(issueKey, reportBody) ? "succeeded" : "failed";
-            Console.WriteLine("$  Update issue {status}");
+            Console.WriteLine($"  Update issue {status}");
         }
     }
 
