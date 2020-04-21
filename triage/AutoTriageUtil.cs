@@ -27,6 +27,7 @@ internal sealed class AutoTriageUtil : IDisposable
         Server = server;
         GitHubClient = gitHubClient;
         QueryUtil = new DotNetQueryUtil(server);
+        TriageUtil = new TriageUtil();
     }
 
     public void Dispose()

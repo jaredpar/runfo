@@ -106,6 +106,7 @@ internal static class Program
         async Task RunAutoTriage(List<string> args)
         {
             using var autoTriageUtil = new AutoTriageUtil(server, gitHubClient);
+            autoTriageUtil.EnsureTriageIssues();
             await autoTriageUtil.Triage("-d runtime -c 100 -pr");
         }
 

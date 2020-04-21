@@ -304,6 +304,8 @@ namespace DevOps.Util.DotNet
 
         [return: NotNullIfNotNull("pattern")]
         private static Regex? CreateTimelineRegex(string? pattern) =>
-            new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            pattern is null 
+                ? null
+                : new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
     }
 }

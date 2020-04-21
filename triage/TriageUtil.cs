@@ -56,7 +56,15 @@ internal sealed class TriageUtil : IDisposable
     public bool TryCreateTimelineIssue(IssueKind kind, GitHubIssueKey issueKey, string text)
     {
         var id = $"{issueKey.Organization}-{issueKey.Repository}-{issueKey.Id}";
-        var timelineIssue = new TimelineIssue()
+        var timelineIssue = Context.TimelineIssues
+            .Where(x => x.Id == id)
+            .FirstOrDefault();
+        if (timelineIssue is object)
+        {
+            return false;
+        }
+
+        timelineIssue = new TimelineIssue()
         {
             Id = id,
             GitHubOrganization = issueKey.Organization,
@@ -71,8 +79,9 @@ internal sealed class TriageUtil : IDisposable
             Context.SaveChanges();
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine(ex.Message);
             return false;
         }
 
@@ -97,8 +106,9 @@ internal sealed class TriageUtil : IDisposable
             Context.SaveChanges();
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine(ex.Message);
             return false;
         }
     }

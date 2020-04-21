@@ -24,11 +24,24 @@
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFoldern}/scratch/bin/Debug/netcoreapp3.1/scratch.dll",
-            "args": [],
+            "args": ["auto"],
             "cwd": "${workspaceFolder}/scratch",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
             "stopAtEntry": true
+        },
+        {
+            "name": "triage",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            // If you have changed target frameworks, make sure to update the program path.
+            "program": "${workspaceFolder}/triage/bin/Debug/netcoreapp3.1/triage.dll",
+            "args": ["auto"],
+            "cwd": "${workspaceFolder}/scratch",
+            // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
+            "console": "internalConsole",
+            "stopAtEntry": false
         },
         {
             "name": "status",
