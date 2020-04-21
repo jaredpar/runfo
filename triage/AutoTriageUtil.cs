@@ -71,6 +71,14 @@ internal sealed class AutoTriageUtil : IDisposable
             IssueKind.Infra,
             new GitHubIssueKey("dotnet", "runtime", 34015),
             text: "Failed to install dotnet");
+        TriageUtil.TryCreateTimelineQuery(
+            IssueKind.Infra,
+            new GitHubIssueKey("dotnet", "runtime", 34472),
+            text: "Received request to deprovision: The request was cancelled by the remote provider");
+        TriageUtil.TryCreateTimelineQuery(
+            IssueKind.Infra,
+            new GitHubIssueKey("dotnet", "core-eng", 34472),
+            text: "Received request to deprovision: The request was cancelled by the remote provider");
     }
 
     internal async Task Triage(string buildQuery)
@@ -228,14 +236,12 @@ internal sealed class AutoTriageUtil : IDisposable
                 // Skip until we hit the end of the existing report
                 if (ReportBuilder.MarkdownReportEndRegex.IsMatch(line))
                 {
-                    builder.Append(line);
                     inReportBody = false;
                     foundEnd = true;
                 }
             }
             else if (ReportBuilder.MarkdownReportStartRegex.IsMatch(line))
             {
-                builder.AppendLine(line);
                 builder.AppendLine(reportBody);
                 inReportBody = true;
             }
@@ -267,11 +273,13 @@ internal sealed class AutoTriageUtil : IDisposable
         header.AppendLine("## Overview");
         header.AppendLine("Please use this queries to discover issues");
 
-        await BuildOne("Blocking CI", "blocking-clean-ci");
-        await BuildOne("Blocking Official Build", "blocking-official-build");
-        await BuildOne("Blocking CI Optional", "blocking-clean-ci-optional");
-        await BuildOne("Blocking Outerloop", "blocking-outerloop");
+        await BuildOne("Blocking CI", "blocking-clean-ci", DotNetUtil.GetBuildDefinitionKeyFromFriendlyName("runtime"));
+        await BuildOne("Blocking Official Build", "blocking-official-build", DotNetUtil.GetBuildDefinitionKeyFromFriendlyName("runtime-official"));
+        await BuildOne("Blocking CI Optional", "blocking-clean-ci-optional", DotNetUtil.GetBuildDefinitionKeyFromFriendlyName("runtime"));
+        await BuildOne("Blocking Outerloop", "blocking-outerloop", null);
 
+        // Blank line to move past the table 
+        header.AppendLine("");
         header.AppendLine($"The build numbers given in the tables below cover the last {buildLimit} builds of the repository");
         BuildFooter();
 
@@ -289,28 +297,38 @@ internal sealed class AutoTriageUtil : IDisposable
 
         }
 
-        async Task BuildOne(string title, string label)
+        async Task BuildOne(string title, string label, BuildDefinitionKey? definitionKey)
         {
             header.AppendLine($"- [{title}](https://github.com/dotnet/runtime/issues?q=is%3Aopen+is%3Aissue+label%3{label})");
 
             body.AppendLine($"## {title}");
-            body.AppendLine("|Status|Issue|Build Count| Build %|");
-            body.AppendLine("|---|---|---|--|");
+            body.AppendLine("|Status|Issue|Build Count|");
+            body.AppendLine("|---|---|---|");
 
-            foreach (var issue in await DoSearch(label))
+            var query = (await DoSearch(label))
+                .Select(x => 
+                    {
+                        var issueKey = x.GetIssueKey();
+                        var count = definitionKey.HasValue
+                            ? GetImpactedBuildsCount(issueKey, definitionKey.Value)
+                            : null;
+
+                        return (x, Count: count);
+                    })
+                .OrderByDescending(x => x.Count);
+            foreach (var (issue, count) in query)
             {
-                var issueKey = issue.GetIssueKey();
                 var emoji = issue.Labels.Any(x => x.Name == "intermittent")
                     ? ":warning:"
                     : ":fire:";
                 var titleLimit = 75;
-                string issueText = issue.Title.Length >= titleLimit
+                var issueText = issue.Title.Length >= titleLimit
                     ? issue.Title.Substring(0, titleLimit - 5) + " ..."
                     : issue.Title;
-                string issueEntry = $"[{issueText}]({issue.HtmlUrl})";
-                var tuple = GetImpactedBuilds(issueKey);
+                var issueEntry = $"[{issueText}]({issue.HtmlUrl})";
+                var countStr = count.HasValue ? count.ToString() : "N/A";
 
-                body.AppendLine($"|{emoji}|{issueEntry}|{tuple.Count}|{tuple.Percent}|");
+                body.AppendLine($"|{emoji}|{issueEntry}|{countStr}|");
             }
         }
 
@@ -337,24 +355,24 @@ internal sealed class AutoTriageUtil : IDisposable
             await GitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, updateIssue);
         }
 
-        (string Count, string Percent) GetImpactedBuilds(GitHubIssueKey issueKey)
+        int? GetImpactedBuildsCount(GitHubIssueKey issueKey, BuildDefinitionKey definitionKey)
         {
             if (!TriageUtil.TryGetTimelineQuery(issueKey, out var timelineQuery))
             {
-                return ("N/A", "N/A");
+                return null;
             }
 
             // TODO: need to be able to filter to the repo the build ran against
             var count = Context.ModelTimelineItems
                 .Include(x => x.ModelBuild)
+                .ThenInclude(x => x.ModelBuildDefinition)
                 .Where(x =>
                     x.ModelTimelineQueryId == timelineQuery.Id &&
-                    x.ModelBuild.GitHubOrganization == "dotnet" &&
-                    x.ModelBuild.GitHubRepository == "runtime")
+                    x.ModelBuild.ModelBuildDefinition.AzureOrganization == definitionKey.Organization &&
+                    x.ModelBuild.ModelBuildDefinition.AzureProject == definitionKey.Project &&
+                    x.ModelBuild.ModelBuildDefinition.DefinitionId == definitionKey.Id)
                 .Count();
-            var percent = (((double)count / buildLimit) * 100).ToString("N2");
-            percent += "%";
-            return (count.ToString(), percent);
+            return count;;
         }
     }
 }

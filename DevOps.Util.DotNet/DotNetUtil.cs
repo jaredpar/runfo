@@ -17,6 +17,8 @@ namespace DevOps.Util.DotNet
 {
     public static class DotNetUtil
     {
+        public static readonly string Organization = "dnceng";
+
         public static readonly (string BuildName, string Project, int DefinitionId)[] BuildDefinitions = new[]
             {
                 ("runtime", "public", 686),
@@ -33,6 +35,17 @@ namespace DevOps.Util.DotNet
                 ("sdk", "public", 136),
                 ("winforms", "public", 267),
             };
+
+        public static BuildDefinitionKey? GetBuildDefinitionKeyFromFriendlyName(string name)
+        {
+            var item = BuildDefinitions.FirstOrDefault(x => x.BuildName == name);
+            if (item.Project is object)
+            {
+                return new BuildDefinitionKey(Organization, item.Project, item.DefinitionId);
+            }
+
+            return null;
+        }
 
         public static string GetDefinitionName(Build build) => 
             TryGetDefinitionName(build, out var name) 

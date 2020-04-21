@@ -50,6 +50,9 @@ internal static class Program
             case "auto":
                 await RunAutoTriage(args);
                 break;
+            case "issues":
+                await RunIssues();
+                break;
             case "rebuild":
                 await RunRebuild();
                 break;
@@ -66,10 +69,15 @@ internal static class Program
         async Task RunAutoTriage(List<string> args)
         {
             using var autoTriageUtil = new AutoTriageUtil(server, gitHubClient);
-            autoTriageUtil.EnsureTriageIssues();
-            // TODO: need to triage builds that occurred since last query
             await autoTriageUtil.Triage("-d runtime -c 100 -pr");
             await autoTriageUtil.Triage("-d runtime-official -c 20 -pr");
+            await autoTriageUtil.UpdateQueryIssues();
+            await autoTriageUtil.UpdateStatusIssue();
+        }
+
+        async Task RunIssues()
+        {
+            using var autoTriageUtil = new AutoTriageUtil(server, gitHubClient);
             await autoTriageUtil.UpdateQueryIssues();
             await autoTriageUtil.UpdateStatusIssue();
         }
@@ -79,6 +87,7 @@ internal static class Program
             using var autoTriageUtil = new AutoTriageUtil(server, gitHubClient);
             autoTriageUtil.EnsureTriageIssues();
             await autoTriageUtil.Triage("-d runtime -c 500 -pr");
+            await autoTriageUtil.Triage("-d aspnet -c 300 -pr");
             await autoTriageUtil.Triage("-d runtime-official -c 50 -pr");
         }
 
@@ -88,8 +97,8 @@ internal static class Program
             // autoTriageUtil.EnsureTriageIssues();
             // await autoTriageUtil.Triage("-d runtime -c 500 -pr");
             // await autoTriageUtil.Triage("-d runtime-official -c 50 -pr");
-            await autoTriageUtil.UpdateQueryIssues();
-            // await autoTriageUtil.UpdateStatusIssue();
+            // await autoTriageUtil.UpdateQueryIssues();
+            await autoTriageUtil.UpdateStatusIssue();
         }
     }
 }
