@@ -1,7 +1,10 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -81,15 +84,20 @@ internal sealed class TriageUtil : IDisposable
         return modelBuild;
     }
 
-    public bool TryCreateTimelineQuery(IssueKind kind, GitHubIssueKey issueKey, string text)
+    public bool TryGetTimelineQuery(GitHubIssueKey issueKey, [NotNullWhen(true)] out ModelTimelineQuery timelineQuery)
     {
-        var timelineQuery = Context.ModelTimelineQueries
+        timelineQuery = Context.ModelTimelineQueries
             .Where(x => 
                 x.GitHubOrganization == issueKey.Organization &&
                 x.GitHubRepository == issueKey.Repository &&
                 x.IssueId == issueKey.Id)
             .FirstOrDefault();
-        if (timelineQuery is object)
+        return timelineQuery is object;
+    }
+
+    public bool TryCreateTimelineQuery(IssueKind kind, GitHubIssueKey issueKey, string text)
+    {
+        if (TryGetTimelineQuery(issueKey, out var timelineQuery))
         {
             return false;
         }

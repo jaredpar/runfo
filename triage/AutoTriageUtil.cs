@@ -233,5 +233,86 @@ internal sealed class AutoTriageUtil : IDisposable
             newIssueText = null;
             return false;
         }
+
     }
+
+    internal async Task UpdateStatusIssue()
+    {
+        var builder = new StringBuilder();
+
+        await BuildOne("Blocking CI", "blocking-clean-ci");
+        await BuildOne("Blocking Official Build", "blocking-official-build");
+        await BuildOne("Blocking CI Optional", "blocking-clean-ci-optional");
+        await BuildOne("Blocking Outerloop", "blocking-outerloop");
+
+        await UpdateIssue();
+
+            /*
+            BlockingOfficial = await DoSearch(gitHub, "blocking-official-build");
+            BlockingNormalOptional = await DoSearch(gitHub, "blocking-clean-ci-optional");
+            BlockingOuterloop = await DoSearch(gitHub, "blocking-outerloop");
+            */
+
+        async Task BuildOne(string title, string label)
+        {
+            builder.AppendLine($"## {title}");
+            builder.AppendLine($"See [all issues](https://github.com/dotnet/runtime/issues?q=is%3Aopen+is%3Aissue+label%3{label})");
+            builder.AppendLine("|Status|Issue|Impacted Builds|");
+            builder.AppendLine("|---|---|---|");
+
+            foreach (var issue in await DoSearch(label))
+            {
+                var issueKey = issue.GetIssueKey();
+                var emoji = issue.Labels.Any(x => x.Name == "intermittent")
+                    ? ":warning:"
+                    : ":fire:";
+                var titleLimit = 75;
+                string issueText = issue.Title.Length >= titleLimit
+                    ? issue.Title.Substring(0, titleLimit - 5) + " ..."
+                    : issue.Title;
+                string issueEntry = $"[{issueText}]({issue.HtmlUrl})";
+                var impactedBuilds = GetImpactedBuilds(issueKey);
+
+                builder.AppendLine($"|{emoji}|{issueEntry}|{impactedBuilds}|");
+            }
+        }
+
+        async Task<List<Octokit.Issue>> DoSearch(string label)
+        {
+            var request = new SearchIssuesRequest()
+            {
+                Labels = new [] { label },
+                State = ItemState.Open,
+                Type = IssueTypeQualifier.Issue,
+                Repos = { { "dotnet", "runtime" } },
+            };
+            var result = await GitHubClient.Search.SearchIssues(request);
+            return result.Items.ToList();
+        }
+
+        async Task UpdateIssue()
+        {
+            var issueKey = new GitHubIssueKey("jaredpar", "devops-util", 5);
+            var issueClient = GitHubClient.Issue;
+            var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Id);
+            var updateIssue = issue.ToUpdate();
+            updateIssue.Body = builder.ToString();
+            await GitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Id, updateIssue);
+        }
+
+        string GetImpactedBuilds(GitHubIssueKey issueKey)
+        {
+            if (!TriageUtil.TryGetTimelineQuery(issueKey, out var timelineQuery))
+            {
+                return "N/A";
+            }
+
+            // TODO: need to be able to filter to the repo the build ran against
+            var count = Context.ModelTimelineItems
+                .Where(x => x.ModelTimelineQueryId == timelineQuery.Id)
+                .Count();
+            return count.ToString();
+        }
+    }
+
 }
