@@ -224,9 +224,8 @@ internal sealed partial class RuntimeInfo
         var builds = await QueryUtil.ListBuildsAsync(optionSet);
         var found = await QueryUtil.SearchTimelineAsync(builds, text, name, task);
         Console.WriteLine(ReportBuilder.BuildSearchTimeline(
-            found,
-            builds.Count,
-            markdown,
+            found.Select(x => (x.Build, x.TimelineRecord.Name)),
+            markdown: markdown,
             includeDefinition: !hadDefinition));
 
         return ExitSuccess;

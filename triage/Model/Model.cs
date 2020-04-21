@@ -64,6 +64,8 @@ namespace Model
     {
         public int Id { get; set; }
 
+        public int BuildNumber { get; set; }
+
         public string TimelineRecordName { get; set; }
 
         public string Line { get; set; }

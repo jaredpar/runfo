@@ -42,6 +42,7 @@ namespace triage.Migrations
                 {
                     Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
+                    BuildNumber = table.Column<int>(nullable: false),
                     TimelineRecordName = table.Column<string>(nullable: true),
                     Line = table.Column<string>(nullable: true),
                     ModelBuildId = table.Column<string>(nullable: true),

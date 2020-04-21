@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -11,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
+using Microsoft.EntityFrameworkCore;
 using Model;
 using Octokit;
 
@@ -21,6 +23,10 @@ internal sealed class AutoTriageUtil : IDisposable
     internal DotNetQueryUtil QueryUtil { get; }
 
     internal TriageUtil TriageUtil { get; }
+
+    internal ReportBuilder ReportBuilder { get; } = new ReportBuilder();
+
+    internal TriageDbContext Context => TriageUtil.Context;
 
     internal AutoTriageUtil(DevOpsServer server, GitHubClient gitHubClient)
     {
@@ -117,6 +123,44 @@ internal sealed class AutoTriageUtil : IDisposable
         }
     }
 
+    internal async Task UpdateQueryIssues()
+    {
+        await UpdateIssuesForTimelineQueries();
+
+        async Task UpdateIssuesForTimelineQueries()
+        {
+            foreach (var timelineQuery in Context.ModelTimelineQueries)
+            {
+                // TODO: don't update closed issues
+                await UpdateIssueForTimelineQuery(timelineQuery);
+            }
+        }
+
+        async Task UpdateIssueForTimelineQuery(ModelTimelineQuery timelineQuery)
+        {
+            var timelineItems = Context.ModelTimelineItems
+                .Include(x => x.ModelBuild)
+                .Where(x => x.ModelTimelineQueryId == timelineQuery.Id)
+                .OrderByDescending(x => x.BuildNumber)
+                .ToList();
+            
+            // TODO: we use same Server here even if the Organization setting in the 
+            // item specifies a different organization. Need to replace Server with 
+            // a map from org -> DevOpsServer
+            // TODO: using .Result here, need to fix
+            // TODO: be nice if we didn't have to query the server here. Should change 
+            // ReportBuilder to not require Build but rather build information 
+            var results = timelineItems
+                .Select(x => (Server.GetBuildAsync(x.ModelBuild.AzureProject, x.ModelBuild.BuildNumber).Result, x.TimelineRecordName));
+            var reportBody = ReportBuilder.BuildSearchTimeline(results, markdown: true, includeDefinition: true);
+
+            var gitHubIssueKey = TriageUtil.GetGitHubIssueKey(timelineQuery);
+            Console.Write($"Updating {gitHubIssueKey.IssueUri} ... ");
+            var succeeded = await UpdateGitHubIssueReport(gitHubIssueKey, reportBody);
+            Console.WriteLine(succeeded ? "succeeded" : "failed");
+        }
+    }
+
 /*
     private async Task DoSearchTimeline(TriageReasonItem reason, GitHubIssueKey issueKey, bool updateIssue, string buildQuery, string text)
     {
@@ -152,7 +196,7 @@ internal sealed class AutoTriageUtil : IDisposable
     }
     */
 
-    private async Task<bool> UpdateIssue(GitHubIssueKey issueKey, string reportBody)
+    private async Task<bool> UpdateGitHubIssueReport(GitHubIssueKey issueKey, string reportBody)
     {
         try
         {
@@ -178,7 +222,7 @@ internal sealed class AutoTriageUtil : IDisposable
         return false;
     }
 
-    private static bool TryUpdateIssueText(string reportBody, string oldIssueText, out string newIssueText)
+    private static bool TryUpdateIssueText(string reportBody, string oldIssueText, [NotNullWhen(true)] out string? newIssueText)
     {
         var builder = new StringBuilder();
         var inReportBody = false;

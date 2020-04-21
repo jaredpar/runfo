@@ -40,6 +40,9 @@ namespace triage.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("BuildNumber")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Line")
                         .HasColumnType("TEXT");
 

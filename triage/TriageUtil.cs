@@ -43,7 +43,10 @@ internal sealed class TriageUtil : IDisposable
     }
 
     internal static string GetModelBuildId(BuildKey buildKey) => 
-        $"{buildKey.Organization}-{buildKey.Project}-{buildKey.Id}";
+        $"{buildKey.Organization}-{buildKey.Project}-{buildKey.Number}";
+
+    internal static GitHubIssueKey GetGitHubIssueKey(ModelTimelineQuery timelineQuery) =>
+        new GitHubIssueKey(timelineQuery.GitHubOrganization, timelineQuery.GitHubRepository, timelineQuery.IssueId);
 
     internal bool IsProcessed(ModelTimelineQuery timelineQuery, BuildKey buildKey)
     {
@@ -71,7 +74,7 @@ internal sealed class TriageUtil : IDisposable
             Id = modelBuildId,
             AzureOrganization = buildKey.Organization,
             AzureProject = buildKey.Project,
-            BuildNumber = buildKey.Id
+            BuildNumber = buildKey.Number
         };
         Context.ModelBuilds.Add(modelBuild);
         Context.SaveChanges();
@@ -119,7 +122,8 @@ internal sealed class TriageUtil : IDisposable
             TimelineRecordName = result.TimelineRecord.Name,
             Line = result.Line,
             ModelBuild = GetOrCreateBuild(result.Build.GetBuildKey()),
-            ModelTimelineQuery = timelineQuery
+            ModelTimelineQuery = timelineQuery,
+            BuildNumber = result.Build.GetBuildKey().Number,
         };
 
         try

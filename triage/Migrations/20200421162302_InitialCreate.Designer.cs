@@ -8,7 +8,7 @@ using Model;
 namespace triage.Migrations
 {
     [DbContext(typeof(TriageDbContext))]
-    [Migration("20200421153114_InitialCreate")]
+    [Migration("20200421162302_InitialCreate")]
     partial class InitialCreate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -40,6 +40,9 @@ namespace triage.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BuildNumber")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Line")

@@ -6,15 +6,15 @@ namespace DevOps.Util
     {
         public readonly string Organization;
         public readonly string Project;
-        public readonly int Id;
+        public readonly int Number;
 
-        public BuildKey(string organization, string project, int id)
+        public BuildKey(string organization, string project, int number)
         {
             Organization = organization;
             Project = project;
-            Id = id;
+            Number = number;
         }
 
-        public override string ToString() => $"{Organization} {Project} {Id}";
+        public override string ToString() => $"{Organization} {Project} {Number}";
     }
 }
