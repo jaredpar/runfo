@@ -1,3 +1,5 @@
+#nullable enable
+
 using DevOps.Util;
 using Newtonsoft.Json.Linq;
 using System;
@@ -69,23 +71,22 @@ namespace DevOps.Util
             return new Uri(uri);
         }
 
-        public static string GetRepositoryName(Build build)
+        public static (string Organization, string Repository) GetRepositoryInfo(Build build)
         {
             var both = build.Repository.Id.Split(new[] { '/' });
-            return both[1];
+            return (both[0], both[1]);
         }
 
-        public static string GetRepositoryOrganization(Build build)
-        {
-            var both = build.Repository.Id.Split(new[] { '/' });
-            return both[0];
-        }
+        public static string GetRepositoryOrganization(Build build) => GetRepositoryInfo(build).Organization;
 
-        public static int? GetPullRequestNumber(Build build)
+        public static string GetRepositoryName(Build build) => GetRepositoryInfo(build).Repository;
+
+        public static bool TryGetPullRequestKey(Build build, out GitHubPullRequestKey prKey)
         {
+            prKey = default;
             if (build.Reason != BuildReason.PullRequest)
             {
-                return null;
+                return false;
             }
 
             try
@@ -93,14 +94,31 @@ namespace DevOps.Util
                 var items = build.SourceBranch.Split('/');
                 if (int.TryParse(items[2], out int number))
                 {
-                    return number;
+                    var info = GetRepositoryInfo(build);
+                    prKey = new GitHubPullRequestKey(info.Organization, info.Repository, number);
+                    return true;
                 }
 
-                return null;
             }
             catch
             {
-                return null;
+
+            }
+
+            return false;
+        }
+
+        public static bool TryGetPullRequestId(Build build, out int id)
+        {
+            if (TryGetPullRequestKey(build, out var pullRequestKey))
+            {
+                id = pullRequestKey.Id;
+                return true;
+            }
+            else
+            {
+                id = 0;
+                return false;
             }
         }
 

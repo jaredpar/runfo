@@ -135,9 +135,9 @@ internal sealed partial class RuntimeInfo
             }
 
             var kind = "Rolling";
-            if (DevOpsUtil.GetPullRequestNumber(build) is int pr)
+            if (DevOpsUtil.TryGetPullRequestKey(build, out var pullRequestKey))
             {
-                kind = $"PR https://github.com/dotnet/runtime/pull/{pr}";
+                kind = $"PR {pullRequestKey.PullRequestUri}";
             }
             Console.WriteLine($"|[{build.Id}]({DevOpsUtil.GetBuildUri(build)})|{kind}|[console.log]({helixLogInfo.ConsoleUri})|");
         }
@@ -276,9 +276,9 @@ internal sealed partial class RuntimeInfo
             if (markdown)
             {
                 var kind = "Rolling";
-                if (DevOpsUtil.GetPullRequestNumber(build) is int pr)
+                if (DevOpsUtil.TryGetPullRequestKey(build, out var pullRequestKey))
                 {
-                    kind = $"PR https://github.com/{build.Repository.Id}/pull/{pr}";
+                    kind = $"PR {pullRequestKey.PullRequestUri}";
                 }
                 Console.WriteLine($"|[{build.Id}]({DevOpsUtil.GetBuildUri(build)})|{kind}|{tuple.TimelineRecord.Name}|");
             }
@@ -511,7 +511,9 @@ internal sealed partial class RuntimeInfo
         foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
         {
             var uri = DevOpsUtil.GetBuildUri(build);
-            var prId = DevOpsUtil.GetPullRequestNumber(build);
+            var prId = DevOpsUtil.TryGetPullRequestKey(build, out var pullRequestKey)
+                ? (int?)pullRequestKey.Id
+                : null;
             var kind = prId.HasValue ? "PR" : "CI";
             Console.WriteLine($"{build.Id}\t{kind}\t{build.Result,-13}\t{uri}");
         }
@@ -957,13 +959,12 @@ internal sealed partial class RuntimeInfo
 
                 static string GetPullRequestColumn(Build build)
                 {
-                    var prNumber = DevOpsUtil.GetPullRequestNumber(build);
-                    if (prNumber is null)
+                    if (DevOpsUtil.TryGetPullRequestKey(build, out var pullRequestKey))
                     {
-                        return "Rolling";
+                        return $"#{pullRequestKey.Id}";
                     }
 
-                    return $"#{prNumber.Value}";
+                    return "Rolling";
                 }
 
                 Console.WriteLine();

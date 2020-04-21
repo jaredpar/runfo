@@ -46,9 +46,9 @@ namespace DevOps.Util.DotNet
                     }
 
                     var kind = "Rolling";
-                    if (DevOpsUtil.GetPullRequestNumber(build) is int pr)
+                    if (DevOpsUtil.TryGetPullRequestKey(build, out var prKey))
                     {
-                        kind = $"PR https://github.com/{build.Repository.Id}/pull/{pr}";
+                        kind = $"PR {prKey.PullRequestUri}";
                     }
                     builder.AppendLine($"|[{build.Id}]({DevOpsUtil.GetBuildUri(build)})|{kind}|{result.TimelineRecord.Name}|");
                 }
