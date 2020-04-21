@@ -161,41 +161,6 @@ internal sealed class AutoTriageUtil : IDisposable
         }
     }
 
-/*
-    private async Task DoSearchTimeline(TriageReasonItem reason, GitHubIssueKey issueKey, bool updateIssue, string buildQuery, string text)
-    {
-        Console.WriteLine($"Searching Timeline");
-        Console.WriteLine($"  Issue: {issueKey.IssueUri}");
-        Console.WriteLine($"  Query: {buildQuery}");
-        Console.WriteLine($"  Text: {text}");
-        using var triageUtil = new TriageUtil();
-        var builds = await QueryUtil.ListBuildsAsync(buildQuery);
-        var searchTimelineResults = await QueryUtil.SearchTimelineAsync(builds, text);
-        var count = 0;
-        foreach (var result in searchTimelineResults)
-        {
-            var buildKey = DevOpsUtil.GetBuildKey(result.Build);
-            if (triageUtil.TryAddReason(buildKey, reason, issueKey.IssueUri))
-            {
-                count++;
-            }
-        }
-
-        Console.WriteLine($"  New builds found: {count}");
-
-        // TODO: the report should be built off the info in our table storage, not the most
-        // recent query.
-        if (updateIssue)
-        {
-            // TODO: need to avoid redundant updates here
-            var reportBuilder = new ReportBuilder();
-            var reportBody = reportBuilder.BuildSearchTimeline(searchTimelineResults, builds.Count, markdown: true, includeDefinition: false);
-            var status = await UpdateIssue(issueKey, reportBody) ? "succeeded" : "failed";
-            Console.WriteLine($"  Update issue {status}");
-        }
-    }
-    */
-
     private async Task<bool> UpdateGitHubIssueReport(GitHubIssueKey issueKey, string reportBody)
     {
         try
@@ -239,14 +204,14 @@ internal sealed class AutoTriageUtil : IDisposable
             if (inReportBody)
             {
                 // Skip until we hit the end of the existing report
-                if (Regex.IsMatch(line, @"<!--\s*runfo report end\s*-->"))
+                if (ReportBuilder.MarkdownReportEndRegex.IsMatch(line))
                 {
                     builder.Append(line);
                     inReportBody = false;
                     foundEnd = true;
                 }
             }
-            else if (Regex.IsMatch(line, @"<!--\s*runfo report start\s*-->"))
+            else if (ReportBuilder.MarkdownReportStartRegex.IsMatch(line))
             {
                 builder.AppendLine(line);
                 builder.AppendLine(reportBody);
