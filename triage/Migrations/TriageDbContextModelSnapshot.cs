@@ -15,11 +15,10 @@ namespace triage.Migrations
             modelBuilder
                 .HasAnnotation("ProductVersion", "3.1.3");
 
-            modelBuilder.Entity("Model.ProcessedBuild", b =>
+            modelBuilder.Entity("Model.ModelBuild", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("AzureOrganization")
                         .HasColumnType("TEXT");
@@ -32,48 +31,41 @@ namespace triage.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProcessedBuilds");
+                    b.ToTable("ModelBuilds");
                 });
 
-            modelBuilder.Entity("Model.TimelineEntry", b =>
+            modelBuilder.Entity("Model.ModelTimelineItem", b =>
                 {
-                    b.Property<string>("BuildKey")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AzureOrganization")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AzureProject")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("BuildNumber")
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Line")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("TimelineIssueId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("TimelineIssueId1")
+                    b.Property<string>("ModelBuildId")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("ModelTimelineQueryId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("TimelineRecordName")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("BuildKey");
+                    b.HasKey("Id");
 
-                    b.HasIndex("TimelineIssueId1");
+                    b.HasIndex("ModelBuildId");
 
-                    b.ToTable("TimelineEntries");
+                    b.HasIndex("ModelTimelineQueryId");
+
+                    b.ToTable("ModelTimelineItems");
                 });
 
-            modelBuilder.Entity("Model.TimelineIssue", b =>
+            modelBuilder.Entity("Model.ModelTimelineQuery", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("TEXT");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("GitHubOrganization")
                         .IsRequired()
@@ -92,14 +84,23 @@ namespace triage.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TimelineIssues");
+                    b.HasIndex("GitHubOrganization", "GitHubRepository", "IssueId")
+                        .IsUnique();
+
+                    b.ToTable("ModelTimelineQueries");
                 });
 
-            modelBuilder.Entity("Model.TimelineEntry", b =>
+            modelBuilder.Entity("Model.ModelTimelineItem", b =>
                 {
-                    b.HasOne("Model.TimelineIssue", "TimelineIssue")
+                    b.HasOne("Model.ModelBuild", "ModelBuild")
                         .WithMany()
-                        .HasForeignKey("TimelineIssueId1");
+                        .HasForeignKey("ModelBuildId");
+
+                    b.HasOne("Model.ModelTimelineQuery", "ModelTimelineQuery")
+                        .WithMany("ModelTimelineItems")
+                        .HasForeignKey("ModelTimelineQueryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

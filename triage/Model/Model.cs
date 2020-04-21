@@ -6,23 +6,25 @@ namespace Model
 {
     public class TriageDbContext : DbContext
     {
-        public DbSet<ProcessedBuild> ProcessedBuilds { get; set; }
+        public DbSet<ModelBuild> ModelBuilds { get; set; }
 
-        public DbSet<TimelineIssue> TimelineIssues { get; set; }
+        public DbSet<ModelTimelineQuery> ModelTimelineQueries { get; set; }
 
-        public DbSet<TimelineEntry> TimelineEntries { get; set; }
+        public DbSet<ModelTimelineItem> ModelTimelineItems { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
             => options.UseSqlite(@"Data Source=C:\Users\jaredpar\AppData\Local\runfo\triage.db");
-    }
 
-    /// <summary>
-    /// Represents a build that was already processed. This table is used for historical
-    /// data as well a starting point for what the next auto-triage should be considering.
-    /// </summary>
-    public class ProcessedBuild
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ModelTimelineQuery>()
+                .HasIndex(x => new { x.GitHubOrganization, x.GitHubRepository, x.IssueId })
+                .IsUnique();
+        }
+    }
+    public class ModelBuild
     {
-        public int Id { get; set; }
+        public string Id { get; set; }
 
         public string AzureOrganization { get; set; }
 
@@ -31,9 +33,9 @@ namespace Model
         public int BuildNumber { get; set; }
     }
 
-    public class TimelineIssue
+    public class ModelTimelineQuery
     {
-        public string Id { get; set; }
+        public int Id { get; set; }
 
         [Required]
         public string GitHubOrganization { get; set; }
@@ -47,29 +49,31 @@ namespace Model
         [Required]
         public string SearchText { get; set; }
 
-        List<TimelineEntry> TimelineEntries { get; set; }
+        public List<ModelTimelineItem> ModelTimelineItems { get; set; }
     }
 
-    public class TimelineEntry
+    /// <summary>
+    /// Represents a result from a ModelTimelineQuery. These are not guaranteed to be 
+    /// unique. It is possible for a build to have duplicate entries here for the same
+    /// timeline entry in the log. 
+    ///
+    /// There is moderate gating done to ensure duplicate entries don't appear here 
+    /// but they are not concrete
+    /// </summary>
+    public class ModelTimelineItem
     {
-        [Key]
-        public string BuildKey { get; set; }
-
-        [Required]
-        public string AzureOrganization {get; set; }
-
-        [Required]
-        public string AzureProject {get; set; }
-
-        [Required]
-        public int BuildNumber { get; set; }
+        public int Id { get; set; }
 
         public string TimelineRecordName { get; set; }
 
         public string Line { get; set; }
 
-        public int TimelineIssueId { get; set; }
+        public string ModelBuildId { get; set; }
 
-        public TimelineIssue TimelineIssue { get; set; }
+        public ModelBuild ModelBuild { get; set; }
+
+        public int ModelTimelineQueryId { get; set; }
+
+        public ModelTimelineQuery ModelTimelineQuery { get; set; }
     }
 }

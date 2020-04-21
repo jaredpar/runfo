@@ -41,27 +41,27 @@ internal sealed class AutoTriageUtil : IDisposable
     // TODO: eventually this won't be necessary
     internal void EnsureTriageIssues()
     {
-        TriageUtil.TryCreateTimelineIssue(
+        TriageUtil.TryCreateTimelineQuery(
             IssueKind.Infra,
             new GitHubIssueKey("dotnet", "core-eng", 9635),
             text: "unable to load shared library 'advapi32.dll' or one of its dependencies");
-        TriageUtil.TryCreateTimelineIssue(
+        TriageUtil.TryCreateTimelineQuery(
             IssueKind.Infra,
             new GitHubIssueKey("dotnet", "core-eng", 9634),
             text: "HTTP request to.*api.nuget.org.*timed out");
-        TriageUtil.TryCreateTimelineIssue(
+        TriageUtil.TryCreateTimelineQuery(
             IssueKind.Infra,
             new GitHubIssueKey("dotnet", "runtime", 35223),
             text: "Notification of assignment to an agent was never received");
-        TriageUtil.TryCreateTimelineIssue(
+        TriageUtil.TryCreateTimelineQuery(
             IssueKind.Infra,
             new GitHubIssueKey("dotnet", "runtime", 35074),
             text: "HTTP request to.*api.nuget.org.*timed out");
-        TriageUtil.TryCreateTimelineIssue(
+        TriageUtil.TryCreateTimelineQuery(
             IssueKind.Infra,
             new GitHubIssueKey("dotnet", "runtime", 34015),
             text: "Failed to install dotnet");
-        TriageUtil.TryCreateTimelineIssue(
+        TriageUtil.TryCreateTimelineQuery(
             IssueKind.Infra,
             new GitHubIssueKey("dotnet", "runtime", 34015),
             text: "Failed to install dotnet");
@@ -79,17 +79,18 @@ internal sealed class AutoTriageUtil : IDisposable
     // or maybe just make that a separate operation from triage
     internal async Task Triage(Build build)
     {
-        await DoSearchTimeline(build, TriageUtil.Context.TimelineIssues);
+        await DoSearchTimeline(build, TriageUtil.Context.ModelTimelineQueries);
         // TODO: update GitHub issues
         // TODO: update PRs
         // TODO: update the processed build table? At least the caller needs to be concerned
         // with that
     }
 
-    private async Task DoSearchTimeline(Build build, IEnumerable<TimelineIssue> timelineIssues)
+    private async Task DoSearchTimeline(Build build, IEnumerable<ModelTimelineQuery> timelineQueries)
     {
         Console.WriteLine($"Searching {DevOpsUtil.GetBuildUri(build)}");
 
+        var buildKey = build.GetBuildKey();
         var timeline = await Server.GetTimelineAsync(build);
         if (timeline is null)
         {
@@ -97,14 +98,20 @@ internal sealed class AutoTriageUtil : IDisposable
             return;
         }
 
-        foreach (var timelineIssue in timelineIssues)
+        foreach (var timelineQuery in timelineQueries)
         {
-            Console.Write($@"  Text: ""{timelineIssue.SearchText}"" ... ");
+            Console.Write($@"  Text: ""{timelineQuery.SearchText}"" ... ");
+            if (TriageUtil.IsProcessed(timelineQuery, buildKey))
+            {
+                Console.WriteLine("skipping");
+                continue;
+            }
+
             var count = 0;
-            foreach (var result in QueryUtil.SearchTimeline(build, timeline, text: timelineIssue.SearchText))
+            foreach (var result in QueryUtil.SearchTimeline(build, timeline, text: timelineQuery.SearchText))
             {
                 count++;
-                TriageUtil.TryCreateTimelineEntry(timelineIssue, result);
+                TriageUtil.CreateTimelineItem(timelineQuery, result);
             }
             Console.WriteLine($"{count} jobs");
         }
