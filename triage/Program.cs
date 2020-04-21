@@ -69,24 +69,27 @@ internal static class Program
             autoTriageUtil.EnsureTriageIssues();
             // TODO: need to triage builds that occurred since last query
             await autoTriageUtil.Triage("-d runtime -c 100 -pr");
+            await autoTriageUtil.Triage("-d runtime-official -c 20 -pr");
+            await autoTriageUtil.UpdateQueryIssues();
+            await autoTriageUtil.UpdateStatusIssue();
         }
 
         async Task RunRebuild()
         {
             using var autoTriageUtil = new AutoTriageUtil(server, gitHubClient);
             autoTriageUtil.EnsureTriageIssues();
-            await autoTriageUtil.Triage("-d runtime -c 200 -pr");
+            await autoTriageUtil.Triage("-d runtime -c 500 -pr");
             await autoTriageUtil.Triage("-d runtime-official -c 50 -pr");
-            await autoTriageUtil.UpdateQueryIssues();
         }
 
         async Task RunScratch()
         {
             using var autoTriageUtil = new AutoTriageUtil(server, gitHubClient);
             // autoTriageUtil.EnsureTriageIssues();
-            // await autoTriageUtil.Triage("-d runtime -c 100 -pr");
-            // await autoTriageUtil.UpdateQueryIssues();
-            await autoTriageUtil.UpdateStatusIssue();
+            // await autoTriageUtil.Triage("-d runtime -c 500 -pr");
+            // await autoTriageUtil.Triage("-d runtime-official -c 50 -pr");
+            await autoTriageUtil.UpdateQueryIssues();
+            // await autoTriageUtil.UpdateStatusIssue();
         }
     }
 }

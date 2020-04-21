@@ -7,3 +7,4 @@ if (Test-Path $dbPath) {
 Remove-Item -Recurse Migrations -ErrorAction SilentlyContinue
 & dotnet ef migrations add InitialCreate
 & dotnet ef database update
+& dotnet run -- rebuild

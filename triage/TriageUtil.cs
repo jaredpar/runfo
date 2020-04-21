@@ -70,14 +70,21 @@ internal sealed class TriageUtil : IDisposable
         new BuildInfo(
             GetBuildKey(build),
             GetBuildDefinitionInfo(build.ModelBuildDefinition),
-            GetGitHubPullRequestKey(build));
+            build.GitHubOrganization,
+            build.GitHubRepository,
+            build.PullRequestNumber,
+            build.StartTime,
+            build.FinishTime);
 
-    internal bool IsProcessed(ModelTimelineQuery timelineQuery, BuildKey buildKey)
+    /// <summary>
+    /// Determine if this build has already been processed for this query
+    /// </summary>
+    internal bool IsProcessed(ModelTimelineQuery timelineQuery, BuildInfo buildInfo)
     {
-        var modelBuildId = GetModelBuildId(buildKey);
+        var modelBuild = GetOrCreateBuild(buildInfo);
         var query =
             from item in Context.ModelTimelineItems
-            where item.ModelBuildId == modelBuildId
+            where item.ModelBuildId == modelBuild.Id && item.ModelTimelineQueryId == timelineQuery.Id
             select item.Id;
         return query.Any();
     }
@@ -127,6 +134,9 @@ internal sealed class TriageUtil : IDisposable
             GitHubOrganization = prKey?.Organization,
             GitHubRepository = prKey?.Repository,
             PullRequestNumber = prKey?.Number,
+            StartTime = buildInfo.StartTime,
+            FinishTime = buildInfo.FinishTime,
+            BuildNumber = buildInfo.Number,
         };
         Context.ModelBuilds.Add(modelBuild);
         Context.SaveChanges();

@@ -24,6 +24,9 @@ namespace triage.Migrations
                     b.Property<int>("BuildNumber")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("FinishTime")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("GitHubOrganization")
                         .HasColumnType("TEXT");
 
@@ -35,6 +38,9 @@ namespace triage.Migrations
 
                     b.Property<int?>("PullRequestNumber")
                         .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("StartTime")
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 

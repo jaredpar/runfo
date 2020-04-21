@@ -104,10 +104,11 @@ internal sealed class AutoTriageUtil : IDisposable
             return;
         }
 
+        var buildInfo = build.GetBuildInfo();
         foreach (var timelineQuery in timelineQueries)
         {
             Console.Write($@"  Text: ""{timelineQuery.SearchText}"" ... ");
-            if (TriageUtil.IsProcessed(timelineQuery, buildKey))
+            if (TriageUtil.IsProcessed(timelineQuery, buildInfo))
             {
                 Console.WriteLine("skipping");
                 continue;
@@ -144,13 +145,36 @@ internal sealed class AutoTriageUtil : IDisposable
                 .Where(x => x.ModelTimelineQueryId == timelineQuery.Id)
                 .OrderByDescending(x => x.BuildNumber)
                 .ToList();
+
+            var footer = new StringBuilder();
+            var mostRecent = timelineItems
+                .Select(x => x.ModelBuild)
+                .OrderByDescending(x => x.StartTime)
+                .FirstOrDefault();
+            if (mostRecent is object)
+            {
+                Debug.Assert(mostRecent.StartTime.HasValue);
+                var buildKey = TriageUtil.GetBuildKey(mostRecent);
+                footer.AppendLine($"Most [recent]({buildKey.BuildUri}) failure {mostRecent.StartTime.Value.ToLocalTime()}");
+            }
+
+            const int limit = 100;
+            if (timelineItems.Count > limit)
+            {
+                footer.AppendLine($"Limited to {limit} items (removed {timelineItems.Count - limit})");
+                timelineItems = timelineItems.Take(limit).ToList();
+            }
             
             // TODO: we use same Server here even if the Organization setting in the 
             // item specifies a different organization. Need to replace Server with 
             // a map from org -> DevOpsServer
             var results = timelineItems
                 .Select(x => (TriageUtil.GetBuildInfo(x.ModelBuild), x.TimelineRecordName));
-            var reportBody = ReportBuilder.BuildSearchTimeline(results, markdown: true, includeDefinition: true);
+            var reportBody = ReportBuilder.BuildSearchTimeline(
+                results,
+                markdown: true,
+                includeDefinition: true,
+                footer.ToString());
 
             var gitHubIssueKey = TriageUtil.GetGitHubIssueKey(timelineQuery);
             Console.Write($"Updating {gitHubIssueKey.IssueUri} ... ");
@@ -236,27 +260,42 @@ internal sealed class AutoTriageUtil : IDisposable
 
     internal async Task UpdateStatusIssue()
     {
-        var builder = new StringBuilder();
+        const int buildLimit = 200;
+        var header = new StringBuilder();
+        var body = new StringBuilder();
+        var footer = new StringBuilder();
+        header.AppendLine("## Overview");
+        header.AppendLine("Please use this queries to discover issues");
 
         await BuildOne("Blocking CI", "blocking-clean-ci");
         await BuildOne("Blocking Official Build", "blocking-official-build");
         await BuildOne("Blocking CI Optional", "blocking-clean-ci-optional");
         await BuildOne("Blocking Outerloop", "blocking-outerloop");
 
+        header.AppendLine($"The build numbers given in the tables below cover the last {buildLimit} builds of the repository");
+        BuildFooter();
+
         await UpdateIssue();
 
-            /*
-            BlockingOfficial = await DoSearch(gitHub, "blocking-official-build");
-            BlockingNormalOptional = await DoSearch(gitHub, "blocking-clean-ci-optional");
-            BlockingOuterloop = await DoSearch(gitHub, "blocking-outerloop");
-            */
+        void BuildFooter()
+        {
+            footer.AppendLine(@"## Goals
+
+1. A minimum 95% passing rate for the `runtime` pipeline
+
+## Resources
+
+1. [runtime pipeline analytics](https://dnceng.visualstudio.com/public/_build?definitionId=686&view=ms.vss-pipelineanalytics-web.new-build-definition-pipeline-analytics-view-cardmetrics)");
+
+        }
 
         async Task BuildOne(string title, string label)
         {
-            builder.AppendLine($"## {title}");
-            builder.AppendLine($"See [all issues](https://github.com/dotnet/runtime/issues?q=is%3Aopen+is%3Aissue+label%3{label})");
-            builder.AppendLine("|Status|Issue|Impacted Builds|");
-            builder.AppendLine("|---|---|---|");
+            header.AppendLine($"- [{title}](https://github.com/dotnet/runtime/issues?q=is%3Aopen+is%3Aissue+label%3{label})");
+
+            body.AppendLine($"## {title}");
+            body.AppendLine("|Status|Issue|Build Count| Build %|");
+            body.AppendLine("|---|---|---|--|");
 
             foreach (var issue in await DoSearch(label))
             {
@@ -269,9 +308,9 @@ internal sealed class AutoTriageUtil : IDisposable
                     ? issue.Title.Substring(0, titleLimit - 5) + " ..."
                     : issue.Title;
                 string issueEntry = $"[{issueText}]({issue.HtmlUrl})";
-                var impactedBuilds = GetImpactedBuilds(issueKey);
+                var tuple = GetImpactedBuilds(issueKey);
 
-                builder.AppendLine($"|{emoji}|{issueEntry}|{impactedBuilds}|");
+                body.AppendLine($"|{emoji}|{issueEntry}|{tuple.Count}|{tuple.Percent}|");
             }
         }
 
@@ -294,23 +333,28 @@ internal sealed class AutoTriageUtil : IDisposable
             var issueClient = GitHubClient.Issue;
             var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Number);
             var updateIssue = issue.ToUpdate();
-            updateIssue.Body = builder.ToString();
+            updateIssue.Body = header.ToString() + body.ToString() + footer.ToString();
             await GitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, updateIssue);
         }
 
-        string GetImpactedBuilds(GitHubIssueKey issueKey)
+        (string Count, string Percent) GetImpactedBuilds(GitHubIssueKey issueKey)
         {
             if (!TriageUtil.TryGetTimelineQuery(issueKey, out var timelineQuery))
             {
-                return "N/A";
+                return ("N/A", "N/A");
             }
 
             // TODO: need to be able to filter to the repo the build ran against
             var count = Context.ModelTimelineItems
-                .Where(x => x.ModelTimelineQueryId == timelineQuery.Id)
+                .Include(x => x.ModelBuild)
+                .Where(x =>
+                    x.ModelTimelineQueryId == timelineQuery.Id &&
+                    x.ModelBuild.GitHubOrganization == "dotnet" &&
+                    x.ModelBuild.GitHubRepository == "runtime")
                 .Count();
-            return count.ToString();
+            var percent = (((double)count / buildLimit) * 100).ToString("N2");
+            percent += "%";
+            return (count.ToString(), percent);
         }
     }
-
 }

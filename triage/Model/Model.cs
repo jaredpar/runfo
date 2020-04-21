@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
@@ -54,7 +55,12 @@ namespace Model
 
         public int? PullRequestNumber { get; set; }
 
+        public DateTime? StartTime { get; set; }
+
+        public DateTime? FinishTime { get; set; }
+
         public int ModelBuildDefinitionId { get; set; }
+
         public ModelBuildDefinition ModelBuildDefinition { get; set; }
     }
 

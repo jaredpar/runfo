@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace triage.Migrations
 {
@@ -47,6 +48,8 @@ namespace triage.Migrations
                     GitHubOrganization = table.Column<string>(nullable: true),
                     GitHubRepository = table.Column<string>(nullable: true),
                     PullRequestNumber = table.Column<int>(nullable: true),
+                    StartTime = table.Column<DateTime>(nullable: true),
+                    FinishTime = table.Column<DateTime>(nullable: true),
                     ModelBuildDefinitionId = table.Column<int>(nullable: false)
                 },
                 constraints: table =>

@@ -30,11 +30,20 @@ namespace DevOps.Util
                 build.Definition.Id);
         }
 
-        public static BuildInfo GetBuildInfo(Build build) => 
-            new BuildInfo(
-                    GetBuildKey(build),
-                    GetBuildDefinitionInfo(build),
-                    GetPullRequestKey(build));
+        public static BuildInfo GetBuildInfo(Build build)
+        {
+            var key = GetBuildKey(build);
+            var definitionInfo = GetBuildDefinitionInfo(build);
+            var startTime = build.GetStartTime()?.UtcDateTime;
+            var finishTime = build.GetFinishTime()?.UtcDateTime;
+            if (TryGetPullRequestKey(build, out var pullRequestKey))
+            {
+                return new BuildInfo(key, definitionInfo, pullRequestKey, startTime, finishTime);
+            }
+
+            var gitHubInfo = GetGitHubInfo(build);
+            return new BuildInfo(key, definitionInfo, gitHubInfo, startTime, finishTime);
+        }
 
         public static bool TryParseBuildKey(Uri uri, out BuildKey buildKey)
         {
@@ -81,15 +90,32 @@ namespace DevOps.Util
         public static string GetBuildUri(string organization, string project, int buildId) =>
             $"https://dev.azure.com/{organization}/{project}/_build/results?buildId={buildId}";
 
-        public static (string Organization, string Repository) GetRepositoryInfo(Build build)
+        public static GitHubInfo? GetGitHubInfo(Build build)
         {
-            var both = build.Repository.Id.Split(new[] { '/' });
-            return (both[0], both[1]);
+            if (GetRepositoryInfo(build) is RepositoryInfo { Type: "GitHub" } repoInfo)
+            {
+                var both = repoInfo.Id.Split("/");
+                if (both.Length == 2)
+                {
+                    return new GitHubInfo(both[0], both[1]);
+                }
+            }
+
+            return null;
         }
 
-        public static string GetRepositoryOrganization(Build build) => GetRepositoryInfo(build).Organization;
+        public static RepositoryInfo? GetRepositoryInfo(Build build)
+        {
+            var repo = build.Repository;
+            if (repo is object &&
+                repo.Id is object &&
+                repo.Type is object)
+            {
+                return new RepositoryInfo(repo.Id, repo.Type);
+            }
 
-        public static string GetRepositoryName(Build build) => GetRepositoryInfo(build).Repository;
+            return null;
+        }
 
         public static GitHubPullRequestKey? GetPullRequestKey(Build build) =>
             TryGetPullRequestKey(build, out var pullRequestKey)
@@ -107,13 +133,12 @@ namespace DevOps.Util
             try
             {
                 var items = build.SourceBranch.Split('/');
-                if (int.TryParse(items[2], out int number))
+                if (int.TryParse(items[2], out int number) &&
+                    GetGitHubInfo(build) is GitHubInfo gitHubInfo)
                 {
-                    var info = GetRepositoryInfo(build);
-                    prKey = new GitHubPullRequestKey(info.Organization, info.Repository, number);
+                    prKey = new GitHubPullRequestKey(gitHubInfo.Organization, gitHubInfo.Repository, number);
                     return true;
                 }
-
             }
             catch
             {

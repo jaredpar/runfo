@@ -20,7 +20,8 @@ namespace DevOps.Util.DotNet
         public string BuildSearchTimeline(
             IEnumerable<(BuildInfo BuildInfo, string TimelineRecordName)> results,
             bool markdown,
-            bool includeDefinition)
+            bool includeDefinition,
+            string? footer = null)
         {
             var builder = new StringBuilder();
             if (markdown)
@@ -68,10 +69,13 @@ namespace DevOps.Util.DotNet
                 }
             }
 
-            var foundBuildCount = results.GroupBy(x => x.BuildInfo.Number).Count();
+            // Need a line break to separate the table from the footer and report end
+
             builder.AppendLine();
-            builder.AppendLine($"Impacted {foundBuildCount} builds");
-            builder.AppendLine($"Impacted {resultsCount} jobs");
+            if (footer is object)
+            {
+                builder.AppendLine(footer);
+            }
 
             if (markdown)
             {

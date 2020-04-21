@@ -9,7 +9,7 @@ using Model;
 namespace triage.Migrations
 {
     [DbContext(typeof(TriageDbContext))]
-    [Migration("20200421180202_InitialCreate")]
+    [Migration("20200421200106_InitialCreate")]
     partial class InitialCreate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -26,6 +26,9 @@ namespace triage.Migrations
                     b.Property<int>("BuildNumber")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("FinishTime")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("GitHubOrganization")
                         .HasColumnType("TEXT");
 
@@ -37,6 +40,9 @@ namespace triage.Migrations
 
                     b.Property<int?>("PullRequestNumber")
                         .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("StartTime")
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
