@@ -6,6 +6,8 @@ namespace DevOps.Util
 {
     public static class DevOpsUtilExtensions
     {
+        public static BuildKey GetBuildKey(this Build build) => DevOpsUtil.GetBuildKey(build);
+
         public static DateTimeOffset? GetStartTime(this Build build) => DevOpsUtil.ConvertRestTime(build.StartTime);
 
         public static DateTimeOffset? GetQueueTime(this Build build) => DevOpsUtil.ConvertRestTime(build.QueueTime);

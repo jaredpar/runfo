@@ -46,20 +46,9 @@ namespace DevOps.Util.DotNet
             string? name = null,
             string? task = null)
         {
-            var options = RegexOptions.Compiled | RegexOptions.IgnoreCase;
-            var textRegex = new Regex(text, options);
-            Regex? nameRegex = null;
-            if (name is object)
-            {
-                nameRegex = new Regex(name, options);
-            }
-
-            Regex? taskRegex = null;
-            if (task is object)
-            {
-                taskRegex = new Regex(task, options);
-            }
-
+            var textRegex = CreateTimelineRegex(text);
+            var nameRegex = CreateTimelineRegex(name);
+            var taskRegex = CreateTimelineRegex(task);
             return SearchTimelineAsync(builds, textRegex, nameRegex, taskRegex);
         }
 
@@ -78,34 +67,57 @@ namespace DevOps.Util.DotNet
                     continue;
                 }
 
-                var records = timeline.Records
-                    .Where(r => name is null || name.IsMatch(r.Name))
-                    .Where(r => r.Task is null || task is null || task.IsMatch(r.Task.Name));
-                foreach (var record in records)
-                {
-                    if (record.Issues is null)
-                    {
-                        continue;
-                    }
-
-                    string? line = null;
-                    foreach (var issue in record.Issues)
-                    {
-                        if (text.IsMatch(issue.Message))
-                        {
-                            line = issue.Message;
-                            break;
-                        }
-                    }
-
-                    if (line is object)
-                    {
-                        list.Add(new SearchTimelineResult(build, record, line));
-                    }
-                }
+                list.AddRange(SearchTimeline(build, timeline, text, name, task));
             }
 
             return list;
+        }
+
+        public IEnumerable<SearchTimelineResult> SearchTimeline(
+            Build build,
+            Timeline timeline,
+            string text,
+            string? name = null,
+            string? task = null)
+        {
+            var textRegex = CreateTimelineRegex(text);
+            var nameRegex = CreateTimelineRegex(name);
+            var taskRegex = CreateTimelineRegex(task);
+            return SearchTimeline(build, timeline, textRegex, nameRegex, taskRegex);
+        }
+
+        public IEnumerable<SearchTimelineResult> SearchTimeline(
+            Build build,
+            Timeline timeline,
+            Regex text,
+            Regex? name = null,
+            Regex? task = null)
+        {
+            var records = timeline.Records
+                .Where(r => name is null || name.IsMatch(r.Name))
+                .Where(r => r.Task is null || task is null || task.IsMatch(r.Task.Name));
+            foreach (var record in records)
+            {
+                if (record.Issues is null)
+                {
+                    continue;
+                }
+
+                string? line = null;
+                foreach (var issue in record.Issues)
+                {
+                    if (text.IsMatch(issue.Message))
+                    {
+                        line = issue.Message;
+                        break;
+                    }
+                }
+
+                if (line is object)
+                {
+                    yield return new SearchTimelineResult(build, record, line);
+                }
+            }
         }
 
         public async Task<List<Build>> ListBuildsAsync(
@@ -290,5 +302,8 @@ namespace DevOps.Util.DotNet
             return int.TryParse(build, out buildId);
         }
 
+        [return: NotNullIfNotNull("pattern")]
+        private static Regex? CreateTimelineRegex(string? pattern) =>
+            new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
     }
 }

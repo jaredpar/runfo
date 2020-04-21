@@ -68,6 +68,7 @@ internal static class Program
 
         async Task RunList(List<string> args)
         {
+            /*
             var showAll = false;
             var optionSet = new BuildSearchOptionSet()
             {
@@ -85,10 +86,12 @@ internal static class Program
 
                 Console.WriteLine($"{DevOpsUtil.GetBuildUri(build)} {reason}");
             }
+            */
         }
 
         void RunComplete(List<string> args)
         {
+            /*
             var optionSet = new TriageOptionSet();
             ParseAll(optionSet, args);
             foreach (var key in ListBuildKeys(optionSet))
@@ -97,16 +100,18 @@ internal static class Program
                 triageBuild.IsComplete = true;
             }
             triageUtil.Context.SaveChanges();
+            */
         }
 
         async Task RunAutoTriage(List<string> args)
         {
-            var autoTriageUtil = new AutoTriageUtil(server, gitHubClient);
-            await autoTriageUtil.Triage();
+            using var autoTriageUtil = new AutoTriageUtil(server, gitHubClient);
+            await autoTriageUtil.Triage("-d runtime -c 100 -pr");
         }
 
         void RunReason(List<string> args)
         {
+            /*
             string reason = null;
             string issue = null;
             var optionSet = new TriageOptionSet()
@@ -141,10 +146,12 @@ internal static class Program
                 triageUtil.Context.TriageReasons.Add(triageReason);
             }
             triageUtil.Context.SaveChanges();
+            */
         }
 
         async Task<IEnumerable<Build>> GetUntriagedBuilds(BuildSearchOptionSet optionSet, bool showAll = false)
         {
+            /*
             IEnumerable<Build> list = await queryUtil.ListBuildsAsync(optionSet);
             list = list.Where(x => x.Result != BuildResult.Succeeded);
             if (!showAll)
@@ -153,6 +160,9 @@ internal static class Program
             }
 
             return list;
+            */
+            await Task.Yield();
+            throw null;
         }
 
         List<BuildKey> ListBuildKeys(TriageOptionSet optionSet)

@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -66,5 +68,4 @@ namespace DevOps.Util.DotNet
             return builder.ToString();
         }
     }
-
 }

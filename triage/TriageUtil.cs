@@ -7,9 +7,10 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DevOps.Util;
+using DevOps.Util.DotNet;
 using Model;
 
-internal enum TriageReasonItem
+internal enum IssueKind
 {
     Azure,
     Helix,
@@ -29,11 +30,11 @@ internal enum TriageReasonItem
 // occurring. That's a design flaw. Need to fix.
 internal sealed class TriageUtil : IDisposable
 {
-    internal RuntimeInfoDbContext Context { get; }
+    internal TriageDbContext Context { get; }
 
     internal TriageUtil()
     {
-        Context = new RuntimeInfoDbContext();
+        Context = new TriageDbContext();
     }
 
     public void Dispose()
@@ -41,61 +42,64 @@ internal sealed class TriageUtil : IDisposable
         Context.Dispose();
     }
 
-    internal bool IsReason(BuildKey key, string reason, string issue)
+    internal bool IsProcessed(BuildKey buildKey)
     {
-        var triageKey = RuntimeInfoModelUtil.GetTriageBuildKey(key);
-        return Context.TriageReasons
-            .Where(x => x.TriageBuildId == triageKey && x.Reason == reason && x.IssueUri == issue)
-            .Any();
-    }
-
-    internal bool IsTriaged(Build build)
-    {
-        var key = RuntimeInfoModelUtil.GetTriageBuildKey(build);
-        var triagedBuild = Context.TriageBuilds
-            .Where(x => x.Id == key)
+        var processedBuild = Context.ProcessedBuilds
+            .Where(x => 
+                x.AzureOrganization == buildKey.Organization &&
+                x.AzureProject == buildKey.Project &&
+                x.BuildNumber == buildKey.Id)
             .FirstOrDefault();
-        return triagedBuild?.IsComplete == true;
+        return processedBuild is object;
     }
 
-    internal bool TryAddReason(BuildKey key, TriageReasonItem reason, string issue)
+    public bool TryCreateTimelineIssue(IssueKind kind, GitHubIssueKey issueKey, string text)
     {
-        if (IsReason(key, reason.ToString(),  issue))
+        var id = $"{issueKey.Organization}-{issueKey.Repository}-{issueKey.Id}";
+        var timelineIssue = new TimelineIssue()
+        {
+            Id = id,
+            GitHubOrganization = issueKey.Organization,
+            GitHubRepository = issueKey.Repository,
+            IssueId = issueKey.Id,
+            SearchText = text
+        };
+
+        try
+        {
+            Context.TimelineIssues.Add(timelineIssue);
+            Context.SaveChanges();
+            return true;
+        }
+        catch
         {
             return false;
         }
 
-        var triageBuild = GetOrCreateTriageBuild(key);
-        var triageReason = new TriageReason()
-        {
-            Reason = reason.ToString(),
-            IssueUri = issue,
-            TriageBuildId = triageBuild.Id,
-            TriageBuild = triageBuild,
-        };
-
-        Context.TriageReasons.Add(triageReason);
-        Context.SaveChanges();
-        return true;
     }
 
-    internal TriageBuild GetOrCreateTriageBuild(BuildKey key)
+    public bool TryCreateTimelineEntry(TimelineIssue timelineIssue, SearchTimelineResult result)
     {
-        var triageKey = RuntimeInfoModelUtil.GetTriageBuildKey(key);
-        var triageBuild = Context.TriageBuilds.SingleOrDefault(x => x.Id == triageKey);
-        if (triageBuild is null)
+        var buildKey = result.Build.GetBuildKey();
+        var entry = new TimelineEntry()
         {
-            triageBuild = new TriageBuild()
-            {
-                Id = triageKey,
-                Organization = key.Organization,
-                Project = key.Project,
-                BuildNumber = key.Id
-            };
-            Context.TriageBuilds.Add(triageBuild);
-            Context.SaveChanges();
-        }
+            BuildKey = TriageModelUtil.GetBuildKeyId(buildKey),
+            AzureOrganization = buildKey.Organization,
+            AzureProject = buildKey.Project,
+            BuildNumber = buildKey.Id,
+            TimelineRecordName = result.TimelineRecord.Name,
+            Line = result.Line,
+        };
 
-        return triageBuild;
+        try
+        {
+            Context.TimelineEntries.Add(entry);
+            Context.SaveChanges();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

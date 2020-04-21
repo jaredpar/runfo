@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -12,11 +14,13 @@ using DevOps.Util.DotNet;
 using Model;
 using Octokit;
 
-internal sealed class AutoTriageUtil
+internal sealed class AutoTriageUtil : IDisposable
 {
     internal DevOpsServer Server { get; }
     internal GitHubClient GitHubClient { get; }
     internal DotNetQueryUtil QueryUtil { get; }
+
+    internal TriageUtil TriageUtil { get; }
 
     internal AutoTriageUtil(DevOpsServer server, GitHubClient gitHubClient)
     {
@@ -25,49 +29,87 @@ internal sealed class AutoTriageUtil
         QueryUtil = new DotNetQueryUtil(server);
     }
 
+    public void Dispose()
+    {
+        TriageUtil.Dispose();
+    }
+
     // TODO: don't do this if the issue is closed
     // TODO: limit builds to report on to 100 because after that the tables get too large
 
-    internal async Task Triage()
+    // TODO: eventually this won't be necessary
+    internal void EnsureTriageIssues()
     {
-        await DoSearchTimeline(
-            TriageReasonItem.Infra,
+        TriageUtil.TryCreateTimelineIssue(
+            IssueKind.Infra,
             new GitHubIssueKey("dotnet", "core-eng", 9635),
-            updateIssue: true,
-            buildQuery: "-d runtime -c 50 -pr",
             text: "unable to load shared library 'advapi32.dll' or one of its dependencies");
-        await DoSearchTimeline(
-            TriageReasonItem.Infra,
+        TriageUtil.TryCreateTimelineIssue(
+            IssueKind.Infra,
             new GitHubIssueKey("dotnet", "core-eng", 9634),
-            updateIssue: true,
-            buildQuery: "-c 600 -pr",
             text: "HTTP request to.*api.nuget.org.*timed out");
-        await DoSearchTimeline(
-            TriageReasonItem.Infra,
+        TriageUtil.TryCreateTimelineIssue(
+            IssueKind.Infra,
             new GitHubIssueKey("dotnet", "runtime", 35223),
-            updateIssue: true,
-            buildQuery: "-d runtime -c 100 -pr",
             text: "Notification of assignment to an agent was never received");
-        await DoSearchTimeline(
-            TriageReasonItem.Infra,
+        TriageUtil.TryCreateTimelineIssue(
+            IssueKind.Infra,
             new GitHubIssueKey("dotnet", "runtime", 35074),
-            updateIssue: true,
-            buildQuery: "-d runtime -c 100 -pr",
             text: "HTTP request to.*api.nuget.org.*timed out");
-        await DoSearchTimeline(
-            TriageReasonItem.Infra,
+        TriageUtil.TryCreateTimelineIssue(
+            IssueKind.Infra,
             new GitHubIssueKey("dotnet", "runtime", 34015),
-            updateIssue: false,
-            buildQuery: "-d runtime -c 100 -pr",
             text: "Failed to install dotnet");
-        await DoSearchTimeline(
-            TriageReasonItem.Infra,
+        TriageUtil.TryCreateTimelineIssue(
+            IssueKind.Infra,
             new GitHubIssueKey("dotnet", "runtime", 34015),
-            updateIssue: false,
-            buildQuery: "-d runtime-official -c 20",
             text: "Failed to install dotnet");
     }
 
+    internal async Task Triage(string buildQuery)
+    {
+        foreach (var build in await QueryUtil.ListBuildsAsync(buildQuery))
+        {
+            await Triage(build);
+        }
+    }
+
+    // TODO: need overload that takes builds and groups up the issue and PR updates
+    // or maybe just make that a separate operation from triage
+    internal async Task Triage(Build build)
+    {
+        await DoSearchTimeline(build, TriageUtil.Context.TimelineIssues);
+        // TODO: update GitHub issues
+        // TODO: update PRs
+        // TODO: update the processed build table? At least the caller needs to be concerned
+        // with that
+    }
+
+    private async Task DoSearchTimeline(Build build, IEnumerable<TimelineIssue> timelineIssues)
+    {
+        Console.WriteLine($"Searching {DevOpsUtil.GetBuildUri(build)}");
+
+        var timeline = await Server.GetTimelineAsync(build);
+        if (timeline is null)
+        {
+            Console.WriteLine("Error: No timeline");
+            return;
+        }
+
+        foreach (var timelineIssue in timelineIssues)
+        {
+            Console.Write($@"  Text: ""{timelineIssue.SearchText}"" ... ");
+            var count = 0;
+            foreach (var result in QueryUtil.SearchTimeline(build, timeline, text: timelineIssue.SearchText))
+            {
+                count++;
+                TriageUtil.TryCreateTimelineEntry(timelineIssue, result);
+            }
+            Console.WriteLine($"{count} jobs");
+        }
+    }
+
+/*
     private async Task DoSearchTimeline(TriageReasonItem reason, GitHubIssueKey issueKey, bool updateIssue, string buildQuery, string text)
     {
         Console.WriteLine($"Searching Timeline");
@@ -100,6 +142,7 @@ internal sealed class AutoTriageUtil
             Console.WriteLine($"  Update issue {status}");
         }
     }
+    */
 
     private async Task<bool> UpdateIssue(GitHubIssueKey issueKey, string reportBody)
     {
