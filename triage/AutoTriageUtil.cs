@@ -25,6 +25,9 @@ internal sealed class AutoTriageUtil
         QueryUtil = new DotNetQueryUtil(server);
     }
 
+    // TODO: don't do this if the issue is closed
+    // TODO: limit builds to report on to 100 because after that the tables get too large
+
     internal async Task Triage()
     {
         await DoSearchTimeline(
@@ -39,6 +42,12 @@ internal sealed class AutoTriageUtil
             updateIssue: true,
             buildQuery: "-c 600 -pr",
             text: "HTTP request to.*api.nuget.org.*timed out");
+        await DoSearchTimeline(
+            TriageReasonItem.Infra,
+            new GitHubIssueKey("dotnet", "runtime", 35223),
+            updateIssue: true,
+            buildQuery: "-d runtime -c 100 -pr",
+            text: "Notification of assignment to an agent was never received");
         await DoSearchTimeline(
             TriageReasonItem.Infra,
             new GitHubIssueKey("dotnet", "runtime", 35074),
@@ -105,6 +114,10 @@ internal sealed class AutoTriageUtil
                 await issueClient.Update(issueKey.Organization, issueKey.Repository, issueKey.Id, issueUpdate);
                 return true;
             }
+            else
+            {
+                Console.WriteLine("Cannot find the replacement section in the issue");
+            }
         }
         catch (Exception ex)
         {
@@ -133,6 +146,7 @@ internal sealed class AutoTriageUtil
                 // Skip until we hit the end of the existing report
                 if (Regex.IsMatch(line, @"<!--\s*runfo report end\s*-->"))
                 {
+                    builder.Append(line);
                     inReportBody = false;
                     foundEnd = true;
                 }
