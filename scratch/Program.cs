@@ -233,12 +233,6 @@ namespace QueryFun
             var builds2 = await server.ListBuildsAsync("public", top: 10);
         }
 
-        private static async Task UploadCloneTime()
-        {
-            using var util = new CloneTimeUtil(await GetToken("scratch-db"));
-            await util.UpdateDatabaseAsync();
-        }
-
         private static async Task DumpTestTimes()
         {
             using var util = new RunTestsUtil(await GetToken("scratch-db"));

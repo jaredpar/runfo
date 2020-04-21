@@ -49,7 +49,28 @@ internal sealed class TriageUtil : IDisposable
         $"{buildKey.Organization}-{buildKey.Project}-{buildKey.Number}";
 
     internal static GitHubIssueKey GetGitHubIssueKey(ModelTimelineQuery timelineQuery) =>
-        new GitHubIssueKey(timelineQuery.GitHubOrganization, timelineQuery.GitHubRepository, timelineQuery.IssueId);
+        new GitHubIssueKey(timelineQuery.GitHubOrganization, timelineQuery.GitHubRepository, timelineQuery.IssueNumber);
+
+    internal static GitHubPullRequestKey? GetGitHubPullRequestKey(ModelBuild build) =>
+        build.PullRequestNumber.HasValue
+            ? (GitHubPullRequestKey?)new GitHubPullRequestKey(build.GitHubOrganization, build.GitHubRepository, build.PullRequestNumber.Value)
+            : null;
+
+    internal static BuildDefinitionInfo GetBuildDefinitionInfo(ModelBuildDefinition buildDefinition) =>
+        new BuildDefinitionInfo(
+            buildDefinition.AzureOrganization,
+            buildDefinition.AzureProject,
+            buildDefinition.DefinitionName,
+            buildDefinition.DefinitionId);
+
+    internal static BuildKey GetBuildKey(ModelBuild build) =>
+        new BuildKey(build.ModelBuildDefinition.AzureOrganization, build.ModelBuildDefinition.AzureProject, build.BuildNumber);
+
+    internal static BuildInfo GetBuildInfo(ModelBuild build) =>
+        new BuildInfo(
+            GetBuildKey(build),
+            GetBuildDefinitionInfo(build.ModelBuildDefinition),
+            GetGitHubPullRequestKey(build));
 
     internal bool IsProcessed(ModelTimelineQuery timelineQuery, BuildKey buildKey)
     {
@@ -61,9 +82,35 @@ internal sealed class TriageUtil : IDisposable
         return query.Any();
     }
 
-    internal ModelBuild GetOrCreateBuild(BuildKey buildKey)
+    internal ModelBuildDefinition GetOrCreateBuildDefinition(BuildDefinitionInfo definitionInfo)
     {
-        var modelBuildId = GetModelBuildId(buildKey);
+        var buildDefinition = Context.ModelBuildDefinitions
+            .Where(x =>
+                x.AzureOrganization == definitionInfo.Organization &&
+                x.AzureProject == definitionInfo.Project &&
+                x.DefinitionId == definitionInfo.Id)
+            .FirstOrDefault();
+        if (buildDefinition is object)
+        {
+            return buildDefinition;
+        }
+
+        buildDefinition = new ModelBuildDefinition()
+        {
+            AzureOrganization = definitionInfo.Organization,
+            AzureProject = definitionInfo.Project,
+            DefinitionId = definitionInfo.Id,
+            DefinitionName = definitionInfo.Name,
+        };
+
+        Context.ModelBuildDefinitions.Add(buildDefinition);
+        Context.SaveChanges();
+        return buildDefinition;
+    }
+
+    internal ModelBuild GetOrCreateBuild(BuildInfo buildInfo)
+    {
+        var modelBuildId = GetModelBuildId(buildInfo.Key);
         var modelBuild = Context.ModelBuilds
             .Where(x => x.Id == modelBuildId)
             .FirstOrDefault();
@@ -72,12 +119,14 @@ internal sealed class TriageUtil : IDisposable
             return modelBuild;
         }
 
+        var prKey = buildInfo.PullRequestKey;
         modelBuild = new ModelBuild()
         {
             Id = modelBuildId,
-            AzureOrganization = buildKey.Organization,
-            AzureProject = buildKey.Project,
-            BuildNumber = buildKey.Number
+            ModelBuildDefinitionId = GetOrCreateBuildDefinition(buildInfo.DefinitionInfo).Id,
+            GitHubOrganization = prKey?.Organization,
+            GitHubRepository = prKey?.Repository,
+            PullRequestNumber = prKey?.Number,
         };
         Context.ModelBuilds.Add(modelBuild);
         Context.SaveChanges();
@@ -90,7 +139,7 @@ internal sealed class TriageUtil : IDisposable
             .Where(x => 
                 x.GitHubOrganization == issueKey.Organization &&
                 x.GitHubRepository == issueKey.Repository &&
-                x.IssueId == issueKey.Id)
+                x.IssueNumber == issueKey.Number)
             .FirstOrDefault();
         return timelineQuery is object;
     }
@@ -106,7 +155,7 @@ internal sealed class TriageUtil : IDisposable
         {
             GitHubOrganization = issueKey.Organization,
             GitHubRepository = issueKey.Repository,
-            IssueId = issueKey.Id,
+            IssueNumber = issueKey.Number,
             SearchText = text
         };
 
@@ -129,7 +178,7 @@ internal sealed class TriageUtil : IDisposable
         {
             TimelineRecordName = result.TimelineRecord.Name,
             Line = result.Line,
-            ModelBuild = GetOrCreateBuild(result.Build.GetBuildKey()),
+            ModelBuild = GetOrCreateBuild(result.Build.GetBuildInfo()),
             ModelTimelineQuery = timelineQuery,
             BuildNumber = result.Build.GetBuildKey().Number,
         };

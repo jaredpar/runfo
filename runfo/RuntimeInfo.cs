@@ -224,7 +224,7 @@ internal sealed partial class RuntimeInfo
         var builds = await QueryUtil.ListBuildsAsync(optionSet);
         var found = await QueryUtil.SearchTimelineAsync(builds, text, name, task);
         Console.WriteLine(ReportBuilder.BuildSearchTimeline(
-            found.Select(x => (x.Build, x.TimelineRecord.Name)),
+            found.Select(x => (x.Build.GetBuildInfo(), x.TimelineRecord.Name)),
             markdown: markdown,
             includeDefinition: !hadDefinition));
 
@@ -511,7 +511,7 @@ internal sealed partial class RuntimeInfo
         {
             var uri = DevOpsUtil.GetBuildUri(build);
             var prId = DevOpsUtil.TryGetPullRequestKey(build, out var pullRequestKey)
-                ? (int?)pullRequestKey.Id
+                ? (int?)pullRequestKey.Number
                 : null;
             var kind = prId.HasValue ? "PR" : "CI";
             Console.WriteLine($"{build.Id}\t{kind}\t{build.Result,-13}\t{uri}");
@@ -960,7 +960,7 @@ internal sealed partial class RuntimeInfo
                 {
                     if (DevOpsUtil.TryGetPullRequestKey(build, out var pullRequestKey))
                     {
-                        return $"#{pullRequestKey.Id}";
+                        return $"#{pullRequestKey.Number}";
                     }
 
                     return "Rolling";

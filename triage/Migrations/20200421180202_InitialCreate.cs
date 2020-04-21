@@ -7,17 +7,19 @@ namespace triage.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "ModelBuilds",
+                name: "ModelBuildDefinitions",
                 columns: table => new
                 {
-                    Id = table.Column<string>(nullable: false),
+                    Id = table.Column<int>(nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
                     AzureOrganization = table.Column<string>(nullable: true),
                     AzureProject = table.Column<string>(nullable: true),
-                    BuildNumber = table.Column<int>(nullable: false)
+                    DefinitionName = table.Column<string>(nullable: true),
+                    DefinitionId = table.Column<int>(nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ModelBuilds", x => x.Id);
+                    table.PrimaryKey("PK_ModelBuildDefinitions", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -28,12 +30,34 @@ namespace triage.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     GitHubOrganization = table.Column<string>(nullable: false),
                     GitHubRepository = table.Column<string>(nullable: false),
-                    IssueId = table.Column<int>(nullable: false),
+                    IssueNumber = table.Column<int>(nullable: false),
                     SearchText = table.Column<string>(nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ModelTimelineQueries", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ModelBuilds",
+                columns: table => new
+                {
+                    Id = table.Column<string>(nullable: false),
+                    BuildNumber = table.Column<int>(nullable: false),
+                    GitHubOrganization = table.Column<string>(nullable: true),
+                    GitHubRepository = table.Column<string>(nullable: true),
+                    PullRequestNumber = table.Column<int>(nullable: true),
+                    ModelBuildDefinitionId = table.Column<int>(nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ModelBuilds", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ModelBuilds_ModelBuildDefinitions_ModelBuildDefinitionId",
+                        column: x => x.ModelBuildDefinitionId,
+                        principalTable: "ModelBuildDefinitions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -66,6 +90,17 @@ namespace triage.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_ModelBuildDefinitions_AzureOrganization_AzureProject_DefinitionId",
+                table: "ModelBuildDefinitions",
+                columns: new[] { "AzureOrganization", "AzureProject", "DefinitionId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ModelBuilds_ModelBuildDefinitionId",
+                table: "ModelBuilds",
+                column: "ModelBuildDefinitionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ModelTimelineItems_ModelBuildId",
                 table: "ModelTimelineItems",
                 column: "ModelBuildId");
@@ -76,9 +111,9 @@ namespace triage.Migrations
                 column: "ModelTimelineQueryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ModelTimelineQueries_GitHubOrganization_GitHubRepository_IssueId",
+                name: "IX_ModelTimelineQueries_GitHubOrganization_GitHubRepository_IssueNumber",
                 table: "ModelTimelineQueries",
-                columns: new[] { "GitHubOrganization", "GitHubRepository", "IssueId" },
+                columns: new[] { "GitHubOrganization", "GitHubRepository", "IssueNumber" },
                 unique: true);
         }
 
@@ -92,6 +127,9 @@ namespace triage.Migrations
 
             migrationBuilder.DropTable(
                 name: "ModelTimelineQueries");
+
+            migrationBuilder.DropTable(
+                name: "ModelBuildDefinitions");
         }
     }
 }

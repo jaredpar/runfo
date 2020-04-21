@@ -75,7 +75,8 @@ internal static class Program
         {
             using var autoTriageUtil = new AutoTriageUtil(server, gitHubClient);
             autoTriageUtil.EnsureTriageIssues();
-            await autoTriageUtil.Triage("-d runtime -c 100 -pr");
+            await autoTriageUtil.Triage("-d runtime -c 200 -pr");
+            await autoTriageUtil.Triage("-d runtime-official -c 50 -pr");
             await autoTriageUtil.UpdateQueryIssues();
         }
 

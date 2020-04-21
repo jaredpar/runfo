@@ -20,6 +20,22 @@ namespace DevOps.Util
             return new BuildKey(organization, build.Project.Name, build.Id);
         }
 
+        public static BuildDefinitionInfo GetBuildDefinitionInfo(Build build)
+        {
+            var organization = GetOrganization(build);
+            return new BuildDefinitionInfo(
+                organization,
+                build.Definition.Project.Name,
+                build.Definition.Name,
+                build.Definition.Id);
+        }
+
+        public static BuildInfo GetBuildInfo(Build build) => 
+            new BuildInfo(
+                    GetBuildKey(build),
+                    GetBuildDefinitionInfo(build),
+                    GetPullRequestKey(build));
+
         public static bool TryParseBuildKey(Uri uri, out BuildKey buildKey)
         {
             var regex = new Regex(@"https://dev.azure.com/(\w+)/(\w+)/.*buildId=(\d+)");
@@ -34,13 +50,10 @@ namespace DevOps.Util
             return false;
         }
 
-        public static Uri GetBuildDefinitionUri(string organization, string project, int definitionId)
-        {
-            var uri = $"https://{organization}.visualstudio.com/{project}/_build?definitionId={definitionId}";
-            return new Uri(uri);
-        }
+        public static string GetBuildDefinitionUri(string organization, string project, int definitionId) =>
+             $"https://{organization}.visualstudio.com/{project}/_build?definitionId={definitionId}";
 
-        public static Uri GetBuildDefinitionUri(Build build) =>
+        public static string GetBuildDefinitionUri(Build build) =>
             GetBuildDefinitionUri(
                 GetOrganization(build),
                 build.Project.Name,
@@ -56,7 +69,7 @@ namespace DevOps.Util
         /// <summary>
         /// Get a human readable build URI for the build
         /// </summary>
-        public static Uri GetBuildUri(Build build)
+        public static string GetBuildUri(Build build)
         {
             var organization = GetOrganization(build);
             return GetBuildUri(organization, build.Project.Name, build.Id);
@@ -65,11 +78,8 @@ namespace DevOps.Util
         /// <summary>
         /// Get a human readable build URI for the build
         /// </summary>
-        public static Uri GetBuildUri(string organization, string project, int buildId)
-        {
-            var uri = $"https://dev.azure.com/{organization}/{project}/_build/results?buildId={buildId}";
-            return new Uri(uri);
-        }
+        public static string GetBuildUri(string organization, string project, int buildId) =>
+            $"https://dev.azure.com/{organization}/{project}/_build/results?buildId={buildId}";
 
         public static (string Organization, string Repository) GetRepositoryInfo(Build build)
         {
@@ -80,6 +90,11 @@ namespace DevOps.Util
         public static string GetRepositoryOrganization(Build build) => GetRepositoryInfo(build).Organization;
 
         public static string GetRepositoryName(Build build) => GetRepositoryInfo(build).Repository;
+
+        public static GitHubPullRequestKey? GetPullRequestKey(Build build) =>
+            TryGetPullRequestKey(build, out var pullRequestKey)
+                ? (GitHubPullRequestKey?)pullRequestKey
+                : null;
 
         public static bool TryGetPullRequestKey(Build build, out GitHubPullRequestKey prKey)
         {
@@ -108,16 +123,16 @@ namespace DevOps.Util
             return false;
         }
 
-        public static bool TryGetPullRequestId(Build build, out int id)
+        public static bool TryGetPullRequestNumber(Build build, out int number)
         {
             if (TryGetPullRequestKey(build, out var pullRequestKey))
             {
-                id = pullRequestKey.Id;
+                number = pullRequestKey.Number;
                 return true;
             }
             else
             {
-                id = 0;
+                number = 0;
                 return false;
             }
         }

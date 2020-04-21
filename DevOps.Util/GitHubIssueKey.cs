@@ -8,18 +8,18 @@ namespace DevOps.Util
 
         public string Repository { get; }
 
-        public int Id { get; }
+        public int Number { get; }
 
-        public string IssueUri => $"https://github.com/{Organization}/{Repository}/issues/{Id}";
+        public string IssueUri => $"https://github.com/{Organization}/{Repository}/issues/{Number}";
 
-        public GitHubIssueKey(string organization, string repository, int id)
+        public GitHubIssueKey(string organization, string repository, int number)
         {
             Organization = organization;
             Repository = repository;
-            Id = id;
+            Number = number;
         }
 
-        public override string ToString() => $"{Organization}/{Repository}/{Id}";
+        public override string ToString() => $"{Organization}/{Repository}/{Number}";
     }
 
     public readonly struct GitHubPullRequestKey
@@ -28,19 +28,19 @@ namespace DevOps.Util
 
         public string Repository { get; }
 
-        public int Id { get; }
+        public int Number { get; }
 
-        public string PullRequestUri => $"https://github.com/{Organization}/{Repository}/pull/{Id}";
+        public string PullRequestUri => $"https://github.com/{Organization}/{Repository}/pull/{Number}";
 
-        public GitHubPullRequestKey(string organization, string repository, int id)
+        public GitHubPullRequestKey(string organization, string repository, int number)
         {
             Organization = organization;
             Repository = repository;
-            Id = id;
+            Number = number;
         }
 
-        public GitHubIssueKey ToIssueKey() => new GitHubIssueKey(Organization, Repository, Id);
+        public GitHubIssueKey ToIssueKey() => new GitHubIssueKey(Organization, Repository, Number);
 
-        public override string ToString() => $"{Organization}/{Repository}/{Id}";
+        public override string ToString() => $"{Organization}/{Repository}/{Number}";
     }
 }

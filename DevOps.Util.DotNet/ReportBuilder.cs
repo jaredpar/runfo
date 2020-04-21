@@ -18,7 +18,7 @@ namespace DevOps.Util.DotNet
         public static readonly Regex MarkdownReportEndRegex = new Regex(@"<!--\s*runfo report end\s*-->", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         public string BuildSearchTimeline(
-            IEnumerable<(Build Build, string TimelineRecordName)> results,
+            IEnumerable<(BuildInfo BuildInfo, string TimelineRecordName)> results,
             bool markdown,
             bool includeDefinition)
         {
@@ -45,30 +45,30 @@ namespace DevOps.Util.DotNet
             foreach (var result in results)
             {
                 resultsCount++;
-                var build = result.Build;
+                var buildInfo = result.BuildInfo;
                 if (markdown)
                 {
                     if (includeDefinition)
                     {
-                        var definitionName = DotNetUtil.GetDefinitionName(build);
-                        var definitionUri = DevOpsUtil.GetBuildDefinitionUri(build);
+                        var definitionName = buildInfo.DefinitionName;
+                        var definitionUri = buildInfo.DefinitionInfo.DefinitionUri;
                         builder.Append($"|[{definitionName}]({definitionUri})");
                     }
 
                     var kind = "Rolling";
-                    if (DevOpsUtil.TryGetPullRequestKey(build, out var prKey))
+                    if (buildInfo.PullRequestKey.HasValue)
                     {
-                        kind = $"PR {prKey.PullRequestUri}";
+                        kind = $"PR {buildInfo.PullRequestKey.Value.PullRequestUri}";
                     }
-                    builder.AppendLine($"|[{build.Id}]({DevOpsUtil.GetBuildUri(build)})|{kind}|{result.TimelineRecordName}|");
+                    builder.AppendLine($"|[{buildInfo.Number}]({buildInfo.BuildUri})|{kind}|{result.TimelineRecordName}|");
                 }
                 else
                 {
-                    builder.AppendLine(DevOpsUtil.GetBuildUri(build).ToString());
+                    builder.AppendLine(buildInfo.BuildUri);
                 }
             }
 
-            var foundBuildCount = results.GroupBy(x => x.Build.Id).Count();
+            var foundBuildCount = results.GroupBy(x => x.BuildInfo.Number).Count();
             builder.AppendLine();
             builder.AppendLine($"Impacted {foundBuildCount} builds");
             builder.AppendLine($"Impacted {resultsCount} jobs");

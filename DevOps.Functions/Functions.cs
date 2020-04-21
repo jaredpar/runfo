@@ -36,6 +36,7 @@ namespace DevOps.Functions
             [QueueTrigger("build-complete", Connection = "AzureWebJobsStorage")] string message,
             ILogger logger)
         {
+            /*
             var buildId = int.Parse(message);
             logger.LogInformation($"Processing build {buildId}");
             var connectionString = Environment.GetEnvironmentVariable("SQL_CONNECTION_STRING");
@@ -46,6 +47,7 @@ namespace DevOps.Functions
                 return;
             }
             await cloneTimeUtil.UploadBuildAsync(buildId);
+            */
         }
     }
 }

@@ -140,6 +140,7 @@ internal sealed class AutoTriageUtil : IDisposable
         {
             var timelineItems = Context.ModelTimelineItems
                 .Include(x => x.ModelBuild)
+                .ThenInclude(b => b.ModelBuildDefinition)
                 .Where(x => x.ModelTimelineQueryId == timelineQuery.Id)
                 .OrderByDescending(x => x.BuildNumber)
                 .ToList();
@@ -147,11 +148,8 @@ internal sealed class AutoTriageUtil : IDisposable
             // TODO: we use same Server here even if the Organization setting in the 
             // item specifies a different organization. Need to replace Server with 
             // a map from org -> DevOpsServer
-            // TODO: using .Result here, need to fix
-            // TODO: be nice if we didn't have to query the server here. Should change 
-            // ReportBuilder to not require Build but rather build information 
             var results = timelineItems
-                .Select(x => (Server.GetBuildAsync(x.ModelBuild.AzureProject, x.ModelBuild.BuildNumber).Result, x.TimelineRecordName));
+                .Select(x => (TriageUtil.GetBuildInfo(x.ModelBuild), x.TimelineRecordName));
             var reportBody = ReportBuilder.BuildSearchTimeline(results, markdown: true, includeDefinition: true);
 
             var gitHubIssueKey = TriageUtil.GetGitHubIssueKey(timelineQuery);
@@ -166,12 +164,12 @@ internal sealed class AutoTriageUtil : IDisposable
         try
         {
             var issueClient = GitHubClient.Issue;
-            var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Id);
+            var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Number);
             if (TryUpdateIssueText(reportBody, issue.Body, out var newIssueBody))
             {
                 var issueUpdate = issue.ToUpdate();
                 issueUpdate.Body = newIssueBody;
-                await issueClient.Update(issueKey.Organization, issueKey.Repository, issueKey.Id, issueUpdate);
+                await issueClient.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, issueUpdate);
                 return true;
             }
             else
@@ -294,10 +292,10 @@ internal sealed class AutoTriageUtil : IDisposable
         {
             var issueKey = new GitHubIssueKey("jaredpar", "devops-util", 5);
             var issueClient = GitHubClient.Issue;
-            var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Id);
+            var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Number);
             var updateIssue = issue.ToUpdate();
             updateIssue.Body = builder.ToString();
-            await GitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Id, updateIssue);
+            await GitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, updateIssue);
         }
 
         string GetImpactedBuilds(GitHubIssueKey issueKey)

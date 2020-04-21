@@ -8,6 +8,8 @@ namespace Model
     {
         public DbSet<ModelBuild> ModelBuilds { get; set; }
 
+        public DbSet<ModelBuildDefinition> ModelBuildDefinitions { get; set; }
+
         public DbSet<ModelTimelineQuery> ModelTimelineQueries { get; set; }
 
         public DbSet<ModelTimelineItem> ModelTimelineItems { get; set; }
@@ -18,19 +20,42 @@ namespace Model
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ModelTimelineQuery>()
-                .HasIndex(x => new { x.GitHubOrganization, x.GitHubRepository, x.IssueId })
+                .HasIndex(x => new { x.GitHubOrganization, x.GitHubRepository, x.IssueNumber })
+                .IsUnique();
+
+            modelBuilder.Entity<ModelBuildDefinition>()
+                .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionId })
                 .IsUnique();
         }
     }
-    public class ModelBuild
+
+    public class ModelBuildDefinition
     {
-        public string Id { get; set; }
+        public int Id { get; set; }
 
         public string AzureOrganization { get; set; }
 
         public string AzureProject { get; set; }
 
+        public string DefinitionName { get; set; }
+
+        public int DefinitionId { get; set; }
+    }
+
+    public class ModelBuild
+    {
+        public string Id { get; set; }
+
         public int BuildNumber { get; set; }
+
+        public string GitHubOrganization { get; set; }
+
+        public string GitHubRepository { get; set; }
+
+        public int? PullRequestNumber { get; set; }
+
+        public int ModelBuildDefinitionId { get; set; }
+        public ModelBuildDefinition ModelBuildDefinition { get; set; }
     }
 
     public class ModelTimelineQuery
@@ -44,7 +69,7 @@ namespace Model
         public string GitHubRepository { get; set; }
 
         [Required]
-        public int IssueId { get; set; }
+        public int IssueNumber { get; set; }
 
         [Required]
         public string SearchText { get; set; }

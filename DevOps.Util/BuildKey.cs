@@ -8,6 +8,8 @@ namespace DevOps.Util
         public readonly string Project;
         public readonly int Number;
 
+        public string BuildUri => DevOpsUtil.GetBuildUri(Organization, Project, Number);
+
         public BuildKey(string organization, string project, int number)
         {
             Organization = organization;
