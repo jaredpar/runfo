@@ -1,12 +1,12 @@
 Set-StrictMode -version 2.0
 $ErrorActionPreference = "Stop"
 
-Push-Location ..\DevOps.Util.Triage
 try {
+  $targetProject = "..\DevOps.Util.Triage\DevOps.Util.Triage.csproj"
 
   Write-Host "Creating Migration"
-  Remove-Item -Recurse Migrations -ErrorAction SilentlyContinue
-  & dotnet ef migrations add InitialCreate
+  Remove-Item -Recurse ..\DevOps.Util.Triage\Migrations -ErrorAction SilentlyContinue
+  & dotnet ef migrations add InitialCreate --project $targetProject
   
   $dbPath = "C:\Users\jaredpar\AppData\Local\runfo\triage.db"
   if (Test-Path $dbPath) {
@@ -14,7 +14,7 @@ try {
   }
 
   Write-Host "Creating Database"
-  & dotnet ef database update
+  & dotnet ef database update --project $targetProject 
 }
 catch {
   Write-Host $_

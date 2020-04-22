@@ -17,7 +17,7 @@ using Octokit;
 
 namespace DevOps.Util.Triage
 {
-    public sealed class AutoTriageUtil : IDisposable
+    public sealed class AutoTriageUtil
     {
         public DevOpsServer Server { get; }
         public GitHubClient GitHubClient { get; }
@@ -29,17 +29,15 @@ namespace DevOps.Util.Triage
 
         public TriageDbContext Context => TriageUtil.Context;
 
-        public AutoTriageUtil(DevOpsServer server, GitHubClient gitHubClient)
+        public AutoTriageUtil(
+            DevOpsServer server,
+            GitHubClient gitHubClient,
+            TriageDbContext context)
         {
             Server = server;
             GitHubClient = gitHubClient;
             QueryUtil = new DotNetQueryUtil(server);
-            TriageUtil = new TriageUtil();
-        }
-
-        public void Dispose()
-        {
-            TriageUtil.Dispose();
+            TriageUtil = new TriageUtil(context);
         }
 
         // TODO: don't do this if the issue is closed

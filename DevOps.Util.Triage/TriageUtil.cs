@@ -31,18 +31,13 @@ namespace DevOps.Util.Triage
 
     // TODO: this class is designed to work when there is only one DB writer 
     // occurring. That's a design flaw. Need to fix for the cases that matter
-    public sealed class TriageUtil : IDisposable
+    public sealed class TriageUtil
     {
         public TriageDbContext Context { get; }
 
-        public TriageUtil()
+        public TriageUtil(TriageDbContext context)
         {
-            Context = new TriageDbContext();
-        }
-
-        public void Dispose()
-        {
-            Context.Dispose();
+            Context = context;
         }
 
         public static string GetModelBuildId(BuildKey buildKey) => 

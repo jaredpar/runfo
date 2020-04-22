@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Mono.Options;
 using Octokit;
 using static DevOps.Util.DotNet.OptionSetUtil;
@@ -18,7 +21,25 @@ internal static class Program
     internal const int ExitSuccess = 0;
     internal const int ExitFailure = 1;
 
-    internal static async Task<int> Main(string[] args) => await MainCore(args.ToList());
+    public static void Main(string[] args)
+    {
+        var host = CreateHostBuilder(args).Build();
+        var db = host.Services.GetService<TriageDbContext>();
+        using (var scope = host.Services.CreateScope())
+        {
+            db = host.Services.GetService<TriageDbContext>();
+        }
+    }
+
+    public static IHostBuilder CreateHostBuilder(string[] args) =>
+        Host.CreateDefaultBuilder(args)
+            .ConfigureServices((hostContext, services) =>
+            {
+                services.AddDbContext<TriageDbContext>(options =>
+                    options.UseSqlite(@"Data Source=C:\Users\jaredpar\AppData\Local\runfo\triage.db"));
+            });
+
+    // internal static async Task<int> Main(string[] args) => await MainCore(args.ToList());
 
     internal static async Task<int> MainCore(List<string> args)
     {

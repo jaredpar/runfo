@@ -15,8 +15,11 @@ namespace DevOps.Util.Triage
 
         public DbSet<ModelTimelineItem> ModelTimelineItems { get; set; }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder options)
-            => options.UseSqlite(@"Data Source=C:\Users\jaredpar\AppData\Local\runfo\triage.db");
+        public TriageDbContext(DbContextOptions<TriageDbContext> options)
+            : base(options)
+        {
+
+        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
