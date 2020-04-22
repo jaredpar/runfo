@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DevOps.Util.Triage.Migrations
 {
     [DbContext(typeof(TriageDbContext))]
-    [Migration("20200422182318_InitialCreate")]
+    [Migration("20200422230130_InitialCreate")]
     partial class InitialCreate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

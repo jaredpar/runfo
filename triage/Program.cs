@@ -21,14 +21,11 @@ internal static class Program
     internal const int ExitSuccess = 0;
     internal const int ExitFailure = 1;
 
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         var host = CreateHostBuilder(args).Build();
-        var db = host.Services.GetService<TriageDbContext>();
-        using (var scope = host.Services.CreateScope())
-        {
-            db = host.Services.GetService<TriageDbContext>();
-        }
+        using var db = host.Services.GetService<TriageDbContext>();
+        await MainCore(db, args.ToList());
     }
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
@@ -41,7 +38,7 @@ internal static class Program
 
     // internal static async Task<int> Main(string[] args) => await MainCore(args.ToList());
 
-    internal static async Task<int> MainCore(List<string> args)
+    internal static async Task<int> MainCore(TriageDbContext context, List<string> args)
     {
         var azdoToken = Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN");
         var gitHubToken = Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN");
@@ -54,7 +51,6 @@ internal static class Program
         // TODO: should not hard code jaredpar here
         gitHubClient.Credentials = new Credentials("jaredpar", gitHubToken);
 
-        using var triageUtil = new TriageUtil();
         string command;
         if (args.Count == 0)
         {
@@ -66,6 +62,7 @@ internal static class Program
             args = args.Skip(1).ToList();
         }
 
+        var autoTriageUtil = new AutoTriageUtil(server, gitHubClient, context);
         switch (command)
         {
             case "auto":
@@ -89,7 +86,6 @@ internal static class Program
 
         async Task RunAutoTriage(List<string> args)
         {
-            using var autoTriageUtil = new AutoTriageUtil(server, gitHubClient);
             await autoTriageUtil.Triage("-d runtime -c 100 -pr");
             await autoTriageUtil.Triage("-d runtime-official -c 20 -pr");
             await autoTriageUtil.UpdateQueryIssues();
@@ -98,14 +94,12 @@ internal static class Program
 
         async Task RunIssues()
         {
-            using var autoTriageUtil = new AutoTriageUtil(server, gitHubClient);
             await autoTriageUtil.UpdateQueryIssues();
             await autoTriageUtil.UpdateStatusIssue();
         }
 
         async Task RunRebuild()
         {
-            using var autoTriageUtil = new AutoTriageUtil(server, gitHubClient);
             autoTriageUtil.EnsureTriageIssues();
             await autoTriageUtil.Triage("-d runtime -c 500 -pr");
             await autoTriageUtil.Triage("-d aspnet -c 300 -pr");
@@ -114,7 +108,6 @@ internal static class Program
 
         async Task RunScratch()
         {
-            using var autoTriageUtil = new AutoTriageUtil(server, gitHubClient);
             // autoTriageUtil.EnsureTriageIssues();
             // await autoTriageUtil.Triage("-d runtime -c 500 -pr");
             // await autoTriageUtil.Triage("-d runtime-official -c 50 -pr");
