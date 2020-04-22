@@ -747,7 +747,7 @@ internal sealed partial class RuntimeInfo
         IEnumerable<int> definitions = null;
         if (definition is object)
         {
-            if (!DotNetUtil.TryGetDefinitionId(definition, out string definitionProject, out int definitionId))
+            if (!DotNetUtil.TryGetDefinitionId(definition, defaultProject: project, out string definitionProject, out int definitionId))
             {
                 OptionSetUtil.OptionFailureDefinition(definition, optionSet);
                 return ExitFailure;

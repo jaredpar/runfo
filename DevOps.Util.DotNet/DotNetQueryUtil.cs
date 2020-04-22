@@ -225,7 +225,7 @@ namespace DevOps.Util.DotNet
             {
                 foreach (var definition in optionSet.Definitions)
                 {
-                    if (!DotNetUtil.TryGetDefinitionId(definition, out var definitionProject, out var definitionId))
+                    if (!DotNetUtil.TryGetDefinitionId(definition, defaultProject: project, out var definitionProject, out var definitionId))
                     {
                         OptionFailureDefinition(definition, optionSet);
                         throw CreateBadOptionException();

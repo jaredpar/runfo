@@ -11,8 +11,11 @@
         "preLaunchTask": "build",
         "program": "${workspaceFolder}/runfo/bin/Debug/netcoreapp3.1/runfo.dll",
         "args": [
-            "triage",
-            "auto"
+            "builds",
+            "-d",
+            "286",
+            "-p",
+            "internal"
         ],
         "cwd": "${workspaceFolder}/runfo",
         "console": "internalConsole",

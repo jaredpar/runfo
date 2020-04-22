@@ -69,7 +69,7 @@ namespace DevOps.Util.DotNet
             return false;
         }
 
-        public static bool TryGetDefinitionId(string definition, [NotNullWhen(true)] out string? project, out int definitionId)
+        public static bool TryGetDefinitionId(string definition, string defaultProject, [NotNullWhen(true)] out string? project, out int definitionId)
         {
             definitionId = 0;
             project = null;
@@ -88,7 +88,7 @@ namespace DevOps.Util.DotNet
             }
             else
             {
-                project = BuildSearchOptionSet.DefaultProject;
+                project = defaultProject;
             }
 
             if (int.TryParse(definition, out definitionId))
