@@ -4,72 +4,77 @@
    // For further information visit https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md
    "version": "0.2.0",
    "configurations": [
-        {
-            "name": "runfo",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build",
-            // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/runfo/bin/Debug/netcoreapp3.1/runfo.dll",
-            "args": ["triage", "auto"],
-            "cwd": "${workspaceFolder}/runfo",
-            // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
-            "console": "internalConsole",
-            "stopAtEntry": false,
+    {
+        "name": "runfo",
+        "type": "coreclr",
+        "request": "launch",
+        "preLaunchTask": "build",
+        "program": "${workspaceFolder}/runfo/bin/Debug/netcoreapp3.1/runfo.dll",
+        "args": [
+            "triage",
+            "auto"
+        ],
+        "cwd": "${workspaceFolder}/runfo",
+        "console": "internalConsole",
+        "stopAtEntry": false
+    },
+    {
+        "name": "scratch",
+        "type": "coreclr",
+        "request": "launch",
+        "preLaunchTask": "build",
+        "program": "${workspaceFoldern}/scratch/bin/Debug/netcoreapp3.1/scratch.dll",
+        "args": [
+            "auto"
+        ],
+        "cwd": "${workspaceFolder}/scratch",
+        "console": "internalConsole",
+        "stopAtEntry": true
+    },
+    {
+        "name": "triage",
+        "type": "coreclr",
+        "request": "launch",
+        "preLaunchTask": "build",
+        "program": "${workspaceFolder}/triage/bin/Debug/netcoreapp3.1/triage.dll",
+        "args": [
+            "scratch"
+        ],
+        "cwd": "${workspaceFolder}/scratch",
+        "console": "internalConsole",
+        "stopAtEntry": false
+    },
+    {
+        "name": "status",
+        "type": "coreclr",
+        "request": "launch",
+        "preLaunchTask": "build",
+        "program": "${workspaceFolder}/DevOps.Status/bin/Debug/netcoreapp3.1/DevOps.Status.dll",
+        "args": [],
+        "cwd": "${workspaceFolder}/DevOps.Status",
+        "stopAtEntry": false,
+        "serverReadyAction": {
+            "action": "openExternally",
+            "pattern": "^\\s*Now listening on:\\s+(https?://\\S+)"
         },
-        {
-            "name": "scratch",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build",
-            // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFoldern}/scratch/bin/Debug/netcoreapp3.1/scratch.dll",
-            "args": ["auto"],
-            "cwd": "${workspaceFolder}/scratch",
-            // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
-            "console": "internalConsole",
-            "stopAtEntry": true
+        "env": {
+            "ASPNETCORE_ENVIRONMENT": "Development"
         },
-        {
-            "name": "triage",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build",
-            // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/triage/bin/Debug/netcoreapp3.1/triage.dll",
-            "args": ["scratch"],
-            "cwd": "${workspaceFolder}/scratch",
-            // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
-            "console": "internalConsole",
-            "stopAtEntry": false
-        },
-        {
-            "name": "status",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build",
-            // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/DevOps.Status/bin/Debug/netcoreapp3.1/DevOps.Status.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/DevOps.Status",
-            "stopAtEntry": false,
-            // Enable launching a web browser when ASP.NET Core starts. For more information: https://aka.ms/VSCode-CS-LaunchJson-WebBrowser
-            "serverReadyAction": {
-                "action": "openExternally",
-                "pattern": "^\\s*Now listening on:\\s+(https?://\\S+)"
-            },
-            "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            },
-            "sourceFileMap": {
-                "/Views": "${workspaceFolder}/DevOps.Status/Views"
-            }
-        },
-        {
-            "name": ".NET Core Attach",
-            "type": "coreclr",
-            "request": "attach",
-            "processId": "${command:pickProcess}"
+        "sourceFileMap": {
+            "/Views": "${workspaceFolder}/DevOps.Status/Views"
         }
-    ]
+    },
+    {
+        "name": ".NET Core Attach",
+        "type": "coreclr",
+        "request": "attach",
+        "processId": "${command:pickProcess}"
+    },
+    {
+        "name": "Attach to .NET Functions",
+        "type": "coreclr",
+        "request": "attach",
+        "processId": "${command:azureFunctions.pickProcess}"
+    }
+]
 }

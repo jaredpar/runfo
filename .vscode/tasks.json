@@ -2,16 +2,76 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "clean",
             "command": "dotnet",
-            "type": "process",
             "args": [
-                "build",
-                "${workspaceFolder}/DevOps-Util.sln",
+                "clean",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
+            "type": "process",
+            "problemMatcher": "$msCompile",
+            "options": {
+                "cwd": "${workspaceFolder}/DevOps.Functions"
+            }
+        },
+        {
+            "label": "build",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "type": "process",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "clean release",
+            "command": "dotnet",
+            "args": [
+                "clean",
+                "--configuration",
+                "Release",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "type": "process",
+            "problemMatcher": "$msCompile",
+            "options": {
+                "cwd": "${workspaceFolder}/DevOps.Functions"
+            }
+        },
+        {
+            "label": "publish",
+            "command": "dotnet",
+            "args": [
+                "publish",
+                "--configuration",
+                "Release",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "type": "process",
+            "dependsOn": "clean release",
+            "problemMatcher": "$msCompile",
+            "options": {
+                "cwd": "${workspaceFolder}/DevOps.Functions"
+            }
+        },
+        {
+            "type": "func",
+            "dependsOn": "build",
+            "options": {
+                "cwd": "${workspaceFolder}/DevOps.Functions/bin/Debug/netcoreapp3.1"
+            },
+            "command": "host start",
+            "isBackground": true,
+            "problemMatcher": "$func-watch"
         }
     ]
 }

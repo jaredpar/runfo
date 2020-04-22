@@ -21,22 +21,27 @@ namespace DevOps.Functions
             [Queue("build-complete", Connection = "AzureWebJobsStorage")] IAsyncCollector<string> queueCollector)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync().ConfigureAwait(false);
+            logger.LogInformation(requestBody);
+            /*
             var connectionString = Environment.GetEnvironmentVariable("SQL_CONNECTION_STRING");
+
             dynamic data = JsonConvert.DeserializeObject(requestBody);
             int id = data.resource.id;
             await queueCollector.AddAsync(id.ToString()).ConfigureAwait(false);
 
             using var generalUtil = new GeneralUtil(connectionString, logger);
             await generalUtil.UploadBuildEventAsync(id, requestBody).ConfigureAwait(false);
+            */
             return new OkResult();
         }
+
+            /*
 
         [FunctionName("build-upload")]
         public static async Task OnBuildComplete(
             [QueueTrigger("build-complete", Connection = "AzureWebJobsStorage")] string message,
             ILogger logger)
         {
-            /*
             var buildId = int.Parse(message);
             logger.LogInformation($"Processing build {buildId}");
             var connectionString = Environment.GetEnvironmentVariable("SQL_CONNECTION_STRING");
@@ -47,7 +52,7 @@ namespace DevOps.Functions
                 return;
             }
             await cloneTimeUtil.UploadBuildAsync(buildId);
-            */
         }
+            */
     }
 }
