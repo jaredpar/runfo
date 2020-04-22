@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace triage.Migrations
+namespace DevOps.Util.Triage.Migrations
 {
     public partial class InitialCreate : Migration
     {

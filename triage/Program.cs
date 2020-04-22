@@ -8,8 +8,8 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
+using DevOps.Util.Triage;
 using Mono.Options;
-using Model;
 using Octokit;
 using static DevOps.Util.DotNet.OptionSetUtil;
 

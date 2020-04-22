@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 
-namespace Model
+namespace DevOps.Util.Triage
 {
     public class TriageDbContext : DbContext
     {

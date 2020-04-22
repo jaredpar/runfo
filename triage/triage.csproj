@@ -31,4 +31,8 @@
     <PackageReference Include="Mono.Options" Version="6.6.0.161" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DevOps.Util.Triage\DevOps.Util.Triage.csproj" />
+  </ItemGroup>
+
 </Project>
