@@ -12,6 +12,7 @@ using DevOps.Util.Triage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Mono.Options;
 using Octokit;
 using static DevOps.Util.DotNet.OptionSetUtil;
@@ -29,7 +30,11 @@ internal static class Program
     }
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
-        Host.CreateDefaultBuilder(args)
+        Host.CreateDefaultBuilder()
+            .ConfigureLogging(logging =>
+            {
+                logging.ClearProviders();
+            })
             .ConfigureServices((hostContext, services) =>
             {
                 services.AddDbContext<TriageDbContext>(options =>
