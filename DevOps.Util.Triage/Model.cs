@@ -106,6 +106,7 @@ namespace DevOps.Util.Triage
 
         public ModelTimelineQuery ModelTimelineQuery { get; set; }
 
+        [Column(TypeName="nvarchar(100)")]
         public string ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
@@ -129,6 +130,7 @@ namespace DevOps.Util.Triage
 
         public string Line { get; set; }
 
+        [Column(TypeName="nvarchar(100)")]
         public string ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }

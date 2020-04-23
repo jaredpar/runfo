@@ -12,7 +12,7 @@ namespace DevOps.Util.Triage.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     AzureOrganization = table.Column<string>(nullable: true),
                     AzureProject = table.Column<string>(nullable: true),
                     DefinitionName = table.Column<string>(nullable: true),
@@ -28,7 +28,7 @@ namespace DevOps.Util.Triage.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     GitHubOrganization = table.Column<string>(nullable: false),
                     GitHubRepository = table.Column<string>(nullable: false),
                     IssueNumber = table.Column<int>(nullable: false),
@@ -68,11 +68,11 @@ namespace DevOps.Util.Triage.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     BuildNumber = table.Column<int>(nullable: false),
                     TimelineRecordName = table.Column<string>(nullable: true),
                     Line = table.Column<string>(nullable: true),
-                    ModelBuildId = table.Column<string>(nullable: true),
+                    ModelBuildId = table.Column<string>(type: "nvarchar(100)", nullable: true),
                     ModelTimelineQueryId = table.Column<int>(nullable: false)
                 },
                 constraints: table =>
@@ -97,9 +97,9 @@ namespace DevOps.Util.Triage.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     ModelTimelineQueryId = table.Column<int>(nullable: false),
-                    ModelBuildId = table.Column<string>(nullable: true)
+                    ModelBuildId = table.Column<string>(type: "nvarchar(100)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -122,7 +122,8 @@ namespace DevOps.Util.Triage.Migrations
                 name: "IX_ModelBuildDefinitions_AzureOrganization_AzureProject_DefinitionId",
                 table: "ModelBuildDefinitions",
                 columns: new[] { "AzureOrganization", "AzureProject", "DefinitionId" },
-                unique: true);
+                unique: true,
+                filter: "[AzureOrganization] IS NOT NULL AND [AzureProject] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ModelBuilds_ModelBuildDefinitionId",
@@ -154,7 +155,8 @@ namespace DevOps.Util.Triage.Migrations
                 name: "IX_ModelTimelineQueryCompletes_ModelTimelineQueryId_ModelBuildId",
                 table: "ModelTimelineQueryCompletes",
                 columns: new[] { "ModelTimelineQueryId", "ModelBuildId" },
-                unique: true);
+                unique: true,
+                filter: "[ModelBuildId] IS NOT NULL");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
