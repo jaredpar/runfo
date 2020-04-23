@@ -72,5 +72,15 @@ namespace DevOps.Functions
             var util = new AutoTriageUtil(Server, GitHubClient, Context, logger);
             await util.Triage(projectName, buildCompleteMessage.BuildNumber);
         }
+
+        [FunctionName("issues-update")]
+        public async Task IssuesUpdate(
+            [TimerTrigger("* */15 * * * *")] TimerInfo timerInfo,
+            ILogger logger)
+        {
+            var util = new AutoTriageUtil(Server, GitHubClient, Context, logger);
+            await util.UpdateQueryIssues();
+            await util.UpdateStatusIssue();
+        }
     }
 }

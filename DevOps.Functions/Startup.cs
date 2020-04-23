@@ -17,9 +17,19 @@ namespace DevOps.Functions
         {
             var connectionString = Environment.GetEnvironmentVariable("RUNFO_CONNECTION_STRING");
             var azdoToken = Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN");
+            var gitHubToken = Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN");
             builder.Services.AddDbContext<TriageContext>(options => options.UseSqlServer(connectionString));
             builder.Services.AddScoped<DevOpsServer>(_ => new DevOpsServer(DotNetUtil.Organization, azdoToken));
-            builder.Services.AddScoped<GitHubClient>(_ => new GitHubClient(new ProductHeaderValue("RuntimeStatusPage")));
+            builder.Services.AddScoped<GitHubClient>(_ =>
+            {
+                var client = new GitHubClient(new ProductHeaderValue("RuntimeStatusPage"));
+                if (!string.IsNullOrEmpty(gitHubToken))
+                {
+                    client.Credentials = new Credentials("jaredpar", gitHubToken);
+                }
+
+                return client;
+            });
         }
     }
 }

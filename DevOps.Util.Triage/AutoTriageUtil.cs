@@ -321,7 +321,6 @@ namespace DevOps.Util.Triage
 
         public async Task UpdateStatusIssue()
         {
-            const int buildLimit = 200;
             var header = new StringBuilder();
             var body = new StringBuilder();
             var footer = new StringBuilder();
@@ -335,7 +334,6 @@ namespace DevOps.Util.Triage
 
             // Blank line to move past the table 
             header.AppendLine("");
-            header.AppendLine($"The build numbers given in the tables below cover the last {buildLimit} builds of the repository");
             BuildFooter();
 
             await UpdateIssue();
@@ -344,11 +342,11 @@ namespace DevOps.Util.Triage
             {
                 footer.AppendLine(@"## Goals
 
-    1. A minimum 95% passing rate for the `runtime` pipeline
+1. A minimum 95% passing rate for the `runtime` pipeline
 
-    ## Resources
+## Resources
 
-    1. [runtime pipeline analytics](https://dnceng.visualstudio.com/public/_build?definitionId=686&view=ms.vss-pipelineanalytics-web.new-build-definition-pipeline-analytics-view-cardmetrics)");
+1. [runtime pipeline analytics](https://dnceng.visualstudio.com/public/_build?definitionId=686&view=ms.vss-pipelineanalytics-web.new-build-definition-pipeline-analytics-view-cardmetrics)");
 
             }
 
@@ -402,7 +400,7 @@ namespace DevOps.Util.Triage
 
             async Task UpdateIssue()
             {
-                var issueKey = new GitHubIssueKey("jaredpar", "devops-util", 5);
+                var issueKey = new GitHubIssueKey("dotnet", "runtime", 702);
                 var issueClient = GitHubClient.Issue;
                 var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Number);
                 var updateIssue = issue.ToUpdate();
