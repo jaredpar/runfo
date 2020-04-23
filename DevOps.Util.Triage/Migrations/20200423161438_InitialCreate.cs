@@ -12,7 +12,7 @@ namespace DevOps.Util.Triage.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                        .Annotation("Sqlite:Autoincrement", true),
                     AzureOrganization = table.Column<string>(nullable: true),
                     AzureProject = table.Column<string>(nullable: true),
                     DefinitionName = table.Column<string>(nullable: true),
@@ -28,7 +28,7 @@ namespace DevOps.Util.Triage.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                        .Annotation("Sqlite:Autoincrement", true),
                     GitHubOrganization = table.Column<string>(nullable: false),
                     GitHubRepository = table.Column<string>(nullable: false),
                     IssueNumber = table.Column<int>(nullable: false),
@@ -68,7 +68,7 @@ namespace DevOps.Util.Triage.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                        .Annotation("Sqlite:Autoincrement", true),
                     BuildNumber = table.Column<int>(nullable: false),
                     TimelineRecordName = table.Column<string>(nullable: true),
                     Line = table.Column<string>(nullable: true),
@@ -92,12 +92,37 @@ namespace DevOps.Util.Triage.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "ModelTimelineQueryCompletes",
+                columns: table => new
+                {
+                    Id = table.Column<int>(nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    ModelTimelineQueryId = table.Column<int>(nullable: false),
+                    ModelBuildId = table.Column<string>(nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ModelTimelineQueryCompletes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ModelTimelineQueryCompletes_ModelBuilds_ModelBuildId",
+                        column: x => x.ModelBuildId,
+                        principalTable: "ModelBuilds",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ModelTimelineQueryCompletes_ModelTimelineQueries_ModelTimelineQueryId",
+                        column: x => x.ModelTimelineQueryId,
+                        principalTable: "ModelTimelineQueries",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_ModelBuildDefinitions_AzureOrganization_AzureProject_DefinitionId",
                 table: "ModelBuildDefinitions",
                 columns: new[] { "AzureOrganization", "AzureProject", "DefinitionId" },
-                unique: true,
-                filter: "[AzureOrganization] IS NOT NULL AND [AzureProject] IS NOT NULL");
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_ModelBuilds_ModelBuildDefinitionId",
@@ -119,12 +144,26 @@ namespace DevOps.Util.Triage.Migrations
                 table: "ModelTimelineQueries",
                 columns: new[] { "GitHubOrganization", "GitHubRepository", "IssueNumber" },
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ModelTimelineQueryCompletes_ModelBuildId",
+                table: "ModelTimelineQueryCompletes",
+                column: "ModelBuildId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ModelTimelineQueryCompletes_ModelTimelineQueryId_ModelBuildId",
+                table: "ModelTimelineQueryCompletes",
+                columns: new[] { "ModelTimelineQueryId", "ModelBuildId" },
+                unique: true);
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
                 name: "ModelTimelineItems");
+
+            migrationBuilder.DropTable(
+                name: "ModelTimelineQueryCompletes");
 
             migrationBuilder.DropTable(
                 name: "ModelBuilds");

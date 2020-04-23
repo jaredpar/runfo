@@ -207,6 +207,21 @@ namespace DevOps.Util
             return JsonConvert.DeserializeObject<BuildArtifact>(json);
         }
 
+        /// <summary>
+        /// The project in a server can be expressed as an IDE or a name. This method will convert the
+        /// ID form, typically a GUID, into a friendly name.
+        /// </summary>
+        public async Task<string> ConvertProjectIdToNameAsync(string id)
+        {
+            var definitions = await ListDefinitionsAsync(id, top: 1);
+            if (definitions.Count == 0)
+            {
+                throw new InvalidOperationException();
+            }
+
+            return definitions[0].Project.Name;
+        }
+
         public Task<MemoryStream> DownloadArtifactAsync(string project, int buildId, string artifactName) =>
             WithMemoryStream(s => DownloadArtifactAsync(project, buildId, artifactName, s));
 
@@ -489,7 +504,7 @@ namespace DevOps.Util
             int? limit = null)
         {
             var list = new List<T>();
-            await foreach (var item in EnumerateItemsAsync<T>(builder).ConfigureAwait(false))
+            await foreach (var item in EnumerateItemsAsync<T>(builder, limit).ConfigureAwait(false))
             {
                 list.Add(item);
             }
@@ -523,7 +538,7 @@ namespace DevOps.Util
                     break;
                 }
 
-                if (limit.HasValue && count > limit.Value)
+                if (limit.HasValue && count >= limit.Value)
                 {
                     break;
                 }

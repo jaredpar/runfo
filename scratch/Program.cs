@@ -73,7 +73,7 @@ namespace QueryFun
         private static async Task Scratch()
         {
             var server = new DevOpsServer("dnceng", await GetToken("dnceng"));
-            var build = await server.GetBuildAsync("public", 593105);
+            var name = await server.ConvertProjectIdToNameAsync("9ee6d478-d288-47f7-aacc-f6e6d082ae6d");
         }
 
         private static async Task DumpTestTimesCsv()

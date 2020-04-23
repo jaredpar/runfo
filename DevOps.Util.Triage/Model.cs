@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DevOps.Util.Triage
 {
-    public class TriageDbContext : DbContext
+    public class TriageContext : DbContext
     {
         public DbSet<ModelBuild> ModelBuilds { get; set; }
 
@@ -16,7 +16,9 @@ namespace DevOps.Util.Triage
 
         public DbSet<ModelTimelineItem> ModelTimelineItems { get; set; }
 
-        public TriageDbContext(DbContextOptions<TriageDbContext> options)
+        public DbSet<ModelTimelineQueryComplete> ModelTimelineQueryCompletes { get; set;}
+
+        public TriageContext(DbContextOptions<TriageContext> options)
             : base(options)
         {
 
@@ -29,6 +31,10 @@ namespace DevOps.Util.Triage
 
             modelBuilder.Entity<ModelBuildDefinition>()
                 .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionId })
+                .IsUnique();
+
+            modelBuilder.Entity<ModelTimelineQueryComplete>()
+                .HasIndex(x => new { x.ModelTimelineQueryId, x.ModelBuildId })
                 .IsUnique();
         }
     }
@@ -88,6 +94,21 @@ namespace DevOps.Util.Triage
         public string SearchText { get; set; }
 
         public List<ModelTimelineItem> ModelTimelineItems { get; set; }
+
+        public List<ModelTimelineQueryComplete> ModelTimelineQueryCompletes { get; set; }
+    }
+
+    public class ModelTimelineQueryComplete
+    {
+        public int Id { get; set; }
+
+        public int ModelTimelineQueryId { get; set; }
+
+        public ModelTimelineQuery ModelTimelineQuery { get; set; }
+
+        public string ModelBuildId { get; set; }
+
+        public ModelBuild ModelBuild { get; set; }
     }
 
     /// <summary>

@@ -29,13 +29,11 @@ namespace DevOps.Util.Triage
         Other
     }
 
-    // TODO: this class is designed to work when there is only one DB writer 
-    // occurring. That's a design flaw. Need to fix for the cases that matter
-    public sealed class TriageUtil
+    public sealed class TriageContextUtil
     {
-        public TriageDbContext Context { get; }
+        public TriageContext Context { get; }
 
-        public TriageUtil(TriageDbContext context)
+        public TriageContextUtil(TriageContext context)
         {
             Context = context;
         }
@@ -74,17 +72,12 @@ namespace DevOps.Util.Triage
         /// <summary>
         /// Determine if this build has already been processed for this query
         /// </summary>
-        public bool IsProcessed(ModelTimelineQuery timelineQuery, BuildInfo buildInfo)
-        {
-            var modelBuild = GetOrCreateBuild(buildInfo);
-            var query =
-                from item in Context.ModelTimelineItems
-                where item.ModelBuildId == modelBuild.Id && item.ModelTimelineQueryId == timelineQuery.Id
-                select item.Id;
-            return query.Any();
-        }
+        public bool IsProcessed(ModelTimelineQuery timelineQuery, ModelBuild modelBuild) =>
+            Context.ModelTimelineQueryCompletes.Any(x =>
+                x.ModelTimelineQueryId == timelineQuery.Id &&
+                x.ModelBuildId == modelBuild.Id);
 
-        public ModelBuildDefinition GetOrCreateBuildDefinition(BuildDefinitionInfo definitionInfo)
+        public ModelBuildDefinition EnsureBuildDefinition(BuildDefinitionInfo definitionInfo)
         {
             var buildDefinition = Context.ModelBuildDefinitions
                 .Where(x =>
@@ -110,7 +103,7 @@ namespace DevOps.Util.Triage
             return buildDefinition;
         }
 
-        public ModelBuild GetOrCreateBuild(BuildInfo buildInfo)
+        public ModelBuild EnsureBuild(BuildInfo buildInfo)
         {
             var modelBuildId = GetModelBuildId(buildInfo.Key);
             var modelBuild = Context.ModelBuilds
@@ -125,7 +118,7 @@ namespace DevOps.Util.Triage
             modelBuild = new ModelBuild()
             {
                 Id = modelBuildId,
-                ModelBuildDefinitionId = GetOrCreateBuildDefinition(buildInfo.DefinitionInfo).Id,
+                ModelBuildDefinitionId = EnsureBuildDefinition(buildInfo.DefinitionInfo).Id,
                 GitHubOrganization = prKey?.Organization,
                 GitHubRepository = prKey?.Repository,
                 PullRequestNumber = prKey?.Number,
@@ -176,28 +169,5 @@ namespace DevOps.Util.Triage
                 return false;
             }
         }
-
-        public void CreateTimelineItem(ModelTimelineQuery timelineQuery, SearchTimelineResult result)
-        {
-            var item = new ModelTimelineItem()
-            {
-                TimelineRecordName = result.TimelineRecord.Name,
-                Line = result.Line,
-                ModelBuild = GetOrCreateBuild(result.Build.GetBuildInfo()),
-                ModelTimelineQuery = timelineQuery,
-                BuildNumber = result.Build.GetBuildKey().Number,
-            };
-
-            try
-            {
-                Context.ModelTimelineItems.Add(item);
-                Context.SaveChanges();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-        }
     }
-
 }

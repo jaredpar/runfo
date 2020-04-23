@@ -25,13 +25,13 @@ internal class Program
     internal const int ExitSuccess = 0;
     internal const int ExitFailure = 1;
 
-    public static async Task Main(string[] args) => await MainCore(CreateTriageDbContext(), args.ToList());
+    public static async Task Main(string[] args) => await MainCore(CreateTriageContext(), args.ToList());
 
-    private static TriageDbContext CreateTriageDbContext()
+    private static TriageContext CreateTriageContext()
     {
-        var builder = new DbContextOptionsBuilder<TriageDbContext>();
+        var builder = new DbContextOptionsBuilder<TriageContext>();
         ConfigureOptions(builder);
-        return new TriageDbContext(builder.Options);
+        return new TriageContext(builder.Options);
     }
 
     private static void ConfigureOptions(DbContextOptionsBuilder builder)
@@ -60,12 +60,12 @@ internal class Program
         Host.CreateDefaultBuilder()
             .ConfigureServices((hostContext, services) =>
             {
-                services.AddDbContext<TriageDbContext>(options => ConfigureOptions(options));
+                services.AddDbContext<TriageContext>(options => ConfigureOptions(options));
             });
 
     // internal static async Task<int> Main(string[] args) => await MainCore(args.ToList());
 
-    internal static async Task<int> MainCore(TriageDbContext context, List<string> args)
+    internal static async Task<int> MainCore(TriageContext context, List<string> args)
     {
         var azdoToken = Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN");
         var gitHubToken = Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN");
@@ -74,6 +74,7 @@ internal class Program
         var server = new CachingDevOpsServer(cacheDirectory, "dnceng", azdoToken);
         var gitHubClient = new GitHubClient(new ProductHeaderValue("RuntimeStatusPage"));
         var queryUtil = new DotNetQueryUtil(server);
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
 
         // TODO: should not hard code jaredpar here
         gitHubClient.Credentials = new Credentials("jaredpar", gitHubToken);
@@ -89,7 +90,7 @@ internal class Program
             args = args.Skip(1).ToList();
         }
 
-        var autoTriageUtil = new AutoTriageUtil(server, gitHubClient, context);
+        var autoTriageUtil = new AutoTriageUtil(server, gitHubClient, context, loggerFactory.CreateLogger<AutoTriageUtil>());
         switch (command)
         {
             case "auto":
@@ -128,8 +129,8 @@ internal class Program
         async Task RunRebuild()
         {
             autoTriageUtil.EnsureTriageIssues();
-            await autoTriageUtil.Triage("-d runtime -c 500 -pr");
-            await autoTriageUtil.Triage("-d aspnet -c 300 -pr");
+            await autoTriageUtil.Triage("-d runtime -c 100 -pr");
+            await autoTriageUtil.Triage("-d aspnet -c 100 -pr");
             await autoTriageUtil.Triage("-d runtime-official -c 50 -pr");
         }
 

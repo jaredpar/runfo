@@ -26,13 +26,12 @@
         "type": "coreclr",
         "request": "launch",
         "preLaunchTask": "build",
-        "program": "${workspaceFoldern}/scratch/bin/Debug/netcoreapp3.1/scratch.dll",
+        "program": "${workspaceFolder}/scratch/bin/Debug/netcoreapp3.1/scratch.dll",
         "args": [
-            "auto"
         ],
         "cwd": "${workspaceFolder}/scratch",
         "console": "internalConsole",
-        "stopAtEntry": true
+        "stopAtEntry": false,
     },
     {
         "name": "triage",

@@ -9,50 +9,68 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Configuration;
 using DevOps.Util.DotNet;
+using DevOps.Util.Triage;
+using Octokit;
+using DevOps.Util;
 
 namespace DevOps.Functions
 {
-    public static class Functions
+    public class BuildCompleteMessage
     {
+        public string ProjectId { get; set; }
+        public int BuildNumber { get; set; }
+    }
+
+    public class Functions
+    {
+        public TriageContext Context { get; }
+
+        public TriageContextUtil TriageContextUtil { get; }
+
+        public DevOpsServer Server { get; }
+
+        public GitHubClient GitHubClient { get; }
+
+        public Functions(DevOpsServer server, GitHubClient gitHubClient, TriageContext context)
+        {
+            Server = server;
+            GitHubClient = gitHubClient;
+            Context = context;
+            TriageContextUtil = new TriageContextUtil(context);
+        }
+
         [FunctionName("build")]
-        public static async Task<IActionResult> OnBuild(
+        public async Task<IActionResult> OnBuild(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
             ILogger logger,
             [Queue("build-complete", Connection = "AzureWebJobsStorage")] IAsyncCollector<string> queueCollector)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync().ConfigureAwait(false);
             logger.LogInformation(requestBody);
-            /*
-            var connectionString = Environment.GetEnvironmentVariable("SQL_CONNECTION_STRING");
 
             dynamic data = JsonConvert.DeserializeObject(requestBody);
-            int id = data.resource.id;
-            await queueCollector.AddAsync(id.ToString()).ConfigureAwait(false);
+            var message = new BuildCompleteMessage()
+            {
+                BuildNumber = data.resource.id,
+                ProjectId = data.resourceContainers.project.id
+            };
 
-            using var generalUtil = new GeneralUtil(connectionString, logger);
-            await generalUtil.UploadBuildEventAsync(id, requestBody).ConfigureAwait(false);
-            */
+            await queueCollector.AddAsync(JsonConvert.SerializeObject(message));
             return new OkResult();
         }
 
-            /*
-
-        [FunctionName("build-upload")]
-        public static async Task OnBuildComplete(
+        [FunctionName("triage-build")]
+        public async Task OnBuildComplete(
             [QueueTrigger("build-complete", Connection = "AzureWebJobsStorage")] string message,
             ILogger logger)
         {
-            var buildId = int.Parse(message);
-            logger.LogInformation($"Processing build {buildId}");
-            var connectionString = Environment.GetEnvironmentVariable("SQL_CONNECTION_STRING");
-            using var cloneTimeUtil = new CloneTimeUtil(connectionString, logger);
-            if (await cloneTimeUtil.IsBuildUploadedAsync(buildId))
-            {
-                logger.LogInformation($"Build {buildId} is already uploaded");
-                return;
-            }
-            await cloneTimeUtil.UploadBuildAsync(buildId);
+            var buildCompleteMessage = JsonConvert.DeserializeObject<BuildCompleteMessage>(message);
+            var projectName = await Server.ConvertProjectIdToNameAsync(buildCompleteMessage.ProjectId);
+
+            logger.LogInformation($"Triaging build {projectName} {buildCompleteMessage.BuildNumber}");
+
+            var util = new AutoTriageUtil(Server, GitHubClient, Context, logger);
+            await util.Triage(projectName, buildCompleteMessage.BuildNumber);
         }
-            */
     }
 }
