@@ -147,9 +147,10 @@ namespace DevOps.Util.Triage
             ModelTimelineQuery modelTimelineQuery)
         {
             var searchText = modelTimelineQuery.SearchText;
+            Logger.LogInformation($@"Text: ""{searchText}""");
             if (TriageContextUtil.IsProcessed(modelTimelineQuery, modelBuild))
             {
-                Logger.LogInformation($@"Text: ""{searchText}"" ... skipping");
+                Logger.LogInformation($@"Skipping");
                 return;
             }
 
@@ -178,8 +179,8 @@ namespace DevOps.Util.Triage
 
             try
             {
+                Logger.LogInformation($@"Saving {count} jobs");
                 Context.SaveChanges();
-                Logger.LogInformation($@"Text: ""{searchText}"" ... {count} jobs ");
             }
             catch (Exception ex)
             {

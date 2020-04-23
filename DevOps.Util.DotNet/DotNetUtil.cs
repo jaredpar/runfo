@@ -32,6 +32,7 @@ namespace DevOps.Util.DotNet
                 ("roslyn", "public", 15),
                 ("roslyn-integration", "public", 245),
                 ("aspnet", "public", 278),
+                ("aspnet-official", "internal", 21),
                 ("sdk", "public", 136),
                 ("winforms", "public", 267),
             };

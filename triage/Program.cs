@@ -114,6 +114,7 @@ internal class Program
 
         async Task RunAutoTriage(List<string> args)
         {
+            autoTriageUtil.EnsureTriageIssues();
             await autoTriageUtil.Triage("-d runtime -c 100 -pr");
             await autoTriageUtil.Triage("-d runtime-official -c 20 -pr");
             await autoTriageUtil.UpdateQueryIssues();
@@ -129,9 +130,10 @@ internal class Program
         async Task RunRebuild()
         {
             autoTriageUtil.EnsureTriageIssues();
-            await autoTriageUtil.Triage("-d runtime -c 100 -pr");
-            await autoTriageUtil.Triage("-d aspnet -c 100 -pr");
+            await autoTriageUtil.Triage("-d runtime -c 1000 -pr");
+            await autoTriageUtil.Triage("-d aspnet -c 1000 -pr");
             await autoTriageUtil.Triage("-d runtime-official -c 50 -pr");
+            await autoTriageUtil.Triage("-d aspnet-official -c 50 -pr");
         }
 
         async Task RunScratch()
