@@ -75,7 +75,7 @@ namespace DevOps.Functions
 
         [FunctionName("issues-update")]
         public async Task IssuesUpdate(
-            [TimerTrigger("* */15 * * * *")] TimerInfo timerInfo,
+            [TimerTrigger("0 */15 * * * *")] TimerInfo timerInfo,
             ILogger logger)
         {
             var util = new AutoTriageUtil(Server, GitHubClient, Context, logger);

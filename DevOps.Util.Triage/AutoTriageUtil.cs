@@ -266,7 +266,7 @@ namespace DevOps.Util.Triage
             }
             catch (Exception ex)
             {
-                Logger.LogInformation(ex.Message);
+                Logger.LogError($"Error updating issue {issueKey}: {ex.Message}");
             }
 
             return false;
@@ -352,7 +352,7 @@ namespace DevOps.Util.Triage
 
             async Task BuildOne(string title, string label, BuildDefinitionKey? definitionKey)
             {
-                header.AppendLine($"- [{title}](https://github.com/dotnet/runtime/issues?q=is%3Aopen+is%3Aissue+label%3{label})");
+                header.AppendLine($"- [{title}](https://github.com/dotnet/runtime/issues?q=is%3Aopen+is%3Aissue+label%3A{label})");
 
                 body.AppendLine($"## {title}");
                 body.AppendLine("|Status|Issue|Build Count|");
