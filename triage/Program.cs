@@ -10,6 +10,7 @@ using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -17,28 +18,49 @@ using Mono.Options;
 using Octokit;
 using static DevOps.Util.DotNet.OptionSetUtil;
 
-internal static class Program
+[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsId("8c127652-56b4-4501-9323-d1f40a41c512")]
+
+internal class Program
 {
     internal const int ExitSuccess = 0;
     internal const int ExitFailure = 1;
 
-    public static async Task Main(string[] args)
+    public static async Task Main(string[] args) => await MainCore(CreateTriageDbContext(), args.ToList());
+
+    private static TriageDbContext CreateTriageDbContext()
     {
-        var host = CreateHostBuilder(args).Build();
-        using var db = host.Services.GetService<TriageDbContext>();
-        await MainCore(db, args.ToList());
+        var builder = new DbContextOptionsBuilder<TriageDbContext>();
+        ConfigureOptions(builder);
+        return new TriageDbContext(builder.Options);
     }
 
+    private static void ConfigureOptions(DbContextOptionsBuilder builder)
+    {
+        var config = new ConfigurationBuilder()
+            .AddUserSecrets<Program>()
+            .AddEnvironmentVariables()
+            .Build();
+
+        if (!string.IsNullOrEmpty(config["RUNFO_USE_SQL"]))
+        {
+            Console.WriteLine("using sql");
+            var connectionString = config["RUNFO_CONNECTION_STRING"];
+            builder.UseSqlServer(connectionString);
+        }
+        else
+        {
+            Console.WriteLine("using sqlite");
+            builder.UseSqlite(@"Data Source=C:\Users\jaredpar\AppData\Local\runfo\triage.db");
+        }
+    }
+
+    // This entry point exists so that `dotnet ef database` and `migrations` has an 
+    // entry point to create TriageDbContext
     public static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder()
-            .ConfigureLogging(logging =>
-            {
-                logging.ClearProviders();
-            })
             .ConfigureServices((hostContext, services) =>
             {
-                services.AddDbContext<TriageDbContext>(options =>
-                    options.UseSqlite(@"Data Source=C:\Users\jaredpar\AppData\Local\runfo\triage.db"));
+                services.AddDbContext<TriageDbContext>(options => ConfigureOptions(options));
             });
 
     // internal static async Task<int> Main(string[] args) => await MainCore(args.ToList());

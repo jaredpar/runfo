@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevOps.Util.Triage
@@ -20,7 +21,6 @@ namespace DevOps.Util.Triage
         {
 
         }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ModelTimelineQuery>()
@@ -48,6 +48,8 @@ namespace DevOps.Util.Triage
 
     public class ModelBuild
     {
+
+        [Column(TypeName="nvarchar(100)")]
         public string Id { get; set; }
 
         public int BuildNumber { get; set; }
@@ -58,8 +60,10 @@ namespace DevOps.Util.Triage
 
         public int? PullRequestNumber { get; set; }
 
+        [Column(TypeName="smalldatetime")]
         public DateTime? StartTime { get; set; }
 
+        [Column(TypeName="smalldatetime")]
         public DateTime? FinishTime { get; set; }
 
         public int ModelBuildDefinitionId { get; set; }
