@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace DevOps.Util.Triage.Migrations
+namespace DevOps.Util.Triage.Migrations.SqlServer 
 {
     [DbContext(typeof(TriageContext))]
     partial class TriageContextModelSnapshot : ModelSnapshot

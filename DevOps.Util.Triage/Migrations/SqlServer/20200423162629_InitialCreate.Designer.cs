@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace DevOps.Util.Triage.Migrations
+namespace DevOps.Util.Triage.Migrations.SqlServer 
 {
     [DbContext(typeof(TriageContext))]
     [Migration("20200423162629_InitialCreate")]

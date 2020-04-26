@@ -12,6 +12,14 @@ namespace DevOps.Util.Triage
 
         public DbSet<ModelBuildDefinition> ModelBuildDefinitions { get; set; }
 
+        public DbSet<ModelTriageIssue> ModelTriageIssues { get; set; }
+
+        public DbSet<ModelTriageIssueResult> ModelTriageIssueResults { get; set; }
+
+        public DbSet<ModelTriageIssueResultComplete> ModelTriageIssueResultCompletes { get; set; }
+
+        public DbSet<ModelTriageGitHubIssue> ModelTriageGitHubIssues { get; set; }
+
         public DbSet<ModelTimelineQuery> ModelTimelineQueries { get; set; }
 
         public DbSet<ModelTimelineItem> ModelTimelineItems { get; set; }
@@ -25,12 +33,32 @@ namespace DevOps.Util.Triage
         }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<ModelTimelineQuery>()
-                .HasIndex(x => new { x.GitHubOrganization, x.GitHubRepository, x.IssueNumber })
-                .IsUnique();
-
             modelBuilder.Entity<ModelBuildDefinition>()
                 .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionId })
+                .IsUnique();
+
+            modelBuilder.Entity<ModelTriageIssue>()
+                .HasIndex(x => new { x.SearchKind, x.SearchText })
+                .IsUnique();
+
+            modelBuilder.Entity<ModelTriageIssue>()
+                .Property(x => x.SearchKind)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<ModelTriageIssue>()
+                .Property(x => x.TriageIssueKind)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<ModelTriageGitHubIssue>()
+                .HasIndex(x => new { x.Organization, x.Repository, x.IssueNumber })
+                .IsUnique();
+
+            modelBuilder.Entity<ModelTriageIssueResultComplete>()
+                .HasIndex(x => new { x.ModelTriageIssueId, x.ModelBuildId })
+                .IsUnique();
+
+            modelBuilder.Entity<ModelTimelineQuery>()
+                .HasIndex(x => new { x.GitHubOrganization, x.GitHubRepository, x.IssueNumber })
                 .IsUnique();
 
             modelBuilder.Entity<ModelTimelineQueryComplete>()
@@ -76,6 +104,114 @@ namespace DevOps.Util.Triage
 
         public ModelBuildDefinition ModelBuildDefinition { get; set; }
     }
+
+    public enum TriageIssueKind
+    {
+        Unknown = 0,
+
+        Azure,
+
+        Helix,
+
+        NuGet,
+
+        // General infrastructure owned by the .NET Team
+        Infra,
+
+        Build,
+
+        Test,
+    }
+
+    public enum SearchKind
+    {
+        Unknown,
+
+        SearchTimeline,
+    }
+
+    /// <summary>
+    /// This is an issue that the tool is attempting to auto-triage as builds complete
+    /// </summary>
+    public class ModelTriageIssue
+    {
+        public int Id { get; set;}
+
+        [Column(TypeName = "nvarchar(30)")]
+        public TriageIssueKind TriageIssueKind { get; set; }
+
+        [Column(TypeName = "nvarchar(30)")]
+        public SearchKind SearchKind { get; set; }
+
+        [Column(TypeName="nvarchar(400)")]
+        public string SearchText { get; set; }
+
+        public List<ModelTriageGitHubIssue> ModelTriageGitHubissues { get; set; }
+    }
+
+    /// <summary>
+    /// Represents an issue that needs to be updated for the associated triage issue 
+    /// above
+    /// </summary>
+    // TODO: include fields that will shape the report that we include in the actualy
+    // issue here
+    public class  ModelTriageGitHubIssue
+    {
+        public int Id { get; set; }
+
+        [Required]
+        public string Organization { get; set; }
+
+        [Required]
+        public string Repository { get; set; }
+
+        [Required]
+        public int IssueNumber { get; set; }
+
+        [NotMapped]
+        public GitHubIssueKey IssueKey => new GitHubIssueKey(Organization, Repository, IssueNumber);
+    }
+
+    /// <summary>
+    /// Represents a result from a ModelTriageIssue for a given build. 
+    /// </summary>
+    public class ModelTriageIssueResult
+    {
+        public int Id { get; set; }
+
+        public int BuildNumber { get; set; }
+
+        public string JobName { get; set; }
+
+        public string TimelineRecordName { get; set; }
+
+        public string Line { get; set; }
+
+        [Column(TypeName="nvarchar(100)")]
+        public string ModelBuildId { get; set; }
+
+        public ModelBuild ModelBuild { get; set; }
+
+        public int ModelTriageIssueId { get; set; }
+
+        public ModelTriageIssue ModelTriageIssue { get; set; }
+    }
+
+    public class ModelTriageIssueResultComplete
+    {
+        public int Id { get; set; }
+
+        public int ModelTriageIssueId { get; set; }
+
+        public ModelTriageIssue ModelTriageIssue { get; set; }
+
+        [Column(TypeName="nvarchar(100)")]
+        public string ModelBuildId { get; set; }
+
+        public ModelBuild ModelBuild { get; set; }
+    }
+
+    /* Tables to be deleted eventually */
 
     public class ModelTimelineQuery
     {

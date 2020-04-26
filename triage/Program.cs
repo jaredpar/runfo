@@ -41,16 +41,16 @@ internal class Program
             .AddEnvironmentVariables()
             .Build();
 
-        if (!string.IsNullOrEmpty(config["RUNFO_USE_SQL"]))
+        if (!string.IsNullOrEmpty(config["RUNFO_USE_SQLITE"]))
+        {
+            Console.WriteLine("using sqlite");
+            builder.UseSqlite(@"Data Source=C:\Users\jaredpar\AppData\Local\runfo\triage.db");
+        }
+        else
         {
             Console.WriteLine("using sql");
             var connectionString = config["RUNFO_CONNECTION_STRING"];
             builder.UseSqlServer(connectionString);
-        }
-        else
-        {
-            Console.WriteLine("using sqlite");
-            builder.UseSqlite(@"Data Source=C:\Users\jaredpar\AppData\Local\runfo\triage.db");
         }
     }
 
