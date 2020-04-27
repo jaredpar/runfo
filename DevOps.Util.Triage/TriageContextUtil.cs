@@ -185,9 +185,100 @@ namespace DevOps.Util.Triage
                 {
                     modelTriageIssue.ModelTriageGitHubIssues.Add(gitHubIssue);
                 }
+                else
+                {
+                    existing.BuildQuery = gitHubIssue.BuildQuery;
+                    existing.IncludeDefinitions = gitHubIssue.IncludeDefinitions;
+                }
             }
 
             Context.SaveChanges();
+        }
+
+        public List<ModelTriageIssueResult> FindModelTriageIssueResults(ModelTriageIssue triageIssue, ModelTriageGitHubIssue triageGitHubIssue)
+        {
+            var buildQuery = string.IsNullOrEmpty(triageGitHubIssue.BuildQuery) 
+                ? $"-repository {triageGitHubIssue.Organization}/{triageGitHubIssue.Repository}"
+                : triageGitHubIssue.BuildQuery;
+
+            var optionSet = new BuildSearchOptionSet();
+            if (optionSet.Parse(buildQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries)).Count != 0)
+            {
+                throw new Exception("Bad build query");
+            }
+
+            if (optionSet.BuildIds.Count > 0 ||
+                !string.IsNullOrEmpty(optionSet.Branch) ||
+                optionSet.Before.HasValue ||
+                optionSet.After.HasValue)
+            {
+                // Not supported at this time.
+                throw new NotSupportedException();
+            }
+
+            var project = optionSet.Project ?? BuildSearchOptionSet.DefaultProject;
+
+            if (!string.IsNullOrEmpty(optionSet.Repository))
+            {
+                var both = optionSet.Repository.Split("/");
+                var list = Context.ModelTriageIssueResults
+                    .Include(x => x.ModelBuild)
+                    .ThenInclude(x => x.ModelBuildDefinition)
+                    .Where(x => 
+                        x.ModelTriageIssueId == triageIssue.Id &&
+                        x.ModelBuild.GitHubOrganization == both[0] &&
+                        x.ModelBuild.GitHubRepository == both[1])
+                    .OrderByDescending(x => x.BuildNumber)
+                    .ToList();
+                return list;
+            }
+            else if (optionSet.Definitions.Count > 0)
+            {
+                var list = new List<ModelTriageIssueResult>();
+                foreach (var definition in optionSet.Definitions)
+                {
+                    if (!DotNetUtil.TryGetDefinitionId(definition, defaultProject: project, out var definitionProject, out var definitionId))
+                    {
+                        throw new NotSupportedException();
+                    }
+
+                    definitionProject ??= project;
+                    var subList = Context.ModelTriageIssueResults
+                        .Include(x => x.ModelBuild)
+                        .ThenInclude(x => x.ModelBuildDefinition)
+                        .Where(x => 
+                            x.ModelTriageIssueId == triageIssue.Id &&
+                            x.ModelBuild.ModelBuildDefinition.AzureProject == definitionProject &&
+                            x.ModelBuild.ModelBuildDefinition.DefinitionId == definitionId)
+                        .OrderByDescending(x => x.BuildNumber)
+                        .ToList();
+                    list.AddRange(subList);
+                }
+
+                return list;
+            }
+            else
+            {
+                var list = Context.ModelTriageIssueResults
+                    .Include(x => x.ModelBuild)
+                    .ThenInclude(x => x.ModelBuildDefinition)
+                    .Where(x =>
+                        x.ModelTriageIssueId == triageIssue.Id &&
+                        x.ModelBuild.ModelBuildDefinition.AzureProject == project)
+                    .OrderByDescending(x => x.BuildNumber)
+                    .ToList();
+                return list;
+            }
+        }
+
+        public List<ModelBuild> FindModelBuilds(ModelTriageIssue modelTriageIssue, ModelTriageGitHubIssue modelTriageGitHubIssue)
+        {
+            if (string.IsNullOrEmpty(modelTriageGitHubIssue.BuildQuery))
+            {
+                return FindModelBuildsByRepository(modelTriageIssue, modelTriageGitHubIssue.Organization, modelTriageGitHubIssue.Repository, 100);
+            }
+
+            return FindModelBuilds(modelTriageIssue, modelTriageGitHubIssue.BuildQuery);
         }
 
         public List<ModelBuild> FindModelBuilds(ModelTriageIssue modelTriageIssue, string buildQuery)
@@ -216,7 +307,13 @@ namespace DevOps.Util.Triage
             var project = optionSet.Project ?? BuildSearchOptionSet.DefaultProject;
             var count = optionSet.SearchCount ?? 100;
             var list = new List<ModelBuild>();
-            if (optionSet.Definitions.Count > 0)
+
+            if (!string.IsNullOrEmpty(optionSet.Repository))
+            {
+                var both = optionSet.Repository.Split("/");
+                list.AddRange(FindModelBuildsByRepository(modelTriageIssue, both[0], both[1], count));
+            }
+            else if (optionSet.Definitions.Count > 0)
             {
                 foreach (var definition in optionSet.Definitions)
                 {
@@ -226,7 +323,7 @@ namespace DevOps.Util.Triage
                     }
 
                     definitionProject ??= project;
-                    list.AddRange(FindModelBuildByDefinition(modelTriageIssue, definitionProject, definitionId, count));
+                    list.AddRange(FindModelBuildsByDefinition(modelTriageIssue, definitionProject, definitionId, count));
                 }
             }
             else
@@ -247,7 +344,7 @@ namespace DevOps.Util.Triage
             return list;
         }
 
-        public List<ModelBuild> FindModelBuildByDefinition(ModelTriageIssue modelTriageIssue, string project, int definitionId, int count) =>
+        public List<ModelBuild> FindModelBuildsByDefinition(ModelTriageIssue modelTriageIssue, string project, int definitionId, int count) =>
             Context.ModelTriageIssueResults
                 .Include(x => x.ModelBuild)
                 .ThenInclude(x => x.ModelBuildDefinition)
@@ -255,6 +352,18 @@ namespace DevOps.Util.Triage
                     x.ModelTriageIssueId == modelTriageIssue.Id &&
                     x.ModelBuild.ModelBuildDefinition.AzureProject == project &&
                     x.ModelBuild.ModelBuildDefinitionId == definitionId)
+                .Select(x => x.ModelBuild)
+                .OrderByDescending(x => x.BuildNumber)
+                .Take(count)
+                .ToList();
+
+        public List<ModelBuild> FindModelBuildsByRepository(ModelTriageIssue modelTriageIssue, string organization, string repository, int count) =>
+            Context.ModelTriageIssueResults
+                .Include(x => x.ModelBuild)
+                .Where(x =>
+                    x.ModelTriageIssueId == modelTriageIssue.Id &&
+                    x.ModelBuild.GitHubOrganization == organization &&
+                    x.ModelBuild.GitHubRepository == repository)
                 .Select(x => x.ModelBuild)
                 .OrderByDescending(x => x.BuildNumber)
                 .Take(count)

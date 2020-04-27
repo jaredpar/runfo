@@ -84,15 +84,17 @@ namespace DevOps.Util.Triage
                 TriageIssueKind.Infra,
                 SearchKind.SearchTimeline,
                 searchText: "Received request to deprovision: The request was cancelled by the remote provider",
-                Create("dotnet", "runtime", 34472),
+                Create("dotnet", "runtime", 34472, includeDefinitons: false),
                 Create("dotnet", "core-eng", 9532));
 
-            static ModelTriageGitHubIssue Create(string organization, string repository, int number) =>
+            static ModelTriageGitHubIssue Create(string organization, string repository, int number, string? buildQuery = null, bool includeDefinitons = true) =>
                 new ModelTriageGitHubIssue()
                 {
                     Organization = organization,
                     Repository = repository, 
-                    IssueNumber = number
+                    IssueNumber = number,
+                    BuildQuery = buildQuery,
+                    IncludeDefinitions = includeDefinitons
                 };
         }
 

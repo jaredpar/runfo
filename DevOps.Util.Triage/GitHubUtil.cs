@@ -71,13 +71,7 @@ namespace DevOps.Util.Triage
 
             async Task UpdateIssueForSearchTimeline(ModelTriageIssue triageIssue, ModelTriageGitHubIssue gitHubIssue)
             {
-                var results = Context.ModelTriageIssueResults
-                    .Include(x => x.ModelBuild)
-                    .ThenInclude(b => b.ModelBuildDefinition)
-                    .Where(x => x.ModelTriageIssueId == triageIssue.Id)
-                    .OrderByDescending(x => x.BuildNumber)
-                    .ToList();
-
+                var results = TriageContextUtil.FindModelTriageIssueResults(triageIssue, gitHubIssue);
                 var footer = new StringBuilder();
                 var mostRecent = results
                     .Select(x => x.ModelBuild)
@@ -105,7 +99,7 @@ namespace DevOps.Util.Triage
                 var reportBody = ReportBuilder.BuildSearchTimeline(
                     searchResults,
                     markdown: true,
-                    includeDefinition: true,
+                    includeDefinition: gitHubIssue.IncludeDefinitions,
                     footer.ToString());
 
                 var succeeded = await UpdateGitHubIssueReport(gitHubIssue.IssueKey, reportBody);

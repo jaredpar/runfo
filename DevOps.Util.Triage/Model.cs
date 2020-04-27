@@ -158,7 +158,7 @@ namespace DevOps.Util.Triage
     /// Represents an issue that needs to be updated for the associated triage issue 
     /// above
     /// </summary>
-    // TODO: include fields that will shape the report that we include in the actualy
+    // TODO: include fields that will shape the report that we include in the actually
     // issue here
     public class  ModelTriageGitHubIssue
     {
@@ -172,6 +172,14 @@ namespace DevOps.Util.Triage
 
         [Required]
         public int IssueNumber { get; set; }
+
+        // Whether or not to include BuildDefinitions in the report
+        public bool IncludeDefinitions { get; set; }
+
+        // The query to use to filter builds hitting the overall triage issue to this specific
+        // GitHub issue. If empty it will filter to builds against the repository where this 
+        // issue was defined
+        public string BuildQuery { get; set; }
 
         [NotMapped]
         public GitHubIssueKey IssueKey => new GitHubIssueKey(Organization, Repository, IssueNumber);

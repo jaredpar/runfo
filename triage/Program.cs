@@ -25,32 +25,40 @@ internal class Program
     internal const int ExitSuccess = 0;
     internal const int ExitFailure = 1;
 
-    public static async Task Main(string[] args) => await MainCore(CreateTriageContext(), args.ToList());
+    public static async Task Main(string[] args) => await MainCore(args.ToList());
 
-    private static TriageContext CreateTriageContext()
+    private static (TriageContext, bool IsDevelopment) CreateTriageContext()
     {
         var builder = new DbContextOptionsBuilder<TriageContext>();
-        ConfigureOptions(builder, forceDev: true);
-        return new TriageContext(builder.Options);
+        var configuration = CreateConfiguration();
+        ConfigureOptions(builder, configuration);
+        return (new TriageContext(builder.Options), IsDevelopment(configuration));
     }
 
-    private static void ConfigureOptions(DbContextOptionsBuilder builder, bool forceDev = false)
+    public static bool IsDevelopment(IConfiguration configuration) => !string.IsNullOrEmpty(configuration["RUNFO_DEV"]);
+
+    private static IConfiguration CreateConfiguration()
     {
         var config = new ConfigurationBuilder()
             .AddUserSecrets<Program>()
             .AddEnvironmentVariables()
             .Build();
+            return config;
+    }
 
-        if (!string.IsNullOrEmpty(config["RUNFO_DEV"]) || forceDev)
+    private static void ConfigureOptions(DbContextOptionsBuilder builder, IConfiguration configuration = null)
+    {
+        configuration ??= CreateConfiguration();
+        if (IsDevelopment(configuration))
         {
             Console.WriteLine("using sql dev");
-            var connectionString = config["RUNFO_CONNECTION_STRING_DEV"];
+            var connectionString = configuration["RUNFO_CONNECTION_STRING_DEV"];
             builder.UseSqlServer(connectionString);
         }
         else
         {
             Console.WriteLine("using sql");
-            var connectionString = config["RUNFO_CONNECTION_STRING"];
+            var connectionString = configuration["RUNFO_CONNECTION_STRING"];
             builder.UseSqlServer(connectionString);
         }
     }
@@ -66,11 +74,12 @@ internal class Program
 
     // internal static async Task<int> Main(string[] args) => await MainCore(args.ToList());
 
-    internal static async Task<int> MainCore(TriageContext context, List<string> args)
+    internal static async Task<int> MainCore(List<string> args)
     {
         var azdoToken = Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN");
         var gitHubToken = Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN");
         var cacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "runfo", "json");
+        var (context, isDevelopment) = CreateTriageContext();
 
         var server = new CachingDevOpsServer(cacheDirectory, "dnceng", azdoToken);
         var gitHubClient = new GitHubClient(new ProductHeaderValue("RuntimeStatusPage"));
@@ -92,7 +101,10 @@ internal class Program
         }
 
         var autoTriageUtil = new AutoTriageUtil(server, gitHubClient, context, loggerFactory.CreateLogger<AutoTriageUtil>());
-        var gitHubUtil = new GitHubUtil(gitHubClient, context, loggerFactory.CreateLogger<GitHubClient>());
+        var gitHubUtil = new GitHubUtil(
+            isDevelopment ? (IGitHubClient)new DevGitHubClient(gitHubClient) : gitHubClient,
+            context,
+            loggerFactory.CreateLogger<GitHubClient>());
         switch (command)
         {
             case "auto":
@@ -141,10 +153,10 @@ internal class Program
         async Task RunScratch()
         {
             autoTriageUtil.EnsureTriageIssues();
-            autoTriageUtil.UpdateIssues = false;
+            // await autoTriageUtil.Triage("-d runtime -c 200 -pr");
             //await autoTriageUtil.Triage("-d runtime -c 100 -pr");
             await gitHubUtil.UpdateGithubIssues();
-            await gitHubUtil.UpdateStatusIssue();
+            // await gitHubUtil.UpdateStatusIssue();
         }
     }
 }
