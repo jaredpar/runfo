@@ -118,38 +118,66 @@ namespace DevOps.Util.Triage
         {
             Logger.LogInformation($"Triaging {DevOpsUtil.GetBuildUri(build)}");
 
+            (Timeline? Timeline, bool Fetched) cachedTimeline = (null, false);
             var buildInfo = build.GetBuildInfo();
             var modelBuild = TriageContextUtil.EnsureBuild(buildInfo);
 
-            Timeline? timeline = null;
-            try
-            {
-                timeline = await Server.GetTimelineAsync(build);
-                if (timeline is null)
-                
-                {
-                    Logger.LogWarning("No timeline");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning($"Error getting timeline: {ex.Message}");
-            }
+            var query = 
+                from issue in Context.ModelTriageIssues
+                from complete in Context.ModelTriageIssueResultCompletes
+                    .Where(complete =>
+                        complete.ModelTriageIssueId == issue.Id &&
+                        complete.ModelBuildId == modelBuild.Id)
+                    .DefaultIfEmpty()
+                select new { issue, complete };
 
-            foreach (var modelTriageIssue in Context.ModelTriageIssues.ToList())
+            foreach (var data in query.ToList())
             {
-                switch (modelTriageIssue.SearchKind)
+                if (data.complete is object)
+                {
+                    continue;
+                }
+
+                var issue = data.issue;
+                switch (issue.SearchKind)
                 {
                     case SearchKind.SearchTimeline:
-                        if (timeline is object)
-                        {
-                            DoSearchTimeline(modelTriageIssue, build, modelBuild, timeline);
+                        { 
+                            var timeline = await GetTimelineAsync();
+                            if (timeline is object)
+                            {
+                                DoSearchTimeline(issue, build, modelBuild, timeline);
+                            }
+                            break;
                         }
-                        break;
                     default:
-                        Logger.LogWarning($"Unknown search kind {modelTriageIssue.SearchKind} in {modelTriageIssue.Id}");
+                        Logger.LogWarning($"Unknown search kind {issue.SearchKind} in {issue.Id}");
                         break;
                 }
+            }
+
+            async Task<Timeline?> GetTimelineAsync()
+            {
+                if (cachedTimeline.Fetched)
+                {
+                    return cachedTimeline.Timeline;
+                }
+
+                try
+                {
+                    cachedTimeline.Timeline = await Server.GetTimelineAsync(build);
+                    if (cachedTimeline.Timeline is null)
+                    {
+                        Logger.LogWarning("No timeline");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning($"Error getting timeline: {ex.Message}");
+                }
+
+                cachedTimeline.Fetched = true;
+                return cachedTimeline.Timeline;
             }
         }
 

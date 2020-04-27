@@ -146,16 +146,17 @@ internal class Program
             autoTriageUtil.EnsureTriageIssues();
             await autoTriageUtil.Triage("-d runtime -c 1000 -pr");
             await autoTriageUtil.Triage("-d aspnet -c 1000 -pr");
-            await autoTriageUtil.Triage("-d runtime-official -c 50 -pr");
-            await autoTriageUtil.Triage("-d aspnet-official -c 50 -pr");
+            await autoTriageUtil.Triage("-d runtime-official -c 100 -pr");
+            await autoTriageUtil.Triage("-d aspnet-official -c 100 -pr");
         }
 
         async Task RunScratch()
         {
             autoTriageUtil.EnsureTriageIssues();
-            // await autoTriageUtil.Triage("-d runtime -c 200 -pr");
+            await autoTriageUtil.Triage("-d aspnet -c 100 -pr");
+            await autoTriageUtil.Triage("-d runtime -c 500 -pr");
             //await autoTriageUtil.Triage("-d runtime -c 100 -pr");
-            await gitHubUtil.UpdateGithubIssues();
+            // await gitHubUtil.UpdateGithubIssues();
             // await gitHubUtil.UpdateStatusIssue();
         }
     }
