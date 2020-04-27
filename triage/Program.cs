@@ -95,6 +95,9 @@ internal class Program
         var gitHubUtil = new GitHubUtil(gitHubClient, context, loggerFactory.CreateLogger<GitHubUtil>());
         switch (command)
         {
+            case "list":
+                await RunList();
+                break;
             case "rebuild":
                 await RunRebuild();
                 break;
@@ -110,6 +113,34 @@ internal class Program
         }
 
         return ExitSuccess;
+
+        async Task RunList()
+        {
+            foreach (var build in await queryUtil.ListBuildsAsync("-d runtime"))
+            {
+                Console.WriteLine(DevOpsUtil.GetBuildUri(build));
+                var key = build.GetBuildKey();
+                var jobs = await queryUtil.ListFailedJobs(build);
+                foreach (var job in jobs)
+                {
+                    var result = context.ModelTriageIssueResults
+                        .Include(x => x.ModelBuild)
+                        .Include(x => x.ModelTriageIssue)
+                        .Where(x => 
+                            x.JobName == job.Name &&
+                            x.ModelBuild.BuildNumber == key.Number)
+                        .FirstOrDefault();
+                    if (result is null)
+                    {
+                        Console.WriteLine($" Unknown: {job.Name}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($" {result.ModelTriageIssue.TriageIssueKind}: {job.Name}");
+                    }
+                }
+            }
+        }
 
         async Task RunRebuild()
         {

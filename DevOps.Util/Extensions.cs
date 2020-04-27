@@ -21,5 +21,9 @@ namespace DevOps.Util
         public static int? GetByteSize(this BuildArtifact buildArtifact) => DevOpsUtil.GetArtifactByteSize(buildArtifact);
 
         public static BuildArtifactKind GetKind(this BuildArtifact buildArtifact) => DevOpsUtil.GetArtifactKind(buildArtifact);
+
+        public static bool IsAnySuccess(this TimelineRecord record) =>
+            record.Result == TaskResult.Succeeded ||
+            record.Result == TaskResult.SucceededWithIssues;
     }
 }

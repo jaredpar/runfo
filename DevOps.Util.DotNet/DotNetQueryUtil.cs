@@ -140,6 +140,17 @@ namespace DevOps.Util.DotNet
             }
         }
 
+        public async Task<List<TimelineRecord>> ListFailedJobs(Build build)
+        {
+            var timeline = await Server.GetTimelineAsync(build).ConfigureAwait(false);
+            var timelineTree = TimelineTree.Create(timeline);
+            return timelineTree
+                .Nodes
+                .Where(n => !n.TimelineRecord.IsAnySuccess() && timelineTree.IsJob(n.TimelineRecord.Id))
+                .Select(x => x.TimelineRecord)
+                .ToList();
+        }
+
         public async Task<List<Build>> ListBuildsAsync(
             string project,
             int count,
