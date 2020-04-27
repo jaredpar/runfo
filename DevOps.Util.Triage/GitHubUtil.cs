@@ -186,7 +186,7 @@ namespace DevOps.Util.Triage
             var body = new StringBuilder();
             var footer = new StringBuilder();
             header.AppendLine("## Overview");
-            header.AppendLine("Please use this queries to discover issues");
+            header.AppendLine("Please use these queries to discover issues");
 
             await BuildOne("Blocking CI", "blocking-clean-ci", DotNetUtil.GetBuildDefinitionKeyFromFriendlyName("runtime"));
             await BuildOne("Blocking Official Build", "blocking-official-build", DotNetUtil.GetBuildDefinitionKeyFromFriendlyName("runtime-official"));
