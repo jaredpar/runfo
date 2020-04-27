@@ -797,7 +797,7 @@ internal sealed partial class RuntimeInfo
             { "g|grouping=", "output grouping: tests*, builds, jobs", g => grouping = g },
             { "m|markdown", "output in markdown", m => markdown = m  is object },
             { "n|name=", "name regex to match in results", n => name = n },
-            { "at|all-tests", "output in markdown", at => includeAllTests = at is object },
+            { "at|all-tests", "include all tests", at => includeAllTests = at is object },
             { "v|verbose", "verbose output", d => verbose = d is object },
         };
 
