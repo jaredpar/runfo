@@ -21,10 +21,18 @@ namespace DevOps.Util.Triage
     public sealed class AutoTriageUtil
     {
         public DevOpsServer Server { get; }
+
         public GitHubClient GitHubClient { get; }
+
         public DotNetQueryUtil QueryUtil { get; }
 
         public TriageContextUtil TriageContextUtil { get; }
+
+
+        // TODO: should factor this out to an interface. This is a terrible
+        // design as is
+        // Set to false to not actually update issues. Useful for testing
+        public bool UpdateIssues { get; set; }
 
         public ReportBuilder ReportBuilder { get; } = new ReportBuilder();
 
@@ -60,7 +68,7 @@ namespace DevOps.Util.Triage
                 TriageIssueKind.Infra,
                 SearchKind.SearchTimeline,
                 searchText: "HTTP request to.*api.nuget.org.*timed out",
-                Create("dotnet", "core-eng", 9635),
+                Create("dotnet", "core-eng", 9634),
                 Create("dotnet", "runtime", 35074));
             TriageContextUtil.EnsureTriageIssue(
                 TriageIssueKind.Infra,
@@ -116,6 +124,7 @@ namespace DevOps.Util.Triage
             {
                 timeline = await Server.GetTimelineAsync(build);
                 if (timeline is null)
+                
                 {
                     Logger.LogWarning("No timeline");
                 }
@@ -125,7 +134,7 @@ namespace DevOps.Util.Triage
                 Logger.LogWarning($"Error getting timeline: {ex.Message}");
             }
 
-            foreach (var modelTriageIssue in Context.ModelTriageIssues)
+            foreach (var modelTriageIssue in Context.ModelTriageIssues.ToList())
             {
                 switch (modelTriageIssue.SearchKind)
                 {
@@ -260,6 +269,11 @@ namespace DevOps.Util.Triage
 
         private async Task<bool> UpdateGitHubIssueReport(GitHubIssueKey issueKey, string reportBody)
         {
+            if (!UpdateIssues)
+            {
+                return true;
+            }
+
             try
             {
                 var issueClient = GitHubClient.Issue;
@@ -412,6 +426,11 @@ namespace DevOps.Util.Triage
 
             async Task UpdateIssue()
             {
+                if (!UpdateIssues)
+                {
+                    return;
+                }
+
                 var issueKey = new GitHubIssueKey("dotnet", "runtime", 702);
                 var issueClient = GitHubClient.Issue;
                 var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Number);

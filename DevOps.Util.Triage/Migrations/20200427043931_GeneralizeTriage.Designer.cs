@@ -4,14 +4,16 @@ using DevOps.Util.Triage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace DevOps.Util.Triage.Migrations.SqlServer 
+namespace DevOps.Util.Triage.Migrations
 {
     [DbContext(typeof(TriageContext))]
-    partial class TriageContextModelSnapshot : ModelSnapshot
+    [Migration("20200427043931_GeneralizeTriage")]
+    partial class GeneralizeTriage
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -165,6 +167,122 @@ namespace DevOps.Util.Triage.Migrations.SqlServer
                     b.ToTable("ModelTimelineQueryCompletes");
                 });
 
+            modelBuilder.Entity("DevOps.Util.Triage.ModelTriageGitHubIssue", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<int>("IssueNumber")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ModelTriageIssueId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Organization")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Repository")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ModelTriageIssueId");
+
+                    b.HasIndex("Organization", "Repository", "IssueNumber")
+                        .IsUnique();
+
+                    b.ToTable("ModelTriageGitHubIssues");
+                });
+
+            modelBuilder.Entity("DevOps.Util.Triage.ModelTriageIssue", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<string>("SearchKind")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("SearchText")
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<string>("TriageIssueKind")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SearchKind", "SearchText")
+                        .IsUnique()
+                        .HasFilter("[SearchText] IS NOT NULL");
+
+                    b.ToTable("ModelTriageIssues");
+                });
+
+            modelBuilder.Entity("DevOps.Util.Triage.ModelTriageIssueResult", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<int>("BuildNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("JobName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Line")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ModelBuildId")
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("ModelTriageIssueId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TimelineRecordName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ModelBuildId");
+
+                    b.HasIndex("ModelTriageIssueId");
+
+                    b.ToTable("ModelTriageIssueResults");
+                });
+
+            modelBuilder.Entity("DevOps.Util.Triage.ModelTriageIssueResultComplete", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<string>("ModelBuildId")
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("ModelTriageIssueId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ModelBuildId");
+
+                    b.HasIndex("ModelTriageIssueId", "ModelBuildId")
+                        .IsUnique()
+                        .HasFilter("[ModelBuildId] IS NOT NULL");
+
+                    b.ToTable("ModelTriageIssueResultCompletes");
+                });
+
             modelBuilder.Entity("DevOps.Util.Triage.ModelBuild", b =>
                 {
                     b.HasOne("DevOps.Util.Triage.ModelBuildDefinition", "ModelBuildDefinition")
@@ -196,6 +314,41 @@ namespace DevOps.Util.Triage.Migrations.SqlServer
                     b.HasOne("DevOps.Util.Triage.ModelTimelineQuery", "ModelTimelineQuery")
                         .WithMany("ModelTimelineQueryCompletes")
                         .HasForeignKey("ModelTimelineQueryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DevOps.Util.Triage.ModelTriageGitHubIssue", b =>
+                {
+                    b.HasOne("DevOps.Util.Triage.ModelTriageIssue", "ModelTriageIssue")
+                        .WithMany("ModelTriageGitHubIssues")
+                        .HasForeignKey("ModelTriageIssueId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DevOps.Util.Triage.ModelTriageIssueResult", b =>
+                {
+                    b.HasOne("DevOps.Util.Triage.ModelBuild", "ModelBuild")
+                        .WithMany()
+                        .HasForeignKey("ModelBuildId");
+
+                    b.HasOne("DevOps.Util.Triage.ModelTriageIssue", "ModelTriageIssue")
+                        .WithMany("ModelTriageIssueResults")
+                        .HasForeignKey("ModelTriageIssueId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DevOps.Util.Triage.ModelTriageIssueResultComplete", b =>
+                {
+                    b.HasOne("DevOps.Util.Triage.ModelBuild", "ModelBuild")
+                        .WithMany()
+                        .HasForeignKey("ModelBuildId");
+
+                    b.HasOne("DevOps.Util.Triage.ModelTriageIssue", "ModelTriageIssue")
+                        .WithMany()
+                        .HasForeignKey("ModelTriageIssueId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

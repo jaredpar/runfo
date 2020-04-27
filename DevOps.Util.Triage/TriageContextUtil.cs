@@ -123,7 +123,8 @@ namespace DevOps.Util.Triage
             [NotNullWhen(true)] out ModelTriageIssue? modelTriageIssue)
         {
             modelTriageIssue = Context.ModelTriageIssues
-                .Where(x => x.SearchKind == searchKind || x.SearchText == searchText)
+                .Include(x => x.ModelTriageGitHubIssues)
+                .Where(x => x.SearchKind == searchKind && x.SearchText == searchText)
                 .FirstOrDefault();
             return modelTriageIssue is object;
         }
@@ -161,7 +162,6 @@ namespace DevOps.Util.Triage
                 if (modelTriageIssue.TriageIssueKind != issueKind)
                 {
                     modelTriageIssue.TriageIssueKind = issueKind;
-                    Context.SaveChanges();
                 }
             }
             else
@@ -171,6 +171,7 @@ namespace DevOps.Util.Triage
                     TriageIssueKind = issueKind,
                     SearchKind = searchKind,
                     SearchText = searchText,
+                    ModelTriageGitHubIssues = new List<ModelTriageGitHubIssue>(),
                 };
                 Context.ModelTriageIssues.Add(modelTriageIssue);
             }
@@ -188,5 +189,75 @@ namespace DevOps.Util.Triage
 
             Context.SaveChanges();
         }
+
+        public List<ModelBuild> FindModelBuilds(ModelTriageIssue modelTriageIssue, string buildQuery)
+        {
+            var optionSet = new BuildSearchOptionSet();
+            if (optionSet.Parse(buildQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries)).Count != 0)
+            {
+                throw new Exception("Bad build query");
+            }
+
+            return FindModelBuilds(modelTriageIssue, optionSet);
+        }
+
+        // TODO: This only supports part of the build query syntax. Could improve this a lot
+        public List<ModelBuild> FindModelBuilds(ModelTriageIssue modelTriageIssue, BuildSearchOptionSet optionSet)
+        {
+            if (optionSet.BuildIds.Count > 0 ||
+                !string.IsNullOrEmpty(optionSet.Branch) ||
+                optionSet.Before.HasValue ||
+                optionSet.After.HasValue)
+            {
+                // Not supported at this time.
+                throw new NotSupportedException();
+            }
+
+            var project = optionSet.Project ?? BuildSearchOptionSet.DefaultProject;
+            var count = optionSet.SearchCount ?? 100;
+            var list = new List<ModelBuild>();
+            if (optionSet.Definitions.Count > 0)
+            {
+                foreach (var definition in optionSet.Definitions)
+                {
+                    if (!DotNetUtil.TryGetDefinitionId(definition, defaultProject: project, out var definitionProject, out var definitionId))
+                    {
+                        throw new NotSupportedException();
+                    }
+
+                    definitionProject ??= project;
+                    list.AddRange(FindModelBuildByDefinition(modelTriageIssue, definitionProject, definitionId, count));
+                }
+            }
+            else
+            {
+                var builds = Context.ModelTriageIssueResults
+                    .Include(x => x.ModelBuild)
+                    .ThenInclude(x => x.ModelBuildDefinition)
+                    .Where(x =>
+                        x.ModelTriageIssueId == modelTriageIssue.Id &&
+                        x.ModelBuild.ModelBuildDefinition.AzureProject == project)
+                    .Select(x => x.ModelBuild)
+                    .OrderByDescending(x => x.BuildNumber)
+                    .Take(count)
+                    .ToList();
+                list.AddRange(builds);
+            }
+
+            return list;
+        }
+
+        public List<ModelBuild> FindModelBuildByDefinition(ModelTriageIssue modelTriageIssue, string project, int definitionId, int count) =>
+            Context.ModelTriageIssueResults
+                .Include(x => x.ModelBuild)
+                .ThenInclude(x => x.ModelBuildDefinition)
+                .Where(x =>
+                    x.ModelTriageIssueId == modelTriageIssue.Id &&
+                    x.ModelBuild.ModelBuildDefinition.AzureProject == project &&
+                    x.ModelBuild.ModelBuildDefinitionId == definitionId)
+                .Select(x => x.ModelBuild)
+                .OrderByDescending(x => x.BuildNumber)
+                .Take(count)
+                .ToList();
     }
 }

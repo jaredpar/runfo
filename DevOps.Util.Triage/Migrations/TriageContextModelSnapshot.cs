@@ -3,20 +3,21 @@ using System;
 using DevOps.Util.Triage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace DevOps.Util.Triage.Migrations.Sqlite
+namespace DevOps.Util.Triage.Migrations
 {
     [DbContext(typeof(TriageContext))]
-    [Migration("20200426230743_ExpandQuery")]
-    partial class ExpandQuery
+    partial class TriageContextModelSnapshot : ModelSnapshot
     {
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "3.1.3");
+                .HasAnnotation("ProductVersion", "3.1.3")
+                .HasAnnotation("Relational:MaxIdentifierLength", 128)
+                .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
             modelBuilder.Entity("DevOps.Util.Triage.ModelBuild", b =>
                 {
@@ -24,22 +25,22 @@ namespace DevOps.Util.Triage.Migrations.Sqlite
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("BuildNumber")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("FinishTime")
                         .HasColumnType("smalldatetime");
 
                     b.Property<string>("GitHubOrganization")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("GitHubRepository")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("ModelBuildDefinitionId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int?>("PullRequestNumber")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("StartTime")
                         .HasColumnType("smalldatetime");
@@ -55,24 +56,26 @@ namespace DevOps.Util.Triage.Migrations.Sqlite
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("AzureOrganization")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("AzureProject")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("DefinitionId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("DefinitionName")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("AzureOrganization", "AzureProject", "DefinitionId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[AzureOrganization] IS NOT NULL AND [AzureProject] IS NOT NULL");
 
                     b.ToTable("ModelBuildDefinitions");
                 });
@@ -81,22 +84,23 @@ namespace DevOps.Util.Triage.Migrations.Sqlite
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<int>("BuildNumber")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Line")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ModelBuildId")
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("ModelTimelineQueryId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("TimelineRecordName")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -111,22 +115,23 @@ namespace DevOps.Util.Triage.Migrations.Sqlite
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("GitHubOrganization")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("GitHubRepository")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("IssueNumber")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("SearchText")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -140,20 +145,22 @@ namespace DevOps.Util.Triage.Migrations.Sqlite
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("ModelBuildId")
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("ModelTimelineQueryId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ModelBuildId");
 
                     b.HasIndex("ModelTimelineQueryId", "ModelBuildId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[ModelBuildId] IS NOT NULL");
 
                     b.ToTable("ModelTimelineQueryCompletes");
                 });
@@ -162,21 +169,22 @@ namespace DevOps.Util.Triage.Migrations.Sqlite
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<int>("IssueNumber")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
-                    b.Property<int?>("ModelTriageIssueId")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("ModelTriageIssueId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Organization")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Repository")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -192,7 +200,8 @@ namespace DevOps.Util.Triage.Migrations.Sqlite
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("SearchKind")
                         .IsRequired()
@@ -208,7 +217,8 @@ namespace DevOps.Util.Triage.Migrations.Sqlite
                     b.HasKey("Id");
 
                     b.HasIndex("SearchKind", "SearchText")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[SearchText] IS NOT NULL");
 
                     b.ToTable("ModelTriageIssues");
                 });
@@ -217,25 +227,26 @@ namespace DevOps.Util.Triage.Migrations.Sqlite
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<int>("BuildNumber")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("JobName")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Line")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ModelBuildId")
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("ModelTriageIssueId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("TimelineRecordName")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -250,20 +261,22 @@ namespace DevOps.Util.Triage.Migrations.Sqlite
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("ModelBuildId")
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("ModelTriageIssueId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ModelBuildId");
 
                     b.HasIndex("ModelTriageIssueId", "ModelBuildId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[ModelBuildId] IS NOT NULL");
 
                     b.ToTable("ModelTriageIssueResultCompletes");
                 });
@@ -305,9 +318,11 @@ namespace DevOps.Util.Triage.Migrations.Sqlite
 
             modelBuilder.Entity("DevOps.Util.Triage.ModelTriageGitHubIssue", b =>
                 {
-                    b.HasOne("DevOps.Util.Triage.ModelTriageIssue", null)
-                        .WithMany("ModelTriageGitHubissues")
-                        .HasForeignKey("ModelTriageIssueId");
+                    b.HasOne("DevOps.Util.Triage.ModelTriageIssue", "ModelTriageIssue")
+                        .WithMany("ModelTriageGitHubIssues")
+                        .HasForeignKey("ModelTriageIssueId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("DevOps.Util.Triage.ModelTriageIssueResult", b =>
@@ -317,7 +332,7 @@ namespace DevOps.Util.Triage.Migrations.Sqlite
                         .HasForeignKey("ModelBuildId");
 
                     b.HasOne("DevOps.Util.Triage.ModelTriageIssue", "ModelTriageIssue")
-                        .WithMany()
+                        .WithMany("ModelTriageIssueResults")
                         .HasForeignKey("ModelTriageIssueId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

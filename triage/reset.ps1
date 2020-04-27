@@ -2,24 +2,24 @@ Set-StrictMode -version 2.0
 $ErrorActionPreference = "Stop"
 
 try {
+  $migrationName = "GeneralizeTriage"
   $targetProject = "..\DevOps.Util.Triage\DevOps.Util.Triage.csproj"
+  $env:RUNFO_DEV = 1
 
-  if ((-not (Test-Path "env:\RUNFO_USE_SQLITE")) -or ($env:RUNFO_USE_SQLITE -eq "")) {
-    Write-Host "Must be setup for SQLITE to run this script"
-    exit 1
+  [string]$output = & dotnet ef migrations list
+  if ($output.Contains($migrationName)) {
+    Write-Host "Removing old version of migration"
+    & dotnet ef migrations remove --project $targetProject --no-build
   }
 
   Write-Host "Creating Migration"
-  Remove-Item -Recurse ..\DevOps.Util.Triage\Migrations\Sqlite -ErrorAction SilentlyContinue
-  & dotnet ef migrations add ExpandQuery --project $targetProject -o "Migrations\Sqlite"
-  
-  $dbPath = "C:\Users\jaredpar\AppData\Local\runfo\triage.db"
-  if (Test-Path $dbPath) {
-    Remove-Item $dbPath
-  }
+  & dotnet ef migrations add $migrationName --project $targetProject
 
-  Write-Host "Creating Database"
-  & dotnet ef database update --project $targetProject 
+  Write-Host "Moving Database to correct migration"
+  & dotnet ef database update InitialCreate --no-build
+
+  Write-Host "Updating Database"
+  & dotnet ef database update --project $targetProject  --no-build
 }
 catch {
   Write-Host $_

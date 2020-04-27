@@ -30,25 +30,26 @@ internal class Program
     private static TriageContext CreateTriageContext()
     {
         var builder = new DbContextOptionsBuilder<TriageContext>();
-        ConfigureOptions(builder);
+        ConfigureOptions(builder, forceDev: true);
         return new TriageContext(builder.Options);
     }
 
-    private static void ConfigureOptions(DbContextOptionsBuilder builder)
+    private static void ConfigureOptions(DbContextOptionsBuilder builder, bool forceDev = false)
     {
         var config = new ConfigurationBuilder()
             .AddUserSecrets<Program>()
             .AddEnvironmentVariables()
             .Build();
 
-        if (!string.IsNullOrEmpty(config["RUNFO_USE_SQLITE"]))
+        if (!string.IsNullOrEmpty(config["RUNFO_DEV"]) || forceDev)
         {
-            Console.WriteLine("using sqlite");
-            builder.UseSqlite(@"Data Source=C:\Users\jaredpar\AppData\Local\runfo\triage.db");
+            Console.WriteLine("using sql dev");
+            var connectionString = config["RUNFO_CONNECTION_STRING_DEV"];
+            builder.UseSqlServer(connectionString);
         }
         else
         {
-            Console.WriteLine("using sql");
+            Console.WriteLine("using sql dev");
             var connectionString = config["RUNFO_CONNECTION_STRING"];
             builder.UseSqlServer(connectionString);
         }
@@ -138,10 +139,10 @@ internal class Program
 
         async Task RunScratch()
         {
-            // autoTriageUtil.EnsureTriageIssues();
-            // await autoTriageUtil.Triage("-d runtime -c 500 -pr");
-            // await autoTriageUtil.Triage("-d runtime-official -c 50 -pr");
-            // await autoTriageUtil.UpdateQueryIssues();
+            autoTriageUtil.EnsureTriageIssues();
+            autoTriageUtil.UpdateIssues = false;
+            await autoTriageUtil.Triage("-d runtime -c 100 -pr");
+            await autoTriageUtil.UpdateGithubIssues();
             await autoTriageUtil.UpdateStatusIssue();
         }
     }
