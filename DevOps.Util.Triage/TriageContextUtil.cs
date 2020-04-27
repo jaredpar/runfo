@@ -194,10 +194,7 @@ namespace DevOps.Util.Triage
 
         public List<ModelTriageIssueResult> FindModelTriageIssueResults(ModelTriageIssue triageIssue, ModelTriageGitHubIssue triageGitHubIssue)
         {
-            var buildQuery = string.IsNullOrEmpty(triageGitHubIssue.BuildQuery) 
-                ? $"-repository {triageGitHubIssue.Organization}/{triageGitHubIssue.Repository}"
-                : triageGitHubIssue.BuildQuery;
-
+            var buildQuery = triageGitHubIssue.BuildQuery ?? "";
             var optionSet = new BuildSearchOptionSet();
             if (optionSet.Parse(buildQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries)).Count != 0)
             {

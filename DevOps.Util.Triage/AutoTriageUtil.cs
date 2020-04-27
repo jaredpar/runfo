@@ -56,7 +56,7 @@ namespace DevOps.Util.Triage
                 TriageIssueKind.Infra,
                 SearchKind.SearchTimeline,
                 searchText: "HTTP request to.*api.nuget.org.*timed out",
-                Create("dotnet", "core-eng", 9634),
+                Create("dotnet", "core-eng", 9634, "-p public"),
                 Create("dotnet", "runtime", 35074));
             TriageContextUtil.EnsureTriageIssue(
                 TriageIssueKind.Infra,

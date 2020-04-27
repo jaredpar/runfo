@@ -48,7 +48,7 @@ namespace DevOps.Util.Triage
 
         public async Task UpdateGithubIssues()
         {
-            foreach (var modelTriageIssue in Context.ModelTriageIssues.ToList())
+            foreach (var modelTriageIssue in Context.ModelTriageIssues.Include(x => x.ModelTriageGitHubIssues).ToList())
             {
                 switch (modelTriageIssue.SearchKind)
                 {

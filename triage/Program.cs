@@ -98,6 +98,9 @@ internal class Program
             case "rebuild":
                 await RunRebuild();
                 break;
+            case "issues":
+                await RunIssues();
+                break;
             case "scratch":
                 await RunScratch();
                 break;
@@ -115,6 +118,13 @@ internal class Program
             await autoTriageUtil.Triage("-d aspnet -c 1000 -pr");
             await autoTriageUtil.Triage("-d runtime-official -c 100 -pr");
             await autoTriageUtil.Triage("-d aspnet-official -c 100 -pr");
+        }
+
+        async Task RunIssues()
+        {
+            autoTriageUtil.EnsureTriageIssues();
+            await gitHubUtil.UpdateGithubIssues();
+            await gitHubUtil.UpdateStatusIssue();
         }
 
         async Task RunScratch()
@@ -140,7 +150,7 @@ internal class Program
             var optionSet = new OptionSet()
             {
                 { "ds|devsql", "Use sql", d => devSql = d is object },
-                { "dg|devgithub", "Use devops-util issues", d => devSql = d is object },
+                { "dg|devgithub", "Use devops-util issues", d => devGitHub = d is object },
             };
 
             args = optionSet.Parse(args);
