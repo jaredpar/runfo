@@ -79,7 +79,7 @@ namespace DevOps.Functions
             ILogger logger)
         {
             var util = new AutoTriageUtil(Server, GitHubClient, Context, logger);
-            await util.UpdateQueryIssues();
+            await util.UpdateGithubIssues();
             await util.UpdateStatusIssue();
         }
     }

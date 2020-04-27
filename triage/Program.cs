@@ -117,13 +117,13 @@ internal class Program
             autoTriageUtil.EnsureTriageIssues();
             await autoTriageUtil.Triage("-d runtime -c 100 -pr");
             await autoTriageUtil.Triage("-d runtime-official -c 20 -pr");
-            await autoTriageUtil.UpdateQueryIssues();
+            await autoTriageUtil.UpdateGithubIssues();
             await autoTriageUtil.UpdateStatusIssue();
         }
 
         async Task RunIssues()
         {
-            await autoTriageUtil.UpdateQueryIssues();
+            await autoTriageUtil.UpdateGithubIssues();
             await autoTriageUtil.UpdateStatusIssue();
         }
 

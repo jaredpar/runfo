@@ -20,10 +20,13 @@ namespace DevOps.Util.Triage
 
         public DbSet<ModelTriageGitHubIssue> ModelTriageGitHubIssues { get; set; }
 
+        [Obsolete("Move to new model")]
         public DbSet<ModelTimelineQuery> ModelTimelineQueries { get; set; }
 
+        [Obsolete("Move to new model")]
         public DbSet<ModelTimelineItem> ModelTimelineItems { get; set; }
 
+        [Obsolete("Move to new model")]
         public DbSet<ModelTimelineQueryComplete> ModelTimelineQueryCompletes { get; set;}
 
         public TriageContext(DbContextOptions<TriageContext> options)
@@ -146,7 +149,9 @@ namespace DevOps.Util.Triage
         [Column(TypeName="nvarchar(400)")]
         public string SearchText { get; set; }
 
-        public List<ModelTriageGitHubIssue> ModelTriageGitHubissues { get; set; }
+        public List<ModelTriageIssueResult> ModelTriageIssueResults { get; set; }
+
+        public List<ModelTriageGitHubIssue> ModelTriageGitHubIssues { get; set; }
     }
 
     /// <summary>
@@ -170,6 +175,10 @@ namespace DevOps.Util.Triage
 
         [NotMapped]
         public GitHubIssueKey IssueKey => new GitHubIssueKey(Organization, Repository, IssueNumber);
+
+        public int ModelTriageIssueId { get; set; }
+
+        public ModelTriageIssue ModelTriageIssue { get; set; }
     }
 
     /// <summary>

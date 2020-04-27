@@ -11,24 +11,10 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
+using Microsoft.EntityFrameworkCore;
 
 namespace DevOps.Util.Triage
 {
-    public enum IssueKind
-    {
-        Azure,
-        Helix,
-
-        NuGet,
-
-        // General infrastructure owned by the .NET Team
-        Infra,
-
-        Build,
-        Test,
-        Other
-    }
-
     public sealed class TriageContextUtil
     {
         public TriageContext Context { get; }
@@ -68,14 +54,6 @@ namespace DevOps.Util.Triage
                 build.PullRequestNumber,
                 build.StartTime,
                 build.FinishTime);
-
-        /// <summary>
-        /// Determine if this build has already been processed for this query
-        /// </summary>
-        public bool IsProcessed(ModelTimelineQuery timelineQuery, ModelBuild modelBuild) =>
-            Context.ModelTimelineQueryCompletes.Any(x =>
-                x.ModelTimelineQueryId == timelineQuery.Id &&
-                x.ModelBuildId == modelBuild.Id);
 
         public ModelBuildDefinition EnsureBuildDefinition(BuildDefinitionInfo definitionInfo)
         {
@@ -131,43 +109,84 @@ namespace DevOps.Util.Triage
             return modelBuild;
         }
 
-        public bool TryGetTimelineQuery(GitHubIssueKey issueKey, [NotNullWhen(true)] out ModelTimelineQuery timelineQuery)
+        /// <summary>
+        /// Determine if this build has already been processed for this query
+        /// </summary>
+        public bool IsProcessed(ModelTriageIssue modelTriageIssue, ModelBuild modelBuild) =>
+            Context.ModelTriageIssueResultCompletes.Any(x =>
+                x.ModelTriageIssueId == modelTriageIssue.Id &&
+                x.ModelBuildId == modelBuild.Id);
+
+        public bool TryGetTriageIssue(
+            SearchKind searchKind, 
+            string searchText,
+            [NotNullWhen(true)] out ModelTriageIssue? modelTriageIssue)
         {
-            timelineQuery = Context.ModelTimelineQueries
+            modelTriageIssue = Context.ModelTriageIssues
+                .Where(x => x.SearchKind == searchKind || x.SearchText == searchText)
+                .FirstOrDefault();
+            return modelTriageIssue is object;
+        }
+        public bool TryGetTriageIssue(
+            GitHubIssueKey issueKey,
+            [NotNullWhen(true)] out ModelTriageIssue? modelTriageIssue)
+        {
+            var model = Context.ModelTriageGitHubIssues
+                .Include(x => x.ModelTriageIssue)
                 .Where(x => 
-                    x.GitHubOrganization == issueKey.Organization &&
-                    x.GitHubRepository == issueKey.Repository &&
+                    x.Organization == issueKey.Organization &&
+                    x.Repository == issueKey.Repository && 
                     x.IssueNumber == issueKey.Number)
                 .FirstOrDefault();
-            return timelineQuery is object;
-        }
-
-        public bool TryCreateTimelineQuery(IssueKind kind, GitHubIssueKey issueKey, string text)
-        {
-            if (TryGetTimelineQuery(issueKey, out var timelineQuery))
+            if (model is object)
             {
-                return false;
-            }
-
-            timelineQuery = new ModelTimelineQuery()
-            {
-                GitHubOrganization = issueKey.Organization,
-                GitHubRepository = issueKey.Repository,
-                IssueNumber = issueKey.Number,
-                SearchText = text
-            };
-
-            try
-            {
-                Context.ModelTimelineQueries.Add(timelineQuery);
-                Context.SaveChanges();
+                modelTriageIssue = model.ModelTriageIssue;
                 return true;
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine(ex.Message);
+                modelTriageIssue = null;
                 return false;
             }
+        }
+
+        public void EnsureTriageIssue(
+            TriageIssueKind issueKind,
+            SearchKind searchKind, 
+            string searchText,
+            params ModelTriageGitHubIssue[] gitHubIssues)
+        {
+            if (TryGetTriageIssue(searchKind, searchText, out var modelTriageIssue))
+            {
+                if (modelTriageIssue.TriageIssueKind != issueKind)
+                {
+                    modelTriageIssue.TriageIssueKind = issueKind;
+                    Context.SaveChanges();
+                }
+            }
+            else
+            {
+                modelTriageIssue = new ModelTriageIssue()
+                {
+                    TriageIssueKind = issueKind,
+                    SearchKind = searchKind,
+                    SearchText = searchText,
+                };
+                Context.ModelTriageIssues.Add(modelTriageIssue);
+            }
+
+            foreach (var gitHubIssue in gitHubIssues)
+            {
+                var existing = modelTriageIssue.ModelTriageGitHubIssues
+                    .Where(x => x.IssueKey.IssueUri == gitHubIssue.IssueKey.IssueUri)
+                    .FirstOrDefault();
+                if (existing is null)
+                {
+                    modelTriageIssue.ModelTriageGitHubIssues.Add(gitHubIssue);
+                }
+            }
+
+            Context.SaveChanges();
         }
     }
 }

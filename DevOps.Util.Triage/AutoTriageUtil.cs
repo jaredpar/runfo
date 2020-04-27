@@ -51,38 +51,41 @@ namespace DevOps.Util.Triage
         // TODO: eventually this won't be necessary
         public void EnsureTriageIssues()
         {
-            TriageContextUtil.TryCreateTimelineQuery(
-                IssueKind.Infra,
-                new GitHubIssueKey("dotnet", "core-eng", 9635),
-                text: "unable to load shared library 'advapi32.dll' or one of its dependencies");
-            TriageContextUtil.TryCreateTimelineQuery(
-                IssueKind.Infra,
-                new GitHubIssueKey("dotnet", "core-eng", 9634),
-                text: "HTTP request to.*api.nuget.org.*timed out");
-            TriageContextUtil.TryCreateTimelineQuery(
-                IssueKind.Infra,
-                new GitHubIssueKey("dotnet", "runtime", 35223),
-                text: "Notification of assignment to an agent was never received");
-            TriageContextUtil.TryCreateTimelineQuery(
-                IssueKind.Infra,
-                new GitHubIssueKey("dotnet", "runtime", 35074),
-                text: "HTTP request to.*api.nuget.org.*timed out");
-            TriageContextUtil.TryCreateTimelineQuery(
-                IssueKind.Infra,
-                new GitHubIssueKey("dotnet", "runtime", 34015),
-                text: "Failed to install dotnet");
-            TriageContextUtil.TryCreateTimelineQuery(
-                IssueKind.Infra,
-                new GitHubIssueKey("dotnet", "runtime", 34015),
-                text: "Failed to install dotnet");
-            TriageContextUtil.TryCreateTimelineQuery(
-                IssueKind.Infra,
-                new GitHubIssueKey("dotnet", "runtime", 34472),
-                text: "Received request to deprovision: The request was cancelled by the remote provider");
-            TriageContextUtil.TryCreateTimelineQuery(
-                IssueKind.Infra,
-                new GitHubIssueKey("dotnet", "core-eng", 34472),
-                text: "Received request to deprovision: The request was cancelled by the remote provider");
+            TriageContextUtil.EnsureTriageIssue(
+                TriageIssueKind.Infra,
+                SearchKind.SearchTimeline,
+                searchText: "unable to load shared library 'advapi32.dll' or one of its dependencies",
+                Create("dotnet", "core-eng", 9635));
+            TriageContextUtil.EnsureTriageIssue(
+                TriageIssueKind.Infra,
+                SearchKind.SearchTimeline,
+                searchText: "HTTP request to.*api.nuget.org.*timed out",
+                Create("dotnet", "core-eng", 9635),
+                Create("dotnet", "runtime", 35074));
+            TriageContextUtil.EnsureTriageIssue(
+                TriageIssueKind.Infra,
+                SearchKind.SearchTimeline,
+                searchText: "Failed to install dotnet",
+                Create("dotnet", "runtime", 34015));
+            TriageContextUtil.EnsureTriageIssue(
+                TriageIssueKind.Infra,
+                SearchKind.SearchTimeline,
+                searchText: "Notification of assignment to an agent was never received",
+                Create("dotnet", "runtime", 35223));
+            TriageContextUtil.EnsureTriageIssue(
+                TriageIssueKind.Infra,
+                SearchKind.SearchTimeline,
+                searchText: "Received request to deprovision: The request was cancelled by the remote provider",
+                Create("dotnet", "runtime", 34472),
+                Create("dotnet", "core-eng", 9532));
+
+            static ModelTriageGitHubIssue Create(string organization, string repository, int number) =>
+                new ModelTriageGitHubIssue()
+                {
+                    Organization = organization,
+                    Repository = repository, 
+                    IssueNumber = number
+                };
         }
 
         public async Task Triage(string projectName, int buildNumber)
@@ -103,52 +106,51 @@ namespace DevOps.Util.Triage
         // or maybe just make that a separate operation from triage
         public async Task Triage(Build build)
         {
-            await DoSearchTimeline(build, Context.ModelTimelineQueries.ToList());
-            // TODO: update GitHub issues
-            // TODO: update PRs
-            // TODO: update the processed build table? At least the caller needs to be concerned
-            // with that
-        }
+            Logger.LogInformation($"Triaging {DevOpsUtil.GetBuildUri(build)}");
 
-        private async Task DoSearchTimeline(Build build, IEnumerable<ModelTimelineQuery> timelineQueries)
-        {
-            Logger.LogInformation($"Searching {DevOpsUtil.GetBuildUri(build)}");
+            var buildInfo = build.GetBuildInfo();
+            var modelBuild = TriageContextUtil.EnsureBuild(buildInfo);
 
-            var buildKey = build.GetBuildKey();
-
-            Timeline timeline;
+            Timeline? timeline = null;
             try
             {
                 timeline = await Server.GetTimelineAsync(build);
                 if (timeline is null)
                 {
-                    Logger.LogWarning("Error: No timeline");
-                    return;
+                    Logger.LogWarning("No timeline");
                 }
             }
             catch (Exception ex)
             {
                 Logger.LogWarning($"Error getting timeline: {ex.Message}");
-                return;
             }
 
-            var buildInfo = build.GetBuildInfo();
-            var modelBuild = TriageContextUtil.EnsureBuild(buildInfo);
-            foreach (var modelTimelineQuery in timelineQueries)
+            foreach (var modelTriageIssue in Context.ModelTriageIssues)
             {
-                DoSearchTimeline(build, timeline, modelBuild, modelTimelineQuery);
+                switch (modelTriageIssue.SearchKind)
+                {
+                    case SearchKind.SearchTimeline:
+                        if (timeline is object)
+                        {
+                            DoSearchTimeline(modelTriageIssue, build, modelBuild, timeline);
+                        }
+                        break;
+                    default:
+                        Logger.LogWarning($"Unknown search kind {modelTriageIssue.SearchKind} in {modelTriageIssue.Id}");
+                        break;
+                }
             }
         }
 
         private void DoSearchTimeline(
+            ModelTriageIssue modelTriageIssue,
             Build build,
-            Timeline timeline,
             ModelBuild modelBuild,
-            ModelTimelineQuery modelTimelineQuery)
+            Timeline timeline)
         {
-            var searchText = modelTimelineQuery.SearchText;
+            var searchText = modelTriageIssue.SearchText;
             Logger.LogInformation($@"Text: ""{searchText}""");
-            if (TriageContextUtil.IsProcessed(modelTimelineQuery, modelBuild))
+            if (TriageContextUtil.IsProcessed(modelTriageIssue, modelBuild))
             {
                 Logger.LogInformation($@"Skipping");
                 return;
@@ -159,23 +161,25 @@ namespace DevOps.Util.Triage
             {
                 count++;
 
-                var modelTimelineItem = new ModelTimelineItem()
+                var modelTriageIssueResult = new ModelTriageIssueResult()
                 {
                     TimelineRecordName = result.TimelineRecord.Name,
+                    // TODO: uncomment when this is available
+                    // JobName = result.JobRecord.Name,
                     Line = result.Line,
                     ModelBuild = modelBuild,
-                    ModelTimelineQuery = modelTimelineQuery,
+                    ModelTriageIssue = modelTriageIssue,
                     BuildNumber = result.Build.GetBuildKey().Number,
                 };
-                Context.ModelTimelineItems.Add(modelTimelineItem);
+                Context.ModelTriageIssueResults.Add(modelTriageIssueResult);
             }
 
-            var modelTimelineQueryComplete = new ModelTimelineQueryComplete()
+            var complete = new ModelTriageIssueResultComplete()
             {
-                ModelTimelineQuery = modelTimelineQuery,
+                ModelTriageIssue = modelTriageIssue,
                 ModelBuild = modelBuild,
             };
-            Context.ModelTimelineQueryCompletes.Add(modelTimelineQueryComplete);
+            Context.ModelTriageIssueResultCompletes.Add(complete);
 
             try
             {
@@ -188,30 +192,40 @@ namespace DevOps.Util.Triage
             }
         }
 
-        public async Task UpdateQueryIssues()
+        public async Task UpdateGithubIssues()
         {
-            await UpdateIssuesForTimelineQueries();
-
-            async Task UpdateIssuesForTimelineQueries()
+            foreach (var modelTriageIssue in Context.ModelTriageIssues)
             {
-                foreach (var timelineQuery in Context.ModelTimelineQueries)
+                switch (modelTriageIssue.SearchKind)
                 {
-                    // TODO: don't update closed issues
-                    await UpdateIssueForTimelineQuery(timelineQuery);
+                    case SearchKind.SearchTimeline:
+                        await UpdateIssuesForSearchTimeline(modelTriageIssue);
+                        break;
+                    default:
+                        Logger.LogWarning($"Unknown search kind {modelTriageIssue.SearchKind} in {modelTriageIssue.Id}");
+                        break;
                 }
             }
 
-            async Task UpdateIssueForTimelineQuery(ModelTimelineQuery timelineQuery)
+            async Task UpdateIssuesForSearchTimeline(ModelTriageIssue triageIssue)
             {
-                var timelineItems = Context.ModelTimelineItems
+                foreach (var gitHubIssue in triageIssue.ModelTriageGitHubIssues.ToList())
+                {
+                    await UpdateIssueForSearchTimeline(triageIssue, gitHubIssue);
+                }
+            }
+
+            async Task UpdateIssueForSearchTimeline(ModelTriageIssue triageIssue, ModelTriageGitHubIssue gitHubIssue)
+            {
+                var results = Context.ModelTriageIssueResults
                     .Include(x => x.ModelBuild)
                     .ThenInclude(b => b.ModelBuildDefinition)
-                    .Where(x => x.ModelTimelineQueryId == timelineQuery.Id)
+                    .Where(x => x.ModelTriageIssueId == triageIssue.Id)
                     .OrderByDescending(x => x.BuildNumber)
                     .ToList();
 
                 var footer = new StringBuilder();
-                var mostRecent = timelineItems
+                var mostRecent = results
                     .Select(x => x.ModelBuild)
                     .OrderByDescending(x => x.StartTime)
                     .FirstOrDefault();
@@ -223,26 +237,25 @@ namespace DevOps.Util.Triage
                 }
 
                 const int limit = 100;
-                if (timelineItems.Count > limit)
+                if (results.Count > limit)
                 {
-                    footer.AppendLine($"Limited to {limit} items (removed {timelineItems.Count - limit})");
-                    timelineItems = timelineItems.Take(limit).ToList();
+                    footer.AppendLine($"Limited to {limit} items (removed {results.Count - limit})");
+                    results = results.Take(limit).ToList();
                 }
                 
                 // TODO: we use same Server here even if the Organization setting in the 
                 // item specifies a different organization. Need to replace Server with 
                 // a map from org -> DevOpsServer
-                var results = timelineItems
+                var searchResults = results
                     .Select(x => (TriageContextUtil.GetBuildInfo(x.ModelBuild), x.TimelineRecordName));
                 var reportBody = ReportBuilder.BuildSearchTimeline(
-                    results,
+                    searchResults,
                     markdown: true,
                     includeDefinition: true,
                     footer.ToString());
 
-                var gitHubIssueKey = TriageContextUtil.GetGitHubIssueKey(timelineQuery);
-                var succeeded = await UpdateGitHubIssueReport(gitHubIssueKey, reportBody);
-                Logger.LogInformation($"Updated {gitHubIssueKey.IssueUri}");
+                var succeeded = await UpdateGitHubIssueReport(gitHubIssue.IssueKey, reportBody);
+                Logger.LogInformation($"Updated {gitHubIssue.IssueKey.IssueUri}");
             }
         }
 
@@ -410,17 +423,17 @@ namespace DevOps.Util.Triage
 
             int? GetImpactedBuildsCount(GitHubIssueKey issueKey, BuildDefinitionKey definitionKey)
             {
-                if (!TriageContextUtil.TryGetTimelineQuery(issueKey, out var timelineQuery))
+                if (!TriageContextUtil.TryGetTriageIssue(issueKey, out var triageIssue))
                 {
                     return null;
                 }
 
                 // TODO: need to be able to filter to the repo the build ran against
-                var count = Context.ModelTimelineItems
+                var count = Context.ModelTriageIssueResults
                     .Include(x => x.ModelBuild)
                     .ThenInclude(x => x.ModelBuildDefinition)
                     .Where(x =>
-                        x.ModelTimelineQueryId == timelineQuery.Id &&
+                        x.ModelTriageIssueId == triageIssue.Id &&
                         x.ModelBuild.ModelBuildDefinition.AzureOrganization == definitionKey.Organization &&
                         x.ModelBuild.ModelBuildDefinition.AzureProject == definitionKey.Project &&
                         x.ModelBuild.ModelBuildDefinition.DefinitionId == definitionKey.Id)
