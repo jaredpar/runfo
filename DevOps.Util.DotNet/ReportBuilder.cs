@@ -18,7 +18,7 @@ namespace DevOps.Util.DotNet
         public static readonly Regex MarkdownReportEndRegex = new Regex(@"<!--\s*runfo report end\s*-->", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         public string BuildSearchTimeline(
-            IEnumerable<(BuildInfo BuildInfo, string TimelineRecordName)> results,
+            IEnumerable<(BuildInfo BuildInfo, string JobName)> results,
             bool markdown,
             bool includeDefinition,
             string? footer = null)
@@ -32,7 +32,7 @@ namespace DevOps.Util.DotNet
                     builder.Append("|Definition");
                 }
 
-                builder.AppendLine("|Build|Kind|Timeline Record|");
+                builder.AppendLine("|Build|Kind|Job Name|");
 
                 if (includeDefinition)
                 {
@@ -61,7 +61,7 @@ namespace DevOps.Util.DotNet
                     {
                         kind = $"PR {buildInfo.PullRequestKey.Value.PullRequestUri}";
                     }
-                    builder.AppendLine($"|[{buildInfo.Number}]({buildInfo.BuildUri})|{kind}|{result.TimelineRecordName}|");
+                    builder.AppendLine($"|[{buildInfo.Number}]({buildInfo.BuildUri})|{kind}|{result.JobName}|");
                 }
                 else
                 {

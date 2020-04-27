@@ -49,7 +49,7 @@ internal class Program
         }
         else
         {
-            Console.WriteLine("using sql dev");
+            Console.WriteLine("using sql");
             var connectionString = config["RUNFO_CONNECTION_STRING"];
             builder.UseSqlServer(connectionString);
         }
@@ -92,6 +92,7 @@ internal class Program
         }
 
         var autoTriageUtil = new AutoTriageUtil(server, gitHubClient, context, loggerFactory.CreateLogger<AutoTriageUtil>());
+        var gitHubUtil = new GitHubUtil(gitHubClient, context, loggerFactory.CreateLogger<GitHubClient>());
         switch (command)
         {
             case "auto":
@@ -118,14 +119,14 @@ internal class Program
             autoTriageUtil.EnsureTriageIssues();
             await autoTriageUtil.Triage("-d runtime -c 100 -pr");
             await autoTriageUtil.Triage("-d runtime-official -c 20 -pr");
-            await autoTriageUtil.UpdateGithubIssues();
-            await autoTriageUtil.UpdateStatusIssue();
+            await gitHubUtil.UpdateGithubIssues();
+            await gitHubUtil.UpdateStatusIssue();
         }
 
         async Task RunIssues()
         {
-            await autoTriageUtil.UpdateGithubIssues();
-            await autoTriageUtil.UpdateStatusIssue();
+            await gitHubUtil.UpdateGithubIssues();
+            await gitHubUtil.UpdateStatusIssue();
         }
 
         async Task RunRebuild()
@@ -142,8 +143,8 @@ internal class Program
             autoTriageUtil.EnsureTriageIssues();
             autoTriageUtil.UpdateIssues = false;
             //await autoTriageUtil.Triage("-d runtime -c 100 -pr");
-            await autoTriageUtil.UpdateGithubIssues();
-            await autoTriageUtil.UpdateStatusIssue();
+            await gitHubUtil.UpdateGithubIssues();
+            await gitHubUtil.UpdateStatusIssue();
         }
     }
 }
