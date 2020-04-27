@@ -17,16 +17,35 @@ namespace DevOps.Util.DotNet
     public class SearchTimelineResult
     {
         public Build Build { get; }
-        public TimelineRecord TimelineRecord { get; }
+
+        public TimelineTree TimelineTree { get; }
+
+        public TimelineRecord ResultRecord { get; }
+
         public string Line { get; }
+
+        public string? JobName
+        {
+            get
+            {
+                if (TimelineTree.TryGetRoot(ResultRecord, out var root))
+                {
+                    return root.Name;
+                }
+
+                return null;
+            }
+        }
 
         public SearchTimelineResult(
             Build build,
-            TimelineRecord timelineRecord,
+            TimelineTree timelineTree,
+            TimelineRecord resultRecord,
             string line)
         {
             Build = build;
-            TimelineRecord = timelineRecord;
+            TimelineTree = timelineTree;
+            ResultRecord = resultRecord;
             Line = line;
         }
     }
@@ -93,6 +112,7 @@ namespace DevOps.Util.DotNet
             Regex? name = null,
             Regex? task = null)
         {
+            var timelineTree = TimelineTree.Create(timeline);
             var records = timeline.Records
                 .Where(r => name is null || name.IsMatch(r.Name))
                 .Where(r => r.Task is null || task is null || task.IsMatch(r.Task.Name));
@@ -115,7 +135,7 @@ namespace DevOps.Util.DotNet
 
                 if (line is object)
                 {
-                    yield return new SearchTimelineResult(build, record, line);
+                    yield return new SearchTimelineResult(build, timelineTree, record, line);
                 }
             }
         }

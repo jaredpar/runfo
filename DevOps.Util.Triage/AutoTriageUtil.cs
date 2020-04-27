@@ -163,9 +163,8 @@ namespace DevOps.Util.Triage
 
                 var modelTriageIssueResult = new ModelTriageIssueResult()
                 {
-                    TimelineRecordName = result.TimelineRecord.Name,
-                    // TODO: uncomment when this is available
-                    // JobName = result.JobRecord.Name,
+                    TimelineRecordName = result.ResultRecord.Name,
+                    JobName = result.JobName,
                     Line = result.Line,
                     ModelBuild = modelBuild,
                     ModelTriageIssue = modelTriageIssue,
