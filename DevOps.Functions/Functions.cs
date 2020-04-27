@@ -73,14 +73,14 @@ namespace DevOps.Functions
             await util.Triage(projectName, buildCompleteMessage.BuildNumber);
         }
 
-        [FunctionName("issues-update")]
-        public async Task IssuesUpdate(
-            [TimerTrigger("0 */15 * * * *")] TimerInfo timerInfo,
-            ILogger logger)
-        {
-            var util = new GitHubUtil(GitHubClient, Context, logger);
-            await util.UpdateGithubIssues();
-            await util.UpdateStatusIssue();
-        }
+        // [FunctionName("issues-update")]
+        // public async Task IssuesUpdate(
+        //     [TimerTrigger("0 */15 * * * *")] TimerInfo timerInfo,
+        //     ILogger logger)
+        // {
+        //     var util = new GitHubUtil(GitHubClient, Context, logger);
+        //     await util.UpdateGithubIssues();
+        //     await util.UpdateStatusIssue();
+        // }
     }
 }

@@ -27,9 +27,6 @@ namespace DevOps.Util.Triage
         public static string GetModelBuildId(BuildKey buildKey) => 
             $"{buildKey.Organization}-{buildKey.Project}-{buildKey.Number}";
 
-        public static GitHubIssueKey GetGitHubIssueKey(ModelTimelineQuery timelineQuery) =>
-            new GitHubIssueKey(timelineQuery.GitHubOrganization, timelineQuery.GitHubRepository, timelineQuery.IssueNumber);
-
         public static GitHubPullRequestKey? GetGitHubPullRequestKey(ModelBuild build) =>
             build.PullRequestNumber.HasValue
                 ? (GitHubPullRequestKey?)new GitHubPullRequestKey(build.GitHubOrganization, build.GitHubRepository, build.PullRequestNumber.Value)

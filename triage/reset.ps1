@@ -2,7 +2,7 @@ Set-StrictMode -version 2.0
 $ErrorActionPreference = "Stop"
 
 try {
-  $migrationName = "GitHubIssueQuery"
+  $migrationName = "DropOldTimelineTables"
   $targetProject = "..\DevOps.Util.Triage\DevOps.Util.Triage.csproj"
   $env:RUNFO_DEV = 1
 
