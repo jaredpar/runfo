@@ -22,19 +22,9 @@ namespace DevOps.Util.Triage
     {
         public DevOpsServer Server { get; }
 
-        public GitHubClient GitHubClient { get; }
-
         public DotNetQueryUtil QueryUtil { get; }
 
         public TriageContextUtil TriageContextUtil { get; }
-
-
-        // TODO: should factor this out to an interface. This is a terrible
-        // design as is
-        // Set to false to not actually update issues. Useful for testing
-        public bool UpdateIssues { get; set; }
-
-        public ReportBuilder ReportBuilder { get; } = new ReportBuilder();
 
         private ILogger Logger { get; }
 
@@ -42,12 +32,10 @@ namespace DevOps.Util.Triage
 
         public AutoTriageUtil(
             DevOpsServer server,
-            GitHubClient gitHubClient,
             TriageContext context,
             ILogger logger)
         {
             Server = server;
-            GitHubClient = gitHubClient;
             QueryUtil = new DotNetQueryUtil(server);
             TriageContextUtil = new TriageContextUtil(context);
             Logger = logger;

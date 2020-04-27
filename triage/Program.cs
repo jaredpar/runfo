@@ -27,14 +27,6 @@ internal class Program
 
     public static async Task Main(string[] args) => await MainCore(args.ToList());
 
-    private static (TriageContext, bool IsDevelopment) CreateTriageContext()
-    {
-        var builder = new DbContextOptionsBuilder<TriageContext>();
-        var configuration = CreateConfiguration();
-        ConfigureOptions(builder, configuration);
-        return (new TriageContext(builder.Options), IsDevelopment(configuration));
-    }
-
     public static bool IsDevelopment(IConfiguration configuration) => !string.IsNullOrEmpty(configuration["RUNFO_DEV"]);
 
     private static IConfiguration CreateConfiguration()
@@ -46,18 +38,15 @@ internal class Program
             return config;
     }
 
-    private static void ConfigureOptions(DbContextOptionsBuilder builder, IConfiguration configuration = null)
+    private static void ConfigureOptions(DbContextOptionsBuilder builder, IConfiguration configuration, bool isDevelopment)
     {
-        configuration ??= CreateConfiguration();
-        if (IsDevelopment(configuration))
+        if (isDevelopment)
         {
-            Console.WriteLine("using sql dev");
             var connectionString = configuration["RUNFO_CONNECTION_STRING_DEV"];
             builder.UseSqlServer(connectionString);
         }
         else
         {
-            Console.WriteLine("using sql");
             var connectionString = configuration["RUNFO_CONNECTION_STRING"];
             builder.UseSqlServer(connectionString);
         }
@@ -65,29 +54,31 @@ internal class Program
 
     // This entry point exists so that `dotnet ef database` and `migrations` has an 
     // entry point to create TriageDbContext
-    public static IHostBuilder CreateHostBuilder(string[] args) =>
-        Host.CreateDefaultBuilder()
+    public static IHostBuilder CreateHostBuilder(string[] args)
+    {
+        return Host
+            .CreateDefaultBuilder()
             .ConfigureServices((hostContext, services) =>
             {
-                services.AddDbContext<TriageContext>(options => ConfigureOptions(options));
+                services.AddDbContext<TriageContext>(options => Config(options));
             });
+
+        static void Config(DbContextOptionsBuilder builder)
+        {
+            var configuration = CreateConfiguration();
+            var kind = IsDevelopment(configuration) ? "dev" : "production";
+            Console.WriteLine($"Using {kind} sql");
+            ConfigureOptions(builder, configuration, IsDevelopment(configuration));
+        }
+    }
 
     // internal static async Task<int> Main(string[] args) => await MainCore(args.ToList());
 
     internal static async Task<int> MainCore(List<string> args)
     {
-        var azdoToken = Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN");
-        var gitHubToken = Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN");
-        var cacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "runfo", "json");
-        var (context, isDevelopment) = CreateTriageContext();
-
-        var server = new CachingDevOpsServer(cacheDirectory, "dnceng", azdoToken);
-        var gitHubClient = new GitHubClient(new ProductHeaderValue("RuntimeStatusPage"));
+        var (server, gitHubClient, context) = Create(ref args);
         var queryUtil = new DotNetQueryUtil(server);
         using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-
-        // TODO: should not hard code jaredpar here
-        gitHubClient.Credentials = new Credentials("jaredpar", gitHubToken);
 
         string command;
         if (args.Count == 0)
@@ -100,19 +91,10 @@ internal class Program
             args = args.Skip(1).ToList();
         }
 
-        var autoTriageUtil = new AutoTriageUtil(server, gitHubClient, context, loggerFactory.CreateLogger<AutoTriageUtil>());
-        var gitHubUtil = new GitHubUtil(
-            isDevelopment ? (IGitHubClient)new DevGitHubClient(gitHubClient) : gitHubClient,
-            context,
-            loggerFactory.CreateLogger<GitHubClient>());
+        var autoTriageUtil = new AutoTriageUtil(server, context, loggerFactory.CreateLogger<AutoTriageUtil>());
+        var gitHubUtil = new GitHubUtil(gitHubClient, context, loggerFactory.CreateLogger<GitHubUtil>());
         switch (command)
         {
-            case "auto":
-                await RunAutoTriage(args);
-                break;
-            case "issues":
-                await RunIssues();
-                break;
             case "rebuild":
                 await RunRebuild();
                 break;
@@ -126,21 +108,6 @@ internal class Program
 
         return ExitSuccess;
 
-        async Task RunAutoTriage(List<string> args)
-        {
-            autoTriageUtil.EnsureTriageIssues();
-            await autoTriageUtil.Triage("-d runtime -c 100 -pr");
-            await autoTriageUtil.Triage("-d runtime-official -c 20 -pr");
-            await gitHubUtil.UpdateGithubIssues();
-            await gitHubUtil.UpdateStatusIssue();
-        }
-
-        async Task RunIssues()
-        {
-            await gitHubUtil.UpdateGithubIssues();
-            await gitHubUtil.UpdateStatusIssue();
-        }
-
         async Task RunRebuild()
         {
             autoTriageUtil.EnsureTriageIssues();
@@ -152,12 +119,46 @@ internal class Program
 
         async Task RunScratch()
         {
-            autoTriageUtil.EnsureTriageIssues();
-            await autoTriageUtil.Triage("-d aspnet -c 100 -pr");
-            await autoTriageUtil.Triage("-d runtime -c 500 -pr");
+            // autoTriageUtil.EnsureTriageIssues();
+            // await autoTriageUtil.Triage("-d aspnet -c 100 -pr");
+            // await autoTriageUtil.Triage("-d runtime -c 500 -pr");
             //await autoTriageUtil.Triage("-d runtime -c 100 -pr");
             // await gitHubUtil.UpdateGithubIssues();
-            // await gitHubUtil.UpdateStatusIssue();
+            await gitHubUtil.UpdateStatusIssue();
+        }
+
+        static (DevOpsServer Server, IGitHubClient githubClient, TriageContext Context) Create(ref List<string> args)
+        {
+            var azdoToken = Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN");
+            var gitHubToken = Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN");
+            var cacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "runfo", "json");
+            var configuration = CreateConfiguration();
+            var isDevelopment = IsDevelopment(configuration);
+
+            var devSql = isDevelopment;
+            var devGitHub = isDevelopment;
+            var optionSet = new OptionSet()
+            {
+                { "ds|devsql", "Use sql", d => devSql = d is object },
+                { "dg|devgithub", "Use devops-util issues", d => devSql = d is object },
+            };
+
+            args = optionSet.Parse(args);
+            Console.WriteLine($"Using dev SQL {devSql}");
+            Console.WriteLine($"Using dev GitHub {devGitHub}");
+
+            var builder = new DbContextOptionsBuilder<TriageContext>();
+            ConfigureOptions(builder, configuration, devSql);
+            var context = new TriageContext(builder.Options);
+            var server = new CachingDevOpsServer(cacheDirectory, "dnceng", azdoToken);
+            var realGitHubClient = new GitHubClient(new ProductHeaderValue("RuntimeStatusPage"));
+            // TODO: should not hard code jaredpar here
+            realGitHubClient.Credentials = new Credentials("jaredpar", gitHubToken);
+
+            var gitHubClient = devGitHub
+                ? (IGitHubClient)new DevGitHubClient(realGitHubClient)
+                : realGitHubClient;
+            return (server, gitHubClient, context);
         }
     }
 }

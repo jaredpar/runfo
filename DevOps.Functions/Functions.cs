@@ -69,7 +69,7 @@ namespace DevOps.Functions
 
             logger.LogInformation($"Triaging build {projectName} {buildCompleteMessage.BuildNumber}");
 
-            var util = new AutoTriageUtil(Server, GitHubClient, Context, logger);
+            var util = new AutoTriageUtil(Server, Context, logger);
             await util.Triage(projectName, buildCompleteMessage.BuildNumber);
         }
 
