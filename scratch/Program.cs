@@ -72,13 +72,16 @@ namespace QueryFun
         }
         private static async Task Scratch()
         {
-            var server = new DevOpsServer("dnceng", await GetToken("dnceng"));
+            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
+            var timeline = await server.GetTimelineAsync("public", 618592);
+            var tree = TimelineTree.Create(timeline);
+
             var name = await server.ConvertProjectIdToNameAsync("9ee6d478-d288-47f7-aacc-f6e6d082ae6d");
         }
 
         private static async Task DumpTestTimesCsv()
         {
-            var server = new DevOpsServer("dnceng", await GetToken("dnceng"));
+            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
             var all = await server.ListTestRunsAsync("public", 585853);
             var debug = all.Where(x => x.Name == "Windows Desktop Debug Test32").First();
             var spanish = all.Where(x => x.Name == "Windows Desktop Spanish").First();

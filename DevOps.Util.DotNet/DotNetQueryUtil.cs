@@ -28,9 +28,9 @@ namespace DevOps.Util.DotNet
         {
             get
             {
-                if (TimelineTree.TryGetRoot(ResultRecord, out var root))
+                if (TimelineTree.TryGetJob(ResultRecord, out var job))
                 {
-                    return root.Name;
+                    return job.Name;
                 }
 
                 return null;

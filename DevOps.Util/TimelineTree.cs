@@ -14,11 +14,11 @@ namespace DevOps.Util
     {
         public sealed class TimelineNode
         {
-            public TimelineRecord TimelineRecord { get; set; }
+            public TimelineRecord TimelineRecord { get; } 
 
-            public TimelineNode? ParentNode { get; set; }
+            public TimelineNode? ParentNode { get; internal set; }
 
-            public List<TimelineNode> Children { get; set; }
+            public List<TimelineNode> Children { get; internal set; }
 
             public int Count => 1 + Children.Sum(x => x.Count);
 
@@ -44,6 +44,8 @@ namespace DevOps.Util
 
         public List<TimelineNode> Roots { get; } 
 
+        public IEnumerable<TimelineNode> Nodes => IdToNodeMap.Values;
+
         public int Count => Roots.Sum(x => x.Count);
 
         public TimelineTree(Timeline timeline, List<TimelineNode> roots, Dictionary<string, TimelineNode> idToNodeMap)
@@ -54,6 +56,11 @@ namespace DevOps.Util
         }
 
         public bool IsRoot(string id) => Roots.Any(x => x.TimelineRecord.Id == id);
+
+        public bool IsJob(string id) =>
+            IdToNodeMap.TryGetValue(id, out var node) &&
+            node.ParentNode is object &&
+            IsRoot(node.ParentNode.TimelineRecord.Id);
 
         public bool TryGetParent(TimelineRecord record, [NotNullWhen(true)] TimelineRecord? parent)
         {
@@ -68,31 +75,56 @@ namespace DevOps.Util
             return false;
         }
 
-        public bool TryGetRoot(TimelineRecord record, [NotNullWhen(true)] out TimelineRecord? root)
-        {
-            root = null;
+        public bool TryGetNode(string id, [NotNullWhen(true)] out TimelineNode? node) => 
+            IdToNodeMap.TryGetValue(id, out node);
 
-            var current = record;
+        public bool TryGetNode(TimelineRecord record, [NotNullWhen(true)] out TimelineNode? node) => 
+            IdToNodeMap.TryGetValue(record.Id, out node);
+
+        public bool TryGetJob(TimelineRecord record, [NotNullWhen(true)] out TimelineRecord? job) =>
+            TryFindUp(
+                record.Id,
+                node => IsJob(node.TimelineRecord.Id),
+                out job);
+
+        public bool TryGetRoot(TimelineRecord record, [NotNullWhen(true)] out TimelineRecord? root) =>
+            TryFindUp(
+                record.Id,
+                node => IsRoot(node.TimelineRecord.Id),
+                out root);
+
+        private bool TryFindUp(string id, Func<TimelineNode, bool> predicate, [NotNullWhen(true)] out TimelineRecord? record)
+        {
+            if (TryFindUp(id, predicate, out TimelineNode? node))
+            {
+                record = node.TimelineRecord;
+                return true;
+            }
+
+            record = null;
+            return false;
+        }
+
+        private bool TryFindUp(string id, Func<TimelineNode, bool> predicate, [NotNullWhen(true)] out TimelineNode? node)
+        {
+            node = null;
+            if (!IdToNodeMap.TryGetValue(id, out var current))
+            {
+                return false;
+            }
+
             do
             {
-                if (!IdToNodeMap.TryGetValue(current.Id, out var node))
+                if (predicate(current))
                 {
-                    return false;
-                }
-
-                if (IsRoot(node.TimelineRecord.Id))
-                {
-                    root = node.TimelineRecord;
+                    node = current;
                     return true;
                 }
 
-                if (node.ParentNode is null)
-                {
-                    return false;
-                }
+                current = current.ParentNode;
+            } while (current is object);
 
-                current = node.ParentNode.TimelineRecord;
-            } while (true);
+            return false;
         }
 
         public TimelineTree Filter(Func<TimelineRecord, bool> predicate)

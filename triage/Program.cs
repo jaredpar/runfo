@@ -141,7 +141,7 @@ internal class Program
         {
             autoTriageUtil.EnsureTriageIssues();
             autoTriageUtil.UpdateIssues = false;
-            await autoTriageUtil.Triage("-d runtime -c 100 -pr");
+            //await autoTriageUtil.Triage("-d runtime -c 100 -pr");
             await autoTriageUtil.UpdateGithubIssues();
             await autoTriageUtil.UpdateStatusIssue();
         }

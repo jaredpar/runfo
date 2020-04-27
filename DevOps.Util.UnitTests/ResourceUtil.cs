@@ -9,7 +9,7 @@ namespace Query.Test
     {
         internal static Stream GetJsonFileStream(string fileName)
         {
-            var fullName = $"Query.Test.JsonData._5._0.{fileName}";
+            var fullName = $"DevOps.Util.UnitTests.JsonData._5._0.{fileName}";
             var assembly = typeof(ResourceUtil).Assembly;
             return assembly.GetManifestResourceStream(fullName);
         }

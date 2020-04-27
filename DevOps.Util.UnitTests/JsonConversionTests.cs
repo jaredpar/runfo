@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Query.Test
 {
-    public class JsonConversion
+    public class JsonConversionTests
     {
         public sealed class Build
         {
@@ -18,6 +18,5 @@ namespace Query.Test
                 Assert.Single(buildArray);
             }
         }
-
     }
 }
