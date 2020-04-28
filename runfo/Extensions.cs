@@ -23,7 +23,7 @@ internal static class Extensions
         {
             try
             {
-                var collection = await DotNetUtil.ListDotNetTestRunsAsync(queryUtil.Server, build, outcomes);
+                var collection = await queryUtil.ListDotNetTestRunsAsync(build, outcomes);
                 var buildTestInfo = new BuildTestInfo(build, collection.SelectMany(x => x.TestCaseResults).ToList());
                 list.Add(buildTestInfo);
             }

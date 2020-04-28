@@ -75,7 +75,7 @@ namespace QueryFun
             var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
             var queryUtil = new DotNetQueryUtil(server);
             var build = await server.GetBuildAsync("public", 610393);
-            var collection = await DotNetUtil.ListDotNetTestRunsAsync(server, build, TestOutcome.Failed);
+            var collection = await queryUtil.ListDotNetTestRunsAsync(build, TestOutcome.Failed);
             var all = collection.SelectMany(x => x.TestCaseResults).ToList();
 
         }
