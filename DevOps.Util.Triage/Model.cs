@@ -114,6 +114,8 @@ namespace DevOps.Util.Triage
         Unknown,
 
         SearchTimeline,
+
+        SearchHelix,
     }
 
     /// <summary>

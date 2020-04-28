@@ -1,2 +1,3 @@
-X - Need the TriageGitHubIssue to be able to scope the reports that it generates so that it is repository specific
-- Need to include the job name in the tables, not the timeline record that failed TimelineSearchResult
+- Define a way to search helix logs
+- Update GitHub issues based on tests that have hit this
+- Need a way to disable search items so they don't take up processing power

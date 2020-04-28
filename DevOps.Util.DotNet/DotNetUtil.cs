@@ -116,49 +116,6 @@ namespace DevOps.Util.DotNet
         /// </summary>
         public static string NormalizeBranchName(string fullName) => BranchName.Parse(fullName).ShortName;
 
-        public static async Task DoWithTransactionAsync(SqlConnection connection, string transactionName, Func<SqlTransaction, Task> process)
-        {
-            await connection.EnsureOpenAsync();
-            var transaction = connection.BeginTransaction(transactionName);
-
-            try
-            {
-                await process(transaction);
-                transaction.Commit();
-            }
-            catch (Exception)
-            {
-                // Attempt to roll back the transaction. 
-                try
-                {
-                    transaction.Rollback();
-                }
-                catch (Exception)
-                {
-                    // Expected that this will fail if the transaction fails on the server
-                }
-
-                throw;
-            }
-        }
-
-        public static async Task DoWithTransactionAsync(SqlConnection connection, string transactionName, Func<SqlTransaction, SqlCommand, Task> process)
-        {
-            await DoWithTransactionAsync(connection, transactionName, async transaction =>
-            {
-                using var command = connection.CreateCommand();
-                command.Connection = connection;
-                command.Transaction = transaction;
-                await process(transaction, command);
-            });
-        }
-
-        public static ILogger CreateConsoleLogger()
-        {
-            var provider = new ConsoleLoggerProvider((message, level) => true, includeScopes: true);
-            return provider.CreateLogger("Console logger");
-        }
-
         public static async Task<List<DotNetTestRun>> ListDotNetTestRunsAsync(DevOpsServer server, Build build, params TestOutcome[]? outcomes)
         {
             var testRuns = await server.ListTestRunsAsync(build.Project.Name, build.Id).ConfigureAwait(false);
