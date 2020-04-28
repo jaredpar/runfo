@@ -40,7 +40,7 @@
         "preLaunchTask": "build",
         "program": "${workspaceFolder}/triage/bin/Debug/netcoreapp3.1/triage.dll",
         "args": [
-            "issues"
+            "scratch"
         ],
         "cwd": "${workspaceFolder}/scratch",
         "console": "internalConsole",

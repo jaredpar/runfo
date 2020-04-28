@@ -5,7 +5,7 @@ namespace DevOps.Util.DotNet
 {
     public sealed class DotNetTestCaseResult
     {
-        internal DotNetTestRunInfo TestRunInfo { get; }
+        public DotNetTestRunInfo TestRunInfo { get; }
 
         // The TestCaseResult representing the actual test failure
         public TestCaseResult TestCaseResult { get; }

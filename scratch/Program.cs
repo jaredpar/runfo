@@ -70,6 +70,7 @@ namespace QueryFun
 
             throw new Exception($"Could not find token with name {name}");
         }
+
         private static async Task Scratch()
         {
             var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
@@ -79,7 +80,7 @@ namespace QueryFun
                 await server.GetBuildAsync("public", 619240),
                 DotNetUtil.FailedTestOutcomes);
                 */
-            var helixWorkItems = await queryUtil.ListHelixWorkItems(
+            var helixWorkItems = await queryUtil.ListHelixWorkItemsAsync(
                 await server.GetBuildAsync("public", 619240),
                 DotNetUtil.FailedTestOutcomes);
             foreach (var helixWorkItem in helixWorkItems)

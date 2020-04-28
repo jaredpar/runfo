@@ -16,7 +16,7 @@ internal static class Extensions
     {
         TestOutcome[]? outcomes = includeAllTests
             ? null
-            : new[] { TestOutcome.Failed, TestOutcome.Aborted };
+            : DotNetUtil.FailedTestOutcomes;
 
         var list = new List<BuildTestInfo>();
         foreach (var build in await queryUtil.ListBuildsAsync(optionSet).ConfigureAwait(false))

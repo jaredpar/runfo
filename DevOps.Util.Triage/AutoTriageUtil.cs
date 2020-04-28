@@ -72,150 +72,52 @@ namespace DevOps.Util.Triage
                 TriageIssueKind.Infra,
                 SearchKind.SearchTimeline,
                 searchText: "Received request to deprovision: The request was cancelled by the remote provider",
-                Create("dotnet", "runtime", 34472, includeDefinitons: false),
+                Create("dotnet", "runtime", 34472, includeDefinitions: false),
                 Create("dotnet", "core-eng", 9532));
+            TriageContextUtil.EnsureTriageIssue(
+                TriageIssueKind.Test,
+                SearchKind.SearchHelixRunClient,
+                searchText: "ERROR.*Job running for too long. Killing...");
 
-            static ModelTriageGitHubIssue Create(string organization, string repository, int number, string? buildQuery = null, bool includeDefinitons = true) =>
+            static ModelTriageGitHubIssue Create(string organization, string repository, int number, string? buildQuery = null, bool includeDefinitions = true) =>
                 new ModelTriageGitHubIssue()
                 {
                     Organization = organization,
                     Repository = repository, 
                     IssueNumber = number,
                     BuildQuery = buildQuery,
-                    IncludeDefinitions = includeDefinitons
+                    IncludeDefinitions = includeDefinitions
                 };
         }
 
-        public async Task Triage(string projectName, int buildNumber)
+        public async Task TriageAsync(string projectName, int buildNumber)
         {
             var build = await Server.GetBuildAsync(projectName, buildNumber).ConfigureAwait(false);
-            await Triage(build).ConfigureAwait(false);
+            await TriageAsync(build).ConfigureAwait(false);
         }
 
-        public async Task Triage(string buildQuery)
+        public async Task TriageAsync(string buildQuery)
         {
             foreach (var build in await QueryUtil.ListBuildsAsync(buildQuery))
             {
-                await Triage(build).ConfigureAwait(false);
+                await TriageAsync(build).ConfigureAwait(false);
             }
         }
 
         // TODO: need overload that takes builds and groups up the issue and PR updates
         // or maybe just make that a separate operation from triage
-        public async Task Triage(Build build)
+        public async Task TriageAsync(Build build)
         {
-            Logger.LogInformation($"Triaging {DevOpsUtil.GetBuildUri(build)}");
-
-            (Timeline? Timeline, bool Fetched) cachedTimeline = (null, false);
             var buildInfo = build.GetBuildInfo();
             var modelBuild = TriageContextUtil.EnsureBuild(buildInfo);
-
-            var query = 
-                from issue in Context.ModelTriageIssues
-                from complete in Context.ModelTriageIssueResultCompletes
-                    .Where(complete =>
-                        complete.ModelTriageIssueId == issue.Id &&
-                        complete.ModelBuildId == modelBuild.Id)
-                    .DefaultIfEmpty()
-                select new { issue, complete };
-
-            foreach (var data in query.ToList())
-            {
-                if (data.complete is object)
-                {
-                    continue;
-                }
-
-                var issue = data.issue;
-                switch (issue.SearchKind)
-                {
-                    case SearchKind.SearchTimeline:
-                        { 
-                            var timeline = await GetTimelineAsync();
-                            if (timeline is object)
-                            {
-                                DoSearchTimeline(issue, build, modelBuild, timeline);
-                            }
-                            break;
-                        }
-                    default:
-                        Logger.LogWarning($"Unknown search kind {issue.SearchKind} in {issue.Id}");
-                        break;
-                }
-            }
-
-            async Task<Timeline?> GetTimelineAsync()
-            {
-                if (cachedTimeline.Fetched)
-                {
-                    return cachedTimeline.Timeline;
-                }
-
-                try
-                {
-                    cachedTimeline.Timeline = await Server.GetTimelineAsync(build);
-                    if (cachedTimeline.Timeline is null)
-                    {
-                        Logger.LogWarning("No timeline");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogWarning($"Error getting timeline: {ex.Message}");
-                }
-
-                cachedTimeline.Fetched = true;
-                return cachedTimeline.Timeline;
-            }
-        }
-
-        private void DoSearchTimeline(
-            ModelTriageIssue modelTriageIssue,
-            Build build,
-            ModelBuild modelBuild,
-            Timeline timeline)
-        {
-            var searchText = modelTriageIssue.SearchText;
-            Logger.LogInformation($@"Text: ""{searchText}""");
-            if (TriageContextUtil.IsProcessed(modelTriageIssue, modelBuild))
-            {
-                Logger.LogInformation($@"Skipping");
-                return;
-            }
-
-            var count = 0;
-            foreach (var result in QueryUtil.SearchTimeline(build, timeline, text: searchText))
-            {
-                count++;
-
-                var modelTriageIssueResult = new ModelTriageIssueResult()
-                {
-                    TimelineRecordName = result.ResultRecord.Name,
-                    JobName = result.JobName,
-                    Line = result.Line,
-                    ModelBuild = modelBuild,
-                    ModelTriageIssue = modelTriageIssue,
-                    BuildNumber = result.Build.GetBuildKey().Number,
-                };
-                Context.ModelTriageIssueResults.Add(modelTriageIssueResult);
-            }
-
-            var complete = new ModelTriageIssueResultComplete()
-            {
-                ModelTriageIssue = modelTriageIssue,
-                ModelBuild = modelBuild,
-            };
-            Context.ModelTriageIssueResultCompletes.Add(complete);
-
-            try
-            {
-                Logger.LogInformation($@"Saving {count} jobs");
-                Context.SaveChanges();
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"Cannot save timeline complete: {ex.Message}");
-            }
+            var buildTriageUtil = new BuildTriageUtil(
+                build,
+                buildInfo,
+                modelBuild,
+                Server,
+                TriageContextUtil,
+                Logger);
+            await buildTriageUtil.TriageAsync().ConfigureAwait(false);
         }
     }
 }

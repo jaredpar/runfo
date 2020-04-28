@@ -16,9 +16,10 @@ namespace DevOps.Util
 {
     public class DevOpsServer
     {
-        private HttpClient HttpClient { get;}
+        public HttpClient HttpClient { get;}
 
         private string PersonalAccessToken { get; }
+
         public string Organization { get; }
 
         public DevOpsServer(string organization, string personalAccessToken = null)

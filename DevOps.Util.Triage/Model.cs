@@ -115,7 +115,7 @@ namespace DevOps.Util.Triage
 
         SearchTimeline,
 
-        SearchHelix,
+        SearchHelixRunClient,
     }
 
     /// <summary>
@@ -188,6 +188,10 @@ namespace DevOps.Util.Triage
         public string TimelineRecordName { get; set; }
 
         public string Line { get; set; }
+
+        public string HelixJobId { get; set; }
+
+        public string HelixWorkItem { get; set; }
 
         [Column(TypeName="nvarchar(100)")]
         public string ModelBuildId { get; set; }

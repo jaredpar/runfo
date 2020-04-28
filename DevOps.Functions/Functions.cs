@@ -70,7 +70,7 @@ namespace DevOps.Functions
             logger.LogInformation($"Triaging build {projectName} {buildCompleteMessage.BuildNumber}");
 
             var util = new AutoTriageUtil(Server, Context, logger);
-            await util.Triage(projectName, buildCompleteMessage.BuildNumber);
+            await util.TriageAsync(projectName, buildCompleteMessage.BuildNumber);
         }
 
         // [FunctionName("issues-update")]

@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 
 namespace DevOps.Util.DotNet
@@ -6,19 +8,19 @@ namespace DevOps.Util.DotNet
     {
         public static readonly HelixLogInfo Empty = new HelixLogInfo(null, null, null, null);
 
-        public string RunClientUri { get; }
+        public string? RunClientUri { get; }
 
-        public string ConsoleUri { get; }
+        public string? ConsoleUri { get; }
 
-        public string CoreDumpUri { get; }
+        public string? CoreDumpUri { get; }
 
-        public string TestResultsUri { get; }
+        public string? TestResultsUri { get; }
 
         public HelixLogInfo(
-            string runClientUri,
-            string consoleUri,
-            string coreDumpUri,
-            string testResultsUri)
+            string? runClientUri,
+            string? consoleUri,
+            string? coreDumpUri,
+            string? testResultsUri)
         {
             RunClientUri = runClientUri;
             ConsoleUri = consoleUri;
