@@ -19,6 +19,7 @@ namespace DevOps.Util.DotNet
     public sealed class DotNetTestRun
     {
         public DotNetTestRunInfo TestRunInfo { get; }
+
         public ReadOnlyCollection<DotNetTestCaseResult> TestCaseResults { get; }
 
         public Build Build => TestRunInfo.Build;

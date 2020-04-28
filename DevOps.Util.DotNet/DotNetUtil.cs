@@ -19,6 +19,12 @@ namespace DevOps.Util.DotNet
     {
         public static readonly string Organization = "dnceng";
 
+        public static TestOutcome[] FailedTestOutcomes = new[]
+        {
+            TestOutcome.Failed,
+            TestOutcome.Aborted
+        };
+
         public static readonly (string BuildName, string Project, int DefinitionId)[] BuildDefinitions = new[]
             {
                 ("runtime", "public", 686),

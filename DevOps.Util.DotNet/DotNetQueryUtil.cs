@@ -402,5 +402,15 @@ namespace DevOps.Util.DotNet
                 return list;
             }
         }
+
+        public async Task<List<HelixWorkItem>> ListHelixWorkItems(Build build, params TestOutcome[]? outcomes)
+        {
+            var testRuns = await ListDotNetTestRunsAsync(build, outcomes);
+            return testRuns
+                .SelectMany(x => x.TestCaseResults)
+                .Where(x => x.IsHelixWorkItem)
+                .SelectNullableValue(x => x.HelixWorkItem)
+                .ToList();
+        }
     }
 }

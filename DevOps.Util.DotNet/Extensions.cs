@@ -1,32 +1,27 @@
-﻿using DevOps.Util;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft;
-using Newtonsoft.Json.Linq;
+using System.Linq;
 
 namespace DevOps.Util.DotNet
 {
     public static class Extensions
     {
-        public static void AddWithValueNullable<T>(this SqlParameterCollection collection, string parameterName, T? value)
+        public static IEnumerable<T> SelectNullableValue<T>(this IEnumerable<T?> enumerable)
             where T : struct
         {
-            var realValue = value is null ? DBNull.Value : (object)value.Value;
-            collection.AddWithValue(parameterName, realValue);
-        }
-
-        public static async ValueTask EnsureOpenAsync(this SqlConnection sqlConnection)
-        {
-            if (sqlConnection.State != ConnectionState.Open)
+            foreach (var current in enumerable)
             {
-                await sqlConnection.OpenAsync();
+                if (current.HasValue)
+                {
+                    yield return current.Value;
+                }
             }
         }
+
+        public static IEnumerable<U> SelectNullableValue<T, U>(this IEnumerable<T> enumerable, Func<T, U?> func)
+            where U : struct =>
+            enumerable
+                .Select(func)
+                .SelectNullableValue();
     }
 }

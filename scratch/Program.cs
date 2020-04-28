@@ -74,10 +74,19 @@ namespace QueryFun
         {
             var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
             var queryUtil = new DotNetQueryUtil(server);
-            var build = await server.GetBuildAsync("public", 610393);
-            var collection = await queryUtil.ListDotNetTestRunsAsync(build, TestOutcome.Failed);
-            var all = collection.SelectMany(x => x.TestCaseResults).ToList();
-
+            /*
+            var runs = await queryUtil.ListDotNetTestRunsAsync(
+                await server.GetBuildAsync("public", 619240),
+                DotNetUtil.FailedTestOutcomes);
+                */
+            var helixWorkItems = await queryUtil.ListHelixWorkItems(
+                await server.GetBuildAsync("public", 619240),
+                DotNetUtil.FailedTestOutcomes);
+            foreach (var helixWorkItem in helixWorkItems)
+            {
+                var helixItem = helixWorkItem.HelixInfo;
+                Console.WriteLine($"{helixItem.JobId} - {helixItem.WorkItemName}");
+            }
         }
 
         private static async Task DumpTestTimesCsv()
