@@ -360,12 +360,12 @@ namespace DevOps.Util.DotNet
             static async Task<DotNetTestRun> GetDotNetTestRunAsync(DevOpsServer server, Build build, TestRun testRun, TestOutcome[]? outcomes)
             {
                 var all = await server.ListTestResultsAsync(build.Project.Name, testRun.Id, outcomes: outcomes).ConfigureAwait(false);
-                var info = new TestRunInfo(build, testRun);
+                var info = new DotNetTestRunInfo(build, testRun);
                 var list = ToDotNetTestCaseResult(info, all.ToList());
                 return new DotNetTestRun(info, new ReadOnlyCollection<DotNetTestCaseResult>(list));
             }
 
-            static List<DotNetTestCaseResult> ToDotNetTestCaseResult(TestRunInfo testRunInfo, List<TestCaseResult> testCaseResults)
+            static List<DotNetTestCaseResult> ToDotNetTestCaseResult(DotNetTestRunInfo testRunInfo, List<TestCaseResult> testCaseResults)
             {
                 var list = new List<DotNetTestCaseResult>();
                 foreach (var testCaseResult in testCaseResults)

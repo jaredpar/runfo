@@ -7,7 +7,7 @@ namespace DevOps.Util.DotNet
     {
         public readonly HelixInfo HelixInfo;
 
-        public readonly TestRunInfo TestRunInfo;
+        public readonly DotNetTestRunInfo TestRunInfo;
 
         // This is the TestCaseResult that represents the Helix Work item
         public readonly TestCaseResult TestCaseResult;
@@ -22,7 +22,7 @@ namespace DevOps.Util.DotNet
 
         public string ProjectName => Build.Project.Name;
 
-        public HelixWorkItem(TestRunInfo testRunInfo, HelixInfo helixInfo, TestCaseResult testCaseResult)
+        public HelixWorkItem(DotNetTestRunInfo testRunInfo, HelixInfo helixInfo, TestCaseResult testCaseResult)
         {
             Debug.Assert(HelixUtil.TryGetHelixInfo(testCaseResult) == helixInfo);
             TestRunInfo = testRunInfo;

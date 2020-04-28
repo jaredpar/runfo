@@ -5,7 +5,7 @@ namespace DevOps.Util.DotNet
 {
     public sealed class DotNetTestCaseResult
     {
-        internal TestRunInfo TestRunInfo { get; }
+        internal DotNetTestRunInfo TestRunInfo { get; }
 
         // The TestCaseResult representing the actual test failure
         public TestCaseResult TestCaseResult { get; }
@@ -25,7 +25,7 @@ namespace DevOps.Util.DotNet
 
         public Build Build => TestRunInfo.Build;
 
-        public DotNetTestCaseResult(TestRunInfo testRunInfo, HelixWorkItem helixWorkItem, TestCaseResult testCaseResult)
+        public DotNetTestCaseResult(DotNetTestRunInfo testRunInfo, HelixWorkItem helixWorkItem, TestCaseResult testCaseResult)
         {
             Debug.Assert(HelixUtil.TryGetHelixInfo(testCaseResult) == helixWorkItem.HelixInfo);
             TestRunInfo = testRunInfo;
@@ -33,7 +33,7 @@ namespace DevOps.Util.DotNet
             TestCaseResult = testCaseResult;
         }
 
-        public DotNetTestCaseResult(TestRunInfo testRunInfo, TestCaseResult testCaseResult)
+        public DotNetTestCaseResult(DotNetTestRunInfo testRunInfo, TestCaseResult testCaseResult)
         {
             TestRunInfo = testRunInfo;
             TestCaseResult = testCaseResult;
