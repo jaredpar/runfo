@@ -203,7 +203,7 @@ namespace DevOps.Util
             return BuildArtifactKind.Unknown;
         }
 
-        public static DateTimeOffset? ConvertRestTime(string time)
+        public static DateTimeOffset? ConvertFromRestTime(string time)
         {
             if (time is null || !DateTime.TryParse(time, out var dateTime))
             {
@@ -214,5 +214,6 @@ namespace DevOps.Util
             return new DateTimeOffset(dateTime);
         }
 
+        public static string ConvertToRestTime(DateTimeOffset dateTime) => dateTime.UtcDateTime.ToString("o");
     }
 }

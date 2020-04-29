@@ -157,22 +157,45 @@ namespace DevOps.Util.DotNet
             int[]? definitions = null,
             string? repositoryId = null,
             string? branchName = null,
-            bool includePullRequests = false)
+            bool includePullRequests = false,
+            DateTimeOffset? before = null,
+            DateTimeOffset? after = null)
         {
+            // When doing before / after comparisons always use QueueTime. The StartTime parameter
+            // in REST refers to when the latest build attempt started, not the original. Using that
+            // means the jobs returned can violate the before / after constraint. The queue time is
+            // consistent though and can be reliably used for filtering
+            BuildStatus? statusFilter = BuildStatus.Completed;
+            BuildQueryOrder? queryOrder = null;
+            if (before is object || after is object)
+            {
+                queryOrder = BuildQueryOrder.QueueTimeDescending;
+                statusFilter = null;
+            }
+
             var list = new List<Build>();
             var builds = Server.EnumerateBuildsAsync(
                 project,
                 definitions: definitions,
                 repositoryId: repositoryId,
                 branchName: branchName,
-                statusFilter: BuildStatus.Completed,
-                queryOrder: BuildQueryOrder.FinishTimeDescending);
+                statusFilter: statusFilter,
+                queryOrder: queryOrder,
+                maxTime: before,
+                minTime: after);
             await foreach (var build in builds)
             {
                 var isUserDriven = 
                     build.Reason == BuildReason.PullRequest || 
                     build.Reason == BuildReason.Manual;
                 if (isUserDriven && !includePullRequests)
+                {
+                    continue;
+                }
+
+                // In the case before / after is specified we have to remove the status filter hence 
+                // it's possible to get back jobs that aren't completed. Filter them out here.
+                if (build.Status != BuildStatus.Completed)
                 {
                     continue;
                 }
@@ -269,7 +292,9 @@ namespace DevOps.Util.DotNet
                         definitions: new[] { definitionId },
                         repositoryId: repository,
                         branchName: branch,
-                        includePullRequests: optionSet.IncludePullRequests);
+                        includePullRequests: optionSet.IncludePullRequests,
+                        before: optionSet.Before,
+                        after: optionSet.After);
                     builds.AddRange(collection);
                 }
             }
@@ -281,7 +306,9 @@ namespace DevOps.Util.DotNet
                     definitions: null,
                     repositoryId: repository,
                     branchName: branch,
-                    includePullRequests: optionSet.IncludePullRequests);
+                    includePullRequests: optionSet.IncludePullRequests,
+                    before: optionSet.Before,
+                    after: optionSet.After);
                 builds.AddRange(collection);
             }
 
@@ -289,20 +316,6 @@ namespace DevOps.Util.DotNet
             foreach (var excludedBuildId in optionSet.ExcludedBuildIds)
             {
                 builds = builds.Where(x => x.Id != excludedBuildId).ToList();
-            }
-
-            // When doing before / after comparisons always use QueueTime. The StartTime parameter
-            // in REST refers to when the latest build attempt started, not the original. Using that
-            // means the jobs returned can violate the before / after constraint. The queue time is
-            // consistent though and can be reliably used for filtering
-            if (before.HasValue)
-            {
-                builds = builds.Where(b => b.GetQueueTime() is DateTimeOffset d && d <= before.Value).ToList();
-            }
-
-            if (after.HasValue)
-            {
-                builds = builds.Where(b => b.GetQueueTime() is DateTimeOffset d && d >= after.Value).ToList();
             }
 
             return builds;

@@ -232,8 +232,8 @@ namespace DevOps.Util
 
             static int Compare(TimelineNode x, TimelineNode y)
             {
-                var xStart = DevOpsUtil.ConvertRestTime(x.TimelineRecord.StartTime);
-                var yStart = DevOpsUtil.ConvertRestTime(y.TimelineRecord.StartTime);
+                var xStart = DevOpsUtil.ConvertFromRestTime(x.TimelineRecord.StartTime);
+                var yStart = DevOpsUtil.ConvertFromRestTime(y.TimelineRecord.StartTime);
                 if (xStart is null)
                 {
                     if (yStart is null)

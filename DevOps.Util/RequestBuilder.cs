@@ -104,7 +104,7 @@ namespace DevOps.Util
             if (value.HasValue)
             {
                 QueryBuilder.Append($"{name}=");
-                QueryBuilder.Append(value.Value.UtcDateTime.ToString("o"));
+                QueryBuilder.Append(DevOpsUtil.ConvertToRestTime(value.Value));
                 QueryBuilder.Append("&");
             }
         }

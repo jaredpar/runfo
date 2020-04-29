@@ -12,11 +12,11 @@ namespace DevOps.Util
 
         public static BuildDefinitionInfo GetBuildDefinitionInfo(this Build build) => DevOpsUtil.GetBuildDefinitionInfo(build);
 
-        public static DateTimeOffset? GetStartTime(this Build build) => DevOpsUtil.ConvertRestTime(build.StartTime);
+        public static DateTimeOffset? GetStartTime(this Build build) => DevOpsUtil.ConvertFromRestTime(build.StartTime);
 
-        public static DateTimeOffset? GetQueueTime(this Build build) => DevOpsUtil.ConvertRestTime(build.QueueTime);
+        public static DateTimeOffset? GetQueueTime(this Build build) => DevOpsUtil.ConvertFromRestTime(build.QueueTime);
 
-        public static DateTimeOffset? GetFinishTime(this Build build) => DevOpsUtil.ConvertRestTime(build.FinishTime);
+        public static DateTimeOffset? GetFinishTime(this Build build) => DevOpsUtil.ConvertFromRestTime(build.FinishTime);
 
         public static int? GetByteSize(this BuildArtifact buildArtifact) => DevOpsUtil.GetArtifactByteSize(buildArtifact);
 

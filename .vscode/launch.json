@@ -12,10 +12,8 @@
         "program": "${workspaceFolder}/runfo/bin/Debug/netcoreapp3.1/runfo.dll",
         "args": [
             "builds",
-            "-d",
-            "286",
-            "-p",
-            "internal"
+            "-before",
+            "2020/4/29"
         ],
         "cwd": "${workspaceFolder}/runfo",
         "console": "internalConsole",
