@@ -1,4 +1,12 @@
-﻿using Newtonsoft.Json;
+﻿#nullable enable
+
+// These are all REST types which are primarily constructed through reflection. 
+// Hence this warning is suppressed. As members are discovered that are expected
+// to be null they can be annotated here and provide value to the rest of the 
+// program
+#pragma warning disable 8618
+
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System;
@@ -895,7 +903,7 @@ namespace DevOps.Util
         public string Phase { get; set; }
 
         // Reference of the pipeline to which this test run belongs.
-        public PipelineReference PipelineReference { get; set; }
+        public PipelineReference? PipelineReference { get; set; }
 
         // Test plan associated with this test run.
         public ShallowReference Plan { get; set; }
