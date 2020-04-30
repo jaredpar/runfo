@@ -117,18 +117,19 @@ internal sealed partial class RuntimeInfo
             return ExitFailure;
         }
 
-        var badLogList = new List<string>();
         var textRegex = new Regex(text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
         var collection = await QueryUtil.ListBuildTestInfosAsync(optionSet);
         var found = collection
             .AsParallel()
-            .Select(async b => (b.Build, await SearchBuild(b)));
+            .Select(async b => await SearchBuild(Server, textRegex, b));
+        var badLogList = new List<string>();
 
         Console.WriteLine("|Build|Kind|Console Log|");
         Console.WriteLine("|---|---|---|");
         foreach (var task in found)
         {
-            var (build, helixLogInfo) = await task;
+            var (build, helixLogInfo, list) = await task;
+            badLogList.AddRange(list);
             if (helixLogInfo is null)
             {
                 continue;
@@ -149,20 +150,24 @@ internal sealed partial class RuntimeInfo
 
         return ExitSuccess;
 
-        async Task<HelixLogInfo> SearchBuild(BuildTestInfo buildTestInfo)
+        static async Task<(Build Build, HelixLogInfo LogInfo, List<string> BadLogs)> SearchBuild(
+            DevOpsServer server,
+            Regex textRegex,
+            BuildTestInfo buildTestInfo)
         {
             var build = buildTestInfo.Build;
+            var badLogList = new List<string>();
             foreach (var workItem in buildTestInfo.GetHelixWorkItems())
             {
                 try
                 {
-                    var logInfo = await GetHelixLogInfoAsync(workItem);
+                    var logInfo = await HelixUtil.GetHelixLogInfoAsync(server, workItem);
                     if (logInfo.ConsoleUri is object)
                     {
-                        using var stream = await Server.DownloadFileAsync(logInfo.ConsoleUri);
+                        using var stream = await server.HttpClient.DownloadFileStreamAsync(logInfo.ConsoleUri);
                         if (IsMatch(stream, textRegex))
                         {
-                            return logInfo;
+                            return (build, logInfo, badLogList);
                         }
                     }
                 }
@@ -172,7 +177,7 @@ internal sealed partial class RuntimeInfo
                 }
             }
 
-            return null;
+            return (build, null, badLogList);
         }
 
         static bool IsMatch(Stream stream, Regex textRegex)
