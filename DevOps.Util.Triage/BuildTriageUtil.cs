@@ -358,7 +358,7 @@ namespace DevOps.Util.Triage
         }
 
         private async Task<string?> DownloadHelixLogAsync(string uri) => 
-            await Server.HttpClient.DownloadFileAsync(
+            await Server.HttpClient.DownloadFileTextAsync(
                 uri,
                 ex => Logger.LogWarning($"Cannot download helix log {uri}: {ex.Message}"));
     }

@@ -455,7 +455,7 @@ namespace DevOps.Util.DotNet
             var list = new List<TimelineResult<string>>();
             foreach (var record in timelineTree.Records.Where(x => comparer.Equals(x.Name, "Send to Helix")))
             {
-                var buildLogText = await Server.HttpClient.DownloadFileAsync(record.Log.Url);
+                var buildLogText = await Server.HttpClient.DownloadFileTextAsync(record.Log.Url);
                 if (buildLogText is null)
                 {
                     continue;
