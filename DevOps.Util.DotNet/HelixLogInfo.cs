@@ -4,6 +4,17 @@ using System;
 
 namespace DevOps.Util.DotNet
 {
+    public enum HelixLogKind
+    {
+        RunClientUri,
+
+        Console,
+
+        CoreDump,
+
+        TestResults
+    }
+
     public sealed class HelixLogInfo
     {
         public static readonly HelixLogInfo Empty = new HelixLogInfo(null, null, null, null);
@@ -28,6 +39,14 @@ namespace DevOps.Util.DotNet
             TestResultsUri = testResultsUri;
         }
 
+        public string? GetUri(HelixLogKind kind) => kind switch
+        {
+            HelixLogKind.RunClientUri => RunClientUri,
+            HelixLogKind.Console => ConsoleUri,
+            HelixLogKind.CoreDump => CoreDumpUri,
+            HelixLogKind.TestResults => TestResultsUri,
+            _ => throw new InvalidOperationException($"Invalid enum value {kind}")
+        };
     }
 
 }

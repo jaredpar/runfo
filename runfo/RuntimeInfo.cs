@@ -118,7 +118,7 @@ internal sealed partial class RuntimeInfo
         }
 
         var textRegex = new Regex(text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        var collection = await QueryUtil.ListBuildTestInfosAsync(optionSet);
+        var collection = await QueryUtil.ListBuildsAsync(optionSet);
         var found = collection
             .AsParallel()
             .Select(async b => await SearchBuild(Server, QueryUtil, textRegex, b));
@@ -154,11 +154,13 @@ internal sealed partial class RuntimeInfo
             DevOpsServer server,
             DotNetQueryUtil queryUtil,
             Regex textRegex,
-            BuildTestInfo buildTestInfo)
+            Build build)
         {
-            var build = buildTestInfo.Build;
             var badLogList = new List<string>();
-            foreach (var workItem in buildTestInfo.GetHelixWorkItems())
+            var workItems = await queryUtil
+                .ListHelixWorkItemsAsync(build, DotNetUtil.FailedTestOutcomes)
+                .ConfigureAwait(false);
+            foreach (var workItem in workItems)
             {
                 try
                 {
