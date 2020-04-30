@@ -347,7 +347,7 @@ namespace DevOps.Util.DotNet
                 ? null
                 : new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-        public async Task<List<DotNetTestRun>> ListDotNetTestRunsAsync(Build build, params TestOutcome[]? outcomes)
+        public async Task<List<DotNetTestRun>> ListDotNetTestRunsAsync(Build build, params TestOutcome[] outcomes)
         {
             var testRuns = await Server.ListTestRunsAsync(build.Project.Name, build.Id).ConfigureAwait(false);
             var taskList = new List<Task<DotNetTestRun>>();
@@ -365,7 +365,7 @@ namespace DevOps.Util.DotNet
 
             return list;
 
-            static async Task<DotNetTestRun> GetDotNetTestRunAsync(DevOpsServer server, Build build, TestRun testRun, TestOutcome[]? outcomes)
+            static async Task<DotNetTestRun> GetDotNetTestRunAsync(DevOpsServer server, Build build, TestRun testRun, TestOutcome[] outcomes)
             {
                 var all = await server.ListTestResultsAsync(build.Project.Name, testRun.Id, outcomes: outcomes).ConfigureAwait(false);
                 var info = new DotNetTestRunInfo(build, testRun);
@@ -411,7 +411,7 @@ namespace DevOps.Util.DotNet
             }
         }
 
-        public async Task<List<HelixWorkItem>> ListHelixWorkItemsAsync(Build build, params TestOutcome[]? outcomes)
+        public async Task<List<HelixWorkItem>> ListHelixWorkItemsAsync(Build build, params TestOutcome[] outcomes)
         {
             var testRuns = await ListDotNetTestRunsAsync(build, outcomes).ConfigureAwait(false);
             return ListHelixWorkItems(testRuns);

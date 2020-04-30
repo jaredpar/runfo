@@ -14,8 +14,8 @@ internal static class Extensions
 {
     internal static async Task<BuildTestInfoCollection> ListBuildTestInfosAsync(this DotNetQueryUtil queryUtil, BuildSearchOptionSet optionSet, bool includeAllTests = false)
     {
-        TestOutcome[]? outcomes = includeAllTests
-            ? null
+        TestOutcome[] outcomes = includeAllTests
+            ? Array.Empty<TestOutcome>()
             : DotNetUtil.FailedTestOutcomes;
 
         var list = new List<BuildTestInfo>();
