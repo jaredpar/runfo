@@ -17,6 +17,7 @@ using DevOps.Util.DotNet;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Octokit;
+using HelixTimelineResult = DevOps.Util.DotNet.TimelineResult<string>;
 
 namespace DevOps.Util.Triage
 {
@@ -44,7 +45,7 @@ namespace DevOps.Util.Triage
 
         internal List<(HelixWorkItem WorkItem, HelixLogInfo LogInfo)>? HelixLogInfos { get; set; }
 
-        internal Dictionary<string, TimelineRecord> HelixJobToRecordMap { get; set; }
+        internal Dictionary<string, HelixTimelineResult>? HelixJobToRecordMap { get; set; }
 
         internal TriageContext Context => TriageContextUtil.Context;
 
@@ -103,33 +104,10 @@ namespace DevOps.Util.Triage
 
         private async Task DoSearchTimelineAsync(ModelTriageIssue modelTriageIssue)
         {
-            await EnsureTimelineAsync().ConfigureAwait(false);
-            if (Timeline is object)
+            var timeline = await EnsureTimelineAsync().ConfigureAwait(false);
+            if (timeline is object)
             {
-                DoSearchTimeline(modelTriageIssue, Timeline);
-            }
-
-            async Task EnsureTimelineAsync()
-            {
-                if (HasSetTimeline)
-                {
-                    return;
-                }
-
-                try
-                {
-                    Timeline = await Server.GetTimelineAsync(Build);
-                    if (Timeline is null)
-                    {
-                        Logger.LogWarning("No timeline");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogWarning($"Error getting timeline: {ex.Message}");
-                }
-
-                HasSetTimeline = true;
+                DoSearchTimeline(modelTriageIssue, timeline);
             }
         }
 
@@ -150,12 +128,12 @@ namespace DevOps.Util.Triage
 
                 var modelTriageIssueResult = new ModelTriageIssueResult()
                 {
-                    TimelineRecordName = result.ResultRecord.Name,
+                    TimelineRecordName = result.RecordName,
                     JobName = result.JobName,
-                    Line = result.Line,
+                    Line = result.Value.Line,
                     ModelBuild = ModelBuild,
                     ModelTriageIssue = modelTriageIssue,
-                    BuildNumber = result.Build.GetBuildKey().Number,
+                    BuildNumber = result.Value.Build.GetBuildKey().Number,
                 };
                 Context.ModelTriageIssueResults.Add(modelTriageIssueResult);
             }
@@ -198,6 +176,7 @@ namespace DevOps.Util.Triage
                 return;
             }
 
+            var jobMap = await EnsureHelixJobToRecordMap().ConfigureAwait(false);
             foreach (var tuple in helixLogInfos)
             {
                 var workItem = tuple.WorkItem;
@@ -212,6 +191,15 @@ namespace DevOps.Util.Triage
                 var log = await DownloadHelixLogAsync(helixLogInfo.RunClientUri).ConfigureAwait(false);
                 if (log is object && IsMatch(log, modelTriageIssue.SearchText))
                 {
+                    string? recordName = null;
+                    string? jobName = null;
+                    if (jobMap.TryGetValue(workItem.JobId, out var result))
+                    {
+                        recordName = result.RecordName;
+                        jobName = result.JobName;
+                    }
+
+
                     // TODO: missing all the timeline record data here
                     var modelTriageIssueResult = new ModelTriageIssueResult()
                     {
@@ -220,6 +208,8 @@ namespace DevOps.Util.Triage
                         ModelBuild = ModelBuild,
                         ModelTriageIssue = modelTriageIssue,
                         BuildNumber = BuildInfo.Number,
+                        TimelineRecordName = recordName,
+                        JobName = jobName,
                     };
                     Context.ModelTriageIssueResults.Add(modelTriageIssueResult);
                 }
@@ -312,6 +302,59 @@ namespace DevOps.Util.Triage
             }
 
             HelixLogInfos = list;
+        }
+
+        private async Task<Timeline?> EnsureTimelineAsync()
+        {
+            if (HasSetTimeline)
+            {
+                return Timeline;
+            }
+
+            try
+            {
+                Timeline = await Server.GetTimelineAsync(Build);
+                if (Timeline is null)
+                {
+                    Logger.LogWarning("No timeline");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning($"Error getting timeline: {ex.Message}");
+            }
+
+            HasSetTimeline = true;
+            return Timeline;
+        }
+
+        private async Task<Dictionary<string, HelixTimelineResult>> EnsureHelixJobToRecordMap()
+        {
+            if (HelixJobToRecordMap is object)
+            {
+                return HelixJobToRecordMap;
+            }
+
+            HelixJobToRecordMap = new Dictionary<string, HelixTimelineResult>(StringComparer.OrdinalIgnoreCase);
+            var timeline = await EnsureTimelineAsync().ConfigureAwait(false);
+            if (timeline is null)
+            {
+                return HelixJobToRecordMap;
+            }
+
+            try
+            {
+                foreach (var result in await QueryUtil.ListHelixJobs(timeline).ConfigureAwait(false))
+                {
+                    HelixJobToRecordMap[result.Value] = result;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning($"Error getting helix job to record map: {ex.Message}");
+            }
+
+            return HelixJobToRecordMap;
         }
 
         private async Task<string?> DownloadHelixLogAsync(string uri) => 

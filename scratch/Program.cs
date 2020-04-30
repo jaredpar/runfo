@@ -84,10 +84,9 @@ namespace QueryFun
             var timeline = await server.GetTimelineAsync(project, buildId);
             var timelineTree = TimelineTree.Create(timeline);
 
-            foreach (var tuple in list)
+            foreach (var result in list)
             {
-                timelineTree.TryGetJob(tuple.Record, out var job);
-                Console.WriteLine($"{tuple.HelixJob} - {job?.Name}");
+                Console.WriteLine($"{result.Value} - {result.JobName}");
             }
         }
 

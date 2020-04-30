@@ -15,39 +15,30 @@ namespace DevOps.Util.DotNet
 {
     using static OptionSetUtil;
 
-    public class SearchTimelineResult
+    public class TimelineResult<T>
     {
-        public Build Build { get; }
+        public T Value { get; }
 
-        public TimelineTree TimelineTree { get; }
+        public TimelineRecord Record { get; }
 
-        public TimelineRecord ResultRecord { get; }
+        public TimelineTree Tree { get; }
 
-        public string Line { get; }
+        public string RecordName => Record.Name;
 
-        public string? JobName
+        public TimelineRecord? JobRecord => Tree.TryGetJob(Record, out var job)
+            ? job
+            : null;
+
+        public string? JobName => JobRecord?.Name;
+
+        public TimelineResult(
+            T result,
+            TimelineRecord record,
+            TimelineTree tree)
         {
-            get
-            {
-                if (TimelineTree.TryGetJob(ResultRecord, out var job))
-                {
-                    return job.Name;
-                }
-
-                return null;
-            }
-        }
-
-        public SearchTimelineResult(
-            Build build,
-            TimelineTree timelineTree,
-            TimelineRecord resultRecord,
-            string line)
-        {
-            Build = build;
-            TimelineTree = timelineTree;
-            ResultRecord = resultRecord;
-            Line = line;
+            Value = result;
+            Record = record;
+            Tree = tree;
         }
     }
 
@@ -60,7 +51,7 @@ namespace DevOps.Util.DotNet
             Server = server;
         }
 
-        public Task<List<SearchTimelineResult>> SearchTimelineAsync(
+        public Task<List<TimelineResult<(Build Build, string Line)>>> SearchTimelineAsync(
             IEnumerable<Build> builds,
             string text,
             string? name = null,
@@ -72,13 +63,13 @@ namespace DevOps.Util.DotNet
             return SearchTimelineAsync(builds, textRegex, nameRegex, taskRegex);
         }
 
-        public async Task<List<SearchTimelineResult>> SearchTimelineAsync(
+        public async Task<List<TimelineResult<(Build Build, string Line)>>> SearchTimelineAsync(
             IEnumerable<Build> builds,
             Regex text,
             Regex? name = null,
             Regex? task = null)
         {
-            var list = new List<SearchTimelineResult>();
+            var list = new List<TimelineResult<(Build Build, string Line)>>();
             foreach (var build in builds)
             {
                 var timeline = await Server.GetTimelineAsync(build.Project.Name, build.Id).ConfigureAwait(false);
@@ -93,7 +84,7 @@ namespace DevOps.Util.DotNet
             return list;
         }
 
-        public IEnumerable<SearchTimelineResult> SearchTimeline(
+        public IEnumerable<TimelineResult<(Build Build, string Line)>> SearchTimeline(
             Build build,
             Timeline timeline,
             string text,
@@ -106,7 +97,7 @@ namespace DevOps.Util.DotNet
             return SearchTimeline(build, timeline, textRegex, nameRegex, taskRegex);
         }
 
-        public IEnumerable<SearchTimelineResult> SearchTimeline(
+        public IEnumerable<TimelineResult<(Build Build, string Line)>> SearchTimeline(
             Build build,
             Timeline timeline,
             Regex text,
@@ -136,7 +127,10 @@ namespace DevOps.Util.DotNet
 
                 if (line is object)
                 {
-                    yield return new SearchTimelineResult(build, timelineTree, record, line);
+                    yield return new TimelineResult<(Build Build, string Line)>(
+                        (build, line),
+                        record,
+                        timelineTree);
                 }
             }
         }
@@ -430,13 +424,13 @@ namespace DevOps.Util.DotNet
                 .SelectNullableValue(x => x.HelixWorkItem)
                 .ToList();
 
-        public Task<List<(TimelineRecord Record, string HelixJob)>> ListHelixJobs(Build build)
+        public Task<List<TimelineResult<string>>> ListHelixJobs(Build build)
         {
             var buildKey = build.GetBuildKey();
             return ListHelixJobs(buildKey.Project, buildKey.Number);
         }
 
-        public async Task<List<(TimelineRecord Record, string HelixJob)>> ListHelixJobs(string project, int buildNumber)
+        public async Task<List<TimelineResult<string>>> ListHelixJobs(string project, int buildNumber)
         {
             var timeline = await Server.GetTimelineAsync(project, buildNumber).ConfigureAwait(false);
             return await ListHelixJobs(timeline);
@@ -449,7 +443,7 @@ namespace DevOps.Util.DotNet
         /// TODO: this method works by knowing the display name of timeline records. That is very 
         /// fragile and we should find a better way to do this.
         /// </summary>
-        public async Task<List<(TimelineRecord Record, string HelixJob)>> ListHelixJobs(Timeline timeline)
+        public async Task<List<TimelineResult<string>>> ListHelixJobs(Timeline timeline)
         {
             var timelineTree = TimelineTree.Create(timeline);
 
@@ -458,7 +452,7 @@ namespace DevOps.Util.DotNet
             var comparer = StringComparer.OrdinalIgnoreCase;
             var regex = new Regex(@"Sent Helix Job ([\d\w-]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-            var list = new List<(TimelineRecord Record, string HelixJob)>();
+            var list = new List<TimelineResult<string>>();
             foreach (var record in timelineTree.Records.Where(x => comparer.Equals(x.Name, "Send to Helix")))
             {
                 var buildLogText = await Server.HttpClient.DownloadFileAsync(record.Log.Url);
@@ -480,7 +474,7 @@ namespace DevOps.Util.DotNet
                     if (match.Success)
                     {
                         var id = match.Groups[1].Value;
-                        list.Add((record, id));
+                        list.Add(new TimelineResult<string>(id, record, timelineTree));
                     }
                 } while (true);
             }
