@@ -57,9 +57,9 @@ namespace DevOps.Util.DotNet
             string? name = null,
             string? task = null)
         {
-            var textRegex = CreateTimelineRegex(text);
-            var nameRegex = CreateTimelineRegex(name);
-            var taskRegex = CreateTimelineRegex(task);
+            var textRegex = CreateSearchRegex(text);
+            var nameRegex = CreateSearchRegex(name);
+            var taskRegex = CreateSearchRegex(task);
             return SearchTimelineAsync(builds, textRegex, nameRegex, taskRegex);
         }
 
@@ -91,9 +91,9 @@ namespace DevOps.Util.DotNet
             string? name = null,
             string? task = null)
         {
-            var textRegex = CreateTimelineRegex(text);
-            var nameRegex = CreateTimelineRegex(name);
-            var taskRegex = CreateTimelineRegex(task);
+            var textRegex = CreateSearchRegex(text);
+            var nameRegex = CreateSearchRegex(name);
+            var taskRegex = CreateSearchRegex(task);
             return SearchTimeline(build, timeline, textRegex, nameRegex, taskRegex);
         }
 
@@ -133,6 +133,54 @@ namespace DevOps.Util.DotNet
                         timelineTree);
                 }
             }
+        }
+
+        public async IAsyncEnumerable<Match> SearchFileAsync(
+            string uri,
+            Regex regex,
+            Action<Exception>? onError = null)
+        {
+            using var stream = await Server.HttpClient.DownloadFileStreamAsync(
+                uri,
+                onError).ConfigureAwait(false);
+            if (stream is null)
+            {
+                yield break;
+            }
+
+            using var reader = new StreamReader(stream);
+            do
+            {
+                var line = reader.ReadLine();
+                if (line is null)
+                {
+                    break;
+                }
+
+                var match = regex.Match(line);
+                if (match.Success)
+                {
+                    yield return match;
+                }
+            } while (true);
+        }
+
+        public async Task<Match?> SearchFileForFirstMatchAsync(
+            string uri,
+            Regex regex,
+            Action<Exception>? onError = null)
+        {
+            var enumerable = SearchFileAsync(uri, regex, onError);
+            return await enumerable.FirstOrDefaultAsync().ConfigureAwait(false);
+        }
+
+        public async Task<bool> SearchFileForAnyMatchAsync(
+            string uri,
+            Regex regex,
+            Action<Exception>? onError = null)
+        {
+            var match = await SearchFileForFirstMatchAsync(uri, regex, onError).ConfigureAwait(false);
+            return match?.Success == true;
         }
 
         public async Task<List<TimelineRecord>> ListFailedJobs(Build build)
@@ -342,7 +390,7 @@ namespace DevOps.Util.DotNet
         }
 
         [return: NotNullIfNotNull("pattern")]
-        private static Regex? CreateTimelineRegex(string? pattern) =>
+        public static Regex? CreateSearchRegex(string? pattern) =>
             pattern is null 
                 ? null
                 : new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -443,7 +491,9 @@ namespace DevOps.Util.DotNet
         /// TODO: this method works by knowing the display name of timeline records. That is very 
         /// fragile and we should find a better way to do this.
         /// </summary>
-        public async Task<List<TimelineResult<string>>> ListHelixJobs(Timeline timeline)
+        public async Task<List<TimelineResult<string>>> ListHelixJobs(
+            Timeline timeline,
+            Action<Exception>? onError = null)
         {
             var timelineTree = TimelineTree.Create(timeline);
 
@@ -455,28 +505,12 @@ namespace DevOps.Util.DotNet
             var list = new List<TimelineResult<string>>();
             foreach (var record in timelineTree.Records.Where(x => comparer.Equals(x.Name, "Send to Helix")))
             {
-                var buildLogText = await Server.HttpClient.DownloadFileTextAsync(record.Log.Url);
-                if (buildLogText is null)
+                var match = await SearchFileForFirstMatchAsync(record.Log.Url, regex, onError).ConfigureAwait(false);
+                if (match?.Success == true)
                 {
-                    continue;
+                    var id = match.Groups[1].Value;
+                    list.Add(new TimelineResult<string>(id, record, timelineTree));
                 }
-
-                using var reader = new StringReader(buildLogText);
-                do
-                {
-                    var line = reader.ReadLine();
-                    if (line is null)
-                    {
-                        break;
-                    }
-
-                    var match = regex.Match(line);
-                    if (match.Success)
-                    {
-                        var id = match.Groups[1].Value;
-                        list.Add(new TimelineResult<string>(id, record, timelineTree));
-                    }
-                } while (true);
             }
 
             return list;

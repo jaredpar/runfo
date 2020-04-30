@@ -188,8 +188,11 @@ namespace DevOps.Util.Triage
 
                 // TODO: should cache the log download so it can be used in multiple searches
                 Logger.LogInformation($"Downloading helix log {helixLogInfo.RunClientUri}");
-                var log = await DownloadHelixLogAsync(helixLogInfo.RunClientUri).ConfigureAwait(false);
-                if (log is object && IsMatch(log, modelTriageIssue.SearchText))
+                var isMatch = await QueryUtil.SearchFileForAnyMatchAsync(
+                    helixLogInfo.RunClientUri,
+                    DotNetQueryUtil.CreateSearchRegex(modelTriageIssue.SearchText),
+                    ex => Logger.LogWarning($"Error searching log: {ex.Message}"));
+                if (isMatch)
                 {
                     string? recordName = null;
                     string? jobName = null;
@@ -198,7 +201,6 @@ namespace DevOps.Util.Triage
                         recordName = result.RecordName;
                         jobName = result.JobName;
                     }
-
 
                     // TODO: missing all the timeline record data here
                     var modelTriageIssueResult = new ModelTriageIssueResult()
@@ -232,28 +234,6 @@ namespace DevOps.Util.Triage
             {
                 Logger.LogError($"Cannot save helix complete: {ex.Message}");
             }
-        }
-
-        private static bool IsMatch(string log, string text)
-        {
-            var textRegex = new Regex(text, RegexOptions.IgnoreCase | RegexOptions.Compiled);
-            using var reader = new StringReader(log);
-            do
-            {
-                var line = reader.ReadLine();
-                if (line is null)
-                {
-                    break;
-                }
-
-                if (textRegex.IsMatch(line))
-                {
-                    return true;
-                }
-
-            } while (true);
-
-            return false;
         }
 
         private async Task EnsureHelixWorkItemsAsync()
@@ -356,10 +336,5 @@ namespace DevOps.Util.Triage
 
             return HelixJobToRecordMap;
         }
-
-        private async Task<string?> DownloadHelixLogAsync(string uri) => 
-            await Server.HttpClient.DownloadFileTextAsync(
-                uri,
-                ex => Logger.LogWarning($"Cannot download helix log {uri}: {ex.Message}"));
     }
 }

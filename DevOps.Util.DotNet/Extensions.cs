@@ -1,6 +1,10 @@
-﻿using System;
+﻿#nullable enable
+
+using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet
 {
@@ -23,5 +27,16 @@ namespace DevOps.Util.DotNet
             enumerable
                 .Select(func)
                 .SelectNullableValue();
+
+        public static async Task<T?> FirstOrDefaultAsync<T>(this IAsyncEnumerable<T> enumerable)
+            where T : class
+        {
+            await foreach (var current in enumerable.ConfigureAwait(false))
+            {
+                return current;
+            }
+
+            return default;
+        }
     }
 }

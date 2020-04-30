@@ -121,7 +121,7 @@ internal sealed partial class RuntimeInfo
         var collection = await QueryUtil.ListBuildTestInfosAsync(optionSet);
         var found = collection
             .AsParallel()
-            .Select(async b => await SearchBuild(Server, textRegex, b));
+            .Select(async b => await SearchBuild(Server, QueryUtil, textRegex, b));
         var badLogList = new List<string>();
 
         Console.WriteLine("|Build|Kind|Console Log|");
@@ -152,6 +152,7 @@ internal sealed partial class RuntimeInfo
 
         static async Task<(Build Build, HelixLogInfo LogInfo, List<string> BadLogs)> SearchBuild(
             DevOpsServer server,
+            DotNetQueryUtil queryUtil,
             Regex textRegex,
             BuildTestInfo buildTestInfo)
         {
@@ -164,8 +165,11 @@ internal sealed partial class RuntimeInfo
                     var logInfo = await HelixUtil.GetHelixLogInfoAsync(server, workItem);
                     if (logInfo.ConsoleUri is object)
                     {
-                        using var stream = await server.HttpClient.DownloadFileStreamAsync(logInfo.ConsoleUri);
-                        if (IsMatch(stream, textRegex))
+                        var isMatch = await queryUtil.SearchFileForAnyMatchAsync(
+                            logInfo.ConsoleUri,
+                            textRegex,
+                            ex => badLogList.Add($"Unable to search helix logs {build.Id} {workItem.HelixInfo.JobId}: {ex.Message}")).ConfigureAwait(false);
+                        if (isMatch)
                         {
                             return (build, logInfo, badLogList);
                         }
@@ -178,27 +182,6 @@ internal sealed partial class RuntimeInfo
             }
 
             return (build, null, badLogList);
-        }
-
-        static bool IsMatch(Stream stream, Regex textRegex)
-        {
-            using var reader = new StreamReader(stream);
-            do
-            {
-                var line = reader.ReadLine();
-                if (line is null)
-                {
-                    break;
-                }
-
-                if (textRegex.IsMatch(line))
-                {
-                    return true;
-                }
-
-            } while (true);
-
-            return false;
         }
     }
 
