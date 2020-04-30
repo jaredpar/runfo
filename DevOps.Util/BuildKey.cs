@@ -4,6 +4,10 @@ namespace DevOps.Util
 {
     public readonly struct BuildKey
     {
+        // TODO: Consider strongly removing this and just noting that build keys are only
+        // relevant in their org. So many times we're passing BuildKey in the context of
+        // a DevOpsServer. That just introduces the possibility of getting different
+        // orgs
         public readonly string Organization;
         public readonly string Project;
         public readonly int Number;

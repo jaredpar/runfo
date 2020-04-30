@@ -73,20 +73,21 @@ namespace QueryFun
 
         private static async Task Scratch()
         {
+            await DumpTimelineToHelix("public", 619240);
+        }
+
+        private static async Task DumpTimelineToHelix(string project, int buildId)
+        {
             var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
             var queryUtil = new DotNetQueryUtil(server);
-            /*
-            var runs = await queryUtil.ListDotNetTestRunsAsync(
-                await server.GetBuildAsync("public", 619240),
-                DotNetUtil.FailedTestOutcomes);
-                */
-            var helixWorkItems = await queryUtil.ListHelixWorkItemsAsync(
-                await server.GetBuildAsync("public", 619240),
-                DotNetUtil.FailedTestOutcomes);
-            foreach (var helixWorkItem in helixWorkItems)
+            var list = await queryUtil.ListHelixJobs(project, buildId);
+            var timeline = await server.GetTimelineAsync(project, buildId);
+            var timelineTree = TimelineTree.Create(timeline);
+
+            foreach (var tuple in list)
             {
-                var helixItem = helixWorkItem.HelixInfo;
-                Console.WriteLine($"{helixItem.JobId} - {helixItem.WorkItemName}");
+                timelineTree.TryGetJob(tuple.Record, out var job);
+                Console.WriteLine($"{tuple.HelixJob} - {job?.Name}");
             }
         }
 

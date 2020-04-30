@@ -660,9 +660,9 @@ internal sealed partial class RuntimeInfo
                 tree = tree.Filter(x => x.Result == TaskResult.Failed);
             }
 
-            foreach (var root in tree.Roots)
+            foreach (var rootNode in tree.RootNodes)
             {
-                DumpRecord(root, 0);
+                DumpRecord(rootNode, 0);
             }
 
             void DumpRecord(TimelineTree.TimelineNode current, int depth)

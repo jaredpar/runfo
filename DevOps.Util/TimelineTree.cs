@@ -20,6 +20,10 @@ namespace DevOps.Util
 
             public List<TimelineNode> Children { get; internal set; }
 
+            public string Id => TimelineRecord.Id;
+
+            public string Name => TimelineRecord.Name;
+
             public int Count => 1 + Children.Sum(x => x.Count);
 
             public TimelineNode(TimelineRecord record)
@@ -42,20 +46,27 @@ namespace DevOps.Util
 
         public Timeline Timeline { get; }
 
-        public List<TimelineNode> Roots { get; } 
+        public List<TimelineNode> RootNodes { get; } 
+
+        public IEnumerable<TimelineRecord> Roots => RootNodes.Select(x => x.TimelineRecord);
 
         public IEnumerable<TimelineNode> Nodes => IdToNodeMap.Values;
 
-        public int Count => Roots.Sum(x => x.Count);
+        public IEnumerable<TimelineRecord> Records => IdToNodeMap.Values.Select(x => x.TimelineRecord);
 
-        public TimelineTree(Timeline timeline, List<TimelineNode> roots, Dictionary<string, TimelineNode> idToNodeMap)
+        public IEnumerable<TimelineNode> JobNodes => Nodes.Where(x => IsJob(x.Id));
+
+        public IEnumerable<TimelineRecord> Jobs => JobNodes.Select(x => x.TimelineRecord);
+        public int Count => RootNodes.Sum(x => x.Count);
+
+        public TimelineTree(Timeline timeline, List<TimelineNode> rootNodes, Dictionary<string, TimelineNode> idToNodeMap)
         {
             Timeline = timeline;
-            Roots = roots;
+            RootNodes = rootNodes;
             IdToNodeMap = idToNodeMap;
         }
 
-        public bool IsRoot(string id) => Roots.Any(x => x.TimelineRecord.Id == id);
+        public bool IsRoot(string id) => RootNodes.Any(x => x.TimelineRecord.Id == id);
 
         public bool IsJob(string id) =>
             IdToNodeMap.TryGetValue(id, out var node) &&
@@ -129,7 +140,7 @@ namespace DevOps.Util
 
         public TimelineTree Filter(Func<TimelineRecord, bool> predicate)
         {
-            return new TimelineTree(Timeline, FilterList(newParentNode: null, Roots), IdToNodeMap);
+            return new TimelineTree(Timeline, FilterList(newParentNode: null, RootNodes), IdToNodeMap);
 
             TimelineNode? FilterNode(TimelineNode node, TimelineNode? newParentNode)
             {

@@ -44,6 +44,8 @@ namespace DevOps.Util.Triage
 
         internal List<(HelixWorkItem WorkItem, HelixLogInfo LogInfo)>? HelixLogInfos { get; set; }
 
+        internal Dictionary<string, TimelineRecord> HelixJobToRecordMap { get; set; }
+
         internal TriageContext Context => TriageContextUtil.Context;
 
         internal BuildTriageUtil(
@@ -312,23 +314,9 @@ namespace DevOps.Util.Triage
             HelixLogInfos = list;
         }
 
-        private async Task<string?> DownloadHelixLogAsync(string uri)
-        {
-            var httpClient = Server.HttpClient;
-            var message = new HttpRequestMessage(HttpMethod.Get, uri);
-
-            try
-            {
-                var response = await httpClient.SendAsync(message).ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning($"Cannot download helix log {uri}: {ex.Message}");
-                return null;
-            }
-
-        }
+        private async Task<string?> DownloadHelixLogAsync(string uri) => 
+            await Server.HttpClient.DownloadFileAsync(
+                uri,
+                ex => Logger.LogWarning($"Cannot download helix log {uri}: {ex.Message}"));
     }
 }

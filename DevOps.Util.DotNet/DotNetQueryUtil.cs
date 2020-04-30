@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -428,5 +429,64 @@ namespace DevOps.Util.DotNet
                 .Where(x => x.IsHelixWorkItem)
                 .SelectNullableValue(x => x.HelixWorkItem)
                 .ToList();
+
+        public Task<List<(TimelineRecord Record, string HelixJob)>> ListHelixJobs(Build build)
+        {
+            var buildKey = build.GetBuildKey();
+            return ListHelixJobs(buildKey.Project, buildKey.Number);
+        }
+
+        public async Task<List<(TimelineRecord Record, string HelixJob)>> ListHelixJobs(string project, int buildNumber)
+        {
+            var timeline = await Server.GetTimelineAsync(project, buildNumber).ConfigureAwait(false);
+            return await ListHelixJobs(timeline);
+        }
+
+        /// <summary>
+        /// Find the mapping between TimelineRecord instances and the HelixJobs. It's possible and
+        /// expected that a single TimelineRecord will map to multiple HelixJobs.
+        ///
+        /// TODO: this method works by knowing the display name of timeline records. That is very 
+        /// fragile and we should find a better way to do this.
+        /// </summary>
+        public async Task<List<(TimelineRecord Record, string HelixJob)>> ListHelixJobs(Timeline timeline)
+        {
+            var timelineTree = TimelineTree.Create(timeline);
+
+            // TODO: this scheme really relies on this name. This is pretty fragile. Should work with
+            // core-eng to find a more robust way of detecting this
+            var comparer = StringComparer.OrdinalIgnoreCase;
+            var regex = new Regex(@"Sent Helix Job ([\d\w-]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+            var list = new List<(TimelineRecord Record, string HelixJob)>();
+            foreach (var record in timelineTree.Records.Where(x => comparer.Equals(x.Name, "Send to Helix")))
+            {
+                var buildLogText = await Server.HttpClient.DownloadFileAsync(record.Log.Url);
+                if (buildLogText is null)
+                {
+                    continue;
+                }
+
+                using var reader = new StringReader(buildLogText);
+                do
+                {
+                    var line = reader.ReadLine();
+                    if (line is null)
+                    {
+                        break;
+                    }
+
+                    var match = regex.Match(line);
+                    if (match.Success)
+                    {
+                        var id = match.Groups[1].Value;
+                        list.Add((record, id));
+                    }
+                } while (true);
+            }
+
+            return list;
+        }
+
     }
 }
