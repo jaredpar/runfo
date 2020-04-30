@@ -416,7 +416,7 @@ namespace DevOps.Util
         public Issue[] Issues { get; set; }
         public string LastModified { get; set; }
         public string Name { get; set; }
-        public BuildLogReference Log { get; set; }
+        public BuildLogReference? Log { get; set; }
         public int Order { get; set; }
         /// <summary>
         /// The <see cref="Id"/> field of the timeline record which is this records parent

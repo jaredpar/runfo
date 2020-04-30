@@ -93,7 +93,13 @@ namespace DevOps.Util.Triage
                         await DoSearchTimelineAsync(issue);
                         break;
                     case SearchKind.SearchHelixRunClient:
-                        await DoSearchHelixRunClientAsync(issue);
+                        await DoSearchHelixAsync(issue, HelixLogKind.RunClientUri);
+                        break;
+                    case SearchKind.SearchHelixConsole:
+                        await DoSearchHelixAsync(issue, HelixLogKind.Console);
+                        break;
+                    case SearchKind.SearchHelixTestResults:
+                        await DoSearchHelixAsync(issue, HelixLogKind.TestResults);
                         break;
                     default:
                         Logger.LogWarning($"Unknown search kind {issue.SearchKind} in {issue.Id}");
@@ -156,40 +162,46 @@ namespace DevOps.Util.Triage
             }
         }
 
-        private async Task DoSearchHelixRunClientAsync(ModelTriageIssue modelTriageIssue)
+        private async Task DoSearchHelixAsync(ModelTriageIssue modelTriageIssue, HelixLogKind kind)
         {
             await EnsureHelixLogInfosAsync().ConfigureAwait(false);
             Debug.Assert(HelixLogInfos is object);
-            await DoSearchHelixRunClientAsync(modelTriageIssue, HelixLogInfos);
+            await DoSearchHelixAsync(modelTriageIssue, kind, HelixLogInfos);
         }
 
-        private async Task DoSearchHelixRunClientAsync(
+        private async Task DoSearchHelixAsync(
             ModelTriageIssue modelTriageIssue,
+            HelixLogKind kind,
             List<(HelixWorkItem WorkItem, HelixLogInfo LogInfo)> helixLogInfos)
         {
+            Logger.LogInformation($@"Helix Search {kind}: ""{modelTriageIssue.SearchText}""");
+
             // Guarding against a catostrophic PR failure here. When more than this many work items
             // fail abandon auto-triage
             //
             // The number chosen here is 100% arbitrary. Can adjust as more data comes in.
             if (helixLogInfos.Count > 10)
             {
+                Logger.LogWarning($@"Too many results, not searching");
                 return;
             }
 
+            var count = 0;
             var jobMap = await EnsureHelixJobToRecordMap().ConfigureAwait(false);
             foreach (var tuple in helixLogInfos)
             {
                 var workItem = tuple.WorkItem;
                 var helixLogInfo = tuple.LogInfo;
-                if (helixLogInfo.RunClientUri is null)
+                var uri = helixLogInfo.GetUri(kind);
+                if (uri is null)
                 {
                     continue;
                 }
 
                 // TODO: should cache the log download so it can be used in multiple searches
-                Logger.LogInformation($"Downloading helix log {helixLogInfo.RunClientUri}");
+                Logger.LogInformation($"Downloading helix log {kind} {uri}");
                 var isMatch = await QueryUtil.SearchFileForAnyMatchAsync(
-                    helixLogInfo.RunClientUri,
+                    uri,
                     DotNetQueryUtil.CreateSearchRegex(modelTriageIssue.SearchText),
                     ex => Logger.LogWarning($"Error searching log: {ex.Message}"));
                 if (isMatch)
@@ -214,6 +226,7 @@ namespace DevOps.Util.Triage
                         JobName = jobName,
                     };
                     Context.ModelTriageIssueResults.Add(modelTriageIssueResult);
+                    count++;
                 }
             }
 
@@ -227,7 +240,7 @@ namespace DevOps.Util.Triage
             // TODO: should batch all the saves and not do it issue by issue
             try
             {
-                Logger.LogInformation($@"Saving helix info");
+                Logger.LogInformation($@"Saving {count} helix info");
                 Context.SaveChanges();
             }
             catch (Exception ex)

@@ -166,7 +166,7 @@ internal class Program
             //await autoTriageUtil.Triage("-d runtime -c 100 -pr");
             // await gitHubUtil.UpdateGithubIssues
             autoTriageUtil.EnsureTriageIssues();
-            await autoTriageUtil.TriageAsync("-d runtime -c 100 -pr");
+            await autoTriageUtil.TriageAsync("-d runtime -c 400 -pr");
         }
 
         static (DevOpsServer Server, IGitHubClient githubClient, TriageContext Context) Create(ref List<string> args)

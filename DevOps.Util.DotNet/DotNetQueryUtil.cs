@@ -505,6 +505,11 @@ namespace DevOps.Util.DotNet
             var list = new List<TimelineResult<string>>();
             foreach (var record in timelineTree.Records.Where(x => comparer.Equals(x.Name, "Send to Helix")))
             {
+                if (record.Log is null)
+                {
+                    continue;
+                }
+
                 var match = await SearchFileForFirstMatchAsync(record.Log.Url, regex, onError).ConfigureAwait(false);
                 if (match?.Success == true)
                 {

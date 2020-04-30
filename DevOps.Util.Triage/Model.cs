@@ -116,6 +116,10 @@ namespace DevOps.Util.Triage
         SearchTimeline,
 
         SearchHelixRunClient,
+
+        SearchHelixConsole,
+
+        SearchHelixTestResults,
     }
 
     /// <summary>
