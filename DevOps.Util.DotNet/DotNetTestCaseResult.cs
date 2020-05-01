@@ -1,3 +1,5 @@
+#nullable enable
+
 using DevOps.Util;
 using System.Diagnostics;
 

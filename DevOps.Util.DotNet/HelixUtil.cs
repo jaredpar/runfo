@@ -1,3 +1,4 @@
+#nullable enable
 
 using DevOps.Util;
 using Microsoft.Extensions.Logging;
@@ -59,7 +60,7 @@ namespace DevOps.Util.DotNet
             return null;
         }
 
-        public static async Task<MemoryStream> GetHelixAttachmentContentAsync(
+        public static async Task<MemoryStream?> GetHelixAttachmentContentAsync(
             DevOpsServer server,
             string project,
             int runId,
@@ -78,27 +79,27 @@ namespace DevOps.Util.DotNet
         /// <summary>
         /// Parse out the UploadFileResults file to get the console and core URIs
         /// </summary>
-        private static async Task<HelixLogInfo> GetHelixLogInfoAsync(string runClientUri, Stream resultsStream)
+        private static async Task<HelixLogInfo> GetHelixLogInfoAsync(string? runClientUri, Stream resultsStream)
         {
-            string consoleUri = null;
-            string coreUri = null;
-            string testResultsUri = null;
+            string? consoleUri = null;
+            string? coreUri = null;
+            string? testResultsUri = null;
 
             using var reader = new StreamReader(resultsStream);
-            string line = await reader.ReadLineAsync();
+            string? line = await reader.ReadLineAsync();
             while (line is object)
             {
                 if (Regex.IsMatch(line, @"console.*\.log:"))
                 {
-                    consoleUri = (await reader.ReadLineAsync()).Trim();
+                    consoleUri = (await reader.ReadLineAsync())?.Trim();
                 }
                 else if (Regex.IsMatch(line, @"core\..*:"))
                 {
-                    coreUri = (await reader.ReadLineAsync()).Trim();
+                    coreUri = (await reader.ReadLineAsync())?.Trim();
                 }
                 else if (Regex.IsMatch(line, @"testResults.*xml:"))
                 {
-                    testResultsUri = (await reader.ReadLineAsync()).Trim();
+                    testResultsUri = (await reader.ReadLineAsync())?.Trim();
                 }
 
                 line = await reader.ReadLineAsync();
@@ -141,7 +142,7 @@ namespace DevOps.Util.DotNet
             }
         }
 
-        private static async Task<string> GetRunClientUri(
+        private static async Task<string?> GetRunClientUri(
             DevOpsServer server,
             HelixInfo helixInfo)
         {
@@ -150,11 +151,11 @@ namespace DevOps.Util.DotNet
                 var uri = $"https://helix.dot.net/api/2019-06-17/jobs/{helixInfo.JobId}/workitems/{helixInfo.WorkItemName}/";
                 var json = await server.GetJsonResult(uri, cacheable: true);
                 dynamic d = JObject.Parse(json);
-                foreach (dynamic log in d.Logs)
+                foreach (dynamic? log in d.Logs)
                 {
-                    if (log.Module == "run_client.py")
+                    if (log is object && log.Module == "run_client.py")
                     {
-                        return log.Uri;
+                        return log!.Uri;
                     }
                 }
                 

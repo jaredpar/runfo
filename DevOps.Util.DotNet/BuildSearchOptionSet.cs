@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using Mono.Options;
@@ -19,9 +21,9 @@ namespace DevOps.Util.DotNet
 
         public int? SearchCount { get; set; }
 
-        public string Repository { get; set; }
+        public string? Repository { get; set; }
 
-        public string Branch { get; set; }
+        public string? Branch { get; set; }
 
         public DateTimeOffset? Before { get; set; }
 
@@ -29,7 +31,7 @@ namespace DevOps.Util.DotNet
 
         public bool IncludePullRequests { get; set; }
 
-        public string Project { get; set; }
+        public string? Project { get; set; }
 
         public BuildSearchOptionSet()
         {
