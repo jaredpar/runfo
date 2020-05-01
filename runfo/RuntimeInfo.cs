@@ -733,7 +733,7 @@ internal sealed partial class RuntimeInfo
 
         ParseAll(optionSet, args);
 
-        var project = BuildSearchOptionSet.DefaultProject;
+        var project = DotNetUtil.DefaultProject;
         IEnumerable<int> definitions = null;
         if (definition is object)
         {

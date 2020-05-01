@@ -17,7 +17,9 @@ namespace DevOps.Util.DotNet
 {
     public static class DotNetUtil
     {
-        public static readonly string Organization = "dnceng";
+        public static string Organization => "dnceng";
+
+        public static string DefaultProject => "public";
 
         public static TestOutcome[] FailedTestOutcomes = new[]
         {

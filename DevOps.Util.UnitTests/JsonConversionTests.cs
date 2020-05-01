@@ -2,7 +2,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using Xunit;
 
-namespace Query.Test
+namespace DevOps.Util.UnitTests
 {
     public class JsonConversionTests
     {

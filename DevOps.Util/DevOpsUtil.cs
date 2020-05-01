@@ -70,9 +70,15 @@ namespace DevOps.Util
 
         public static string GetOrganization(Build build)
         {
-            // TODO: this will fail when the URI is in the dev.azure.com form. Should fix.
             var uri = new Uri(build.Url);
-            return uri.PathAndQuery.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries)[0];
+            if (uri.Host == "dev.azure.com")
+            {
+                return uri.PathAndQuery.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries)[0];
+            }
+            else
+            {
+                return uri.Host.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries)[0];
+            }
         }
 
         /// <summary>

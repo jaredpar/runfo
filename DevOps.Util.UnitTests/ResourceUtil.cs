@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace Query.Test
+namespace DevOps.Util.UnitTests
 {
     internal static class ResourceUtil
     {

@@ -8,9 +8,6 @@ namespace DevOps.Util.DotNet
 {
     public sealed class BuildSearchOptionSet : OptionSet
     {
-        // TODO: this should be on DotNetUtil
-        public const string DefaultProject = "public";
-
         public const int DefaultSearchCount = 5;
 
         public List<string> BuildIds { get; set; } = new List<string>();

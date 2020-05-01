@@ -273,7 +273,7 @@ namespace DevOps.Util.DotNet
                 throw CreateBadOptionException();
             }
 
-            var project = optionSet.Project ?? BuildSearchOptionSet.DefaultProject;
+            var project = optionSet.Project ?? DotNetUtil.DefaultProject;
             var searchCount = optionSet.SearchCount ?? BuildSearchOptionSet.DefaultSearchCount;
             var repository = optionSet.Repository;
             var branch = optionSet.Branch;
@@ -366,7 +366,7 @@ namespace DevOps.Util.DotNet
 
         public static bool TryGetBuildId(BuildSearchOptionSet optionSet, string build, [NotNullWhen(true)] out string? project, out int buildId)
         {
-            var defaultProject = optionSet.Project ?? BuildSearchOptionSet.DefaultProject;
+            var defaultProject = optionSet.Project ?? DotNetUtil.DefaultProject;
             return TryGetBuildId(build, defaultProject, out project, out buildId);
         }
 
