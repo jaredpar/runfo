@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json;
+﻿#nullable enable
+
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -18,11 +20,11 @@ namespace DevOps.Util
     {
         public HttpClient HttpClient { get;}
 
-        private string PersonalAccessToken { get; }
+        private string? PersonalAccessToken { get; }
 
         public string Organization { get; }
 
-        public DevOpsServer(string organization, string personalAccessToken = null)
+        public DevOpsServer(string organization, string? personalAccessToken = null)
         {
             Organization = organization;
             PersonalAccessToken = personalAccessToken;
@@ -35,12 +37,12 @@ namespace DevOps.Util
         /// <param name="buildNumber">Supports int based build numbers or * prefixes</param>
         public async Task<List<Build>> ListBuildsAsync(
             string project,
-            IEnumerable<int> definitions = null,
-            IEnumerable<int> queues = null,
-            string buildNumber = null,
+            IEnumerable<int>? definitions = null,
+            IEnumerable<int>? queues = null,
+            string? buildNumber = null,
             DateTimeOffset? minTime = null,
             DateTimeOffset? maxTime = null,
-            string requestedFor = null,
+            string? requestedFor = null,
             BuildReason? reasonFilter = null,
             BuildStatus? statusFilter = null,
             BuildResult? resultFilter = null,
@@ -48,10 +50,10 @@ namespace DevOps.Util
             int? maxBuildsPerDefinition = null,
             QueryDeletedOption? deletedFilter = null,
             BuildQueryOrder? queryOrder = null,
-            string branchName = null,
-            IEnumerable<int> buildIds = null,
-            string repositoryId = null,
-            string repositoryType = null)
+            string? branchName = null,
+            IEnumerable<int>? buildIds = null,
+            string? repositoryId = null,
+            string? repositoryType = null)
         {
             var builder = GetBuilder(project, "build/builds");
 
@@ -80,12 +82,12 @@ namespace DevOps.Util
         /// </summary>
         public IAsyncEnumerable<Build> EnumerateBuildsAsync(
             string project,
-            IEnumerable<int> definitions = null,
-            IEnumerable<int> queues = null,
-            string buildNumber = null,
+            IEnumerable<int>? definitions = null,
+            IEnumerable<int>? queues = null,
+            string? buildNumber = null,
             DateTimeOffset? minTime = null,
             DateTimeOffset? maxTime = null,
-            string requestedFor = null,
+            string? requestedFor = null,
             BuildReason? reasonFilter = null,
             BuildStatus? statusFilter = null,
             BuildResult? resultFilter = null,
@@ -93,10 +95,10 @@ namespace DevOps.Util
             int? maxBuildsPerDefinition = null,
             QueryDeletedOption? deletedFilter = null,
             BuildQueryOrder? queryOrder = null,
-            string branchName = null,
-            IEnumerable<int> buildIds = null,
-            string repositoryId = null,
-            string repositoryType = null)
+            string? branchName = null,
+            IEnumerable<int>? buildIds = null,
+            string? repositoryId = null,
+            string? repositoryType = null)
         {
             var builder = GetBuilder(project, "build/builds");
 
@@ -244,7 +246,7 @@ namespace DevOps.Util
 
         public Task<List<DefinitionReference>> ListDefinitionsAsync(
             string project,
-            IEnumerable<int> definitions = null,
+            IEnumerable<int>? definitions = null,
             int? top = null)
         {
             var builder = GetBuilder(project, "build/definitions");
@@ -294,7 +296,7 @@ namespace DevOps.Util
         public async Task<List<TestCaseResult>> ListTestResultsAsync(
             string project,
             int runId,
-            TestOutcome[] outcomes = null,
+            TestOutcome[]? outcomes = null,
             int? skip = null,
             int? top = null)
         {
@@ -310,7 +312,7 @@ namespace DevOps.Util
         public async IAsyncEnumerable<TestCaseResult> EnumerateTestResultsAsync(
             string project,
             int runId,
-            TestOutcome[] outcomes = null,
+            TestOutcome[]? outcomes = null,
             int? skip = null,
             int? top = null)
         {
@@ -383,7 +385,7 @@ namespace DevOps.Util
             string destinationFilePath) =>
             WithFileStream(destinationFilePath, s => DownloadTestCaseResultAttachmentZipAsync(project, runId, testCaseResultId, attachmentId, s));
 
-        private RequestBuilder GetBuilder(string project, string apiPath) => new RequestBuilder(Organization, project, apiPath);
+        private RequestBuilder GetBuilder(string? project, string apiPath) => new RequestBuilder(Organization, project, apiPath);
 
         protected async Task<string> GetJsonResultCore(string uri)
         {
@@ -411,14 +413,14 @@ namespace DevOps.Util
             return array.ToObject<T[]>();
         }
 
-        private async Task<(string Body, string ContinuationToken)> GetJsonResultAndContinuationToken(string url)
+        private async Task<(string Body, string? ContinuationToken)> GetJsonResultAndContinuationToken(string url)
         {
             var message = CreateHttpRequestMessage(url);
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            string continuationToken = null;
+            string? continuationToken = null;
             if (response.Headers.TryGetValues("x-ms-continuationtoken", out var values))
             {
                 continuationToken = values.FirstOrDefault();
@@ -464,7 +466,7 @@ namespace DevOps.Util
         public Task<MemoryStream> DownloadZipFileAsync(string uri) =>
             WithMemoryStream(s => DownloadFileAsync(uri, s));
 
-        private HttpRequestMessage CreateHttpRequestMessage(string uri, HttpMethod method = null)
+        private HttpRequestMessage CreateHttpRequestMessage(string uri, HttpMethod? method = null)
         {
             var message = new HttpRequestMessage(method ?? HttpMethod.Get, uri);
             if (!string.IsNullOrEmpty(PersonalAccessToken))

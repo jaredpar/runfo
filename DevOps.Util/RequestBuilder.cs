@@ -1,4 +1,6 @@
-﻿using System;
+﻿#nullable enable
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,14 +10,15 @@ namespace DevOps.Util
     internal sealed class RequestBuilder
     {
         internal string Organization { get; }
-        internal string Project { get; }
+
+        internal string? Project { get; }
 
         /// <summary>
         /// The API path inside the query. Example is /builds/build
         /// </summary>
         internal string ApiPath { get; }
 
-        internal string ContinuationToken { get; set; }
+        internal string? ContinuationToken { get; set; }
 
         internal string ApiVersion { get; set; } = "5.0";
 
@@ -24,12 +27,12 @@ namespace DevOps.Util
         /// </summary>
         internal StringBuilder QueryBuilder { get; } = new StringBuilder();
 
-        internal RequestBuilder(string organization, string project, string apiPath)
+        internal RequestBuilder(string organization, string? project, string apiPath)
         {
             Organization = organization;
             Project = project;
             ApiPath = apiPath;
-            if (ApiPath?[0] == '/')
+            if (ApiPath[0] == '/')
             {
                 ApiPath = ApiPath.Substring(1);
             }
@@ -40,7 +43,7 @@ namespace DevOps.Util
             }
         }
 
-        internal void AppendList<T>(string name, IEnumerable<T> values)
+        internal void AppendList<T>(string name, IEnumerable<T>? values)
         {
             if (values is null || !values.Any())
             {
@@ -61,7 +64,7 @@ namespace DevOps.Util
             QueryBuilder.Append("&");
         }
 
-        internal void AppendString(string name, string value, bool escape = true)
+        internal void AppendString(string name, string? value, bool escape = true)
         {
             if (!string.IsNullOrEmpty(value))
             {
@@ -74,7 +77,7 @@ namespace DevOps.Util
             }
         }
 
-        internal void AppendUri(string name, Uri uri)
+        internal void AppendUri(string name, Uri? uri)
         {
             if (uri is object)
             {

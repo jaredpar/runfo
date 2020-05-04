@@ -1,3 +1,5 @@
+#nullable enable
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -48,7 +50,7 @@ namespace DevOps.Util
             }
         }
 
-        private FileStream TryOpenCacheFile(string key)
+        private FileStream? TryOpenCacheFile(string key)
         {
             var filePath = Path.Combine(CacheDirectory, key);
             try
