@@ -145,10 +145,10 @@ internal class Program
         async Task RunRebuild()
         {
             autoTriageUtil.EnsureTriageIssues();
-            await autoTriageUtil.TriageAsync("-d runtime -c 1000 -pr");
-            await autoTriageUtil.TriageAsync("-d aspnet -c 1000 -pr");
-            await autoTriageUtil.TriageAsync("-d runtime-official -c 100 -pr");
-            await autoTriageUtil.TriageAsync("-d aspnet-official -c 100 -pr");
+            await autoTriageUtil.TriageQueryAsync("-d runtime -c 1000 -pr");
+            await autoTriageUtil.TriageQueryAsync("-d aspnet -c 1000 -pr");
+            await autoTriageUtil.TriageQueryAsync("-d runtime-official -c 100 -pr");
+            await autoTriageUtil.TriageQueryAsync("-d aspnet-official -c 100 -pr");
         }
 
         async Task RunIssues()
@@ -166,7 +166,7 @@ internal class Program
             //await autoTriageUtil.Triage("-d runtime -c 100 -pr");
             // await gitHubUtil.UpdateGithubIssues
             autoTriageUtil.EnsureTriageIssues();
-            await autoTriageUtil.TriageAsync("-d runtime -c 400 -pr");
+            await autoTriageUtil.TriageQueryAsync("-d runtime -c 400 -pr");
         }
 
         static (DevOpsServer Server, IGitHubClient githubClient, TriageContext Context) Create(ref List<string> args)

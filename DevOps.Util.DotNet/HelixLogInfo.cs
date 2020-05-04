@@ -6,7 +6,7 @@ namespace DevOps.Util.DotNet
 {
     public enum HelixLogKind
     {
-        RunClientUri,
+        RunClient,
 
         Console,
 
@@ -41,7 +41,7 @@ namespace DevOps.Util.DotNet
 
         public string? GetUri(HelixLogKind kind) => kind switch
         {
-            HelixLogKind.RunClientUri => RunClientUri,
+            HelixLogKind.RunClient => RunClientUri,
             HelixLogKind.Console => ConsoleUri,
             HelixLogKind.CoreDump => CoreDumpUri,
             HelixLogKind.TestResults => TestResultsUri,

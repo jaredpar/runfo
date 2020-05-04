@@ -94,23 +94,23 @@ namespace DevOps.Util.Triage
                 };
         }
 
-        public async Task TriageAsync(string projectName, int buildNumber)
+        public async Task TriageBuildAsync(string projectName, int buildNumber)
         {
             var build = await Server.GetBuildAsync(projectName, buildNumber).ConfigureAwait(false);
-            await TriageAsync(build).ConfigureAwait(false);
+            await TriageBuildAsync(build).ConfigureAwait(false);
         }
 
-        public async Task TriageAsync(string buildQuery)
+        public async Task TriageQueryAsync(string buildQuery)
         {
             foreach (var build in await QueryUtil.ListBuildsAsync(buildQuery))
             {
-                await TriageAsync(build).ConfigureAwait(false);
+                await TriageBuildAsync(build).ConfigureAwait(false);
             }
         }
 
         // TODO: need overload that takes builds and groups up the issue and PR updates
         // or maybe just make that a separate operation from triage
-        public async Task TriageAsync(Build build)
+        public async Task TriageBuildAsync(Build build)
         {
             var buildInfo = build.GetBuildInfo();
             var modelBuild = TriageContextUtil.EnsureBuild(buildInfo);

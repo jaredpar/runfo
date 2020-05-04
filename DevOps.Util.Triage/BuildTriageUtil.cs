@@ -93,7 +93,7 @@ namespace DevOps.Util.Triage
                         await DoSearchTimelineAsync(issue);
                         break;
                     case SearchKind.SearchHelixRunClient:
-                        await DoSearchHelixAsync(issue, HelixLogKind.RunClientUri);
+                        await DoSearchHelixAsync(issue, HelixLogKind.RunClient);
                         break;
                     case SearchKind.SearchHelixConsole:
                         await DoSearchHelixAsync(issue, HelixLogKind.Console);

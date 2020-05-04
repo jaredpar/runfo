@@ -1,4 +1,5 @@
-using System;
+#nullable enable
+
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -12,12 +13,16 @@ using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
 using Octokit;
 using DevOps.Util;
+using System;
 
 namespace DevOps.Functions
 {
     public class BuildCompleteMessage
     {
-        public string ProjectId { get; set; }
+        public string? ProjectId { get; set; }
+
+        public string? ProjectName { get; set; }
+
         public int BuildNumber { get; set; }
     }
 
@@ -42,8 +47,8 @@ namespace DevOps.Functions
         [FunctionName("build")]
         public async Task<IActionResult> OnBuild(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
-            ILogger logger,
-            [Queue("build-complete", Connection = "AzureWebJobsStorage")] IAsyncCollector<string> queueCollector)
+            [Queue("build-complete", Connection = "AzureWebJobsStorage")] IAsyncCollector<string> queueCollector,
+            ILogger logger)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync().ConfigureAwait(false);
             logger.LogInformation(requestBody);
@@ -60,17 +65,48 @@ namespace DevOps.Functions
         }
 
         [FunctionName("triage-build")]
-        public async Task OnBuildComplete(
+        public async Task TriageBuildAsync(
             [QueueTrigger("build-complete", Connection = "AzureWebJobsStorage")] string message,
             ILogger logger)
         {
             var buildCompleteMessage = JsonConvert.DeserializeObject<BuildCompleteMessage>(message);
-            var projectName = await Server.ConvertProjectIdToNameAsync(buildCompleteMessage.ProjectId);
+            var projectName = buildCompleteMessage.ProjectName;
+            if (projectName is null)
+            {
+                var projectId = buildCompleteMessage.ProjectId;
+                if (projectId is null)
+                {
+                    logger.LogError("Both project name and id are null");
+                    return;
+                }
+
+                projectName = await Server.ConvertProjectIdToNameAsync(projectId);
+            }
 
             logger.LogInformation($"Triaging build {projectName} {buildCompleteMessage.BuildNumber}");
 
             var util = new AutoTriageUtil(Server, Context, logger);
-            await util.TriageAsync(projectName, buildCompleteMessage.BuildNumber);
+            await util.TriageBuildAsync(projectName, buildCompleteMessage.BuildNumber);
+        }
+
+        [FunctionName("triage-query")]
+        public async Task TriageQueryAsync(
+            [QueueTrigger("triage-query", Connection = "AzureWebJobsStorage")] string message,
+            [Queue("build-complete", Connection = "AzureWebJobsStorage")] IAsyncCollector<BuildCompleteMessage> triageQueue,
+            ILogger logger)
+        {
+            logger.LogInformation($"Triaging query: {message}");
+            var queryUtil = new DotNetQueryUtil(Server);
+            foreach (var build in await queryUtil.ListBuildsAsync(message))
+            {
+                var key = build.GetBuildKey();
+                var buildCompleteMessage = new BuildCompleteMessage()
+                {
+                    ProjectName = key.Project,
+                    BuildNumber = key.Number,
+                };
+                await triageQueue.AddAsync(buildCompleteMessage);
+            }
         }
 
         // [FunctionName("issues-update")]

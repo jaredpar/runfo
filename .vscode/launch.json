@@ -11,9 +11,15 @@
         "preLaunchTask": "build",
         "program": "${workspaceFolder}/runfo/bin/Debug/netcoreapp3.1/runfo.dll",
         "args": [
-            "builds",
+            "search-helix",
             "-before",
-            "2020/4/29"
+            "2020/4/29",
+            "-c",
+            "10",
+            "-d",
+            "runtime",
+            "-v",
+            "after 60000ms waiting for remote process"
         ],
         "cwd": "${workspaceFolder}/runfo",
         "console": "internalConsole",

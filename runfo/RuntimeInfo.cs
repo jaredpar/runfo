@@ -11,6 +11,7 @@ using DevOps.Util.DotNet;
 using Mono.Options;
 using static RuntimeInfoUtil;
 using static DevOps.Util.DotNet.OptionSetUtil;
+using System.Text;
 
 internal sealed partial class RuntimeInfo
 {
@@ -103,9 +104,11 @@ internal sealed partial class RuntimeInfo
     internal async Task<int> PrintSearchHelix(IEnumerable<string> args)
     {
         string text = null;
+        bool markdown = false;
         var optionSet = new BuildSearchOptionSet()
         {
             { "v|value=", "text to search for", t => text = t },
+            { "m|markdown", "print output in markdown", m => markdown = m is object },
         };
 
         ParseAll(optionSet, args);
@@ -119,34 +122,19 @@ internal sealed partial class RuntimeInfo
 
         var textRegex = new Regex(text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
         var collection = await QueryUtil.ListBuildsAsync(optionSet);
-        var found = collection
+        var foundRaw = collection
             .AsParallel()
             .Select(async b => await SearchBuild(Server, QueryUtil, textRegex, b));
-        var badLogList = new List<string>();
-
-        Console.WriteLine("|Build|Kind|Console Log|");
-        Console.WriteLine("|---|---|---|");
-        foreach (var task in found)
-        {
-            var (build, helixLogInfo, list) = await task;
-            badLogList.AddRange(list);
-            if (helixLogInfo is null)
-            {
-                continue;
-            }
-
-            var kind = "Rolling";
-            if (DevOpsUtil.TryGetPullRequestKey(build, out var pullRequestKey))
-            {
-                kind = $"PR {pullRequestKey.PullRequestUri}";
-            }
-            Console.WriteLine($"|[{build.Id}]({DevOpsUtil.GetBuildUri(build)})|{kind}|[console.log]({helixLogInfo.ConsoleUri})|");
-        }
-
-        foreach (var line in badLogList)
-        {
-            Console.WriteLine(line);
-        }
+        var found = await RuntimeInfoUtil.ToListAsync(foundRaw);
+        var badLogBuilder = new StringBuilder();
+        found.ForEach(x => x.BadLogs.ForEach(l => badLogBuilder.AppendLine(l)));
+        Console.WriteLine(ReportBuilder.BuildSearchHelix(
+            found
+                .Select(x => (x.Build.GetBuildInfo(), x.LogInfo))
+                .Where(x => x.LogInfo is object),
+            new[] { HelixLogKind.Console, HelixLogKind.CoreDump },
+            markdown: markdown,
+            badLogBuilder.ToString()));
 
         return ExitSuccess;
 
@@ -157,12 +145,12 @@ internal sealed partial class RuntimeInfo
             Build build)
         {
             var badLogList = new List<string>();
-            var workItems = await queryUtil
-                .ListHelixWorkItemsAsync(build, DotNetUtil.FailedTestOutcomes)
-                .ConfigureAwait(false);
-            foreach (var workItem in workItems)
+            try
             {
-                try
+                var workItems = await queryUtil
+                    .ListHelixWorkItemsAsync(build, DotNetUtil.FailedTestOutcomes)
+                    .ConfigureAwait(false);
+                foreach (var workItem in workItems)
                 {
                     var logInfo = await HelixUtil.GetHelixLogInfoAsync(server, workItem);
                     if (logInfo.ConsoleUri is object)
@@ -177,10 +165,10 @@ internal sealed partial class RuntimeInfo
                         }
                     }
                 }
-                catch
-                {
-                    badLogList.Add($"Unable to download helix logs for {build.Id} {workItem.HelixInfo.JobId}");
-                }
+            }
+            catch (Exception ex)
+            {
+                badLogList.Add($"Unable to search helix logs for {build.Id}:  {ex.Message}");
             }
 
             return (build, null, badLogList);
@@ -339,7 +327,7 @@ internal sealed partial class RuntimeInfo
                     return (tuple.IsMatch, TimelineRecord: r, tuple.Line);
                 });
 
-            var list = await RuntimeInfoUtil.ToList(all);
+            var list = await RuntimeInfoUtil.ToListAsync(all);
             if (trace)
             {
                 Console.WriteLine(DevOpsUtil.GetBuildUri(build));
@@ -480,7 +468,7 @@ internal sealed partial class RuntimeInfo
                 return (helixLogInfo, consoleText);
             });
 
-        return await RuntimeInfoUtil.ToList(logs);
+        return await RuntimeInfoUtil.ToListAsync(logs);
     }
 
     internal void PrintBuildDefinitions()
@@ -1041,7 +1029,7 @@ internal sealed partial class RuntimeInfo
                 var helixLogInfo = await GetHelixLogInfoAsync(result.HelixWorkItem.Value);
                 return (result.Build, helixLogInfo);
             });
-        var list = await RuntimeInfoUtil.ToList(query);
+        var list = await RuntimeInfoUtil.ToListAsync(query);
         return list;
     }
     

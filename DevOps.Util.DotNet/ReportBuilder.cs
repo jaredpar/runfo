@@ -56,12 +56,11 @@ namespace DevOps.Util.DotNet
                         builder.Append($"|[{definitionName}]({definitionUri})");
                     }
 
-                    var kind = "Rolling";
-                    if (buildInfo.PullRequestKey.HasValue)
-                    {
-                        kind = $"PR {buildInfo.PullRequestKey.Value.PullRequestUri}";
-                    }
-                    builder.AppendLine($"|[{buildInfo.Number}]({buildInfo.BuildUri})|{kind}|{result.JobName}|");
+                    builder.Append("|");
+                    AppendBuildLink(builder, buildInfo);
+                    builder.Append("|");
+                    AppendBuildKind(builder, buildInfo);
+                    builder.AppendLine($"|{result.JobName}|");
                 }
                 else
                 {
@@ -83,6 +82,119 @@ namespace DevOps.Util.DotNet
             }
 
             return builder.ToString();
+        }
+
+        public string BuildSearchHelix(
+            IEnumerable<(BuildInfo BuildInfo, HelixLogInfo HelixLogInfo)> results,
+            HelixLogKind[] kinds,
+            bool markdown,
+            string? footer = null)
+        {
+            var builder = new StringBuilder();
+            if (markdown)
+            {
+                builder.AppendLine(MarkdownReportStart);
+                builder.Append("|Build|Kind|");
+
+                var header = "|---|---|";
+                foreach (var kind in kinds)
+                {
+                    var columnName = GetTitleName(kind);
+                    builder.Append($"{columnName}|");
+                    header += "---|";
+                }
+                builder.AppendLine();
+                builder.AppendLine(header);
+
+                foreach (var tuple in results)
+                {
+                    var buildInfo = tuple.BuildInfo;
+                    var helixLogInfo = tuple.HelixLogInfo;
+                    builder.Append("|");
+                    AppendBuildLink(builder, buildInfo);
+                    builder.Append("|");
+                    AppendBuildKind(builder, buildInfo);
+                    builder.Append("|");
+                    foreach (var kind in kinds)
+                    {
+                        var uri = helixLogInfo.GetUri(kind);
+                        if (uri is null)
+                        {
+                            builder.Append("|");
+                            continue;
+                        }
+
+                        var name = GetValueName(kind);
+                        builder.Append($"[{name}]({uri})|");
+                    }
+                    builder.AppendLine();
+                }
+
+                AppendFooter();
+                builder.AppendLine(MarkdownReportEnd);
+            }
+            else
+            {
+                foreach (var tuple in results)
+                {
+                    var buildInfo = tuple.BuildInfo;
+                    var helixLogInfo = tuple.HelixLogInfo;
+
+                    builder.AppendLine(buildInfo.BuildUri);
+                    foreach (var kind in kinds)
+                    {
+                        var name = GetTitleName(kind);
+                        var uri = helixLogInfo.GetUri(kind);
+                        builder.AppendLine($"  {name} - {uri}");
+                    }
+                }
+                AppendFooter();
+            }
+
+            return builder.ToString();
+
+            void AppendFooter()
+            {
+                if (footer is object)
+                {
+                    builder.AppendLine();
+                    builder.AppendLine(footer);
+                }
+            }
+
+            static string GetTitleName(HelixLogKind kind) => kind switch 
+            {
+                HelixLogKind.Console => "Console",
+                HelixLogKind.CoreDump => "Core Dump",
+                HelixLogKind.RunClient => "Run Client",
+                HelixLogKind.TestResults => "Test Results",
+                _ => throw new InvalidOperationException($"Invalid kind {kind}")
+            };
+
+            static string GetValueName(HelixLogKind kind) => kind switch
+            {
+                HelixLogKind.Console => "console.log",
+                HelixLogKind.CoreDump => "core dump",
+                HelixLogKind.RunClient => "runclient.py",
+                HelixLogKind.TestResults => "test results",
+                _ => throw new InvalidOperationException($"Invalid kind {kind}"),
+            };
+        }
+
+        private static void AppendBuildLink(StringBuilder builder, BuildInfo buildInfo)
+        {
+            builder.Append($"[{buildInfo.Number}]({buildInfo.BuildUri})");
+        }
+
+        private static void AppendBuildKind(StringBuilder builder, BuildInfo buildInfo)
+        {
+            var kind = "Rolling";
+            if (buildInfo.PullRequestKey is GitHubPullRequestKey prKey)
+            {
+                kind = $"[PR {prKey.Number}]({prKey.PullRequestUri})";
+            }
+
+            builder.Append(kind);
         }
     }
 }

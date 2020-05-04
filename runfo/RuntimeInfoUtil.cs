@@ -25,7 +25,7 @@ internal static class RuntimeInfoUtil
         return f - s;
     }
 
-    internal static async Task<List<T>> ToList<T>(IEnumerable<Task<T>> e)
+    internal static async Task<List<T>> ToListAsync<T>(IEnumerable<Task<T>> e)
     {
         await Task.WhenAll(e);
         return e.Select(x => x.Result).ToList();
