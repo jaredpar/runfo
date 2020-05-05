@@ -18,21 +18,21 @@ using System.Security.Cryptography;
 
 namespace DevOps.Util
 {
-    public sealed class CachingDevOpsServer : DevOpsServer
+    public sealed class CachingAzureClient : AzureClient
     {
         internal string CacheDirectory { get; }
 
-        public CachingDevOpsServer(string cacheDirectory, string organization, string personalAccessToken)
-            : base(organization, personalAccessToken)
+        public CachingAzureClient(HttpClient httpClient, string cacheDirectory, string personalAccessToken)
+            : base(httpClient, personalAccessToken)
         {
             CacheDirectory = cacheDirectory;
         }
 
-        public override async Task<string> GetJsonResult(string uri, bool cacheable = false)
+        public override async Task<string> GetJsonAsync(string uri, bool cacheable = false)
         {
             if (!cacheable)
             {
-                return await base.GetJsonResultCore(uri);
+                return await base.GetJsonAsync(uri, cacheable);
             }
 
             var key = GetKey(uri);
@@ -44,7 +44,7 @@ namespace DevOps.Util
             }
             else
             {
-                var response = await base.GetJsonResultCore(uri);
+                var response = await base.GetJsonAsync(uri, cacheable);
                 await SaveCacheFile(key, Encoding.UTF8.GetBytes(response));
                 return response;
             }

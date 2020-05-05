@@ -15,6 +15,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Newtonsoft;
 using Newtonsoft.Json.Linq;
+using System.Net.Http;
 
 namespace DevOps.Util.DotNet
 {
@@ -149,7 +150,12 @@ namespace DevOps.Util.DotNet
             try
             {
                 var uri = $"https://helix.dot.net/api/2019-06-17/jobs/{helixInfo.JobId}/workitems/{helixInfo.WorkItemName}/";
-                var json = await server.GetJsonResult(uri, cacheable: true);
+                var json = await server.AzureClient.HttpClient.GetJsonAsync(uri).ConfigureAwait(false);
+                if (json is null)
+                {
+                    return null;
+                }
+
                 dynamic d = JObject.Parse(json);
                 foreach (dynamic? log in d.Logs)
                 {

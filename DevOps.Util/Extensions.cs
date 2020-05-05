@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
 namespace DevOps.Util
@@ -28,6 +29,23 @@ namespace DevOps.Util
         public static bool IsAnySuccess(this TimelineRecord record) =>
             record.Result == TaskResult.Succeeded ||
             record.Result == TaskResult.SucceededWithIssues;
+
+        public static async Task<string?> GetJsonAsync(this HttpClient httpClient, string uri, Action<Exception>? onError = null)
+        {
+            var message = new HttpRequestMessage(HttpMethod.Get, uri);
+            message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            try
+            {
+                var response = await httpClient.SendAsync(message).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                onError?.Invoke(ex);
+                return null;
+            }
+        }
 
         public static async Task<string?> DownloadFileTextAsync(this HttpClient httpClient, string uri, Action<Exception>? onError = null)
         {
