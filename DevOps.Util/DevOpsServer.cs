@@ -276,7 +276,7 @@ namespace DevOps.Util
             return GetJsonResult<BuildDefinition>(builder);
         }
 
-        public Task<TestRun[]> ListTestRunsAsync(
+        public async Task<TestRun[]> ListTestRunsAsync(
             string project,
             Uri buildUri,
             int? skip = null,
@@ -287,7 +287,28 @@ namespace DevOps.Util
             builder.AppendUri("buildUri", buildUri);
             builder.AppendInt("$skip", top);
             builder.AppendInt("$top", top);
-            return GetJsonArrayResult<TestRun>(builder, cacheable: true);
+
+            var count = 0;
+            do
+            {
+                // There is an AzDO bug where the first time we request test run they will return 
+                // HTTP 500. After a few seconds though they will begin returning the proper 
+                // test run info. Hence the only solution is to just wait :(
+                var message = CreateHttpRequestMessage(builder.ToString());
+                message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
+                if (response.StatusCode == HttpStatusCode.InternalServerError && count < 3)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5));
+                    continue;
+                }
+
+                response.EnsureSuccessStatusCode();
+                string json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var root = JObject.Parse(json);
+                var array = (JArray)root["value"];
+                return array.ToObject<TestRun[]>();
+            } while (true);
         }
 
         public Task<TestRun[]> ListTestRunsAsync(

@@ -11,15 +11,14 @@
         "preLaunchTask": "build",
         "program": "${workspaceFolder}/runfo/bin/Debug/netcoreapp3.1/runfo.dll",
         "args": [
-            "search-helix",
-            "-before",
-            "2020/4/29",
+            "tests",
             "-c",
-            "10",
+            "200",
             "-d",
             "runtime",
-            "-v",
-            "after 60000ms waiting for remote process"
+            "-pr",
+            "-n",
+            "NonDisposedSocket_SafeHandlesCollected"
         ],
         "cwd": "${workspaceFolder}/runfo",
         "console": "internalConsole",
