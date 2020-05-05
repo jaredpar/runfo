@@ -22,10 +22,16 @@ namespace DevOps.Util
 
         public HttpClient HttpClient => AzureClient.HttpClient;
 
-        public DevOpsServer(string organization, string? personalAccessToken)
+        public DevOpsServer(string organization, IAzureClient azureClient)
         {
             Organization = organization;
-            AzureClient = new AzureClient(new HttpClient(), personalAccessToken);
+            AzureClient = azureClient;
+        }
+
+        public DevOpsServer(string organization, string? personalAccessToken = null) 
+            : this(organization, new AzureClient(personalAccessToken))
+        {
+
         }
 
         /// <summary>
@@ -285,12 +291,12 @@ namespace DevOps.Util
                 async response =>
                 {
                     count++;
-                    if (response.StatusCode == HttpStatusCode.InternalServerError && count <= 3)
+                    if (response.StatusCode == HttpStatusCode.InternalServerError && count <= 5)
                     {
                         // There is an AzDO bug where the first time we request test run they will return 
                         // HTTP 500. After a few seconds though they will begin returning the proper 
                         // test run info. Hence the only solution is to just wait :(
-                        await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                        await Task.Delay(TimeSpan.FromSeconds(5 * count)).ConfigureAwait(false);
                         return true;
                     }
 

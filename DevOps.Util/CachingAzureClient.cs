@@ -22,7 +22,12 @@ namespace DevOps.Util
     {
         internal string CacheDirectory { get; }
 
-        public CachingAzureClient(HttpClient httpClient, string cacheDirectory, string personalAccessToken)
+        public CachingAzureClient(string cacheDirectory, string? personalAccessToken = null)
+            : this(new HttpClient(), cacheDirectory, personalAccessToken)
+        {
+        }
+
+        public CachingAzureClient(HttpClient httpClient, string cacheDirectory, string? personalAccessToken = null)
             : base(httpClient, personalAccessToken)
         {
             CacheDirectory = cacheDirectory;
@@ -45,7 +50,7 @@ namespace DevOps.Util
             else
             {
                 var response = await base.GetJsonAsync(uri, cacheable);
-                await SaveCacheFile(key, Encoding.UTF8.GetBytes(response));
+                await SaveCacheFile(key, Encoding.UTF8.GetBytes(response), uri);
                 return response;
             }
         }
@@ -70,7 +75,7 @@ namespace DevOps.Util
         }
 
 
-        private async Task SaveCacheFile(string key, byte[] bytes)
+        private async Task SaveCacheFile(string key, byte[] bytes, string uri)
         {
             try
             {
@@ -78,6 +83,10 @@ namespace DevOps.Util
                 var filePath = Path.Combine(CacheDirectory, key);
                 using var cacheStream = File.Open(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
                 await cacheStream.WriteAsync(bytes, 0, bytes.Length, CancellationToken.None).ConfigureAwait(false);
+
+                var uriFilePath = Path.Combine(CacheDirectory, key + ".uri.txt");
+                using var uriCacheStream = File.Open(uriFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                await uriCacheStream.WriteAsync(Encoding.UTF8.GetBytes(uri).AsMemory()).ConfigureAwait(false);
             }
             catch
             {

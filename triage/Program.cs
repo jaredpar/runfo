@@ -192,7 +192,9 @@ internal class Program
             var builder = new DbContextOptionsBuilder<TriageContext>();
             ConfigureOptions(builder, configuration, devSql);
             var context = new TriageContext(builder.Options);
-            var server = new CachingDevOpsServer(cacheDirectory, "dnceng", azdoToken);
+            var server = new DevOpsServer(
+                "dnceng",
+                new CachingAzureClient(cacheDirectory, azdoToken));
             var realGitHubClient = new GitHubClient(new ProductHeaderValue("RuntimeStatusPage"));
             // TODO: should not hard code jaredpar here
             realGitHubClient.Credentials = new Credentials("jaredpar", gitHubToken);

@@ -23,9 +23,10 @@ internal sealed partial class RuntimeInfo
 
     internal RuntimeInfo(string personalAccessToken = null, bool cacheable = false)
     {
-        Server = cacheable
-            ? new CachingDevOpsServer(RuntimeInfoUtil.CacheDirectory, "dnceng", personalAccessToken)
-            : new DevOpsServer("dnceng", personalAccessToken);
+        var azureClient = cacheable
+            ? (IAzureClient)new CachingAzureClient(RuntimeInfoUtil.CacheDirectory, personalAccessToken)
+            : new AzureClient(personalAccessToken);
+        Server = new DevOpsServer("dnceng", azureClient);
         QueryUtil = new DotNetQueryUtil(Server);
     }
 

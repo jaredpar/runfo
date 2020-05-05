@@ -55,7 +55,12 @@ namespace DevOps.Util
 
         public bool IsAuthenticated => !string.IsNullOrEmpty(PersonalAccessToken);
 
-        public AzureClient(HttpClient httpClient, string? personalAccessToken)
+        public AzureClient(string? personalAccessToken = null)
+            : this(new HttpClient(), personalAccessToken)
+        {
+        }
+
+        public AzureClient(HttpClient httpClient, string? personalAccessToken = null)
         {
             HttpClient = httpClient;
             PersonalAccessToken = personalAccessToken;

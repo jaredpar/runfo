@@ -109,14 +109,14 @@ namespace DevOps.Functions
             }
         }
 
-        [FunctionName("issues-update")]
-        public async Task IssuesUpdate(
-            [TimerTrigger("0 */15 8-4 * * 1-5")] TimerInfo timerInfo,
-            ILogger logger)
-        { 
-            var util = new GitHubUtil(GitHubClient, Context, logger);
-            await util.UpdateGithubIssues();
-            await util.UpdateStatusIssue();
-        }
+        //[FunctionName("issues-update")]
+        //public async Task IssuesUpdate(
+        //    [TimerTrigger("0 */15 8-4 * * 1-5")] TimerInfo timerInfo,
+        //    ILogger logger)
+        //{ 
+        //    var util = new GitHubUtil(GitHubClient, Context, logger);
+        //    await util.UpdateGithubIssues();
+        //    await util.UpdateStatusIssue();
+        //}
     }
 }
