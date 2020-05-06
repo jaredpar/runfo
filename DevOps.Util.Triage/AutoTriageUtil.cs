@@ -80,8 +80,8 @@ namespace DevOps.Util.Triage
                 searchText: "ERROR.*Job running for too long. Killing...");
             TriageContextUtil.EnsureTriageIssue(
                 TriageIssueKind.Test,
-                SearchKind.SearchHelixConsole,
-                searchText: "after 60000ms waiting for remote process");
+                SearchKind.SearchTest,
+                searchText: "System.Net.Sockets.Tests.DisposedSocket.NonDisposedSocket_SafeHandlesCollected");
 
             static ModelTriageGitHubIssue Create(string organization, string repository, int number, string? buildQuery = null, bool includeDefinitions = true) =>
                 new ModelTriageGitHubIssue()

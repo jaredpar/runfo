@@ -120,6 +120,8 @@ namespace DevOps.Util.Triage
         SearchHelixConsole,
 
         SearchHelixTestResults,
+
+        SearchTest,
     }
 
     /// <summary>

@@ -45,6 +45,8 @@ namespace DevOps.Util.Triage
 
         internal List<(HelixWorkItem WorkItem, HelixLogInfo LogInfo)>? HelixLogInfos { get; set; }
 
+        internal List<DotNetTestRun>? DotNetTestRuns { get; set; }
+
         internal Dictionary<string, HelixTimelineResult>? HelixJobToRecordMap { get; set; }
 
         internal TriageContext Context => TriageContextUtil.Context;
@@ -90,16 +92,19 @@ namespace DevOps.Util.Triage
                 switch (issue.SearchKind)
                 {
                     case SearchKind.SearchTimeline:
-                        await DoSearchTimelineAsync(issue);
+                        await DoSearchTimelineAsync(issue).ConfigureAwait(false);
                         break;
                     case SearchKind.SearchHelixRunClient:
-                        await DoSearchHelixAsync(issue, HelixLogKind.RunClient);
+                        await DoSearchHelixAsync(issue, HelixLogKind.RunClient).ConfigureAwait(false);
                         break;
                     case SearchKind.SearchHelixConsole:
-                        await DoSearchHelixAsync(issue, HelixLogKind.Console);
+                        await DoSearchHelixAsync(issue, HelixLogKind.Console).ConfigureAwait(false);
                         break;
                     case SearchKind.SearchHelixTestResults:
-                        await DoSearchHelixAsync(issue, HelixLogKind.TestResults);
+                        await DoSearchHelixAsync(issue, HelixLogKind.TestResults).ConfigureAwait(false);
+                        break;
+                    case SearchKind.SearchTest:
+                        await DoSearchTestAsync(issue).ConfigureAwait(false);
                         break;
                     default:
                         Logger.LogWarning($"Unknown search kind {issue.SearchKind} in {issue.Id}");
@@ -188,6 +193,11 @@ namespace DevOps.Util.Triage
 
             var count = 0;
             var jobMap = await EnsureHelixJobToRecordMap().ConfigureAwait(false);
+            if (jobMap is null)
+            {
+                return;
+            }
+
             foreach (var tuple in helixLogInfos)
             {
                 var workItem = tuple.WorkItem;
@@ -214,7 +224,6 @@ namespace DevOps.Util.Triage
                         jobName = result.JobName;
                     }
 
-                    // TODO: missing all the timeline record data here
                     var modelTriageIssueResult = new ModelTriageIssueResult()
                     {
                         HelixJobId = workItem.JobId,
@@ -241,6 +250,80 @@ namespace DevOps.Util.Triage
             try
             {
                 Logger.LogInformation($@"Saving {count} helix info");
+                Context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Cannot save helix complete: {ex.Message}");
+            }
+        }
+
+        private async Task DoSearchTestAsync(ModelTriageIssue modelTriageIssue)
+        {
+            if (modelTriageIssue.SearchText is null)
+            {
+                Logger.LogError($"Search text is null for {modelTriageIssue.Id}");
+                return;
+            }
+
+            var testRuns = await EnsureDotNetTestRuns().ConfigureAwait(false);
+            if (testRuns is null)
+            {
+                return;
+            }
+
+            var jobMap = await EnsureHelixJobToRecordMap().ConfigureAwait(false);
+            if (jobMap is null)
+            {
+                return;
+            }
+
+            var nameRegex = DotNetQueryUtil.CreateSearchRegex(modelTriageIssue.SearchText);
+            var query = testRuns
+                .SelectMany(x => x.TestCaseResults)
+                .Where(x => nameRegex.IsMatch(x.TestCaseTitle));
+            var count = 0;
+            foreach (var testCaseResult in query)
+            {
+                string? recordName = null;
+                string? jobName = null;
+                string? jobId = null;
+                string? workItemName = null;
+                if (testCaseResult.HelixInfo is HelixInfo helixInfo)
+                {
+                    jobId = helixInfo.JobId;
+                    workItemName = helixInfo.WorkItemName;
+                    if (jobMap.TryGetValue(helixInfo.JobId, out var result))
+                    {
+                        recordName = result.RecordName;
+                        jobName = result.JobName;
+                    }
+                }
+
+                var modelTriageIssueResult = new ModelTriageIssueResult()
+                {
+                    HelixJobId = jobId,
+                    HelixWorkItem = workItemName,
+                    ModelBuild = ModelBuild,
+                    ModelTriageIssue = modelTriageIssue,
+                    BuildNumber = BuildInfo.Number,
+                    TimelineRecordName = recordName,
+                    JobName = jobName,
+                };
+                Context.ModelTriageIssueResults.Add(modelTriageIssueResult);
+                count++;
+            }
+
+            var complete = new ModelTriageIssueResultComplete()
+            {
+                ModelTriageIssue = modelTriageIssue,
+                ModelBuild = ModelBuild,
+            };
+            Context.ModelTriageIssueResultCompletes.Add(complete);
+
+            try
+            {
+                Logger.LogInformation($@"Saving {count} test results");
                 Context.SaveChanges();
             }
             catch (Exception ex)
@@ -321,26 +404,28 @@ namespace DevOps.Util.Triage
             return Timeline;
         }
 
-        private async Task<Dictionary<string, HelixTimelineResult>> EnsureHelixJobToRecordMap()
+        private async Task<Dictionary<string, HelixTimelineResult>?> EnsureHelixJobToRecordMap()
         {
             if (HelixJobToRecordMap is object)
             {
                 return HelixJobToRecordMap;
             }
 
-            HelixJobToRecordMap = new Dictionary<string, HelixTimelineResult>(StringComparer.OrdinalIgnoreCase);
             var timeline = await EnsureTimelineAsync().ConfigureAwait(false);
             if (timeline is null)
             {
-                return HelixJobToRecordMap;
+                return null;
             }
 
+            var map = new Dictionary<string, HelixTimelineResult>(StringComparer.OrdinalIgnoreCase);
             try
             {
                 foreach (var result in await QueryUtil.ListHelixJobs(timeline).ConfigureAwait(false))
                 {
-                    HelixJobToRecordMap[result.Value] = result;
+                    map[result.Value] = result;
                 }
+
+                HelixJobToRecordMap = map;
             }
             catch (Exception ex)
             {
@@ -348,6 +433,27 @@ namespace DevOps.Util.Triage
             }
 
             return HelixJobToRecordMap;
+        }
+
+        private async Task<List<DotNetTestRun>?> EnsureDotNetTestRuns()
+        {
+            if (DotNetTestRuns is object)
+            {
+                return DotNetTestRuns;
+            }
+
+            try
+            {
+                DotNetTestRuns = await QueryUtil.ListDotNetTestRunsAsync(
+                    Build,
+                    DotNetUtil.FailedTestOutcomes).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning($"Error getting test runs: {ex.Message}");
+            }
+
+            return DotNetTestRuns;
         }
     }
 }
