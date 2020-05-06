@@ -11,14 +11,9 @@
         "preLaunchTask": "build",
         "program": "${workspaceFolder}/runfo/bin/Debug/netcoreapp3.1/runfo.dll",
         "args": [
-            "tests",
-            "-c",
-            "200",
-            "-d",
-            "runtime",
-            "-pr",
-            "-n",
-            "NonDisposedSocket_SafeHandlesCollected"
+            "helix-jobs",
+            "-b",
+            "629997"
         ],
         "cwd": "${workspaceFolder}/runfo",
         "console": "internalConsole",

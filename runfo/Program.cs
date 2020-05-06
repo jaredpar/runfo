@@ -76,6 +76,8 @@ public class Program
                     return await runtimeInfo.PrintFailedTests(commandArgs);
                 case "helix":
                     return await runtimeInfo.PrintHelix(commandArgs);
+                case "helix-jobs":
+                    return await runtimeInfo.PrintHelixJobs(commandArgs);
                 case "timeline":
                     return await runtimeInfo.PrintTimeline(commandArgs);
                 case "search-timeline":
@@ -106,6 +108,7 @@ public class Program
             Console.WriteLine("  pr-builds         Print builds for a given pull request");
             Console.WriteLine("  tests             Print build test failures");
             Console.WriteLine("  helix             Print helix logs for build");
+            Console.WriteLine("  helix-jobs        Print helix jobs for builds");
             Console.WriteLine("  search-timeline   Search timeline info");
             Console.WriteLine("  search-helix      Search helix logs");
             Console.WriteLine("  search-buildlog   Search build logs");

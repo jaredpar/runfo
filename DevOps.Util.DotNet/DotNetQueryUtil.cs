@@ -503,18 +503,21 @@ namespace DevOps.Util.DotNet
             var regex = new Regex(@"Sent Helix Job ([\d\w-]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
             var list = new List<TimelineResult<string>>();
-            foreach (var record in timelineTree.Records.Where(x => comparer.Equals(x.Name, "Send to Helix")))
+            var helixRecords = timelineTree.Records.Where(x => comparer.Equals(x.Name, "Send to Helix"));
+            foreach (var record in helixRecords)
             {
                 if (record.Log is null)
                 {
                     continue;
                 }
 
-                var match = await SearchFileForFirstMatchAsync(record.Log.Url, regex, onError).ConfigureAwait(false);
-                if (match?.Success == true)
+                await foreach (var match in SearchFileAsync(record.Log.Url, regex, onError).ConfigureAwait(false))
                 {
-                    var id = match.Groups[1].Value;
-                    list.Add(new TimelineResult<string>(id, record, timelineTree));
+                    if (match?.Success == true)
+                    {
+                        var id = match.Groups[1].Value;
+                        list.Add(new TimelineResult<string>(id, record, timelineTree));
+                    }
                 }
             }
 

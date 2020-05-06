@@ -401,6 +401,28 @@ internal sealed partial class RuntimeInfo
         }
     }
 
+    internal async Task<int> PrintHelixJobs(IEnumerable<string> args)
+    {
+        var optionSet = new BuildSearchOptionSet();
+        ParseAll(optionSet, args);
+
+        foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
+        {
+            Console.WriteLine(build.GetBuildInfo().BuildUri);
+            var jobs = await QueryUtil.ListHelixJobs(build);
+            foreach (var group in jobs.GroupBy(x => x.JobName ?? "<unknown>"))
+            {
+                Console.WriteLine(group.Key);
+                foreach (var item in group)
+                {
+                    Console.WriteLine($"  {item.Value}");
+                }
+            }
+        }
+
+        return ExitSuccess;
+    }
+
     internal async Task<int> PrintHelix(IEnumerable<string> args)
     {
         var verbose = false;
