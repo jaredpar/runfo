@@ -424,7 +424,7 @@ namespace DevOps.Util
         public string ParentId { get; set; }
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public int PercentComplete { get; set; }
-        public TimelineAttempt[] PreviousAttempts { get; set; }
+        public TimelineAttempt[]? PreviousAttempts { get; set; }
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public TaskResult Result { get; set; }
         public string ResultCode { get; set; }

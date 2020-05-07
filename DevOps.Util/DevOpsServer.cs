@@ -137,6 +137,15 @@ namespace DevOps.Util
             return GetJsonArrayAsync<BuildLog>(builder);
         }
 
+        public async Task RetryBuildAsync(string project, int buildId)
+        {
+            var builder = GetBuilder(project, $"build/builds/{buildId}");
+            builder.AppendBool("retry", true);
+            var request = AzureClient.CreateHttpRequestMessage(HttpMethod.Patch, builder.ToString());
+            var response = await AzureClient.HttpClient.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+        }
+
         public Task DownloadBuildLogsAsync(string project, int buildId, Stream stream)
         {
             var builder = GetBuilder(project, $"build/builds/{buildId}/logs");

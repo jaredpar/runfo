@@ -74,6 +74,29 @@ namespace QueryFun
 
         private static async Task Scratch()
         {
+            var project = "public";
+            var buildId = 633511;
+            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
+            var build = await server.GetBuildAsync(project, buildId);
+            var timeline = await server.GetTimelineAsync(project, buildId);
+            var tree = TimelineTree.Create(timeline);
+
+            var attemptMap = tree.JobNodes.GroupBy(x => x.TimelineRecord.Attempt);
+            var failedJobs = tree.JobNodes.Where(x => !x.TimelineRecord.IsAnySuccess());
+            var failed = tree.Nodes.Where(x => !x.TimelineRecord.IsAnySuccess());
+
+            var previous = tree.Nodes
+                .Select(x => (x.TimelineRecord, x.TimelineRecord.PreviousAttempts))
+                .Where(x => x.PreviousAttempts?.Length > 0);
+
+            var originalTimeline = await server.GetTimelineAttemptAsync(project, buildId, attempt: 1);
+            var originalTree = TimelineTree.Create(originalTimeline);
+            var originalFailedJobs = originalTree.JobNodes.Where(x => !x.TimelineRecord.IsAnySuccess());
+
+        }
+
+        private static async Task GitHubPullRequest()
+        {
             var client = new GitHubClient(new ProductHeaderValue("jaredpar"));
             client.Credentials = new Credentials("jaredpar", Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN"));
 

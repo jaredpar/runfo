@@ -1,5 +1,6 @@
 #nullable enable
 
+using System.Linq;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -47,7 +48,8 @@ namespace DevOps.Functions
         [FunctionName("build")]
         public async Task<IActionResult> OnBuild(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
-            [Queue("build-complete", Connection = "AzureWebJobsStorage")] IAsyncCollector<string> queueCollector,
+            [Queue("build-complete", Connection = "AzureWebJobsStorage")] IAsyncCollector<string> completeCollector,
+            [Queue("osx-retry", Connection = "AzureWebJobsStorage")] IAsyncCollector<string> retryCollector,
             ILogger logger)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync().ConfigureAwait(false);
@@ -60,7 +62,8 @@ namespace DevOps.Functions
                 ProjectId = data.resourceContainers.project.id
             };
 
-            await queueCollector.AddAsync(JsonConvert.SerializeObject(message));
+            await completeCollector.AddAsync(JsonConvert.SerializeObject(message));
+            await retryCollector.AddAsync(JsonConvert.SerializeObject(message));
             return new OkResult();
         }
 
@@ -117,6 +120,24 @@ namespace DevOps.Functions
             var util = new GitHubUtil(GitHubClient, Context, logger);
             await util.UpdateGithubIssues();
             await util.UpdateStatusIssue();
+        }
+
+        [FunctionName("osx-retry")]
+        public async Task RetryMac(
+            [QueueTrigger("osx-retry", Connection = "AzureWebJobsStorage")] string message,
+            ILogger logger)
+        {
+            var buildCompleteMessage = JsonConvert.DeserializeObject<BuildCompleteMessage>(message);
+            var projectId = buildCompleteMessage.ProjectId ?? buildCompleteMessage.ProjectName;
+            if (projectId is null)
+            {
+                logger.LogError("Both project name and id are null");
+                return;
+            }
+
+            var projectName = await Server.ConvertProjectIdToNameAsync(projectId);
+            var util = new AutoTriageUtil(Server, Context, logger);
+            await util.RetryOsxDeprovisionAsync(projectName, buildCompleteMessage.BuildNumber);
         }
     }
 }

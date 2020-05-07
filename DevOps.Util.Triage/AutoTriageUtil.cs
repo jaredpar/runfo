@@ -123,5 +123,49 @@ namespace DevOps.Util.Triage
                 Logger);
             await buildTriageUtil.TriageAsync().ConfigureAwait(false);
         }
+
+        public async Task RetryOsxDeprovisionAsync(string projectName, int buildNumber)
+        {
+            var build = await Server.GetBuildAsync(projectName, buildNumber).ConfigureAwait(false);
+            if (!(build.Result == BuildResult.Failed || build.Result == BuildResult.Canceled))
+            {
+                Logger.LogError("Both project name and id are null");
+                return;
+            }
+
+            var timeline = await Server.GetTimelineAsync(build).ConfigureAwait(false);
+            if (timeline.Records.Any(x => x.PreviousAttempts?.Length > 0))
+            {
+                Logger.LogInformation("Project already has multiple attempts");
+                return;
+            }
+
+            var osxCount = QueryUtil.SearchTimeline(
+                build,
+                timeline,
+                text: "Received request to deprovision: The request was cancelled by the remote provider")
+                .Select(x => x.JobRecord)
+                .Count();
+            if (osxCount > 0)
+            {
+                var timelineTree = TimelineTree.Create(timeline);
+                var totalFailed = timelineTree.Jobs.Where(x => !x.IsAnySuccess()).Count();
+                if (totalFailed - osxCount < 4)
+                {
+                    await Server.RetryBuildAsync(projectName, buildNumber).ConfigureAwait(false);
+
+                    var modelBuild = TriageContextUtil.EnsureBuild(build.GetBuildInfo());
+                    var model = new ModelOsxDeprovisionRetry()
+                    {
+                        OsxJobFailedCount = osxCount,
+                        JobFailedCount = totalFailed,
+                        ModelBuild = modelBuild,
+                    };
+
+                    Context.ModelOsxDeprovisionRetry.Add(model);
+                    await Context.SaveChangesAsync().ConfigureAwait(false);
+                }
+            }
+        }
     }
 }

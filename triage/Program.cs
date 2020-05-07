@@ -166,7 +166,7 @@ internal class Program
             //await autoTriageUtil.Triage("-d runtime -c 100 -pr");
             // await gitHubUtil.UpdateGithubIssues
             autoTriageUtil.EnsureTriageIssues();
-            await autoTriageUtil.TriageQueryAsync("-b 629997");
+            await autoTriageUtil.RetryOsxDeprovisionAsync("public", 626513);
         }
 
         static (DevOpsServer Server, IGitHubClient githubClient, TriageContext Context) Create(ref List<string> args)

@@ -389,7 +389,7 @@ namespace DevOps.Util.Triage
 
             try
             {
-                Timeline = await Server.GetTimelineAsync(Build);
+                Timeline = await Server.GetTimelineAttemptAsync(BuildInfo.Project, BuildInfo.Number, attempt: 1);
                 if (Timeline is null)
                 {
                     Logger.LogWarning("No timeline");

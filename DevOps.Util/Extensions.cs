@@ -2,6 +2,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -80,6 +81,30 @@ namespace DevOps.Util
                 onError?.Invoke(ex);
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Get the timeline from the specified attempt
+        /// </summary>
+        public static async Task<Timeline> GetTimelineAttemptAsync(this DevOpsServer server, string project, int buildNumber, int attempt)
+        {
+            var timeline = await server.GetTimelineAsync(project, buildNumber).ConfigureAwait(false);
+            if (attempt == 1 && timeline.Records.All(x => x.Attempt == 1))
+            {
+                return timeline;
+            }
+
+            var timelineAttempt = timeline
+                .Records
+                .Select(x => x.PreviousAttempts?.FirstOrDefault(x => x.Attempt == attempt))
+                .Where(x => x is object)
+                .FirstOrDefault();
+            if (timelineAttempt is null)
+            {
+                throw new Exception($"Cannot get timeline with attempt {attempt}");
+            }
+
+            return await server.GetTimelineAsync(project, buildNumber, timelineAttempt.TimelineId);
         }
     }
 }

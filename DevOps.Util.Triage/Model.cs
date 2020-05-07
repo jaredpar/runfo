@@ -20,6 +20,8 @@ namespace DevOps.Util.Triage
 
         public DbSet<ModelTriageGitHubIssue> ModelTriageGitHubIssues { get; set; }
 
+        public DbSet<ModelOsxDeprovisionRetry> ModelOsxDeprovisionRetry { get; set; }
+
         public TriageContext(DbContextOptions<TriageContext> options)
             : base(options)
         {
@@ -216,6 +218,20 @@ namespace DevOps.Util.Triage
         public int ModelTriageIssueId { get; set; }
 
         public ModelTriageIssue ModelTriageIssue { get; set; }
+
+        [Column(TypeName="nvarchar(100)")]
+        public string ModelBuildId { get; set; }
+
+        public ModelBuild ModelBuild { get; set; }
+    }
+
+    public class ModelOsxDeprovisionRetry
+    {
+        public int Id { get; set; }
+
+        public int OsxJobFailedCount { get; set; }
+
+        public int JobFailedCount { get; set; }
 
         [Column(TypeName="nvarchar(100)")]
         public string ModelBuildId { get; set; }
