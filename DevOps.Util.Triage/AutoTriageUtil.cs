@@ -129,7 +129,7 @@ namespace DevOps.Util.Triage
             var build = await Server.GetBuildAsync(projectName, buildNumber).ConfigureAwait(false);
             if (!(build.Result == BuildResult.Failed || build.Result == BuildResult.Canceled))
             {
-                Logger.LogError("Both project name and id are null");
+                Logger.LogInformation("Not a failed build");
                 return;
             }
 
@@ -146,26 +146,33 @@ namespace DevOps.Util.Triage
                 text: "Received request to deprovision: The request was cancelled by the remote provider")
                 .Select(x => x.JobRecord)
                 .Count();
-            if (osxCount > 0)
+            if (osxCount == 0)
             {
-                var timelineTree = TimelineTree.Create(timeline);
-                var totalFailed = timelineTree.Jobs.Where(x => !x.IsAnySuccess()).Count();
-                if (totalFailed - osxCount < 4)
-                {
-                    await Server.RetryBuildAsync(projectName, buildNumber).ConfigureAwait(false);
-
-                    var modelBuild = TriageContextUtil.EnsureBuild(build.GetBuildInfo());
-                    var model = new ModelOsxDeprovisionRetry()
-                    {
-                        OsxJobFailedCount = osxCount,
-                        JobFailedCount = totalFailed,
-                        ModelBuild = modelBuild,
-                    };
-
-                    Context.ModelOsxDeprovisionRetry.Add(model);
-                    await Context.SaveChangesAsync().ConfigureAwait(false);
-                }
+                Logger.LogInformation("No OSX failures");
+                return;
             }
+
+            var timelineTree = TimelineTree.Create(timeline);
+            var totalFailed = timelineTree.Jobs.Where(x => !x.IsAnySuccess()).Count();
+            if (totalFailed - osxCount >= 4)
+            {
+                Logger.LogInformation("Too many non-OSX failures");
+                return;
+            }
+
+            Logger.LogInformation("Retrying");
+            await Server.RetryBuildAsync(projectName, buildNumber).ConfigureAwait(false);
+
+            var modelBuild = TriageContextUtil.EnsureBuild(build.GetBuildInfo());
+            var model = new ModelOsxDeprovisionRetry()
+            {
+                OsxJobFailedCount = osxCount,
+                JobFailedCount = totalFailed,
+                ModelBuild = modelBuild,
+            };
+
+            Context.ModelOsxDeprovisionRetry.Add(model);
+            await Context.SaveChangesAsync().ConfigureAwait(false);
         }
     }
 }
