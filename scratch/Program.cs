@@ -69,10 +69,22 @@ namespace QueryFun
             }
 
             throw new Exception($"Could not find token with name {name}");
+
         }
 
         private static async Task Scratch()
         {
+            var client = new GitHubClient(new ProductHeaderValue("jaredpar"));
+            client.Credentials = new Credentials("jaredpar", Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN"));
+
+            var pr = await client.PullRequest.Get("dotnet", "runtime", 35914);
+            var runs = await client.Check.Run.GetAllForReference("dotnet", "runtime", pr.Head.Sha);
+            var suites = await client.Check.Suite.GetAllForReference("dotnet", "runtime", pr.Head.Sha);
+        }
+
+        private static async Task Retry()
+        {
+
             var organization = "dnceng";
             var project = "public";
             var buildId = 633511;
