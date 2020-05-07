@@ -827,6 +827,7 @@ internal sealed partial class RuntimeInfo
                 GroupByBuilds();
                 break;
             case "jobs":
+                FilterToTestName();
                 GroupByJobs();
                 break;
             default:
@@ -871,7 +872,7 @@ internal sealed partial class RuntimeInfo
 
             foreach (var (testCaseTitle, testRunList) in all)
             {
-                Console.WriteLine($"{testCaseTitle} {testRunList.Count}");
+                Console.WriteLine($"{testCaseTitle} ({testRunList.Count})");
                 if (verbose)
                 {
                     Console.WriteLine($"{GetIndent(1)}Builds");
@@ -973,45 +974,40 @@ internal sealed partial class RuntimeInfo
 
         void GroupByJobs()
         {
-            if (!string.IsNullOrEmpty(name))
-            {
-                var regex = new Regex(name, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-                collection = collection.FilterToTestRunName(regex);
-            }
-
             var testRunNames = collection.GetTestRunNames();
             foreach (var testRunName in testRunNames)
             {
                 var list = collection.Where(x => x.ContainsTestRunName(testRunName));
+                Console.WriteLine($"{testRunName}");
+
                 if (verbose)
                 {
-                    Console.WriteLine($"{testRunName}");
                     Console.WriteLine($"{GetIndent(1)}Builds");
                     foreach (var build in list)
                     {
                         var uri = DevOpsUtil.GetBuildUri(build.Build);
                         Console.WriteLine($"{GetIndent(2)}{uri}");
                     }
-
-                    Console.WriteLine($"{GetIndent(1)}Test Cases");
-                    var testCaseTitles = list
-                        .SelectMany(x => x.GetDotNetTestCaseResultForTestRunName(testRunName))
-                        .Select(x => x.TestCaseTitle)
-                        .Distinct()
-                        .OrderBy(x => x);
-                    foreach (var testCaseTitle in testCaseTitles)
-                    {
-                        var count = list
-                            .SelectMany(x => x.GetDotNetTestCaseResultForTestCaseTitle(testCaseTitle))
-                            .Count(x => x.TestRun.Name == testRunName);
-                        Console.WriteLine($"{GetIndent(2)}{testCaseTitle} ({count})");
-                    }
                 }
-                else
+
+                var testCaseIndent = 1;
+                if (verbose)
                 {
-                    var buildCount = list.Count();
-                    var testCaseCount = list.Sum(x => x.GetDotNetTestCaseResultForTestRunName(testRunName).Count());
-                    Console.WriteLine($"{testRunName} Builds {buildCount} Tests {testCaseCount}");
+                    Console.WriteLine($"{GetIndent(1)}Test Cases");
+                    testCaseIndent++;
+                }
+
+                var testCaseTitles = list
+                    .SelectMany(x => x.GetDotNetTestCaseResultForTestRunName(testRunName))
+                    .Select(x => x.TestCaseTitle)
+                    .Distinct()
+                    .OrderBy(x => x);
+                foreach (var testCaseTitle in testCaseTitles)
+                {
+                    var count = list
+                        .SelectMany(x => x.GetDotNetTestCaseResultForTestCaseTitle(testCaseTitle))
+                        .Count(x => x.TestRun.Name == testRunName);
+                    Console.WriteLine($"{GetIndent(testCaseIndent)}{testCaseTitle} ({count})");
                 }
             }
         }
