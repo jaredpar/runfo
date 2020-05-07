@@ -73,7 +73,16 @@ namespace QueryFun
 
         private static async Task Scratch()
         {
-            await DumpTimelineToHelix("public", 619240);
+            var organization = "dnceng";
+            var project = "public";
+            var buildId = 633511;
+            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
+            var build = await server.GetBuildAsync(project, buildId);
+            var message = server.AzureClient.CreateHttpRequestMessage(
+                HttpMethod.Patch,
+                $"https://dev.azure.com/{organization}/{project}/_apis/build/builds/{buildId}?retry=true&api-version=5.1");
+            var repsonse = await server.AzureClient.HttpClient.SendAsync(message);
+
         }
 
         private static async Task DumpTimelineToHelix(string project, int buildId)

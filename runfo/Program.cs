@@ -101,6 +101,7 @@ public class Program
         void ShowHelp()
         {
             Console.WriteLine("runfo");
+            Console.WriteLine("=== Commands ===");
             Console.WriteLine("  status            Print build definition status");
             Console.WriteLine("  definitions       Print build definition info");
             Console.WriteLine("  artifacts         Print artifact info for a given build");
@@ -111,7 +112,6 @@ public class Program
             Console.WriteLine("  helix-jobs        Print helix jobs for builds");
             Console.WriteLine("  search-timeline   Search timeline info");
             Console.WriteLine("  search-helix      Search helix logs");
-            Console.WriteLine("  search-buildlog   Search build logs");
             Console.WriteLine("  search-buildlog   Search build logs");
             Console.WriteLine("  timeline          Dump the timeline");
             Console.WriteLine("  yaml              Dump the YML for a build");

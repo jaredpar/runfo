@@ -22,6 +22,8 @@ namespace DevOps.Util
 
         bool IsAuthenticated { get; }
 
+        HttpRequestMessage CreateHttpRequestMessage(HttpMethod method, string uri);
+
         Task<string> GetTextAsync(string uri);
 
         Task<string> GetJsonAsync(string uri, bool cacheable = false);
@@ -66,7 +68,7 @@ namespace DevOps.Util
             PersonalAccessToken = personalAccessToken;
         }
 
-        private HttpRequestMessage CreateHttpRequestMessage(string uri, HttpMethod? method = null)
+        public HttpRequestMessage CreateHttpRequestMessage(HttpMethod method, string uri)
         {
             var message = new HttpRequestMessage(method ?? HttpMethod.Get, uri);
             if (!string.IsNullOrEmpty(PersonalAccessToken))
@@ -81,7 +83,7 @@ namespace DevOps.Util
 
         public async Task<string> GetTextAsync(string uri)
         {
-            var message = CreateHttpRequestMessage(uri);
+            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
             using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -90,7 +92,7 @@ namespace DevOps.Util
 
         public virtual async Task<string> GetJsonAsync(string uri, bool cacheable)
         {
-            var message = CreateHttpRequestMessage(uri);
+            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
@@ -102,7 +104,7 @@ namespace DevOps.Util
         {
             do
             {
-                var message = CreateHttpRequestMessage(uri);
+                var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
                 message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                 using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
@@ -122,7 +124,7 @@ namespace DevOps.Util
 
         public async Task<(string Json, string? ContinuationToken)> GetJsonAndContinuationTokenAsync(string uri)
         {
-            var message = CreateHttpRequestMessage(uri);
+            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
@@ -139,7 +141,7 @@ namespace DevOps.Util
 
         public async Task DownloadZipFileAsync(string uri, Stream destinationStream)
         {
-            var message = CreateHttpRequestMessage(uri);
+            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/zip"));
             using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
@@ -148,7 +150,7 @@ namespace DevOps.Util
 
         public async Task DownloadFileAsync(string uri, Stream destinationStream)
         {
-            var message = CreateHttpRequestMessage(uri);
+            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
             using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             await response.Content.CopyToAsync(destinationStream).ConfigureAwait(false);
