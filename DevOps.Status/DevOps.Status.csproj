@@ -6,5 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Octokit" Version="0.47.0" />
+    <ProjectReference Include="..\DevOps.Util\DevOps.Util.csproj" />
+    <ProjectReference Include="..\DevOps.Util.DotNet\DevOps.Util.DotNet.csproj" />
   </ItemGroup>
 </Project>

@@ -1,40 +1,31 @@
-﻿@page
+@page
 @using Octokit
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Build Search";
 }
 
-@{
-    void DumpTable(string title, List<Issue> issues)
-    {
-        var items = new List<(string TypeName, string TypeClass, Issue Issue)>();
-        foreach (var issue in issues)
-        {
-            string typeName = "Blocking";
-            string typeClass = "badge badge-danger";
-            if (issue.Labels.Any(x => x.Name == "intermittent"))
-            {
-                typeName = "Warning";
-                typeClass = "badge badge-warning";
-            }
-            items.Add((typeName, typeClass, issue));
-        }
+<div>
+    <form method="post">
+        <input asp-for="BuildSearch" /><button>Search</button>
+    </form>
+</div>
 
-        <h3>@title</h3>
-        <ul class="list-group">
-        @foreach (var tuple in items)
-        {
-            <li class="list-group-item">
-                <span class="@tuple.TypeClass">@tuple.TypeName</span>
-                <a href=@tuple.Issue.HtmlUrl>@tuple.Issue.Title</a>
-            </li>
-        }
-        </ul>
-    }
 
-    DumpTable("Official Builds", Model.BlockingOfficial);
-    DumpTable("CI Builds", Model.BlockingNormal);
-    DumpTable("CI Optional Builds", Model.BlockingNormalOptional);
-    DumpTable("Outerloop", Model.BlockingOuterloop);
-}
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="column">Result</th>
+            <th scope="column">Build</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach(var build in @Model.Builds)
+        {
+            <tr>
+                <td>@build.Result</td>
+                <td><a href=@build.BuildUri>@build.BuildNumber</a></td>
+            </tr>
+        }
+    </tbody>
+</table>

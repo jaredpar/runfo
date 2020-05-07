@@ -10,10 +10,10 @@ using Octokit;
 
 namespace DevOps.Status.Pages
 {
-    public class IndexModel : PageModel
+    public class BuildBadgesModel : PageModel
     {
         private readonly IConfiguration _configuration;
-        private readonly ILogger<IndexModel> _logger;
+        private readonly ILogger<BuildBadgesModel> _logger;
 
         public List<Issue> BlockingOfficial { get; set; }
 
@@ -21,7 +21,7 @@ namespace DevOps.Status.Pages
         public List<Issue> BlockingNormalOptional { get; set; }
         public List<Issue> BlockingOuterloop { get; set; }
 
-        public IndexModel(IConfiguration configuration, ILogger<IndexModel> logger)
+        public BuildBadgesModel(IConfiguration configuration, ILogger<BuildBadgesModel> logger)
         {
             _configuration = configuration;
             _logger = logger;

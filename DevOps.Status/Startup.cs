@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DevOps.Util;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -24,6 +25,12 @@ namespace DevOps.Status
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
+
+            services.AddScoped<DevOpsServer>(_ =>
+            {
+                var token = Configuration["RUNFO_AZURE_TOKEN"];
+                return new DevOpsServer("dnceng", token);
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
