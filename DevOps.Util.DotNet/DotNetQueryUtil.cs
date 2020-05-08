@@ -273,7 +273,6 @@ namespace DevOps.Util.DotNet
                 throw CreateBadOptionException();
             }
 
-            var project = optionSet.Project ?? DotNetUtil.DefaultProject;
             var searchCount = optionSet.SearchCount ?? BuildSearchOptionSet.DefaultSearchCount;
             var repository = optionSet.Repository;
             var branch = optionSet.Branch;
@@ -318,35 +317,13 @@ namespace DevOps.Util.DotNet
                     builds.Add(build);
                 }
             }
-            else if (optionSet.Definitions.Count > 0)
-            {
-                foreach (var definition in optionSet.Definitions)
-                {
-                    if (!DotNetUtil.TryGetDefinitionId(definition, defaultProject: project, out var definitionProject, out var definitionId))
-                    {
-                        OptionFailureDefinition(definition, optionSet);
-                        throw CreateBadOptionException();
-                    }
-
-                    definitionProject ??= project;
-                    var collection = await ListBuildsAsync(
-                        definitionProject,
-                        searchCount,
-                        definitions: new[] { definitionId },
-                        repositoryId: repository,
-                        branchName: branch,
-                        includePullRequests: optionSet.IncludePullRequests,
-                        before: optionSet.Before,
-                        after: optionSet.After);
-                    builds.AddRange(collection);
-                }
-            }
             else
             {
+                var (project, definitions) = GetProjectAndDefinitions();
                 var collection = await ListBuildsAsync(
                     project,
                     searchCount,
-                    definitions: null,
+                    definitions: definitions,
                     repositoryId: repository,
                     branchName: branch,
                     includePullRequests: optionSet.IncludePullRequests,
@@ -362,6 +339,40 @@ namespace DevOps.Util.DotNet
             }
 
             return builds;
+
+            (string Project, int[] Definitions) GetProjectAndDefinitions()
+            {
+                if (optionSet.Definitions.Count == 0)
+                {
+                    return (optionSet.Project ?? DotNetUtil.DefaultProject, Array.Empty<int>());
+                }
+
+                string? project = null;
+                var list = new List<int>();
+                foreach (var definition in optionSet.Definitions)
+                {
+                    if (!DotNetUtil.TryGetDefinitionId(definition, out var definitionProject, out var definitionId))
+                    {
+                        OptionFailureDefinition(definition, optionSet);
+                        throw CreateBadOptionException();
+                    }
+
+                    if (definitionProject is object)
+                    {
+                        if (project is null)
+                        {
+                            project = definitionProject;
+                        }
+                        else if (!StringComparer.OrdinalIgnoreCase.Equals(definitionProject, project))
+                        {
+                            throw new InvalidOperationException($"Conflicting project names {project} and {definitionProject}");
+                        }
+                    }
+                }
+
+                project ??= DotNetUtil.DefaultProject;
+                return (project, list.ToArray());
+            }
         }
 
         public static bool TryGetBuildId(BuildSearchOptionSet optionSet, string build, [NotNullWhen(true)] out string? project, out int buildId)

@@ -231,7 +231,7 @@ namespace DevOps.Util.Triage
                 var list = new List<ModelTriageIssueResult>();
                 foreach (var definition in optionSet.Definitions)
                 {
-                    if (!DotNetUtil.TryGetDefinitionId(definition, defaultProject: project, out var definitionProject, out var definitionId))
+                    if (!DotNetUtil.TryGetDefinitionId(definition, out var definitionProject, out var definitionId))
                     {
                         throw new NotSupportedException();
                     }
@@ -311,7 +311,7 @@ namespace DevOps.Util.Triage
             {
                 foreach (var definition in optionSet.Definitions)
                 {
-                    if (!DotNetUtil.TryGetDefinitionId(definition, defaultProject: project, out var definitionProject, out var definitionId))
+                    if (!DotNetUtil.TryGetDefinitionId(definition, out var definitionProject, out var definitionId))
                     {
                         throw new NotSupportedException();
                     }

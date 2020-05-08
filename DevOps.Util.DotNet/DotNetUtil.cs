@@ -78,7 +78,7 @@ namespace DevOps.Util.DotNet
             return false;
         }
 
-        public static bool TryGetDefinitionId(string definition, string defaultProject, [NotNullWhen(true)] out string? project, out int definitionId)
+        public static bool TryGetDefinitionId(string definition, out string? project, out int definitionId)
         {
             definitionId = 0;
             project = null;
@@ -94,10 +94,6 @@ namespace DevOps.Util.DotNet
                 var both = definition.Split(new[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
                 definition = both[0];
                 project = both[1]!;
-            }
-            else
-            {
-                project = defaultProject;
             }
 
             if (int.TryParse(definition, out definitionId))
