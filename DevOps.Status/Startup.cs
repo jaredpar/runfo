@@ -25,6 +25,7 @@ namespace DevOps.Status
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
+            services.AddControllers();
 
             services.AddScoped<DevOpsServer>(_ =>
             {
@@ -57,6 +58,7 @@ namespace DevOps.Status
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapRazorPages();
+                endpoints.MapControllers();
             });
         }
     }

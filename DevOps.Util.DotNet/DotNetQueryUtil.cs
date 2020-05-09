@@ -368,6 +368,8 @@ namespace DevOps.Util.DotNet
                             throw new InvalidOperationException($"Conflicting project names {project} and {definitionProject}");
                         }
                     }
+
+                    list.Add(definitionId);
                 }
 
                 project ??= DotNetUtil.DefaultProject;
