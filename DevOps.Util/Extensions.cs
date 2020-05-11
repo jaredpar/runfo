@@ -69,6 +69,8 @@ namespace DevOps.Util
 
         public static BuildArtifactKind GetKind(this BuildArtifact buildArtifact) => DevOpsUtil.GetArtifactKind(buildArtifact);
 
+        public static int GetAttempt(this Timeline timeline) => timeline.Records.Max(x => x.Attempt);
+
         public static bool IsAnySuccess(this TimelineRecord record) =>
             record.Result == TaskResult.Succeeded ||
             record.Result == TaskResult.SucceededWithIssues;

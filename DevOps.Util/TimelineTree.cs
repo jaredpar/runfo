@@ -44,6 +44,8 @@ namespace DevOps.Util
 
         private Dictionary<string, TimelineNode> IdToNodeMap { get; }
 
+        public int Attempt { get; }
+
         public Timeline Timeline { get; }
 
         public List<TimelineNode> RootNodes { get; } 
@@ -62,6 +64,7 @@ namespace DevOps.Util
         public TimelineTree(Timeline timeline, List<TimelineNode> rootNodes, Dictionary<string, TimelineNode> idToNodeMap)
         {
             Timeline = timeline;
+            Attempt = timeline.GetAttempt();
             RootNodes = rootNodes;
             IdToNodeMap = idToNodeMap;
         }
