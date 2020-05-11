@@ -11,9 +11,11 @@
         "preLaunchTask": "build",
         "program": "${workspaceFolder}/runfo/bin/Debug/netcoreapp3.1/runfo.dll",
         "args": [
-            "helix-jobs",
+            "timeline",
+            "-a",
+            "1",
             "-b",
-            "629997"
+            "634291"
         ],
         "cwd": "${workspaceFolder}/runfo",
         "console": "internalConsole",

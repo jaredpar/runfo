@@ -393,10 +393,10 @@ namespace DevOps.Util
     /// </summary>
     public sealed class Timeline
     {
-        public string Id { get; set; }
+        public string? Id { get; set; }
         public int ChangeId { get; set; }
-        public string LastChangedBy { get; set; }
-        public string LastChangedOn { get; set; }
+        public string? LastChangedBy { get; set; }
+        public string? LastChangedOn { get; set; }
         public TimelineRecord[] Records { get; set; }
         public string Url { get; set; }
     }

@@ -179,19 +179,19 @@ namespace DevOps.Util
         public Task<MemoryStream> DownloadBuildLogAsync(string project, int buildId, int logId) =>
             WithMemoryStream(stream => DownloadBuildLogAsync(project, buildId, logId, stream));
 
-        public Task<Timeline> GetTimelineAsync(string project, int buildId)
+        public Task<Timeline?> GetTimelineAsync(string project, int buildId)
         {
             var builder = GetBuilder(project, $"build/builds/{buildId}/timeline");
-            return GetJsonAsync<Timeline>(builder, cacheable: true);
+            return GetJsonAsync<Timeline?>(builder, cacheable: true);
         }
 
-        public Task<Timeline> GetTimelineAsync(Build build) => GetTimelineAsync(build.Project.Name, build.Id);
+        public Task<Timeline?> GetTimelineAsync(Build build) => GetTimelineAsync(build.Project.Name, build.Id);
 
-        public Task<Timeline> GetTimelineAsync(string project, int buildId, string timelineId, int? changeId = null)
+        public Task<Timeline?> GetTimelineAsync(string project, int buildId, string timelineId, int? changeId = null)
         {
             var builder = GetBuilder(project, $"build/builds/{buildId}/timeline/{timelineId}");
             builder.AppendInt("changeId", changeId);
-            return GetJsonAsync<Timeline>(builder, cacheable: true);
+            return GetJsonAsync<Timeline?>(builder, cacheable: true);
         }
 
         public Task<List<BuildArtifact>> ListArtifactsAsync(string project, int buildId)

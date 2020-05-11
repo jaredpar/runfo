@@ -55,24 +55,26 @@ namespace DevOps.Util.DotNet
             IEnumerable<Build> builds,
             string text,
             string? name = null,
-            string? task = null)
+            string? task = null,
+            int? attempt = null)
         {
             var textRegex = CreateSearchRegex(text);
             var nameRegex = CreateSearchRegex(name);
             var taskRegex = CreateSearchRegex(task);
-            return SearchTimelineAsync(builds, textRegex, nameRegex, taskRegex);
+            return SearchTimelineAsync(builds, textRegex, nameRegex, taskRegex, attempt);
         }
 
         public async Task<List<TimelineResult<(Build Build, string Line)>>> SearchTimelineAsync(
             IEnumerable<Build> builds,
             Regex text,
             Regex? name = null,
-            Regex? task = null)
+            Regex? task = null,
+            int? attempt = null)
         {
             var list = new List<TimelineResult<(Build Build, string Line)>>();
             foreach (var build in builds)
             {
-                var timeline = await Server.GetTimelineAsync(build.Project.Name, build.Id).ConfigureAwait(false);
+                var timeline = await Server.GetTimelineAttemptAsync(build.Project.Name, build.Id, attempt).ConfigureAwait(false);
                 if (timeline is null)
                 {
                     continue;
@@ -89,7 +91,8 @@ namespace DevOps.Util.DotNet
             Timeline timeline,
             string text,
             string? name = null,
-            string? task = null)
+            string? task = null,
+            int? attempt = null)
         {
             var textRegex = CreateSearchRegex(text);
             var nameRegex = CreateSearchRegex(name);
@@ -102,7 +105,8 @@ namespace DevOps.Util.DotNet
             Timeline timeline,
             Regex text,
             Regex? name = null,
-            Regex? task = null)
+            Regex? task = null,
+            int? attempt = null)
         {
             var timelineTree = TimelineTree.Create(timeline);
             var records = timeline.Records
@@ -186,6 +190,11 @@ namespace DevOps.Util.DotNet
         public async Task<List<TimelineRecord>> ListFailedJobs(Build build)
         {
             var timeline = await Server.GetTimelineAsync(build).ConfigureAwait(false);
+            if (timeline is null)
+            {
+                return new List<TimelineRecord>();
+            }
+
             var timelineTree = TimelineTree.Create(timeline);
             return timelineTree
                 .Nodes
@@ -494,6 +503,11 @@ namespace DevOps.Util.DotNet
         public async Task<List<TimelineResult<string>>> ListHelixJobs(string project, int buildNumber)
         {
             var timeline = await Server.GetTimelineAsync(project, buildNumber).ConfigureAwait(false);
+            if (timeline is null)
+            {
+                return new List<TimelineResult<string>>();
+            }
+
             return await ListHelixJobs(timeline);
         }
 

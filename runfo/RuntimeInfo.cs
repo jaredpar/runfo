@@ -182,11 +182,13 @@ internal sealed partial class RuntimeInfo
         string text = null;
         string task = null;
         bool markdown = false;
+        int? attempt = null;
         var optionSet = new BuildSearchOptionSet()
         {
             { "n|name=", "Search only records matching this name", n => name = n },
             { "t|task=", "Search only tasks matching this name", t => task = t },
             { "v|value=", "text to search for", t => text = t },
+            { "a|attempt=", "attempt to search in", (int a) => attempt = a },
             { "m|markdown", "print output in markdown", m => markdown = m is object },
         };
 
@@ -201,7 +203,7 @@ internal sealed partial class RuntimeInfo
 
         var hadDefinition = optionSet.Definitions.Any();
         var builds = await QueryUtil.ListBuildsAsync(optionSet);
-        var found = await QueryUtil.SearchTimelineAsync(builds, text, name, task);
+        var found = await QueryUtil.SearchTimelineAsync(builds, text, name, task, attempt);
         Console.WriteLine(ReportBuilder.BuildSearchTimeline(
             found.Select(x => (x.Value.Build.GetBuildInfo(), x.JobName)),
             markdown: markdown,
@@ -624,6 +626,7 @@ internal sealed partial class RuntimeInfo
         bool failed = false;
         bool verbose = false;
         string name = null;
+        int? attempt = null;
         var optionSet = new BuildSearchOptionSet()
         {
             { "depth=", "depth to print to", (int d) => depth = d },
@@ -631,6 +634,7 @@ internal sealed partial class RuntimeInfo
             { "failed", "print records that failed", f => failed = f is object },
             { "n|name=", "record name to search for", n => name = n},
             { "v|verbose", "print issues with records", v => verbose = v is object },
+            { "a|attempt=", "attempt to search in", (int a) => attempt = a },
         };
 
         ParseAll(optionSet, args);
@@ -638,7 +642,7 @@ internal sealed partial class RuntimeInfo
         foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
         {
             Console.WriteLine(DevOpsUtil.GetBuildUri(build));
-            var timeline = await Server.GetTimelineAsync(build.Project.Name, build.Id);
+            var timeline = await Server.GetTimelineAttemptAsync(build.Project.Name, build.Id, attempt);
             if (timeline is null)
             {
                 Console.WriteLine("No timeline info");
