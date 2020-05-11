@@ -203,7 +203,19 @@ internal sealed partial class RuntimeInfo
 
         var hadDefinition = optionSet.Definitions.Any();
         var builds = await QueryUtil.ListBuildsAsync(optionSet);
-        var found = await QueryUtil.SearchTimelineAsync(builds, text, name, task, attempt);
+        var found = new List<TimelineResult<(Build Build, string Line)>>();
+        foreach (var build in builds)
+        {
+            foreach (var timeline in await ListTimelinesAsync(build, attempt))
+            {
+                found.AddRange(QueryUtil.SearchTimeline(
+                    build,
+                    timeline,
+                    text,
+                    name,
+                    task));
+            }
+        }
         Console.WriteLine(ReportBuilder.BuildSearchTimeline(
             found.Select(x => (x.Value.Build.GetBuildInfo(), x.JobName)),
             markdown: markdown,
@@ -642,14 +654,15 @@ internal sealed partial class RuntimeInfo
         foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
         {
             Console.WriteLine(DevOpsUtil.GetBuildUri(build));
-            var timeline = await Server.GetTimelineAttemptAsync(build.Project.Name, build.Id, attempt);
-            if (timeline is null)
+            foreach (var timeline in await ListTimelinesAsync(build, attempt))
             {
-                Console.WriteLine("No timeline info");
-                return ExitFailure;
+                if (timeline is null)
+                {
+                    Console.WriteLine("No timeline info");
+                    return ExitFailure;
+                }
+                DumpTimeline(Server, timeline, depth, issues, failed, verbose);
             }
-
-            DumpTimeline(Server, timeline, depth, issues, failed, verbose);
         }
 
         static void DumpTimeline(DevOpsServer server, Timeline timeline, int? depthLimit, bool issues, bool failed, bool verbose)
@@ -1061,4 +1074,28 @@ internal sealed partial class RuntimeInfo
     private async Task<HelixLogInfo> GetHelixLogInfoAsync(HelixWorkItem workItem) => await HelixUtil.GetHelixLogInfoAsync(Server, workItem);
 
     private static string GetIndent(int level) => level == 0 ? string.Empty : new string(' ', level * 2);
+
+    private async Task<IEnumerable<Timeline>> ListTimelinesAsync(Build build, int? attempt)
+    {
+        var buildInfo = build.GetBuildInfo();
+        switch (attempt)
+        {
+            case -1:
+            {
+                return await Server.ListTimelineAttemptsAsync(buildInfo.Project, buildInfo.Number);
+            }
+            case null:
+            {
+                var single = await Server.GetTimelineAsync(buildInfo.Project, buildInfo.Number);
+                return new[] { single };
+            }
+            case int attemptId when attemptId >= 1:
+            {
+                var single = await Server.GetTimelineAttemptAsync(buildInfo.Project, buildInfo.Number, attemptId);
+                return new[] { single };
+            }
+            default:
+                throw new Exception($"Illegal attempt value {attempt}.");
+        }
+    }
 }

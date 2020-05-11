@@ -190,5 +190,43 @@ namespace DevOps.Util
             ? GetTimelineAttemptAsync(server, project, buildNumber, attemptId)
             : server.GetTimelineAsync(project, buildNumber);
 
+        /// <summary>
+        /// List the time line attempts of the given build
+        /// </summary>
+        public static async Task<List<Timeline>> ListTimelineAttemptsAsync(this DevOpsServer server, string project, int buildNumber)
+        {
+            var list = new List<Timeline>();
+
+            var timeline = await server.GetTimelineAsync(project, buildNumber).ConfigureAwait(false);
+            if (timeline is null)
+            {
+                return list;
+            }
+
+            list.Add(timeline);
+
+            // Special case the easy case here
+            if (timeline.Records.All(x => x.Attempt == 1))
+            {
+                return list;
+            }
+
+            var attempts = timeline
+                .Records
+                .SelectMany(x => x.PreviousAttempts ?? Array.Empty<TimelineAttempt>())
+                .Select(x => x.Attempt)
+                .Distinct()
+                .OrderBy(x => x);
+            foreach (var attempt in attempts)
+            {
+                var attemptTimeline = await server.GetTimelineAttemptAsync(project, buildNumber, attempt).ConfigureAwait(false);
+                if (attemptTimeline is object)
+                {
+                    list.Add(attemptTimeline);
+                }
+            }
+
+            return list;
+        }
     }
 }

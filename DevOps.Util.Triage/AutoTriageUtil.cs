@@ -134,6 +134,12 @@ namespace DevOps.Util.Triage
             }
 
             var timeline = await Server.GetTimelineAsync(build).ConfigureAwait(false);
+            if (timeline is null)
+            {
+                Logger.LogInformation("Timeline is null");
+                return;
+            }
+
             if (timeline.Records.Any(x => x.PreviousAttempts?.Length > 0))
             {
                 Logger.LogInformation("Project already has multiple attempts");
