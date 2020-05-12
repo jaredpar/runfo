@@ -6,22 +6,11 @@ using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using Microsoft.AspNetCore.Mvc;
+using DevOps.Status.Rest;
+using System;
 
 namespace DevOps.Status.Controllers
 {
-    public class HelixJobRestInfo
-    {
-        public string JobId { get; set; }
-
-        public string TimelineCoreRecordName { get; set; }
-
-        public string TimelineCoreRecordId { get; set; }
-
-        public string TimelineJobRecordName { get; set; }
-
-        public string TimelineJobRecordId { get; set; }
-    }
-
     [ApiController]
     [Produces(MediaTypeNames.Application.Json)]
     public sealed class HelixController : ControllerBase
@@ -34,7 +23,7 @@ namespace DevOps.Status.Controllers
         }
 
         [HttpGet]
-        [Route("helix/jobs/{project}/{buildNumber}")]
+        [Route("api/helix/jobs/{project}/{buildNumber}")]
         public async Task<List<HelixJobRestInfo>> Jobs(string project, int buildNumber)
         {
             var queryUtil = new DotNetQueryUtil(Server);
@@ -52,6 +41,43 @@ namespace DevOps.Status.Controllers
                     };
                 })
                 .ToList();
+        }
+
+        [HttpGet]
+        [Route("api/helix/workItems/{project}/{buildNumber}")]
+        public async Task<List<HelixWorkItemRestInfo>> FailedWorkItems(string project, int buildNumber, [FromQuery]bool failed = false)
+        {
+            if (!failed)
+            {
+                throw new Exception("Not supported");
+            }
+
+            var queryUtil = new DotNetQueryUtil(Server);
+            var build = await Server.GetBuildAsync(project, buildNumber);
+            var workItems = await queryUtil.ListHelixWorkItemsAsync(build, DotNetUtil.FailedTestOutcomes);
+            var list = new List<HelixWorkItemRestInfo>();
+            foreach (var workItem in workItems)
+            {
+                var restWorkItem = new HelixWorkItemRestInfo();
+                restWorkItem.Job = workItem.JobId;
+                restWorkItem.WorkItem = workItem.WorkItemName;
+
+                var logs = new List<HelixLogRestInfo>();
+                var logInfo = await HelixUtil.GetHelixLogInfoAsync(Server, workItem);
+                foreach (var entry in logInfo.GetUris())
+                {
+                    logs.Add(new HelixLogRestInfo()
+                    {
+                        Name = entry.kind.ToString(),
+                        Uri = entry.Uri,
+                    });
+                }
+
+                restWorkItem.Logs = logs.ToArray();
+                list.Add(restWorkItem);
+            }
+
+            return list;
         }
     }
 

@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 
 namespace DevOps.Util.DotNet
 {
@@ -37,6 +38,21 @@ namespace DevOps.Util.DotNet
             ConsoleUri = consoleUri;
             CoreDumpUri = coreDumpUri;
             TestResultsUri = testResultsUri;
+        }
+
+        public IEnumerable<(HelixLogKind kind, string Uri)> GetUris()
+        {
+            foreach (object? value in Enum.GetValues(typeof(HelixLogKind)))
+            {
+                if (value is HelixLogKind kind)
+                {
+                    var uri = GetUri(kind);
+                    if (uri is object)
+                    {
+                        yield return(kind, uri);
+                    }
+                }
+            }
         }
 
         public string? GetUri(HelixLogKind kind) => kind switch

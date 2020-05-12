@@ -417,6 +417,9 @@ namespace DevOps.Util.DotNet
                 ? null
                 : new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+        // TODO: need to get rid of all these overloads that take project + build number or 
+        // Build or BuildInfo. Need a type that combines them together. Also should consider one
+        // that encapsulates the attempt
         public async Task<List<DotNetTestRun>> ListDotNetTestRunsAsync(Build build, params TestOutcome[] outcomes)
         {
             var testRuns = await Server.ListTestRunsAsync(build.Project.Name, build.Id).ConfigureAwait(false);
