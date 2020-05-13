@@ -75,6 +75,16 @@ namespace QueryFun
         private static async Task Scratch()
         {
             var project = "public";
+            var buildId = 642222;
+            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
+            var build = await server.GetBuildAsync(project, buildId);
+            var timeline = await server.GetTimelineAsync(project, buildId);
+            var attempt = timeline.GetAttempt();
+        }
+
+        private static async Task Scratch4()
+        {
+            var project = "public";
             var buildId = 633511;
             var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
             var build = await server.GetBuildAsync(project, buildId);

@@ -6,11 +6,11 @@ namespace DevOps.Util
 {
     public readonly struct BuildKey : IEquatable<BuildKey>
     {
-        public readonly string Organization { get; }
+        public string Organization { get; }
 
-        public readonly string Project { get; }
+        public string Project { get; }
 
-        public readonly int Number { get; }
+        public int Number { get; }
 
         public string BuildUri => DevOpsUtil.GetBuildUri(Organization, Project, Number);
 
@@ -46,11 +46,52 @@ namespace DevOps.Util
         public override string ToString() => $"{Organization} {Project} {Number}";
     }
 
+    public readonly struct BuildAttemptKey : IEquatable<BuildAttemptKey>
+    {
+        public BuildKey BuildKey { get; }
+
+        public int Attempt { get; }
+
+        public string Organization => BuildKey.Organization;
+
+        public string Project => BuildKey.Project;
+
+        public int Number => BuildKey.Number;
+
+        public string BuildUri => BuildKey.BuildUri;
+
+        public BuildAttemptKey(string organization, string project, int number, int attempt)
+        {
+            BuildKey = new BuildKey(organization, project, number);
+            Attempt = attempt;
+        }
+
+        public BuildAttemptKey(Build build, Timeline timeline)
+        {
+            BuildKey = new BuildKey(build);
+            Attempt = timeline.GetAttempt();
+        }
+
+        public static bool operator==(BuildAttemptKey left, BuildAttemptKey right) => left.Equals(right); 
+
+        public static bool operator!=(BuildAttemptKey left, BuildAttemptKey right) => !left.Equals(right); 
+
+        public bool Equals(BuildAttemptKey other) =>
+            other.BuildKey == BuildKey &&
+            other.Attempt == Attempt;
+
+        public override bool Equals(object? other) => other is BuildAttemptKey key && Equals(key);
+
+        public override int GetHashCode() => HashCode.Combine(BuildKey, Attempt);
+
+        public override string ToString() => $"{Organization} {Project} {Number} {Attempt};
+    }
+
     public readonly struct BuildDefinitionKey : IEquatable<BuildDefinitionKey>
     {
-        public readonly string Organization { get; }
-        public readonly string Project { get; }
-        public readonly int Id { get; }
+        public string Organization { get; }
+        public string Project { get; }
+        public int Id { get; }
 
         public BuildDefinitionKey(string organization, string project, int id)
         {
