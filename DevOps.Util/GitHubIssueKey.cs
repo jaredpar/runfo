@@ -4,7 +4,7 @@ using System;
 
 namespace DevOps.Util
 {
-    public readonly struct GitHubIssueKey
+    public readonly struct GitHubIssueKey : IEquatable<GitHubIssueKey>
     {
         public string Organization { get; }
 
@@ -21,10 +21,23 @@ namespace DevOps.Util
             Number = number;
         }
 
+        public static bool operator==(GitHubIssueKey left, GitHubIssueKey right) => left.Equals(right);
+
+        public static bool operator!=(GitHubIssueKey left, GitHubIssueKey right) => !left.Equals(right);
+
+        public bool Equals(GitHubIssueKey other) =>
+            other.Organization == Organization &&
+            other.Repository == Repository &&
+            other.Number == Number;
+
+        public override bool Equals(object? obj) => obj is GitHubIssueKey other && Equals(other);
+
+        public override int GetHashCode() => HashCode.Combine(Organization, Repository, Number);
+
         public override string ToString() => $"{Organization}/{Repository}/{Number}";
     }
 
-    public readonly struct GitHubPullRequestKey
+    public readonly struct GitHubPullRequestKey : IEquatable<GitHubPullRequestKey>
     {
         public string Organization { get; }
 
@@ -42,6 +55,19 @@ namespace DevOps.Util
         }
 
         public GitHubIssueKey ToIssueKey() => new GitHubIssueKey(Organization, Repository, Number);
+
+        public static bool operator==(GitHubPullRequestKey left, GitHubPullRequestKey right) => left.Equals(right);
+
+        public static bool operator!=(GitHubPullRequestKey left, GitHubPullRequestKey right) => !left.Equals(right);
+
+        public bool Equals(GitHubPullRequestKey other) =>
+            other.Organization == Organization &&
+            other.Repository == Repository &&
+            other.Number == Number;
+
+        public override bool Equals(object? obj) => obj is GitHubPullRequestKey other && Equals(other);
+
+        public override int GetHashCode() => HashCode.Combine(Organization, Repository, Number);
 
         public override string ToString() => $"{Organization}/{Repository}/{Number}";
     }
