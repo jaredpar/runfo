@@ -84,7 +84,7 @@ namespace DevOps.Util
 
         public override int GetHashCode() => HashCode.Combine(BuildKey, Attempt);
 
-        public override string ToString() => $"{Organization} {Project} {Number} {Attempt};
+        public override string ToString() => $"{Organization} {Project} {Number} {Attempt}";
     }
 
     public readonly struct BuildDefinitionKey : IEquatable<BuildDefinitionKey>
