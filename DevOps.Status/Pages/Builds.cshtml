@@ -1,0 +1,27 @@
+@page
+@using Octokit
+@model IndexModel
+@{
+    ViewData["Title"] = "Build Search";
+}
+
+@section Scripts {
+    <script type="text/javascript" src="~/js/builds.js"></script>
+}
+
+<div>
+    <form method="post">
+        <input id="search-text" asp-for="BuildSearch" /><button id="search-button">Search</button>
+    </form>
+</div>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="column">Result</th>
+            <th scope="column">Build</th>
+        </tr>
+    </thead>
+    <tbody id="#table-body">
+    </tbody>
+</table>

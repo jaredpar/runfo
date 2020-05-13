@@ -2,6 +2,7 @@
     "cSpell.words": [
         "Azdo",
         "Octokit",
+        "Runfo",
         "nuget"
     ],
     "azureFunctions.deploySubpath": "DevOps.Functions/bin/Release/netcoreapp3.1/publish",
