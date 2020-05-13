@@ -74,12 +74,30 @@ namespace QueryFun
 
         private static async Task Scratch()
         {
+            await DumpTestTotals();
+        }
+
+        public static async Task DumpTestTotals()
+        {
             var project = "public";
-            var buildId = 642222;
+            var buildId = 642971;
             var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
+            var queryUtil = new DotNetQueryUtil(server);
             var build = await server.GetBuildAsync(project, buildId);
-            var timeline = await server.GetTimelineAsync(project, buildId);
-            var attempt = timeline.GetAttempt();
+            var testRuns = await queryUtil.ListDotNetTestRunsAsync(build);
+            var testCases = testRuns.SelectMany(x => x.TestCaseResults).ToList();
+            Console.WriteLine($"Total {testCases.Count}");
+
+            var uniqueCount = testCases.GroupBy(x => x.TestCaseTitle).Count();
+            Console.WriteLine($"Unique {uniqueCount}");
+            var query = testCases
+                .GroupBy(x => x.TestCaseTitle)
+                .OrderByDescending(x => x.Count())
+                .Take(10);
+            foreach (var item in query)
+            {
+                Console.WriteLine($"{item.Key} {item.Count()}");
+            }
         }
 
         private static async Task Scratch4()

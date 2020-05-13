@@ -82,6 +82,11 @@ namespace DevOps.Util.Triage
                 TriageIssueKind.Test,
                 SearchKind.SearchTest,
                 searchText: "System.Net.Sockets.Tests.DisposedSocket.NonDisposedSocket_SafeHandlesCollected");
+            TriageContextUtil.EnsureTriageIssue(
+                TriageIssueKind.Test,
+                SearchKind.SearchTimeline,
+                searchText: "OutOfMemoryException",
+                Create("dotnet", "aspnetcore", 21802, "-d aspnet"));
 
             static ModelTriageGitHubIssue Create(string organization, string repository, int number, string? buildQuery = null, bool includeDefinitions = true) =>
                 new ModelTriageGitHubIssue()

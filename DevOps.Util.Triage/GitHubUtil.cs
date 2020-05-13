@@ -77,11 +77,14 @@ namespace DevOps.Util.Triage
                     .Select(x => x.ModelBuild)
                     .OrderByDescending(x => x.StartTime)
                     .FirstOrDefault();
-                if (mostRecent is object)
+                if (mostRecent is object && mostRecent.StartTime is DateTime startTime)
                 {
                     Debug.Assert(mostRecent.StartTime.HasValue);
                     var buildKey = TriageContextUtil.GetBuildKey(mostRecent);
-                    footer.AppendLine($"Most [recent]({buildKey.BuildUri}) failure {mostRecent.StartTime.Value.ToLocalTime()}");
+                    var zone = TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time");
+                    startTime = TimeZoneInfo.ConvertTimeFromUtc(startTime, zone);
+
+                    footer.AppendLine($"Most [recent]({buildKey.BuildUri}) failure {startTime}");
                 }
 
                 const int limit = 100;

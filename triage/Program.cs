@@ -166,13 +166,19 @@ internal class Program
             //await autoTriageUtil.Triage("-d runtime -c 100 -pr");
             // await gitHubUtil.UpdateGithubIssues
             autoTriageUtil.EnsureTriageIssues();
-            await autoTriageUtil.RetryOsxDeprovisionAsync("public", 633232);
+            await gitHubUtil.UpdateGithubIssues();
+            
         }
 
         static (DevOpsServer Server, IGitHubClient githubClient, TriageContext Context) Create(ref List<string> args)
         {
             var azdoToken = Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN");
             var gitHubToken = Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN");
+            if (gitHubToken.Contains(':'))
+            {
+                gitHubToken = gitHubToken.Split(new[] {':'}, count: 2)[1];
+            }
+
             var cacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "runfo", "json");
             var configuration = CreateConfiguration();
             var isDevelopment = IsDevelopment(configuration);
