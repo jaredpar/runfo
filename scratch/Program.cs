@@ -91,7 +91,7 @@ namespace QueryFun
             var jobPoolMap = GetJobPoolMap(yaml);
             var helixJobs = await queryUtil.ListHelixJobsAsync(build);
 
-            var map = new Dictionary<string, List<string>>();
+            var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             foreach (var pair in jobPoolMap)
             {
                 GetQueueList(pair.Value).Add(pair.Key);
@@ -120,6 +120,11 @@ namespace QueryFun
 
             var total = map.Values.Sum(x => x.Count);
             Console.WriteLine($"Total {total}");
+
+            foreach (var e in helixJobs.Where(x => x.Value.QueueName.Contains("Arm")).OrderBy(x => x.JobName))
+            {
+                Console.WriteLine($"{e.JobName} - {e.Value.QueueName}");
+            }
 
             List<string> GetQueueList(string queueName)
             {

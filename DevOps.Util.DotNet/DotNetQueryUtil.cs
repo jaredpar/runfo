@@ -530,11 +530,15 @@ namespace DevOps.Util.DotNet
             // TODO: this scheme really relies on this name. This is pretty fragile. Should work with
             // core-eng to find a more robust way of detecting this
             var comparer = StringComparer.OrdinalIgnoreCase;
+            var comparison = StringComparison.OrdinalIgnoreCase;
             var sentRegex = new Regex(@"Sent Helix Job ([\d\w-]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
             var queueRegex = new Regex(@"Sending Job to (.*)...", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
             var list = new List<TimelineResult<HelixJobTimelineInfo>>();
-            var helixRecords = timelineTree.Records.Where(x => comparer.Equals(x.Name, "Send to Helix"));
+            var helixRecords = timelineTree.Records.Where(x => 
+                comparer.Equals(x.Name, "Send to Helix") ||
+                comparer.Equals(x.Name, "Send tests to Helix") ||
+                x.Name.StartsWith("Run native crossgen and compare", comparison));
             foreach (var record in helixRecords)
             {
                 if (record.Log is null)
@@ -578,7 +582,6 @@ namespace DevOps.Util.DotNet
                         var id = match.Groups[1].Value;
                         var info = new HelixJobTimelineInfo(id, queueName);
                         list.Add(new TimelineResult<HelixJobTimelineInfo>(info, record, timelineTree));
-                        queueName = null;
                     }
                 } while (true);
             }
