@@ -17,7 +17,7 @@ using DevOps.Util.DotNet;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Octokit;
-using HelixTimelineResult = DevOps.Util.DotNet.TimelineResult<string>;
+using HelixTimelineResult = DevOps.Util.DotNet.TimelineResult<DevOps.Util.DotNet.HelixJobTimelineInfo>;
 
 namespace DevOps.Util.Triage
 {
@@ -420,9 +420,9 @@ namespace DevOps.Util.Triage
             var map = new Dictionary<string, HelixTimelineResult>(StringComparer.OrdinalIgnoreCase);
             try
             {
-                foreach (var result in await QueryUtil.ListHelixJobs(timeline).ConfigureAwait(false))
+                foreach (var result in await QueryUtil.ListHelixJobsAsync(timeline).ConfigureAwait(false))
                 {
-                    map[result.Value] = result;
+                    map[result.Value.JobId] = result;
                 }
 
                 HelixJobToRecordMap = map;

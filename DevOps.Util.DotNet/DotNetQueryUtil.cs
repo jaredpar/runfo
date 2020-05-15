@@ -497,21 +497,21 @@ namespace DevOps.Util.DotNet
                 .SelectNullableValue(x => x.HelixWorkItem)
                 .ToList();
 
-        public Task<List<TimelineResult<string>>> ListHelixJobs(Build build)
+        public Task<List<TimelineResult<HelixJobTimelineInfo>>> ListHelixJobsAsync(Build build)
         {
             var buildKey = build.GetBuildKey();
-            return ListHelixJobs(buildKey.Project, buildKey.Number);
+            return ListHelixJobsAsync(buildKey.Project, buildKey.Number);
         }
 
-        public async Task<List<TimelineResult<string>>> ListHelixJobs(string project, int buildNumber)
+        public async Task<List<TimelineResult<HelixJobTimelineInfo>>> ListHelixJobsAsync(string project, int buildNumber)
         {
             var timeline = await Server.GetTimelineAsync(project, buildNumber).ConfigureAwait(false);
             if (timeline is null)
             {
-                return new List<TimelineResult<string>>();
+                return new List<TimelineResult<HelixJobTimelineInfo>>();
             }
 
-            return await ListHelixJobs(timeline);
+            return await ListHelixJobsAsync(timeline);
         }
 
         /// <summary>
@@ -521,7 +521,7 @@ namespace DevOps.Util.DotNet
         /// TODO: this method works by knowing the display name of timeline records. That is very 
         /// fragile and we should find a better way to do this.
         /// </summary>
-        public async Task<List<TimelineResult<string>>> ListHelixJobs(
+        public async Task<List<TimelineResult<HelixJobTimelineInfo>>> ListHelixJobsAsync(
             Timeline timeline,
             Action<Exception>? onError = null)
         {
@@ -530,9 +530,10 @@ namespace DevOps.Util.DotNet
             // TODO: this scheme really relies on this name. This is pretty fragile. Should work with
             // core-eng to find a more robust way of detecting this
             var comparer = StringComparer.OrdinalIgnoreCase;
-            var regex = new Regex(@"Sent Helix Job ([\d\w-]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            var sentRegex = new Regex(@"Sent Helix Job ([\d\w-]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            var queueRegex = new Regex(@"Sending Job to (.*)...", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-            var list = new List<TimelineResult<string>>();
+            var list = new List<TimelineResult<HelixJobTimelineInfo>>();
             var helixRecords = timelineTree.Records.Where(x => comparer.Equals(x.Name, "Send to Helix"));
             foreach (var record in helixRecords)
             {
@@ -540,19 +541,50 @@ namespace DevOps.Util.DotNet
                 {
                     continue;
                 }
-
-                await foreach (var match in SearchFileAsync(record.Log.Url, regex, onError).ConfigureAwait(false))
+ 
+                using var stream = await Server.AzureClient.HttpClient.DownloadFileStreamAsync(
+                    record.Log.Url,
+                    onError).ConfigureAwait(false);
+                if (stream is null)
                 {
-                    if (match?.Success == true)
+                    continue;
+                }
+
+                string? queueName = null;
+                using var reader = new StreamReader(stream);
+                do
+                {
+                    var line = reader.ReadLine();
+                    if (line is null)
+                    {
+                        break;
+                    }
+
+                    var match = queueRegex.Match(line);
+                    if (match.Success)
+                    {
+                        queueName = match.Groups[1].Value;
+                        match = Regex.Match(queueName, @"\([\w\d.]+\)?([\w\d.]+)@");
+                        if (match.Success)
+                        {
+                            queueName = match.Groups[1].Value;
+                        }
+                        continue;
+                    }
+
+                    match = sentRegex.Match(line);
+                    if (match.Success)
                     {
                         var id = match.Groups[1].Value;
-                        list.Add(new TimelineResult<string>(id, record, timelineTree));
+                        var info = new HelixJobTimelineInfo(id, queueName);
+                        list.Add(new TimelineResult<HelixJobTimelineInfo>(info, record, timelineTree));
+                        queueName = null;
                     }
-                }
+                } while (true);
             }
 
             return list;
         }
-
     }
+
 }

@@ -21,6 +21,8 @@ using Octokit;
 using System.Dynamic;
 using System.Net.Http;
 using System.Text;
+using YamlDotNet.RepresentationModel;
+using YamlDotNet.Core;
 
 namespace QueryFun
 {
@@ -74,7 +76,157 @@ namespace QueryFun
 
         private static async Task Scratch()
         {
-            await DumpTestTotals();
+            await DumpMachineUsage();
+        }
+
+        private static async Task DumpMachineUsage()
+        {
+            var project = "public";
+            var buildId = 646622;
+            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
+            var queryUtil = new DotNetQueryUtil(server);
+            var build = await server.GetBuildAsync(project, buildId);
+            var yaml = await server.GetYamlAsync(project, buildId);
+
+            var jobPoolMap = GetJobPoolMap(yaml);
+            var helixJobs = await queryUtil.ListHelixJobsAsync(build);
+
+            var map = new Dictionary<string, List<string>>();
+            foreach (var pair in jobPoolMap)
+            {
+                GetQueueList(pair.Value).Add(pair.Key);
+            }
+
+            foreach (var item in helixJobs)
+            {
+                if (item.Value.QueueName is object)
+                {
+                    GetQueueList(item.Value.QueueName).Add(item.JobName);
+                }
+                else
+                {
+                    GetQueueList("Helix Unknown").Add(item.JobName);
+                }
+            }
+
+            foreach (var pair in map)
+            {
+                Console.WriteLine($"{pair.Key} ({pair.Value.Count})");
+                foreach (var value in pair.Value)
+                {
+                    Console.WriteLine($"  {value}");
+                }
+            }
+
+            var total = map.Values.Sum(x => x.Count);
+            Console.WriteLine($"Total {total}");
+
+            List<string> GetQueueList(string queueName)
+            {
+                if (!map.TryGetValue(queueName, out var list))
+                {
+                    list = new List<string>();
+                    map[queueName] = list;
+                }
+
+                return list;
+            }
+
+
+            static Dictionary<string, string> GetJobPoolMap(string yaml)
+            {
+                var parser = new Parser(new StringReader(yaml));
+                var yamlStream = new YamlStream();
+                yamlStream.Load(parser);
+                var document = yamlStream.Documents[0];
+                var map = new Dictionary<string, string>();
+
+                foreach (var mapping in document.AllNodes.OfType<YamlMappingNode>())
+                {
+                    if (!TryGetScalarValue(mapping, "job", out var jobName))
+                    {
+                        continue;
+                    }
+
+                    if (TryGetScalarValue(mapping, "displayName", out var displayNameValue))
+                    {
+                        jobName = displayNameValue;
+                    }
+
+                    if (jobName is null)
+                    {
+                        continue;
+                    }
+
+                    string queue = "";
+                    if (TryGetNode<YamlMappingNode>(mapping, "pool", out var poolNode))
+                    {
+                        if (TryGetScalarValue(poolNode, "vmImage", out var vmName))
+                        {
+                            queue = vmName;
+                        }
+                        else if (TryGetScalarValue(poolNode, "queue", out var queueName))
+                        {
+                            queue = queueName;
+                        }
+                        else
+                        {
+                            queue = "Unknown";
+                        }
+                    }
+
+                    map[jobName] = queue;
+                }
+
+                return map;
+
+                bool TryGetNode<T>(YamlMappingNode node, string name, out T childNode)
+                    where T : YamlNode
+                {
+                    if (node.Children.TryGetValue(name, out var n) &&
+                        n is T t)
+                    {
+                        childNode = t;
+                        return true;
+                    }
+
+                    childNode = null;
+                    return false;
+                }
+
+                bool TryGetScalarValue(YamlMappingNode node, string name, out string value)
+                {
+                    if (TryGetNode<YamlScalarNode>(node, name, out var scalarNode))
+                    {
+                        value = scalarNode.Value;
+                        return true;
+                    }
+
+                    value = null;
+                    return false;
+                }
+            }
+        }
+
+
+        private class BuildStats
+        {
+            public int Passed { get; set; }
+            public int PassedOnRetry { get; set;}
+            public int Failed { get; set; }
+
+
+            public int TotalPassed => Passed + PassedOnRetry;
+
+            public int Total => Passed + PassedOnRetry + Failed;
+
+            public double PercentPassed => (double)TotalPassed / Total;
+        }
+
+        private class DayBuildStats
+        {
+            public BuildStats MergedPullRequests { get; set; } = new BuildStats();
+            public BuildStats CIBuilds { get; set; } = new BuildStats();
         }
 
         public static async Task DumpTestTotals()
@@ -148,11 +300,12 @@ namespace QueryFun
 
         }
 
+
         private static async Task DumpTimelineToHelix(string project, int buildId)
         {
             var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
             var queryUtil = new DotNetQueryUtil(server);
-            var list = await queryUtil.ListHelixJobs(project, buildId);
+            var list = await queryUtil.ListHelixJobsAsync(project, buildId);
             var timeline = await server.GetTimelineAsync(project, buildId);
             var timelineTree = TimelineTree.Create(timeline);
 

@@ -75,6 +75,11 @@ namespace DevOps.Util
             record.Result == TaskResult.Succeeded ||
             record.Result == TaskResult.SucceededWithIssues;
 
+        public static bool IsAnyFailed(this TimelineRecord record) =>
+            record.Result == TaskResult.Failed ||
+            record.Result == TaskResult.Abandoned ||
+            record.Result == TaskResult.Canceled;
+
         public static async Task<string?> GetJsonAsync(this HttpClient httpClient, string uri, Action<Exception>? onError = null)
         {
             var message = new HttpRequestMessage(HttpMethod.Get, uri);
@@ -230,5 +235,8 @@ namespace DevOps.Util
 
             return list;
         }
+
+        public static Task<string> GetYamlAsync(this DevOpsServer server, string project, int buildNumber) =>
+            server.GetBuildLogAsync(project, buildNumber, logId: 1);
     }
 }

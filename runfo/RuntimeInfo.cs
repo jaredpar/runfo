@@ -423,7 +423,7 @@ internal sealed partial class RuntimeInfo
         foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
         {
             Console.WriteLine(build.GetBuildInfo().BuildUri);
-            var jobs = await QueryUtil.ListHelixJobs(build);
+            var jobs = await QueryUtil.ListHelixJobsAsync(build);
             foreach (var group in jobs.GroupBy(x => x.JobName ?? "<unknown>"))
             {
                 Console.WriteLine(group.Key);
@@ -637,6 +637,7 @@ internal sealed partial class RuntimeInfo
         bool issues = false;
         bool failed = false;
         bool verbose = false;
+        bool summary = false;
         string name = null;
         int? attempt = null;
         var optionSet = new BuildSearchOptionSet()
@@ -644,6 +645,7 @@ internal sealed partial class RuntimeInfo
             { "depth=", "depth to print to", (int d) => depth = d },
             { "issues", "print recrods that have issues", i => issues = i is object },
             { "failed", "print records that failed", f => failed = f is object },
+            { "summary", "print summary", s => summary = s is object },
             { "n|name=", "record name to search for", n => name = n},
             { "v|verbose", "print issues with records", v => verbose = v is object },
             { "a|attempt=", "attempt to search in", (int a) => attempt = a },
@@ -653,14 +655,24 @@ internal sealed partial class RuntimeInfo
 
         foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
         {
-            Console.WriteLine(DevOpsUtil.GetBuildUri(build));
-            foreach (var timeline in await ListTimelinesAsync(build, attempt))
+            var buildInfo = build.GetBuildInfo();
+            var timeline = await Server.GetTimelineAttemptAsync(build.Project.Name, build.Id, attempt);
+            if (timeline is null)
             {
-                if (timeline is null)
-                {
-                    Console.WriteLine("No timeline info");
-                    return ExitFailure;
-                }
+                Console.WriteLine($"Error: no timeline for {buildInfo.BuildUri}");
+                continue;
+            }
+
+            var tree = TimelineTree.Create(timeline);
+            if (summary)
+            {
+                var succeeded = !tree.Nodes.Any(x => x.TimelineRecord.IsAnyFailed())
+                    ? "Succeeded"
+                    : "Failed";
+                Console.WriteLine($"{buildInfo.BuildUri} {succeeded}"); 
+            }
+            else
+            {
                 DumpTimeline(Server, timeline, depth, issues, failed, verbose);
             }
         }
@@ -740,7 +752,7 @@ internal sealed partial class RuntimeInfo
 
         foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
         {
-            var log = await Server.GetBuildLogAsync(build.Project.Name, build.Id, logId: 1);
+            var log = await Server.GetYamlAsync(build.Project.Name, build.Id);
             Console.WriteLine(log);
         }
 

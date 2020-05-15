@@ -27,13 +27,13 @@ namespace DevOps.Status.Controllers
         public async Task<List<HelixJobRestInfo>> Jobs(string project, int buildNumber)
         {
             var queryUtil = new DotNetQueryUtil(Server);
-            var jobs = await queryUtil.ListHelixJobs(project, buildNumber);
+            var jobs = await queryUtil.ListHelixJobsAsync(project, buildNumber);
             return jobs
                 .Select(x =>
                 {
                     return new HelixJobRestInfo()
                     {
-                        JobId = x.Value,
+                        JobId = x.Value.JobId,
                         TimelineCoreRecordId = x.Record.Id,
                         TimelineCoreRecordName = x.RecordName,
                         TimelineJobRecordId = x.JobRecord?.Id,
