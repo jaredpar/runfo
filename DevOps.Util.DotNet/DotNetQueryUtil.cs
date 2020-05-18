@@ -10,6 +10,8 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
+using YamlDotNet.Core;
+using YamlDotNet.RepresentationModel;
 
 namespace DevOps.Util.DotNet
 {
@@ -497,15 +499,9 @@ namespace DevOps.Util.DotNet
                 .SelectNullableValue(x => x.HelixWorkItem)
                 .ToList();
 
-        public Task<List<TimelineResult<HelixJobTimelineInfo>>> ListHelixJobsAsync(Build build)
+        public async Task<List<TimelineResult<HelixJobTimelineInfo>>> ListHelixJobsAsync(string project, int buildNumber, int? attempt = null)
         {
-            var buildKey = build.GetBuildKey();
-            return ListHelixJobsAsync(buildKey.Project, buildKey.Number);
-        }
-
-        public async Task<List<TimelineResult<HelixJobTimelineInfo>>> ListHelixJobsAsync(string project, int buildNumber)
-        {
-            var timeline = await Server.GetTimelineAsync(project, buildNumber).ConfigureAwait(false);
+            var timeline = await Server.GetTimelineAttemptAsync(project, buildNumber, attempt).ConfigureAwait(false);
             if (timeline is null)
             {
                 return new List<TimelineResult<HelixJobTimelineInfo>>();
@@ -587,6 +583,134 @@ namespace DevOps.Util.DotNet
             }
 
             return list;
+        }
+
+        public async Task<List<MachineInfo>> ListBuildMachineInfoAsync(
+            string project,
+            int buildNumber,
+            int? attempt = null,
+            bool includeAzure = true,
+            bool includeHelix = true)
+        {
+            var list = new List<MachineInfo>();
+            if (!includeAzure && !includeHelix)
+            {
+                return list;
+            }
+
+            if (includeAzure)
+            {
+                await GetJobMachineInfoAsync().ConfigureAwait(false);
+            }
+
+            if (includeHelix)
+            {
+                await GetHelixMachineInfoAsync().ConfigureAwait(false);
+            }
+
+            return list;
+
+            async Task GetJobMachineInfoAsync()
+            {
+                var yaml = await Server.GetYamlAsync(project, buildNumber).ConfigureAwait(false);
+                var parser = new Parser(new StringReader(yaml));
+                var yamlStream = new YamlStream();
+                yamlStream.Load(parser);
+                var document = yamlStream.Documents[0];
+
+                foreach (var mapping in document.AllNodes.OfType<YamlMappingNode>())
+                {
+                    if (!TryGetScalarValue(mapping, "job", out var jobName))
+                    {
+                        continue;
+                    }
+
+                    if (TryGetScalarValue(mapping, "displayName", out var displayNameValue))
+                    {
+                        jobName = displayNameValue;
+                    }
+
+                    if (jobName is null)
+                    {
+                        continue;
+                    }
+
+                    string? container = null;
+                    if (TryGetNode<YamlMappingNode>(mapping, "container", out var containerNode) &&
+                        TryGetScalarValue(containerNode, "alias", out var alias))
+                    {
+                        container = alias;
+                    }
+
+                    string? queue = null;
+                    if (TryGetNode<YamlMappingNode>(mapping, "pool", out var poolNode))
+                    {
+                        if (TryGetScalarValue(poolNode, "vmImage", out var vmName))
+                        {
+                            queue = vmName;
+                        }
+                        else if (TryGetScalarValue(poolNode, "queue", out var queueName))
+                        {
+                            queue = queueName;
+                        }
+                        else if (container is object)
+                        {
+                            queue = MachineInfo.UnknownContainerQueueName;
+                        }
+                    }
+
+                    if (queue is object)
+                    {
+                        list.Add(new MachineInfo(
+                            queue,
+                            jobName,
+                            container,
+                            isHelixSubmission: false));
+                    }
+                }
+
+                bool TryGetNode<T>(YamlMappingNode node, string name, out T childNode)
+                    where T : YamlNode
+                {
+                    if (node.Children.TryGetValue(name, out var n) &&
+                        n is T t)
+                    {
+                        childNode = t;
+                        return true;
+                    }
+
+                    childNode = null!;
+                    return false;
+                }
+
+                bool TryGetScalarValue(YamlMappingNode node, string name, out string value)
+                {
+                    if (TryGetNode<YamlScalarNode>(node, name, out var scalarNode))
+                    {
+                        value = scalarNode.Value!;
+                        return true;
+                    }
+
+                    value = null!;
+                    return false;
+                }
+            }
+
+            async Task GetHelixMachineInfoAsync()
+            {
+                var helixJobs = await ListHelixJobsAsync(project, buildNumber, attempt).ConfigureAwait(false);
+
+                foreach (var item in helixJobs)
+                {
+                    var queueName = item.Value.QueueName ?? MachineInfo.UnknownHelixQueueName;
+                    var info = new MachineInfo(
+                        queueName,
+                        item.JobName ?? "",
+                        containerName: null,
+                        isHelixSubmission: true);
+                    list.Add(info);
+                }
+            }
         }
     }
 

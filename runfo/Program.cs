@@ -89,6 +89,8 @@ public class Program
                 case "yml":
                 case "yaml":
                     return await runtimeInfo.PrintBuildYaml(commandArgs);
+                case "machines":
+                    return await runtimeInfo.PrintMachines(commandArgs);
                 case "clear-cache":
                     return runtimeInfo.ClearCache();
                 default:

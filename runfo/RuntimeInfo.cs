@@ -423,7 +423,7 @@ internal sealed partial class RuntimeInfo
         foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
         {
             Console.WriteLine(build.GetBuildInfo().BuildUri);
-            var jobs = await QueryUtil.ListHelixJobsAsync(build);
+            var jobs = await QueryUtil.ListHelixJobsAsync(build.Project.Name, build.Id);
             foreach (var group in jobs.GroupBy(x => x.JobName ?? "<unknown>"))
             {
                 Console.WriteLine(group.Key);
@@ -745,10 +745,49 @@ internal sealed partial class RuntimeInfo
         return ExitSuccess;
     }
 
+    internal async Task<int> PrintMachines(IEnumerable<string> args)
+    {
+        int? attempt = null;
+        bool verbose = false;
+        bool azure = true;
+        bool helix = true;
+        var optionSet = new BuildSearchOptionSet()
+        {
+            { "azdo", "print azdo job machines", a => azure = a is object },
+            { "helix", "print helix job machines", h => helix = h is object },
+            { "v|verbose", "print issues with records", v => verbose = v is object },
+            { "a|attempt=", "attempt to search in", (int a) => attempt = a },
+        };
+
+        ParseAll(optionSet, args);
+        foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
+        {
+            Console.WriteLine(build.GetBuildInfo().BuildUri);
+            Console.WriteLine();
+            var list = await QueryUtil.ListBuildMachineInfoAsync(build.Project.Name, build.Id, attempt, azure, helix);
+            foreach (var item in list.GroupBy(x => x.QueueName, StringComparer.OrdinalIgnoreCase).OrderBy(x => x.Key))
+            {
+                Console.WriteLine($"{item.Key} ({item.Count()})");
+                if (verbose)
+                {
+                    foreach (var child in item)
+                    {
+                        Console.WriteLine($"  {child.JobName}");
+                    }
+                }
+            }
+            Console.WriteLine();
+            Console.WriteLine($"Total: {list.Count}");
+        }
+
+
+        return ExitSuccess;
+    }
+
     internal async Task<int> PrintBuildYaml(IEnumerable<string> args)
     {
         var optionSet = new BuildSearchOptionSet();
-       ParseAll(optionSet, args);
+        ParseAll(optionSet, args);
 
         foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
         {

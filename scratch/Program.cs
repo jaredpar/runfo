@@ -13,7 +13,6 @@ using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
-using DevOpsFun;
 using DevOps.Util.DotNet;
 using System.Net;
 using System.ComponentModel.DataAnnotations;
@@ -90,7 +89,7 @@ namespace QueryFun
             var yaml = await server.GetYamlAsync(project, buildId);
 
             var jobPoolMap = GetJobPoolMap(yaml);
-            var helixJobs = await queryUtil.ListHelixJobsAsync(build);
+            var helixJobs = await queryUtil.ListHelixJobsAsync(project, buildId);
 
             var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             foreach (var pair in jobPoolMap)
@@ -513,30 +512,6 @@ namespace QueryFun
             var server = new DevOpsServer("dnceng");
             var builds1 = await server.ListBuildsAsync("public", new[] { 15 });
             var builds2 = await server.ListBuildsAsync("public", top: 10);
-        }
-
-        private static async Task DumpTestTimes()
-        {
-            using var util = new RunTestsUtil(await GetToken("scratch-db"));
-            foreach (var build in (await util.ListBuildsAsync(top: 20)).Where(x => x.Result == BuildResult.Succeeded))
-            {
-                Console.Write(DevOpsUtil.GetBuildUri(build));
-                Console.Write(" ");
-                try
-                {
-                    var buildTestTime = await util.GetBuildTestTimeAsync(build);
-                    var milliseconds = buildTestTime.Jobs.Sum(x => x.Duration.TotalMilliseconds);
-                    Console.Write(TimeSpan.FromMilliseconds(milliseconds));
-                    Console.Write(" ");
-                    var max = buildTestTime.Jobs.Max(x => x.Duration.TotalMilliseconds);
-                    Console.WriteLine(TimeSpan.FromMilliseconds(max));
-                }
-                catch(Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-            }
-            await util.UpdateDatabaseAsync(top: 100);
         }
 
         private static async Task DumpNgenData(int buildId)
