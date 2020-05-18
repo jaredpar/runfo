@@ -80,6 +80,10 @@ namespace DevOps.Util
             record.Result == TaskResult.Abandoned ||
             record.Result == TaskResult.Canceled;
 
+        public static DateTimeOffset? GetStartTime(this TimelineRecord record) => DevOpsUtil.ConvertFromRestTime(record.StartTime);
+
+        public static DateTimeOffset? GetFinishTime(this TimelineRecord record) => DevOpsUtil.ConvertFromRestTime(record.FinishTime);
+
         public static async Task<string?> GetJsonAsync(this HttpClient httpClient, string uri, Action<Exception>? onError = null)
         {
             var message = new HttpRequestMessage(HttpMethod.Get, uri);

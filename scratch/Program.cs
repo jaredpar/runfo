@@ -76,7 +76,8 @@ namespace QueryFun
 
         private static async Task Scratch()
         {
-            await DumpMachineUsage();
+            // await DumpMachineUsage();
+            await DumpDownloadTimes();
         }
 
         private static async Task DumpMachineUsage()
@@ -212,6 +213,43 @@ namespace QueryFun
                 }
             }
         }
+
+        private static async Task DumpDownloadTimes()
+        {
+            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
+            var queryUtil = new DotNetQueryUtil(server);
+
+            Console.WriteLine("Build Uri,Pull Request,Minutes");
+            foreach (var build in await queryUtil.ListBuildsAsync("-d runtime -c 100 -pr"))
+            {
+                try
+                {
+                    var timeline = await server.GetTimelineAsync(build.Project.Name, build.Id);
+                    var tree = TimelineTree.Create(timeline);
+                    var node = tree
+                        .Nodes
+                        .Where(x => 
+                            x.Name == "Download artifacts for all platforms" &&
+                            tree.TryGetJob(x.TimelineRecord, out var job) &&
+                            job.Name == "Installer Build and Test mono iOS_arm Release")
+                        .FirstOrDefault();
+                    if (node is object &&
+                        node.TimelineRecord.GetStartTime() is DateTimeOffset start &&
+                        node.TimelineRecord.GetFinishTime() is DateTimeOffset finish)
+                    {
+                        var buildInfo = build.GetBuildInfo();
+                        var isPr = buildInfo.PullRequestKey.HasValue;
+                        Console.WriteLine(buildInfo.BuildUri + $",{isPr}," + ((int)((finish - start).TotalMinutes)).ToString());
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error {build.Id}: {ex.Message}");
+                }
+            }
+
+        }
+
 
 
         private class BuildStats
