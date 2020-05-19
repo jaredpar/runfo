@@ -76,7 +76,65 @@ namespace QueryFun
         private static async Task Scratch()
         {
             // await DumpMachineUsage();
-            await DumpDownloadTimes();
+            await DumpJobFailures();
+        }
+
+        public static async Task DumpJobFailures()
+        {
+            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
+            var queryUtil = new DotNetQueryUtil(server);
+            var jobCount = 0;
+            var testFailCount = 0;
+            var otherFailCount = 0;
+
+            foreach (var build in await queryUtil.ListBuildsAsync("-d runtime -c 100"))
+            {
+                try
+                {
+                    await HandleBuild(build);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error with {build.Id}: {ex.Message}");
+                }
+            }
+
+            int totalFail = testFailCount + otherFailCount;
+            Console.WriteLine($"Total Jobs: {jobCount}");
+            Console.WriteLine($"Failed Tests: {testFailCount} {GetPercent(testFailCount)}");
+            Console.WriteLine($"Failed Other: {otherFailCount} {GetPercent(otherFailCount)}");
+
+            string GetPercent(int count)
+            {
+                var p = (double)count / totalFail;
+                p *= 100;
+                return $"({p:N2}%)";
+            }
+
+            async Task HandleBuild(Build build)
+            {
+                var timeline = await server.GetTimelineAttemptAsync(build.Project.Name, build.Id, attempt: 1);
+                var tree = TimelineTree.Create(timeline);
+                var helixJobs = await queryUtil.ListHelixJobsAsync(timeline);
+                foreach (var job in tree.Jobs)
+                {
+                    jobCount++;
+                    if (!job.IsAnyFailed())
+                    {
+                        continue;
+                    }
+
+                    if (helixJobs.Any(x => x.JobName == job.Name))
+                    {
+                        testFailCount++;
+                    }
+                    else
+                    {
+                        otherFailCount++;
+                    }
+                }
+            }
+
         }
 
         private static async Task DumpDownloadTimes()
