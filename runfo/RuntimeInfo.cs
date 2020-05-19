@@ -765,11 +765,18 @@ internal sealed partial class RuntimeInfo
             Console.WriteLine(build.GetBuildInfo().BuildUri);
             Console.WriteLine();
             var list = await QueryUtil.ListBuildMachineInfoAsync(build.Project.Name, build.Id, attempt, azure, helix);
-            foreach (var item in list.GroupBy(x => x.QueueName, StringComparer.OrdinalIgnoreCase).OrderBy(x => x.Key))
+            foreach (var item in list.GroupBy(x => x.FriendlyName, StringComparer.OrdinalIgnoreCase).OrderBy(x => x.Key))
             {
                 Console.WriteLine($"{item.Key} ({item.Count()})");
                 if (verbose)
                 {
+                    var info = item.First();
+                    if (info.IsContainer)
+                    {
+                        Console.WriteLine($"  Image: {info.ContainerImage}");
+                        Console.WriteLine($"  Queue: {info.QueueName}");
+                    }
+
                     foreach (var child in item)
                     {
                         Console.WriteLine($"  {child.JobName}");

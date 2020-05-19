@@ -528,7 +528,7 @@ namespace DevOps.Util.DotNet
             var comparer = StringComparer.OrdinalIgnoreCase;
             var comparison = StringComparison.OrdinalIgnoreCase;
             var sentRegex = new Regex(@"Sent Helix Job ([\d\w-]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-            var queueRegex = new Regex(@"Sending Job to (.*)...", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            var queueRegex = new Regex(@"Sending Job to (.*)\.\.\.", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
             var list = new List<TimelineResult<HelixJobTimelineInfo>>();
             var helixRecords = timelineTree.Records.Where(x => 
@@ -550,7 +550,13 @@ namespace DevOps.Util.DotNet
                     continue;
                 }
 
+                var jobName = timelineTree.TryGetJob(record, out var job)
+                    ? job.Name
+                    : "";
+
                 string? queueName = null;
+                string? containerName = null;
+                string? containerImage = null;
                 using var reader = new StreamReader(stream);
                 do
                 {
@@ -564,10 +570,14 @@ namespace DevOps.Util.DotNet
                     if (match.Success)
                     {
                         queueName = match.Groups[1].Value;
-                        match = Regex.Match(queueName, @"\([\w\d.]+\)?([\w\d.]+)@");
+                        containerImage = null;
+                        containerName = null;
+                        match = Regex.Match(queueName, @"\(([\w\d.-]+)\)?([\w\d.-]+)@(.*)");
                         if (match.Success)
                         {
-                            queueName = match.Groups[1].Value;
+                            queueName = match.Groups[2].Value;
+                            containerName = match.Groups[1].Value;
+                            containerImage = match.Groups[3].Value;
                         }
                         continue;
                     }
@@ -576,7 +586,13 @@ namespace DevOps.Util.DotNet
                     if (match.Success)
                     {
                         var id = match.Groups[1].Value;
-                        var info = new HelixJobTimelineInfo(id, queueName);
+                        var machineInfo = new MachineInfo(
+                            queueName ?? MachineInfo.UnknownHelixQueueName,
+                            jobName,
+                            containerName,
+                            containerImage,
+                            isHelixSubmission: true);
+                        var info = new HelixJobTimelineInfo(id, machineInfo);
                         list.Add(new TimelineResult<HelixJobTimelineInfo>(info, record, timelineTree));
                     }
                 } while (true);
@@ -665,6 +681,7 @@ namespace DevOps.Util.DotNet
                             queue,
                             jobName,
                             container,
+                            container,
                             isHelixSubmission: false));
                     }
                 }
@@ -702,13 +719,7 @@ namespace DevOps.Util.DotNet
 
                 foreach (var item in helixJobs)
                 {
-                    var queueName = item.Value.QueueName ?? MachineInfo.UnknownHelixQueueName;
-                    var info = new MachineInfo(
-                        queueName,
-                        item.JobName ?? "",
-                        containerName: null,
-                        isHelixSubmission: true);
-                    list.Add(info);
+                    list.Add(item.Value.MachineInfo);
                 }
             }
         }

@@ -9,12 +9,12 @@ namespace DevOps.Util.DotNet
     {
         public string JobId { get; }
 
-        public string? QueueName { get; }
+        public MachineInfo MachineInfo { get; }
 
-        public HelixJobTimelineInfo(string jobId, string? queueName)
+        public HelixJobTimelineInfo(string jobId, MachineInfo machineInfo)
         {
             JobId = jobId;
-            QueueName = queueName;
+            MachineInfo = machineInfo;
         }
     }
 }

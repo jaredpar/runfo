@@ -11,11 +11,12 @@
         "preLaunchTask": "build",
         "program": "${workspaceFolder}/runfo/bin/Debug/netcoreapp3.1/runfo.dll",
         "args": [
-            "timeline",
-            "-a",
+            "machines",
+            "-d",
+            "runtime",
+            "-c",
             "1",
-            "-b",
-            "634291"
+            "--azdo-"
         ],
         "cwd": "${workspaceFolder}/runfo",
         "console": "internalConsole",
