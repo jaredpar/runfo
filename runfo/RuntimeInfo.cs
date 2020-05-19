@@ -749,8 +749,8 @@ internal sealed partial class RuntimeInfo
     {
         int? attempt = null;
         bool verbose = false;
-        bool azure = true;
-        bool helix = true;
+        bool? azure = null;
+        bool? helix = null;
         var optionSet = new BuildSearchOptionSet()
         {
             { "azdo", "print azdo job machines", a => azure = a is object },
@@ -760,11 +760,18 @@ internal sealed partial class RuntimeInfo
         };
 
         ParseAll(optionSet, args);
+
+        if (azure is null && helix is null)
+        {
+            azure = true;
+            helix = true;
+        }
+
         foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
         {
             Console.WriteLine(build.GetBuildInfo().BuildUri);
             Console.WriteLine();
-            var list = await QueryUtil.ListBuildMachineInfoAsync(build.Project.Name, build.Id, attempt, azure, helix);
+            var list = await QueryUtil.ListBuildMachineInfoAsync(build.Project.Name, build.Id, attempt, azure ?? false, helix ?? false);
             foreach (var item in list.GroupBy(x => x.FriendlyName, StringComparer.OrdinalIgnoreCase).OrderBy(x => x.Key))
             {
                 Console.WriteLine($"{item.Key} ({item.Count()})");

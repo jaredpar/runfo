@@ -18,7 +18,19 @@ namespace DevOps.Util.DotNet
 
         public bool IsHelixSubmission { get; set; }
 
-        public string FriendlyName => ContainerName ?? ContainerImage ?? QueueName;
+        public string FriendlyName
+        {
+            get
+            {
+                if (IsContainer)
+                {
+                    var name = ContainerName ?? ContainerImage;
+                    return $"{name} (Docker)";
+                }
+                
+                return QueueName;
+            }
+        }
 
         public bool IsContainer => ContainerImage is object;
 
