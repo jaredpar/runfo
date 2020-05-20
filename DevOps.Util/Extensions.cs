@@ -147,53 +147,18 @@ namespace DevOps.Util
                 return null;
             }
 
-            if (attempt == 1 && timeline.Records.All(x => x.Attempt == 1))
+            if (timeline.Records.All(x => x.Attempt == attempt))
             {
                 return timeline;
             }
 
-            var timelineAttempts = timeline
+            var attemptTimelineId = timeline
                 .Records
                 .Select(x => x.PreviousAttempts?.FirstOrDefault(x => x.Attempt == attempt))
-                .SelectNotNull();
-            var any = false;
-
-            // Requesting a previous timeline will return both the specific TimelineRecords that 
-            // were requested and additionally other records that were not requested. To avoid
-            // having a TimelineRecord[] with entries that have duplicate Id values we need to 
-            // manually filter out returned values from the API.
-            var map = new Dictionary<string, TimelineRecord>(StringComparer.OrdinalIgnoreCase);
-            AddToMap(timeline.Records);
-    
-            foreach (var current in timelineAttempts.GroupBy(x => x.TimelineId))
-            {
-                any = true;
-                var previousTimeline = await server.GetTimelineAsync(project, buildNumber, current.Key).ConfigureAwait(false);
-                if (previousTimeline is object)
-                {
-                    AddToMap(previousTimeline.Records);
-                }
-            }
-
-            if (!any)
-            {
-                throw new Exception($"Cannot get timeline with attempt {attempt}");
-            }
-
-            return new Timeline()
-            {
-                Id = null,
-                Url = timeline.Url,
-                Records = map.Values.OrderBy(x => x.Id).ToArray(),
-            };
-
-            void AddToMap(IEnumerable<TimelineRecord> e)
-            {
-                foreach (var record in e)
-                {
-                    map[record.Id] = record;
-                }
-            }
+                .Select(x => x?.TimelineId)
+                .SelectNotNull()
+                .FirstOrDefault();
+            return await server.GetTimelineAsync(project, buildNumber, attemptTimelineId).ConfigureAwait(false);
         }
 
         public static Task<Timeline?> GetTimelineAttemptAsync(this DevOpsServer server, string project, int buildNumber, int? attempt) =>

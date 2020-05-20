@@ -687,7 +687,7 @@ internal sealed partial class RuntimeInfo
 
             if (failed)
             {
-                tree = tree.Filter(x => x.Result == TaskResult.Failed);
+                tree = tree.Filter(x => x.IsAnyFailed());
             }
 
             foreach (var rootNode in tree.RootNodes)

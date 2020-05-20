@@ -76,7 +76,30 @@ namespace QueryFun
         private static async Task Scratch()
         {
             // await DumpMachineUsage();
-            await DumpJobFailures();
+            // await DumpJobFailures();
+            await DumpTimelines();
+        }
+
+        public static async Task DumpTimelines()
+        {
+            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
+            var queryUtil = new DotNetQueryUtil(server);
+
+            foreach (var build in await queryUtil.ListBuildsAsync("-d runtime -c 30 -pr"))
+            {
+                var timeline = await server.GetTimelineAsync(build.Project.Name, build.Id);
+                if (timeline is null)
+                {
+                    continue;
+                }
+
+                for (var i = timeline.GetAttempt(); i >= 1; i--)
+                {
+                    var t = await server.GetTimelineAttemptAsync(build.Project.Name, build.Id, i);
+                    var tree = TimelineTree.Create(t);
+                    Console.WriteLine($"{build.Id} {i}");
+                }
+            }
         }
 
         public static async Task DumpJobFailures()
