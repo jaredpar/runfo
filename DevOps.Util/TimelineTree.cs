@@ -76,7 +76,7 @@ namespace DevOps.Util
             node.ParentNode is object &&
             IsRoot(node.ParentNode.TimelineRecord.Id);
 
-        public bool TryGetParent(TimelineRecord record, [NotNullWhen(true)] TimelineRecord? parent)
+        public bool TryGetParent(TimelineRecord record, [NotNullWhen(true)] out TimelineRecord? parent)
         {
             if (IdToNodeMap.TryGetValue(record.Id, out var node) &&
                 node.ParentNode is object)

@@ -77,7 +77,91 @@ namespace QueryFun
         {
             // await DumpMachineUsage();
             // await DumpJobFailures();
-            await DumpTimelines();
+            await DumpRoslynTestTimes();
+        }
+
+        public static async Task DumpRoslynTestTimes()
+        {
+            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
+            var queryUtil = new DotNetQueryUtil(server);
+
+            foreach (var build in await queryUtil.ListBuildsAsync("-d roslyn -c 100 -br master -before 2020/4/22"))
+            {
+                var buildInfo = build.GetBuildInfo();
+                try
+                {
+                    await DumpTestTimeAsync(buildInfo);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error with {buildInfo.Number}: {ex.Message}");
+                }
+            }
+
+            ;
+
+            async Task DumpTestTimeAsync(BuildInfo buildInfo)
+            {
+                var timeline = await server.GetTimelineAsync(buildInfo.Project, buildInfo.Number);
+                if (timeline is null)
+                {
+                    return;
+                }
+
+                var tree = TimelineTree.Create(timeline);
+                var record = timeline.Records
+                    .Where(
+                        x => x.Name == "Build and Test" &&
+                        tree.TryGetParent(x, out var parent) &&
+                        parent.Name == "Windows_Desktop_Unit_Tests debug_32")
+                    .FirstOrDefault();
+                if (record is null)
+                {
+                    Console.WriteLine($"Can't get record for {buildInfo.BuildUri}");
+                }
+
+                if (record.IsAnyFailed())
+                {
+                    Console.WriteLine($"tests failed {buildInfo.BuildUri}");
+                    return;
+                }
+
+                var duration = TryGetDuration(record.StartTime, record.FinishTime);
+
+                var log = await server.HttpClient.DownloadFileTextAsync(record.Log.Url);
+                // Console.WriteLine(log);
+                using var reader = new StringReader(log);
+                var regex = new Regex(@"Test execution time: (.*)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+                do
+                {
+                    var line = reader.ReadLine();
+                    if (line is null)
+                    {
+                        Console.WriteLine($"Can't get time for {buildInfo.BuildUri}");
+                        break;
+                    }
+
+                    var match = regex.Match(line);
+                    if (match.Success)
+                    {
+                        Console.WriteLine($"{buildInfo.BuildUri} {duration} {match.Groups[1].Value}");
+                        break;
+                    }
+                } while (true);
+            }
+
+            static TimeSpan? TryGetDuration(string startTime, string finishTime)
+            {
+                if (startTime is null ||
+                    finishTime is null ||
+                    !DateTime.TryParse(startTime, out var s) ||
+                    !DateTime.TryParse(finishTime, out var f))
+                {
+                    return null;
+                }
+
+                return f - s;
+            }
         }
 
         public static async Task DumpTimelines()
