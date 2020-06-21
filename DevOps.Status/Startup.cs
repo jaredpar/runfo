@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DevOps.Util;
+using DevOps.Util.Triage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -31,6 +33,12 @@ namespace DevOps.Status
             {
                 var token = Configuration["RUNFO_AZURE_TOKEN"];
                 return new DevOpsServer("dnceng", token);
+            });
+
+            services.AddDbContext<TriageContext>(options => 
+            {
+                var connectionString = Configuration["RUNFO_CONNECTION_STRING"];
+                options.UseSqlServer(connectionString);
             });
         }
 

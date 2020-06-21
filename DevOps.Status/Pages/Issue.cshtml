@@ -1,0 +1,32 @@
+@page "{id:int}"
+
+@using Octokit
+@model IssueModel
+@{
+    ViewData["Title"] = "Issue Tracking";
+}
+
+
+<div>
+    @Model.SearchText
+</div>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="column">Build</th>
+            <th scope="column">Kind</th>
+            <th scope="column">Count</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach(var issueData in @Model.Issues)
+        {
+            <tr>
+                <td><a asp-page="issue" asp-route-id=@issueData.Id>@issueData.SearchText</a></td>
+                <td>@issueData.SearchKind</td>
+                <td>@issueData.BuildCount</td>
+            </tr>
+        }
+    </tbody>
+</table>
