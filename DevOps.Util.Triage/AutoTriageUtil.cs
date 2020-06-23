@@ -155,7 +155,7 @@ namespace DevOps.Util.Triage
                 build,
                 timeline,
                 text: "Received request to deprovision: The request was cancelled by the remote provider")
-                .Select(x => x.JobRecord)
+                .Select(x => x.Record.JobRecord)
                 .Count();
             if (osxCount == 0)
             {

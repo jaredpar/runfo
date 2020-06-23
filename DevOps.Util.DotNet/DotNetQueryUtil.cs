@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -17,10 +18,8 @@ namespace DevOps.Util.DotNet
 {
     using static OptionSetUtil;
 
-    public class TimelineResult<T>
+    public class TimelineRecordItem
     {
-        public T Value { get; }
-
         public TimelineRecord Record { get; }
 
         public TimelineTree Tree { get; }
@@ -33,14 +32,51 @@ namespace DevOps.Util.DotNet
 
         public string? JobName => JobRecord?.Name;
 
-        public TimelineResult(
-            T result,
+        public TimelineRecord? RootRecord => Tree.TryGetRoot(Record, out var record)
+            ? record
+            : null;
+
+        public TimelineRecordItem(
             TimelineRecord record,
             TimelineTree tree)
         {
-            Value = result;
+            Debug.Assert(tree.TryGetNode(record.Id, out _));
             Record = record;
             Tree = tree;
+        }
+    }
+
+    public sealed class SearchTimelineResult
+    {
+        public TimelineRecordItem Record { get; }
+
+        public Build Build { get; }
+
+        public string Line { get; }
+
+        public SearchTimelineResult(
+            TimelineRecordItem record,
+            Build build, 
+            string line)
+        {
+            Record = record;
+            Build = build;
+            Line = line;
+        }
+    }
+
+    public sealed class HelixTimelineResult
+    {
+        public TimelineRecordItem Record { get; }
+
+        public HelixJobTimelineInfo HelixJob { get; }
+
+        public HelixTimelineResult(
+            TimelineRecordItem record,
+            HelixJobTimelineInfo helixJob)
+        {
+            Record = record;
+            HelixJob = helixJob;
         }
     }
 
@@ -53,7 +89,7 @@ namespace DevOps.Util.DotNet
             Server = server;
         }
 
-        public Task<List<TimelineResult<(Build Build, string Line)>>> SearchTimelineAsync(
+        public Task<List<SearchTimelineResult>> SearchTimelineAsync(
             IEnumerable<Build> builds,
             string text,
             string? name = null,
@@ -66,14 +102,14 @@ namespace DevOps.Util.DotNet
             return SearchTimelineAsync(builds, textRegex, nameRegex, taskRegex, attempt);
         }
 
-        public async Task<List<TimelineResult<(Build Build, string Line)>>> SearchTimelineAsync(
+        public async Task<List<SearchTimelineResult>> SearchTimelineAsync(
             IEnumerable<Build> builds,
             Regex text,
             Regex? name = null,
             Regex? task = null,
             int? attempt = null)
         {
-            var list = new List<TimelineResult<(Build Build, string Line)>>();
+            var list = new List<SearchTimelineResult>();
             foreach (var build in builds)
             {
                 var timeline = await Server.GetTimelineAttemptAsync(build.Project.Name, build.Id, attempt).ConfigureAwait(false);
@@ -88,7 +124,7 @@ namespace DevOps.Util.DotNet
             return list;
         }
 
-        public IEnumerable<TimelineResult<(Build Build, string Line)>> SearchTimeline(
+        public IEnumerable<SearchTimelineResult> SearchTimeline(
             Build build,
             Timeline timeline,
             string text,
@@ -102,7 +138,7 @@ namespace DevOps.Util.DotNet
             return SearchTimeline(build, timeline, textRegex, nameRegex, taskRegex);
         }
 
-        public IEnumerable<TimelineResult<(Build Build, string Line)>> SearchTimeline(
+        public IEnumerable<SearchTimelineResult> SearchTimeline(
             Build build,
             Timeline timeline,
             Regex text,
@@ -133,10 +169,10 @@ namespace DevOps.Util.DotNet
 
                 if (line is object)
                 {
-                    yield return new TimelineResult<(Build Build, string Line)>(
-                        (build, line),
-                        record,
-                        timelineTree);
+                    yield return new SearchTimelineResult(
+                        new TimelineRecordItem(record, timelineTree),
+                        build,
+                        line);
                 }
             }
         }
@@ -499,12 +535,12 @@ namespace DevOps.Util.DotNet
                 .SelectNullableValue(x => x.HelixWorkItem)
                 .ToList();
 
-        public async Task<List<TimelineResult<HelixJobTimelineInfo>>> ListHelixJobsAsync(string project, int buildNumber, int? attempt = null)
+        public async Task<List<HelixTimelineResult>> ListHelixJobsAsync(string project, int buildNumber, int? attempt = null)
         {
             var timeline = await Server.GetTimelineAttemptAsync(project, buildNumber, attempt).ConfigureAwait(false);
             if (timeline is null)
             {
-                return new List<TimelineResult<HelixJobTimelineInfo>>();
+                return new List<HelixTimelineResult>();
             }
 
             return await ListHelixJobsAsync(timeline);
@@ -517,7 +553,7 @@ namespace DevOps.Util.DotNet
         /// TODO: this method works by knowing the display name of timeline records. That is very 
         /// fragile and we should find a better way to do this.
         /// </summary>
-        public async Task<List<TimelineResult<HelixJobTimelineInfo>>> ListHelixJobsAsync(
+        public async Task<List<HelixTimelineResult>> ListHelixJobsAsync(
             Timeline timeline,
             Action<Exception>? onError = null)
         {
@@ -530,7 +566,7 @@ namespace DevOps.Util.DotNet
             var sentRegex = new Regex(@"Sent Helix Job ([\d\w-]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
             var queueRegex = new Regex(@"Sending Job to (.*)\.\.\.", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-            var list = new List<TimelineResult<HelixJobTimelineInfo>>();
+            var list = new List<HelixTimelineResult>();
             var helixRecords = timelineTree.Records.Where(x => 
                 comparer.Equals(x.Name, "Send to Helix") ||
                 comparer.Equals(x.Name, "Send tests to Helix") ||
@@ -593,7 +629,9 @@ namespace DevOps.Util.DotNet
                             containerImage,
                             isHelixSubmission: true);
                         var info = new HelixJobTimelineInfo(id, machineInfo);
-                        list.Add(new TimelineResult<HelixJobTimelineInfo>(info, record, timelineTree));
+                        list.Add(new HelixTimelineResult(
+                            new TimelineRecordItem(record, timelineTree),
+                            info));
                     }
                 } while (true);
             }
@@ -719,7 +757,7 @@ namespace DevOps.Util.DotNet
 
                 foreach (var item in helixJobs)
                 {
-                    list.Add(item.Value.MachineInfo);
+                    list.Add(item.HelixJob.MachineInfo);
                 }
             }
         }

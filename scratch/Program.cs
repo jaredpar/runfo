@@ -147,7 +147,7 @@ namespace QueryFun
                         continue;
                     }
 
-                    if (helixJobs.Any(x => x.JobName == job.Name))
+                    if (helixJobs.Any(x => x.Record.JobName == job.Name))
                     {
                         testFailCount++;
                     }
@@ -300,7 +300,7 @@ namespace QueryFun
 
             foreach (var result in list)
             {
-                Console.WriteLine($"{result.Value} - {result.JobName}");
+                Console.WriteLine($"{result.HelixJob} - {result.Record.JobName}");
             }
         }
 

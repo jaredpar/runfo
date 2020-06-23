@@ -17,7 +17,6 @@ using DevOps.Util.DotNet;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Octokit;
-using HelixTimelineResult = DevOps.Util.DotNet.TimelineResult<DevOps.Util.DotNet.HelixJobTimelineInfo>;
 
 namespace DevOps.Util.Triage
 {
@@ -139,12 +138,12 @@ namespace DevOps.Util.Triage
 
                 var modelTriageIssueResult = new ModelTriageIssueResult()
                 {
-                    TimelineRecordName = result.RecordName,
-                    JobName = result.JobName,
-                    Line = result.Value.Line,
+                    TimelineRecordName = result.Record.RecordName,
+                    JobName = result.Record.JobName,
+                    Line = result.Line,
                     ModelBuild = ModelBuild,
                     ModelTriageIssue = modelTriageIssue,
-                    BuildNumber = result.Value.Build.GetBuildKey().Number,
+                    BuildNumber = result.Build.GetBuildKey().Number,
                 };
                 Context.ModelTriageIssueResults.Add(modelTriageIssueResult);
             }
@@ -220,8 +219,8 @@ namespace DevOps.Util.Triage
                     string? jobName = null;
                     if (jobMap.TryGetValue(workItem.JobId, out var result))
                     {
-                        recordName = result.RecordName;
-                        jobName = result.JobName;
+                        recordName = result.Record.RecordName;
+                        jobName = result.Record.JobName;
                     }
 
                     var modelTriageIssueResult = new ModelTriageIssueResult()
@@ -295,8 +294,8 @@ namespace DevOps.Util.Triage
                     workItemName = helixInfo.WorkItemName;
                     if (jobMap.TryGetValue(helixInfo.JobId, out var result))
                     {
-                        recordName = result.RecordName;
-                        jobName = result.JobName;
+                        recordName = result.Record.RecordName;
+                        jobName = result.Record.JobName;
                     }
                 }
 
@@ -422,7 +421,7 @@ namespace DevOps.Util.Triage
             {
                 foreach (var result in await QueryUtil.ListHelixJobsAsync(timeline).ConfigureAwait(false))
                 {
-                    map[result.Value.JobId] = result;
+                    map[result.HelixJob.JobId] = result;
                 }
 
                 HelixJobToRecordMap = map;

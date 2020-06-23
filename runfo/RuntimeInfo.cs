@@ -203,7 +203,7 @@ internal sealed partial class RuntimeInfo
 
         var hadDefinition = optionSet.Definitions.Any();
         var builds = await QueryUtil.ListBuildsAsync(optionSet);
-        var found = new List<TimelineResult<(Build Build, string Line)>>();
+        var found = new List<SearchTimelineResult>();
         foreach (var build in builds)
         {
             foreach (var timeline in await ListTimelinesAsync(build, attempt))
@@ -217,7 +217,7 @@ internal sealed partial class RuntimeInfo
             }
         }
         Console.WriteLine(ReportBuilder.BuildSearchTimeline(
-            found.Select(x => (x.Value.Build.GetBuildInfo(), x.JobName)),
+            found.Select(x => (x.Build.GetBuildInfo(), x.Record.JobName)),
             markdown: markdown,
             includeDefinition: !hadDefinition));
 
@@ -424,12 +424,12 @@ internal sealed partial class RuntimeInfo
         {
             Console.WriteLine(build.GetBuildInfo().BuildUri);
             var jobs = await QueryUtil.ListHelixJobsAsync(build.Project.Name, build.Id);
-            foreach (var group in jobs.GroupBy(x => x.JobName ?? "<unknown>"))
+            foreach (var group in jobs.GroupBy(x => x.Record.JobName ?? "<unknown>"))
             {
                 Console.WriteLine(group.Key);
                 foreach (var item in group)
                 {
-                    Console.WriteLine($"  {item.Value}");
+                    Console.WriteLine($"  {item.HelixJob}");
                 }
             }
         }
