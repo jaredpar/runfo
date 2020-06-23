@@ -40,35 +40,18 @@ namespace DevOps.Status.Pages
 
         public async Task OnGetAsync()
         {
-            Issues = new List<IssueData>();
-            foreach (var issue in await Context.ModelTriageIssues.ToListAsync())
-            {
-                var issueData = new IssueData()
+            var week = DateTime.UtcNow - TimeSpan.FromDays(7);
+            Issues = await Context.ModelTriageIssues
+                .Select(issue => new IssueData()
                 {
                     Id = issue.Id,
                     SearchText = issue.SearchText,
                     SearchKind = issue.SearchKind.ToString(),
-                    WeekCount = await GetWeekCount(issue),
-                    TotalCount = await GetTotalCount(issue)
-                };
-                Issues.Add(issueData);
-            }
-
-            Issues = Issues.OrderByDescending(x => x.WeekCount).ToList();
-
-            async Task<int> GetTotalCount(ModelTriageIssue issue) =>
-                await Context.ModelTriageIssueResults
-                    .Where(x => x.ModelTriageIssueId == issue.Id)
-                    .CountAsync();
-
-            async Task<int> GetWeekCount(ModelTriageIssue issue)
-            {
-                var week = DateTime.UtcNow - TimeSpan.FromDays(7);
-                return await Context.ModelTriageIssueResults
-                    .Where(x => x.ModelTriageIssueId == issue.Id && x.ModelBuild.StartTime >= week)
-                    .CountAsync();
-
-            }
+                    TotalCount = issue.ModelTriageIssueResults.Count(),
+                    WeekCount = issue.ModelTriageIssueResults.Where(x => x.ModelBuild.StartTime >= week).Count()
+                })
+                .OrderByDescending(x => x.WeekCount)
+                .ToListAsync();
         }
     }
 }
