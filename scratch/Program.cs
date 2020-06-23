@@ -77,7 +77,16 @@ namespace QueryFun
         {
             // await DumpMachineUsage();
             // await DumpJobFailures();
-            await DumpRoslynTestTimes();
+            // await DumpRoslynTestTimes();
+
+            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
+            var queryUtil = new DotNetQueryUtil(server);
+            var timeline = await server.GetTimelineAttemptAsync("public", 697450, 1);
+            Console.WriteLine(timeline.Id);
+            foreach (var record in timeline.Records)
+            {
+                Console.WriteLine($"{record.Id} - {record.Name}");
+            }
         }
 
         public static async Task DumpRoslynTestTimes()

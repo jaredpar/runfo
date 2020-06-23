@@ -17,9 +17,20 @@ namespace DevOps.Status.Pages
 {
     public class IssueModel : PageModel
     {
+        public sealed class Result
+        {
+            public int BuildNumber { get; set; }
+
+            public string BuildUri { get; set; }
+
+            public string JobName { get; set; }
+        }
+
         public TriageContext Context { get; }
 
         public string SearchText { get; set; }
+
+        public List<Result> Results { get; set; }
 
         public IssueModel(TriageContext context)
         {
@@ -32,6 +43,20 @@ namespace DevOps.Status.Pages
                 .Where(x => x.Id == id)
                 .SingleAsync();
             SearchText = issue.SearchText;
+
+            Results = await Context.ModelTriageIssueResults
+                .Include(x => x.ModelBuild)
+                .Include(x => x.ModelBuild.ModelBuildDefinition)
+                .Where(x => x.ModelTriageIssueId == issue.Id)
+                .OrderByDescending(x => x.BuildNumber)
+                .Take(20)
+                .Select(x => new Result()
+                {
+                    BuildNumber = x.BuildNumber,
+                    BuildUri = DevOpsUtil.GetBuildUri(x.ModelBuild.ModelBuildDefinition.AzureOrganization, x.ModelBuild.ModelBuildDefinition.AzureProject, x.BuildNumber),
+                    JobName = x.JobName
+                })
+                .ToListAsync();
         }
     }
 }
