@@ -49,6 +49,10 @@ namespace DevOps.Util.Triage
                 .HasIndex(x => new { x.Organization, x.Repository, x.IssueNumber })
                 .IsUnique();
 
+            modelBuilder.Entity<ModelTriageIssueResult>()
+                .Property(x => x.Attempt)
+                .HasDefaultValue(1);
+
             modelBuilder.Entity<ModelTriageIssueResultComplete>()
                 .HasIndex(x => new { x.ModelTriageIssueId, x.ModelBuildId })
                 .IsUnique();
@@ -192,6 +196,12 @@ namespace DevOps.Util.Triage
         public int BuildNumber { get; set; }
 
         public string JobName { get; set; }
+
+        public string JobRecordId { get ; set; }
+
+        public string RootRecordId { get; set;}
+
+        public int Attempt { get; set; }
 
         public string TimelineRecordName { get; set; }
 

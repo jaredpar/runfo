@@ -140,6 +140,7 @@ namespace DevOps.Util.Triage
                 {
                     TimelineRecordName = result.Record.RecordName,
                     JobName = result.Record.JobName,
+                    JobRecordId = result.Record.JobRecord?.Id,
                     Line = result.Line,
                     ModelBuild = ModelBuild,
                     ModelTriageIssue = modelTriageIssue,
