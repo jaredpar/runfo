@@ -24,7 +24,9 @@ namespace DevOps.Status.Pages
 
             public string SearchKind { get; set; }
 
-            public int BuildCount { get; set; }
+            public int WeekCount { get; set; }
+
+            public int TotalCount { get; set; }
         }
 
         public TriageContext Context { get; }
@@ -38,15 +40,35 @@ namespace DevOps.Status.Pages
 
         public async Task OnGetAsync()
         {
-            Issues = await Context.ModelTriageIssues
-                .Select(x => new IssueData()
+            Issues = new List<IssueData>();
+            foreach (var issue in await Context.ModelTriageIssues.ToListAsync())
+            {
+                var issueData = new IssueData()
                 {
-                    Id = x.Id,
-                    SearchText = x.SearchText,
-                    SearchKind = x.SearchKind.ToString(),
-                    BuildCount = x.ModelTriageIssueResults.Count
-                })
-                .ToListAsync();
+                    Id = issue.Id,
+                    SearchText = issue.SearchText,
+                    SearchKind = issue.SearchKind.ToString(),
+                    WeekCount = await GetWeekCount(issue),
+                    TotalCount = await GetTotalCount(issue)
+                };
+                Issues.Add(issueData);
+            }
+
+            Issues = Issues.OrderByDescending(x => x.WeekCount).ToList();
+
+            async Task<int> GetTotalCount(ModelTriageIssue issue) =>
+                await Context.ModelTriageIssueResults
+                    .Where(x => x.ModelTriageIssueId == issue.Id)
+                    .CountAsync();
+
+            async Task<int> GetWeekCount(ModelTriageIssue issue)
+            {
+                var week = DateTime.UtcNow - TimeSpan.FromDays(7);
+                return await Context.ModelTriageIssueResults
+                    .Where(x => x.ModelTriageIssueId == issue.Id && x.ModelBuild.StartTime >= week)
+                    .CountAsync();
+
+            }
         }
     }
 }

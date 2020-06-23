@@ -83,6 +83,8 @@ namespace QueryFun
             var queryUtil = new DotNetQueryUtil(server);
             var timeline = await server.GetTimelineAttemptAsync("public", 697450, 1);
             Console.WriteLine(timeline.Id);
+            var tree = TimelineTree.Create(timeline);
+            Console.WriteLine(tree.Roots.First().Id);
             foreach (var record in timeline.Records)
             {
                 Console.WriteLine($"{record.Id} - {record.Name}");

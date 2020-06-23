@@ -9,7 +9,8 @@
         <tr>
             <th scope="column">Text</th>
             <th scope="column">Kind</th>
-            <th scope="column">Count</th>
+            <th scope="column">Week Count</th>
+            <th scope="column">Total Count</th>
         </tr>
     </thead>
     <tbody>
@@ -18,7 +19,8 @@
             <tr>
                 <td><a asp-page="issue" asp-route-id=@issueData.Id>@issueData.SearchText</a></td>
                 <td>@issueData.SearchKind</td>
-                <td>@issueData.BuildCount</td>
+                <td>@issueData.WeekCount</td>
+                <td>@issueData.TotalCount</td>
             </tr>
         }
     </tbody>

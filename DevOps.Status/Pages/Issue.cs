@@ -23,7 +23,15 @@ namespace DevOps.Status.Pages
 
             public string BuildUri { get; set; }
 
+            public string BuildKind { get; set; }
+
             public string JobName { get; set; }
+
+            public int Attempt { get; set; }
+
+            public string RepositoryName { get; set; }
+
+            public string RepositoryUri { get; set; }
         }
 
         public TriageContext Context { get; }
@@ -54,7 +62,13 @@ namespace DevOps.Status.Pages
                 {
                     BuildNumber = x.BuildNumber,
                     BuildUri = DevOpsUtil.GetBuildUri(x.ModelBuild.ModelBuildDefinition.AzureOrganization, x.ModelBuild.ModelBuildDefinition.AzureProject, x.BuildNumber),
-                    JobName = x.JobName
+                    BuildKind = x.ModelBuild.PullRequestNumber is object ? "Pull Request" : "Rolling",
+                    JobName = x.JobName,
+                    Attempt = x.Attempt,
+                    RepositoryName = x.ModelBuild.GitHubRepository,
+                    RepositoryUri = x.ModelBuild.GitHubRepository is object 
+                        ? $"https://github.com/{x.ModelBuild.GitHubOrganization}/{x.ModelBuild.GitHubRepository}"
+                        : ""
                 })
                 .ToListAsync();
         }

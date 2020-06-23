@@ -6,7 +6,6 @@
     ViewData["Title"] = "Issue Tracking";
 }
 
-
 <div>
     @Model.SearchText
 </div>
@@ -15,7 +14,10 @@
     <thead>
         <tr>
             <th scope="column">Build</th>
+            <th scope="column">Kind</th>
             <th scope="column">Job Name</th>
+            <th scope="column">Attempt</th>
+            <th scope="column">Repository</th>
         </tr>
     </thead>
     <tbody>
@@ -23,7 +25,10 @@
         {
             <tr>
                 <td><a href=@issueData.BuildUri>@issueData.BuildNumber</a>
+                <td>@issueData.BuildKind</td>
                 <td>@issueData.JobName</td>
+                <td>@issueData.Attempt</td>
+                <td><a href=@issueData.RepositoryUri>@issueData.RepositoryName</a>
             </tr>
         }
     </tbody>
