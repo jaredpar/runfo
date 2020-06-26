@@ -1,0 +1,26 @@
+
+@page 
+@using Octokit
+@model IndexModel
+@{
+    ViewData["Title"] = "Job Failure Rate";
+}
+
+@section Scripts {
+    <script type="text/javascript" src="~/js/runs.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+}
+
+<form>
+  <div class="form-group">
+    <label for="search-definition">Definition</label>
+    <input type="text" class="form-control" id="search-definition" value="runtime">
+  </div>
+  <div class="form-group">
+    <label for="search-query">Query</label>
+    <input type="text" class="form-control" id="search-query" value="-c 5">
+  </div>
+  <button class="btn btn-primary" id="search-button">Search</button>
+</form>
+
+<canvas id="search-chart" width="400" height="400"></canvas>
