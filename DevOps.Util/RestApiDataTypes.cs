@@ -433,6 +433,7 @@ namespace DevOps.Util
         public string Url { get; set; }
         public int WarningCount { get; set; }
         public string WorkerName { get; set; }
+        public string Type { get; set; }
 
         public override string ToString() => Name;
     }

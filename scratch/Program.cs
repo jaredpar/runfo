@@ -81,13 +81,10 @@ namespace QueryFun
 
             var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
             var queryUtil = new DotNetQueryUtil(server);
-            var timeline = await server.GetTimelineAttemptAsync("public", 697450, 1);
-            Console.WriteLine(timeline.Id);
-            var tree = TimelineTree.Create(timeline);
-            Console.WriteLine(tree.Roots.First().Id);
-            foreach (var record in timeline.Records)
+            var timeline = await server.GetTimelineAttemptAsync("public", 706564, 1);;
+            foreach (var t in timeline.Records.Where(x => x.Type == "Job"))
             {
-                Console.WriteLine($"{record.Id} - {record.Name}");
+                Console.WriteLine(t.Name);
             }
         }
 

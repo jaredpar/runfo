@@ -59,6 +59,10 @@ namespace DevOps.Util
         public IEnumerable<TimelineNode> JobNodes => Nodes.Where(x => IsJob(x.Id));
 
         public IEnumerable<TimelineRecord> Jobs => JobNodes.Select(x => x.TimelineRecord);
+
+        public IEnumerable<TimelineNode> PhaseNodes => Nodes.Where(x => IsPhase(x.Id));
+
+        public IEnumerable<TimelineRecord> Phases => PhaseNodes.Select(x => x.TimelineRecord);
         public int Count => RootNodes.Sum(x => x.Count);
 
         public TimelineTree(Timeline timeline, List<TimelineNode> rootNodes, Dictionary<string, TimelineNode> idToNodeMap)
@@ -73,8 +77,11 @@ namespace DevOps.Util
 
         public bool IsJob(string id) =>
             IdToNodeMap.TryGetValue(id, out var node) &&
-            node.ParentNode is object &&
-            IsRoot(node.ParentNode.TimelineRecord.Id);
+            node.TimelineRecord.Type == "Job";
+
+        public bool IsPhase(string id) =>
+            IdToNodeMap.TryGetValue(id, out var node) &&
+            node.TimelineRecord.Type == "Phase";
 
         public bool TryGetParent(TimelineRecord record, [NotNullWhen(true)] out TimelineRecord? parent)
         {
