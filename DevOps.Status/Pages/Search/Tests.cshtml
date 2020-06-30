@@ -1,0 +1,49 @@
+@page
+@model TestsModel
+
+@{
+    ViewData["Title"] = "Timline Search";
+}
+
+<form method="get">
+  <div class="form-group">
+    <label>Query</label>
+    <input asp-for="Query" type="text" class="form-control" value="@Model.Query">
+  </div>
+  <button class="btn btn-primary">Search</button>
+</form>
+
+<div id="accordion">
+    @foreach(var testInfo in @Model.TestInfos)
+    {
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <button class="btn btn-link" data-toggle="collapse" data-target="#@testInfo.CollapseName">
+                    @testInfo.TestName (@testInfo.Results.Count)
+                    </button>
+                </h5>
+            </div>
+
+            <div id="@testInfo.CollapseName" class="collapse" data-parent="#accordion">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="column">Build</th>
+                            <th scope="column">Helix Console</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var result in testInfo.Results)
+                        {
+                            <tr>
+                                <td><a href=@result.BuildUri>@result.BuildNumber</a></td>
+                                <td>@result.HelixConsoleUri</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </diV>
+        </div>
+    }
+</div>
