@@ -7,6 +7,7 @@ namespace DevOps.Util.DotNet
     public readonly struct HelixInfo : IEquatable<HelixInfo>
     {
         public string JobId { get; }
+
         public string WorkItemName { get; }
 
         public HelixInfo(string jobId, string workItemName)

@@ -1,8 +1,9 @@
 @page
 @model TestsModel
+@using Microsoft.AspNetCore.Html
 
 @{
-    ViewData["Title"] = "Timline Search";
+    ViewData["Title"] = "Tests Search";
 }
 
 <form method="get">
@@ -31,6 +32,9 @@
                         <tr>
                             <th scope="column">Build</th>
                             <th scope="column">Helix Console</th>
+                            <th scope="column">Helix Run Client</th>
+                            <th scope="column">Helix Core Dump</th>
+                            <th scope="column">Helix Test Results</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -38,7 +42,30 @@
                         {
                             <tr>
                                 <td><a href=@result.BuildUri>@result.BuildNumber</a></td>
-                                <td>@result.HelixConsoleUri</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(result.HelixConsoleUri))
+                                    {
+                                        <a href=@result.HelixConsoleUri target="_blank">Console</a>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(result.HelixRunClientUri))
+                                    {
+                                        <a href=@result.HelixRunClientUri target="_blank">Run Client</a>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(result.HelixCoreDumpUri))
+                                    {
+                                        <a href=@result.HelixCoreDumpUri target="_blank">Core Dump</a>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(result.HelixTestResultsUri))
+                                    {
+                                        <a href=@result.HelixTestResultsUri target="_blank">Test Results</a>
+                                    }
+                                </td>
                             </tr>
                         }
                     </tbody>

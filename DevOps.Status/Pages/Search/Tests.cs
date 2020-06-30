@@ -30,6 +30,12 @@ namespace DevOps.Status.Pages.Search
             public string BuildUri { get; set; }
 
             public string HelixConsoleUri { get; set; }
+
+            public string HelixRunClientUri { get; set; }
+
+            public string HelixCoreDumpUri { get; set; }
+
+            public string HelixTestResultsUri { get; set; }
         }
 
         public DevOpsServer Server { get; }
@@ -54,12 +60,14 @@ namespace DevOps.Status.Pages.Search
             var queryUtil = new DotNetQueryUtil(Server);
             var testRuns = new List<DotNetTestRun>();
             var builds = await queryUtil.ListBuildsAsync(Query);
+
             foreach (var build in builds)
             {
                 var result = await queryUtil.ListDotNetTestRunsAsync(build, DotNetUtil.FailedTestOutcomes);
                 testRuns.AddRange(result);
             }
 
+            var helixMap = await GetHelixMap();
             var count = 0;
             foreach (var group in testRuns.SelectMany(x => x.TestCaseResults).GroupBy(x => x.TestCaseTitle))
             {
@@ -73,15 +81,38 @@ namespace DevOps.Status.Pages.Search
 
                 foreach (var item in group)
                 {
+                    if (!item.HelixInfo.HasValue || !helixMap.TryGetValue(item.HelixInfo.Value, out var logInfo))
+                    {
+                        logInfo = null;
+                    }
+
                     var testResultInfo = new TestResultInfo()
                     {
                         BuildNumber = item.Build.Id,
                         BuildUri = DevOpsUtil.GetBuildUri(item.Build),
+                        HelixConsoleUri = logInfo?.ConsoleUri,
+                        HelixRunClientUri = logInfo?.RunClientUri,
+                        HelixCoreDumpUri = logInfo?.CoreDumpUri,
+                        HelixTestResultsUri = logInfo?.TestResultsUri,
                     };
                     testInfo.Results.Add(testResultInfo);
                 }
 
                 TestInfos.Add(testInfo);
+            }
+
+            async Task<Dictionary<HelixInfo, HelixLogInfo>> GetHelixMap()
+            {
+                var query = testRuns
+                    .SelectMany(x => x.TestCaseResults)
+                    .Where(x => x.HelixWorkItem.HasValue)
+                    .Select(x => x.HelixWorkItem.Value)
+                    .GroupBy(x => x.HelixInfo)
+                    .ToList()
+                    .AsParallel()
+                    .Select(async g => (g.Key, await HelixUtil.GetHelixLogInfoAsync(Server, g.First())));
+                await Task.WhenAll(query);
+                return query.ToDictionary(x => x.Result.Key, x => x.Result.Item2);
             }
         }
     }
