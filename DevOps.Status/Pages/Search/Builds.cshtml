@@ -1,0 +1,32 @@
+@page
+@model BuildsModel
+
+@{
+    ViewData["Title"] = "Build Search";
+}
+
+<form method="get">
+  <div class="form-group">
+    <label>Query</label>
+    <input asp-for="Query" type="text" class="form-control" value="@Model.Query">
+  </div>
+  <button class="btn btn-primary" id="search-button">Search</button>
+</form>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="column">Result</th>
+            <th scope="column">Build</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach(var build in @Model.Builds)
+        {
+            <tr>
+                <td>@build.Result</td>
+                <td><a href=@build.BuildUri>@build.BuildNumber</a></td>
+            </tr>
+        }
+    </tbody>
+</table>
