@@ -17,4 +17,9 @@ namespace DevOps.Status.Rest
 
         public string BuildUri { get; set; }
     }
+
+    public sealed class JobInfo
+    {
+        
+    }
 }
