@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
@@ -80,9 +81,12 @@ namespace DevOps.Status.Pages.Search
                 testRuns.AddRange(result);
             }
 
+            var testCaseResults = testRuns.SelectMany(x => x.TestCaseResults).ToList();
+            FilterTestName();
+
             var helixMap = await GetHelixMap();
             var count = 0;
-            foreach (var group in testRuns.SelectMany(x => x.TestCaseResults).GroupBy(x => x.TestCaseTitle))
+            foreach (var group in testCaseResults.GroupBy(x => x.TestCaseTitle).OrderByDescending(x => x.Count()))
             {
                 count++;
 
@@ -118,8 +122,7 @@ namespace DevOps.Status.Pages.Search
 
             async Task<Dictionary<HelixInfo, HelixLogInfo>> GetHelixMap()
             {
-                var query = testRuns
-                    .SelectMany(x => x.TestCaseResults)
+                var query = testCaseResults
                     .Where(x => x.HelixWorkItem.HasValue)
                     .Select(x => x.HelixWorkItem.Value)
                     .GroupBy(x => x.HelixInfo)
@@ -128,6 +131,17 @@ namespace DevOps.Status.Pages.Search
                     .Select(async g => (g.Key, await HelixUtil.GetHelixLogInfoAsync(Server, g.First())));
                 await Task.WhenAll(query);
                 return query.ToDictionary(x => x.Result.Key, x => x.Result.Item2);
+            }
+
+            void FilterTestName()
+            {
+                if (string.IsNullOrEmpty(SearchInfo.TestName))
+                {
+                    return;
+                }
+
+                var regex = new Regex(SearchInfo.TestName, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                testCaseResults.RemoveAll(x => !regex.IsMatch(x.TestCaseTitle));
             }
         }
     }

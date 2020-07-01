@@ -78,7 +78,7 @@ namespace DevOps.Status.Pages.Search
                         Count = int.Parse(value);
                         break;
                     case "testname":
-                        TestName = value;
+                        TestName = value.Trim('"');
                         break;
                     default:
                         throw new Exception($"Invalid query string item {name}");
