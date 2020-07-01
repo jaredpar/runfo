@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DevOps.Util;
@@ -301,10 +302,68 @@ namespace DevOps.Util.DotNet
             return list;
         }
 
+        public static List<string> TokenizeQuery(string query)
+        {
+            var list = new List<string>();
+            var builder = new StringBuilder();
+            var start = 0;
+            var index = 0;
+            var inQuote = false;
+            while (index < query.Length)
+            {
+                var current = query[index];
+                if (current == '"')
+                {
+                    if (inQuote)
+                    {
+                        builder.Append('"');
+                        inQuote = false;
+                        CompleteItem();
+                    }
+                    else
+                    {
+                        builder.Append('"');
+                        inQuote = true;
+                        index++;
+                    }
+                }
+                else if (!inQuote && char.IsWhiteSpace(current))
+                {
+                    CompleteItem();
+                }
+                else
+                {
+                    builder.Append(current);
+                    index++;
+                }
+            }
+
+            CompleteItem();
+
+            return list;
+
+            void CompleteItem()
+            {
+                if (builder.Length > 0)
+                {
+                    var item = builder.ToString();
+                    if (!string.IsNullOrEmpty(item))
+                    {
+                        list.Add(item);
+                    }
+
+                    builder.Length = 0;
+                }
+
+                start = index + 1;
+                index++;
+            }
+        }
+
         public async Task<List<Build>> ListBuildsAsync(string buildQuery)
         {
             var optionSet = new BuildSearchOptionSet();
-            if (optionSet.Parse(buildQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries)).Count != 0)
+            if (optionSet.Parse(TokenizeQuery(buildQuery)).Count != 0)
             {
                 throw CreateBadOptionException();
             }
