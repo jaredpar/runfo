@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using Microsoft.AspNetCore.Mvc;
-using DevOps.Status.Rest;
 using System;
 
 namespace DevOps.Status.Controllers

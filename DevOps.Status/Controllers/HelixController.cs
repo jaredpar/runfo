@@ -6,14 +6,13 @@ using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using Microsoft.AspNetCore.Mvc;
-using DevOps.Status.Rest;
 using System;
 
 namespace DevOps.Status.Controllers
 {
     [ApiController]
     [Produces(MediaTypeNames.Application.Json)]
-    public sealed class HelixController : ControllerBase
+    public sealed partial class HelixController : ControllerBase
     {
         public DevOpsServer Server { get; }
 
