@@ -41,7 +41,9 @@ namespace DevOps.Status.Pages.Search
         public DevOpsServer Server { get; }
 
         [BindProperty(SupportsGet = true)]
-        public string Query { get; set; }
+        public SearchInfo SearchInfo { get; set; }
+
+        public string InitialSearchText { get; set; }
 
         public List<TestInfo> TestInfos { get; set; } = new List<TestInfo>();
 
@@ -50,16 +52,27 @@ namespace DevOps.Status.Pages.Search
             Server = server;
         }
 
-        public async Task OnGet()
+        public async Task<IActionResult> OnGet()
         {
-            if (string.IsNullOrEmpty(Query))
+            // No query string, this is an initial page load. Just set the default and 
+            // let the user specify the search.
+            if (!HttpContext.Request.QueryString.HasValue)
             {
-                return;
+                InitialSearchText = SearchInfo.Default.GetSearchText();
+                return Page();
             }
 
+            if (!string.IsNullOrEmpty(SearchInfo.QueryString))
+            {
+                SearchInfo.ParseQueryString();
+                var queryString = SearchInfo.CreatePrettyQueryString();
+                return Redirect($"~/search/tests{queryString}");
+            }
+
+            InitialSearchText = SearchInfo.GetSearchText();
             var queryUtil = new DotNetQueryUtil(Server);
             var testRuns = new List<DotNetTestRun>();
-            var builds = await queryUtil.ListBuildsAsync(Query);
+            var builds = await queryUtil.ListBuildsAsync(SearchInfo.CreateBuildSearchOptionSet());
 
             foreach (var build in builds)
             {
@@ -100,6 +113,8 @@ namespace DevOps.Status.Pages.Search
 
                 TestInfos.Add(testInfo);
             }
+
+            return Page();
 
             async Task<Dictionary<HelixInfo, HelixLogInfo>> GetHelixMap()
             {
