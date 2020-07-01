@@ -1,13 +1,17 @@
-@page "{definition}"
+@page "{definition?}"
 @{
     ViewData["Title"] = "Job Failure Rate";
 }
 
 @section Scripts {
     <script type="text/javascript">
-      let definition = '@RouteData.Values["definition"]';
+        let definition = '@RouteData.Values["definition"]';
+        if (!definition)
+        {
+            definition = "runtime";
+        }
     </script>
-    <script type="text/javascript" src="~/js/jobs/view.js"></script>
+    <script type="text/javascript" src="~/js/view/jobs.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
 }
 
