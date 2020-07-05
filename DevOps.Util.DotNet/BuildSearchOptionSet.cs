@@ -6,7 +6,7 @@ using Mono.Options;
 
 namespace DevOps.Util.DotNet
 {
-    public sealed class BuildSearchOptionSet : OptionSet
+    public class BuildSearchOptionSet : OptionSet
     {
         public const int DefaultSearchCount = 5;
 

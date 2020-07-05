@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,9 +19,9 @@ namespace DevOps.Status.Pages.Search
     {
         public class TestInfo
         {
-            public string TestName { get; set; }
+            public string? TestName { get; set; }
 
-            public string CollapseName { get; set; }
+            public string? CollapseName { get; set; }
 
             public List<TestResultInfo> Results { get; } = new List<TestResultInfo>();
         }
@@ -28,23 +30,33 @@ namespace DevOps.Status.Pages.Search
         {
             public int BuildNumber { get; set; }
 
-            public string BuildUri { get; set; }
+            public string? BuildUri { get; set; }
 
-            public string HelixConsoleUri { get; set; }
+            public string? HelixConsoleUri { get; set; }
 
-            public string HelixRunClientUri { get; set; }
+            public string? HelixRunClientUri { get; set; }
 
-            public string HelixCoreDumpUri { get; set; }
+            public string? HelixCoreDumpUri { get; set; }
 
-            public string HelixTestResultsUri { get; set; }
+            public string? HelixTestResultsUri { get; set; }
+        }
+
+        public sealed class TestSearchOptionSet : BuildSearchOptionSet
+        {
+            public string? TestName { get; set; }
+
+            public TestSearchOptionSet()
+            {
+                Add("n|name", "Test name to filter to", t => TestName = t);
+            }
         }
 
         public DevOpsServer Server { get; }
 
-        [BindProperty(SupportsGet = true)]
-        public SearchInfo SearchInfo { get; set; }
+        [BindProperty(SupportsGet = true, Name = "q")]
+        public string? QueryString { get; set; }
 
-        public string InitialSearchText { get; set; }
+        public string? InitialSearchText { get; set; }
 
         public List<TestInfo> TestInfos { get; set; } = new List<TestInfo>();
 
@@ -59,21 +71,13 @@ namespace DevOps.Status.Pages.Search
             // let the user specify the search.
             if (!HttpContext.Request.QueryString.HasValue)
             {
-                InitialSearchText = SearchInfo.Default.GetSearchText();
                 return Page();
             }
 
-            if (!string.IsNullOrEmpty(SearchInfo.QueryString))
-            {
-                SearchInfo.ParseQueryString();
-                var queryString = SearchInfo.CreatePrettyQueryString();
-                return Redirect($"~/search/tests{queryString}");
-            }
-
-            InitialSearchText = SearchInfo.GetSearchText();
             var queryUtil = new DotNetQueryUtil(Server);
             var testRuns = new List<DotNetTestRun>();
-            var builds = await queryUtil.ListBuildsAsync(SearchInfo.CreateBuildSearchOptionSet());
+            var testSearchOptionSet = CreateTestSearchOptionSet();
+            var builds = await queryUtil.ListBuildsAsync(testSearchOptionSet);
 
             foreach (var build in builds)
             {
@@ -124,7 +128,7 @@ namespace DevOps.Status.Pages.Search
             {
                 var query = testCaseResults
                     .Where(x => x.HelixWorkItem.HasValue)
-                    .Select(x => x.HelixWorkItem.Value)
+                    .Select(x => x.HelixWorkItem!.Value)
                     .GroupBy(x => x.HelixInfo)
                     .ToList()
                     .AsParallel()
@@ -135,14 +139,26 @@ namespace DevOps.Status.Pages.Search
 
             void FilterTestName()
             {
-                if (string.IsNullOrEmpty(SearchInfo.TestName))
+                if (string.IsNullOrEmpty(testSearchOptionSet.TestName))
                 {
                     return;
                 }
 
-                var regex = new Regex(SearchInfo.TestName, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                var regex = new Regex(testSearchOptionSet.TestName, RegexOptions.Compiled | RegexOptions.IgnoreCase);
                 testCaseResults.RemoveAll(x => !regex.IsMatch(x.TestCaseTitle));
             }
+        }
+
+        private TestSearchOptionSet CreateTestSearchOptionSet()
+        {
+            var optionSet = new TestSearchOptionSet();
+            if (!string.IsNullOrEmpty(QueryString) &&
+                optionSet.Parse(DotNetQueryUtil.TokenizeQuery(QueryString)).Count != 0)
+            {
+                throw OptionSetUtil.CreateBadOptionException();
+            }
+
+            return optionSet;
         }
     }
 }
