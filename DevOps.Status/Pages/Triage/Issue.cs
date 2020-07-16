@@ -15,7 +15,7 @@ using Octokit;
 
 namespace DevOps.Status.Pages
 {
-    public class IssueModel : PageModel
+    public class TriageIssueModel : PageModel
     {
         public sealed class Result
         {
@@ -40,7 +40,7 @@ namespace DevOps.Status.Pages
 
         public List<Result> Results { get; set; }
 
-        public IssueModel(TriageContext context)
+        public TriageIssueModel(TriageContext context)
         {
             Context = context;
         }

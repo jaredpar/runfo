@@ -12,9 +12,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Octokit;
 
-namespace DevOps.Status.Pages
+namespace DevOps.Status.Pages.Triage
 {
-    public class IssuesModel : PageModel
+    public class TriageIndexModel : PageModel
     {
         public class IssueData
         {
@@ -33,7 +33,7 @@ namespace DevOps.Status.Pages
 
         public List<IssueData> Issues { get; set; }
 
-        public IssuesModel(TriageContext context)
+        public TriageIndexModel(TriageContext context)
         {
             Context = context;
         }
