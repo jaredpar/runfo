@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.Triage;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -27,7 +29,13 @@ namespace DevOps.Status
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddRazorPages();
+            services
+                .AddRazorPages()
+                .AddRazorPagesOptions(options =>
+                {
+                    options.Conventions.AuthorizeFolder("/triage", Constants.TriagePolicy);
+
+                });
             services.AddControllers();
 
             services.Configure<RouteOptions>(options =>
@@ -47,6 +55,39 @@ namespace DevOps.Status
             {
                 var connectionString = Configuration["RUNFO_CONNECTION_STRING"];
                 options.UseSqlServer(connectionString);
+            });
+
+            services.AddAuthentication(options =>
+                    {
+                        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                    })
+                    .AddCookie(options =>
+                    {
+                        options.LoginPath = "/signin";
+                        options.LogoutPath = "/signout";
+                    })
+                    .AddGitHub(options =>
+                    {
+                        options.ClientId = Configuration["GitHubClientId"];
+                        options.ClientSecret = Configuration["GitHubClientSecret"];
+                        options.SaveTokens = true;
+                        options.Events.OnCreatingTicket = context =>
+                        {
+                            switch (context.Identity.Name.ToLower())
+                            {
+                                case "jaredpar":
+                                case "pilchie":
+                                    context.Identity.AddClaim(new Claim(context.Identity.RoleClaimType, Constants.TriageRole));
+                                    break;
+                            }
+
+                            return Task.CompletedTask;
+                        };
+                    });
+
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy(Constants.TriagePolicy, policy => policy.RequireRole(Constants.TriageRole));
             });
         }
 
@@ -69,6 +110,7 @@ namespace DevOps.Status
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
