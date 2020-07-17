@@ -1,14 +1,29 @@
 @page
-@model NewModel
+@model NewTriageIssueModel
 @{
     ViewData["Title"] = "Create Triage Issue";
 }
 
-<div>
-    <ul class="list-group">
-        <li class="list-group-item"><a asp-page="search/builds">Search Builds</a></li>
-        <li class="list-group-item"><a asp-page="search/tests">Search Tests</a></li>
-        <li class="list-group-item"><a asp-page="view/jobs">View Jobs</a></li>
-    </ul>
-</div>
+<form method="post">
+    <div class="form-group">
+        <label for="searchKind">Search Kind</label>
+        <select id="searchKind" class="form-control" asp-for="SearchKind" asp-items="Html.GetEnumSelectList<DevOps.Util.Triage.SearchKind>()">
+            <option value="">Select a kind</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="triageKind">Issue Kind</label>
+        <select id="triageKind" class="form-control" asp-for="TriageIssueKind" asp-items="Html.GetEnumSelectList<DevOps.Util.Triage.TriageIssueKind>()">
+            <option value="">Select a kind</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="text">Text</label>
+        <input id="text" class="form-control" asp-for="Text">
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+</form>
 

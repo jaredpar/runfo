@@ -148,7 +148,7 @@ namespace DevOps.Util.Triage
             }
         }
 
-        public void EnsureTriageIssue(
+        public ModelTriageIssue EnsureTriageIssue(
             TriageIssueKind issueKind,
             SearchKind searchKind, 
             string searchText,
@@ -190,6 +190,8 @@ namespace DevOps.Util.Triage
             }
 
             Context.SaveChanges();
+
+            return modelTriageIssue;
         }
 
         public List<ModelTriageIssueResult> FindModelTriageIssueResults(ModelTriageIssue triageIssue, ModelTriageGitHubIssue triageGitHubIssue)
