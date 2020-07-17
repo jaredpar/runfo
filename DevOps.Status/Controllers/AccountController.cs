@@ -12,7 +12,7 @@ namespace DevOps.Status.Controllers
     public class AccountController : Controller
     {
         [HttpGet("signin")]
-        public IActionResult SignIn(string returnUrl)
+        public IActionResult SignIn(string returnUrl = null)
         {
             return Challenge(
                 new AuthenticationProperties

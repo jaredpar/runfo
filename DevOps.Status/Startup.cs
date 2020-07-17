@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.Triage;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -71,6 +72,7 @@ namespace DevOps.Status
                         options.ClientId = Configuration["GitHubClientId"];
                         options.ClientSecret = Configuration["GitHubClientSecret"];
                         options.SaveTokens = true;
+                        options.ClaimActions.MapJsonKey(Constants.GitHubAvatarUrl, Constants.GitHubAvatarUrl);
                         options.Events.OnCreatingTicket = context =>
                         {
                             switch (context.Identity.Name.ToLower())

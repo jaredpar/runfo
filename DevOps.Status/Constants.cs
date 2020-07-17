@@ -9,5 +9,6 @@ namespace DevOps.Status
     {
         internal const string TriageRole = "triage-role";
         internal const string TriagePolicy = "triage-policy";
+        internal const string GitHubAvatarUrl = "avatar_url";
     }
 }
