@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <UserSecretsId>8c127652-56b4-4501-9323-d1f40a41c512</UserSecretsId>
+    <UserSecretsId>67c4a872-5dd7-422a-acad-fdbe907ace33</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="3.1.3">

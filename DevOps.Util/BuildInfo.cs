@@ -4,7 +4,7 @@ using System;
 
 namespace DevOps.Util
 {
-    public struct GitHubInfo
+    public readonly struct GitHubInfo
     {
         public string Organization { get; }
 

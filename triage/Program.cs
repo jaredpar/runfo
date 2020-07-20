@@ -18,7 +18,7 @@ using Mono.Options;
 using Octokit;
 using static DevOps.Util.DotNet.OptionSetUtil;
 
-[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsId("8c127652-56b4-4501-9323-d1f40a41c512")]
+[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsId("67c4a872-5dd7-422a-acad-fdbe907ace33")]
 
 internal class Program
 {

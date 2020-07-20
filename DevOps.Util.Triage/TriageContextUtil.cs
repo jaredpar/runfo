@@ -94,8 +94,8 @@ namespace DevOps.Util.Triage
             {
                 Id = modelBuildId,
                 ModelBuildDefinitionId = EnsureBuildDefinition(buildInfo.DefinitionInfo).Id,
-                GitHubOrganization = prKey?.Organization,
-                GitHubRepository = prKey?.Repository,
+                GitHubOrganization = buildInfo.GitHubInfo?.Organization ?? null,
+                GitHubRepository = buildInfo.GitHubInfo?.Repository ?? null,
                 PullRequestNumber = prKey?.Number,
                 StartTime = buildInfo.StartTime,
                 FinishTime = buildInfo.FinishTime,

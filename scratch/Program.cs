@@ -22,12 +22,17 @@ using System.Net.Http;
 using System.Text;
 using YamlDotNet.RepresentationModel;
 using YamlDotNet.Core;
+using Microsoft.Extensions.Configuration;
+using DevOps.Util.Triage;
+using Microsoft.EntityFrameworkCore;
+
+[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsId("67c4a872-5dd7-422a-acad-fdbe907ace33")]
 
 namespace QueryFun
 {
     public class Program
     {
-        public static string Organization = "dnceng";
+        public static string DefaultOrganization { get; set; } = "dnceng";
 
         public static async Task Main(string[] args)
         {
@@ -57,6 +62,32 @@ namespace QueryFun
             // await DumpTimeline("public", 196140);
         }
 
+        private static DevOpsServer CreateDevOpsServer(IConfiguration configuration = null, string organization = null)
+        {
+            configuration = configuration ?? CreateConfiguration();
+            var token = configuration["RUNFO_AZURE_TOKEN"];
+            organization ??= DefaultOrganization;
+            return new DevOpsServer(organization, token);
+        }
+
+        private static TriageContext CreateTriageContext(IConfiguration configuration = null)
+        {
+            configuration = configuration ?? CreateConfiguration();
+            var builder = new DbContextOptionsBuilder<TriageContext>();
+            builder.UseSqlServer(configuration["RUNFO_CONNECTION_STRING"]);
+            return new TriageContext(builder.Options);
+        }
+
+        private static IConfiguration CreateConfiguration()
+        {
+            var config = new ConfigurationBuilder()
+                .AddUserSecrets<Program>()
+                .AddEnvironmentVariables()
+                .Build();
+                return config;
+        }
+
+
         private static async Task<string> GetToken(string name)
         {
             var lines = await File.ReadAllLinesAsync(@"p:\tokens.txt");
@@ -79,12 +110,41 @@ namespace QueryFun
             // await DumpJobFailures();
             // await DumpRoslynTestTimes();
 
-            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
-            var queryUtil = new DotNetQueryUtil(server);
-            var timeline = await server.GetTimelineAttemptAsync("public", 706564, 1);;
-            foreach (var t in timeline.Records.Where(x => x.Type == "Job"))
+            using var context = CreateTriageContext();
+            var server = CreateDevOpsServer();
+            var slice = 100;
+            for (int i = 0; i < 50; i++)
             {
-                Console.WriteLine(t.Name);
+                var query = context.ModelBuilds
+                    .Include(x => x.ModelBuildDefinition)
+                    .Where(x => x.GitHubOrganization == null)
+                    .OrderByDescending(x => x.Id)
+                    .Skip(i * slice)
+                    .Take(slice);
+                foreach (var modelBuild in query)
+                {
+                    try
+                    {
+                        var build = await server.GetBuildAsync(modelBuild.ModelBuildDefinition.AzureProject, modelBuild.BuildNumber);
+                        var buildInfo = build.GetBuildInfo();
+                        if (buildInfo.GitHubInfo is { } info)
+                        {
+                            modelBuild.GitHubOrganization = info.Organization;
+                            modelBuild.GitHubRepository = info.Repository;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Can't get build info for {buildInfo.Number}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error: {ex.Message}");
+                    }
+                }
+
+                Console.WriteLine($"Saving slice {i}");
+                context.SaveChanges();
             }
         }
 
@@ -635,7 +695,7 @@ namespace QueryFun
 
         private static async Task DumpTimeline(string project, int buildId, string personalAccessToken = null)
         {
-            var server = new DevOpsServer(Organization, personalAccessToken);
+            var server = new DevOpsServer(DefaultOrganization, personalAccessToken);
 
             var timeline = await server.GetTimelineAsync(project, buildId);
             await DumpTimeline("", timeline);
@@ -708,7 +768,7 @@ namespace QueryFun
 
         private static async Task DumpBuild(string project, int buildId)
         {
-            var server = new DevOpsServer(Organization);
+            var server = new DevOpsServer(DefaultOrganization);
             var output = @"e:\temp\logs";
             Directory.CreateDirectory(output);
             foreach (var log in await server.GetBuildLogsAsync(project, buildId))
@@ -723,7 +783,7 @@ namespace QueryFun
 
         private static async Task Fun()
         { 
-            var server = new DevOpsServer(Organization);
+            var server = new DevOpsServer(DefaultOrganization);
             var project = "public";
             var builds = await server.ListBuildsAsync(project, definitions: new[] { 15 }, top: 10);
             foreach (var build in builds)
