@@ -59,33 +59,33 @@ namespace DevOps.Status
             });
 
             services.AddAuthentication(options =>
+            {
+                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            })
+            .AddCookie(options =>
+            {
+                options.LoginPath = "/signin";
+                options.LogoutPath = "/signout";
+            })
+            .AddGitHub(options =>
+            {
+                options.ClientId = Configuration["GitHubClientId"];
+                options.ClientSecret = Configuration["GitHubClientSecret"];
+                options.SaveTokens = true;
+                options.ClaimActions.MapJsonKey(Constants.GitHubAvatarUrl, Constants.GitHubAvatarUrl);
+                options.Events.OnCreatingTicket = context =>
+                {
+                    switch (context.Identity.Name.ToLower())
                     {
-                        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    })
-                    .AddCookie(options =>
-                    {
-                        options.LoginPath = "/signin";
-                        options.LogoutPath = "/signout";
-                    })
-                    .AddGitHub(options =>
-                    {
-                        options.ClientId = Configuration["GitHubClientId"];
-                        options.ClientSecret = Configuration["GitHubClientSecret"];
-                        options.SaveTokens = true;
-                        options.ClaimActions.MapJsonKey(Constants.GitHubAvatarUrl, Constants.GitHubAvatarUrl);
-                        options.Events.OnCreatingTicket = context =>
-                        {
-                            switch (context.Identity.Name.ToLower())
-                            {
-                                case "jaredpar":
-                                case "pilchie":
-                                    context.Identity.AddClaim(new Claim(context.Identity.RoleClaimType, Constants.TriageRole));
-                                    break;
-                            }
+                        case "jaredpar":
+                        case "pilchie":
+                            context.Identity.AddClaim(new Claim(context.Identity.RoleClaimType, Constants.TriageRole));
+                            break;
+                    }
 
-                            return Task.CompletedTask;
-                        };
-                    });
+                    return Task.CompletedTask;
+                };
+            });
 
             services.AddAuthorization(options =>
             {
