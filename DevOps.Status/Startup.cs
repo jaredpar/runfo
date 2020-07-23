@@ -34,7 +34,7 @@ namespace DevOps.Status
                 .AddRazorPages()
                 .AddRazorPagesOptions(options =>
                 {
-                    options.Conventions.AuthorizeFolder("/triage", Constants.TriagePolicy);
+                    options.Conventions.AuthorizePage("/triage/new", Constants.TriagePolicy);
 
                 });
             services.AddControllers();
