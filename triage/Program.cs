@@ -77,7 +77,7 @@ internal class Program
     internal static async Task<int> MainCore(List<string> args)
     {
         var (server, gitHubClient, context) = Create(ref args);
-        var queryUtil = new DotNetQueryUtil(server);
+        var queryUtil = new DotNetQueryUtil(server, gitHubClient);
         using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
 
         string command;
@@ -91,7 +91,7 @@ internal class Program
             args = args.Skip(1).ToList();
         }
 
-        var autoTriageUtil = new AutoTriageUtil(server, context, loggerFactory.CreateLogger<AutoTriageUtil>());
+        var autoTriageUtil = new AutoTriageUtil(server, context, gitHubClient, loggerFactory.CreateLogger<AutoTriageUtil>());
         var gitHubUtil = new GitHubUtil(gitHubClient, context, loggerFactory.CreateLogger<GitHubUtil>());
         switch (command)
         {

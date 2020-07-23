@@ -7,6 +7,7 @@ using DevOps.Util;
 using DevOps.Util.DotNet;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using DevOps.Status.Util;
 
 namespace DevOps.Status.Controllers
 {
@@ -14,18 +15,18 @@ namespace DevOps.Status.Controllers
     [Produces(MediaTypeNames.Application.Json)]
     public sealed partial class HelixController : ControllerBase
     {
-        public DevOpsServer Server { get; }
+        public DotNetQueryUtilFactory QueryUtilFactory { get; }
 
-        public HelixController(DevOpsServer server)
+        public HelixController(DotNetQueryUtilFactory factory)
         {
-            Server = server;
+            QueryUtilFactory = factory;
         }
 
         [HttpGet]
         [Route("api/helix/jobs/{project}/{buildNumber}")]
         public async Task<List<HelixJobRestInfo>> Jobs(string project, int buildNumber)
         {
-            var queryUtil = new DotNetQueryUtil(Server);
+            var queryUtil = QueryUtilFactory.CreateForAnonymous();
             var jobs = await queryUtil.ListHelixJobsAsync(project, buildNumber);
             return jobs
                 .Select(x =>
@@ -51,8 +52,8 @@ namespace DevOps.Status.Controllers
                 throw new Exception("Not supported");
             }
 
-            var queryUtil = new DotNetQueryUtil(Server);
-            var build = await Server.GetBuildAsync(project, buildNumber);
+            var queryUtil = QueryUtilFactory.CreateForAnonymous();
+            var build = await queryUtil.Server.GetBuildAsync(project, buildNumber);
             var workItems = await queryUtil.ListHelixWorkItemsAsync(build, DotNetUtil.FailedTestOutcomes);
             var list = new List<HelixWorkItemRestInfo>();
             foreach (var workItem in workItems)
@@ -62,7 +63,7 @@ namespace DevOps.Status.Controllers
                 restWorkItem.WorkItem = workItem.WorkItemName;
 
                 var logs = new List<HelixLogRestInfo>();
-                var logInfo = await HelixUtil.GetHelixLogInfoAsync(Server, workItem);
+                var logInfo = await HelixUtil.GetHelixLogInfoAsync(queryUtil.Server, workItem);
                 foreach (var entry in logInfo.GetUris())
                 {
                     logs.Add(new HelixLogRestInfo()

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using DevOps.Util;
 using Mono.Options;
+using Octokit;
 using static RuntimeInfoUtil;
 
 public class Program
@@ -27,7 +28,7 @@ public class Program
                 token = await GetPersonalAccessTokenFromFile("dnceng");
             }
 
-            var runtimeInfo = new RuntimeInfo(token, cacheable: !disableCache);
+            var runtimeInfo = new RuntimeInfo(CreateGitHubClient(), token, cacheable: !disableCache);
 
             // Kick off a collection of the file system cache
             var collectTask = runtimeInfo.CollectCache();
@@ -98,6 +99,7 @@ public class Program
                     ShowHelp();
                     return ExitFailure;
             }
+
         }
 
         void ShowHelp()
@@ -121,6 +123,19 @@ public class Program
             Console.WriteLine();
             Console.WriteLine("=== Global Options ===");
             optionSet.WriteOptionDescriptions(Console.Out);
+        }
+
+        static GitHubClient CreateGitHubClient()
+        {
+            var gitHubClient = new GitHubClient(new ProductHeaderValue("runfo-app"));
+            var value = Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN");
+            if (value is object)
+            {
+                var both = value.Split(new[] { ':' }, count: 2);
+                gitHubClient.Credentials = new Credentials(both[0], both[1]);
+            }
+
+            return gitHubClient;
         }
     }
 

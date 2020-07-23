@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using Microsoft.AspNetCore.Mvc;
@@ -51,7 +52,7 @@ namespace DevOps.Status.Pages.Search
             }
         }
 
-        public DevOpsServer Server { get; }
+        public DotNetQueryUtilFactory QueryUtilFactory { get; }
 
         [BindProperty(SupportsGet = true, Name = "q")]
         public string? QueryString { get; set; }
@@ -60,9 +61,9 @@ namespace DevOps.Status.Pages.Search
 
         public List<TestInfo> TestInfos { get; set; } = new List<TestInfo>();
 
-        public TestsModel(DevOpsServer server)
+        public TestsModel(DotNetQueryUtilFactory factory)
         {
-            Server = server;
+            QueryUtilFactory = factory;
         }
 
         public async Task<IActionResult> OnGet()
@@ -74,9 +75,9 @@ namespace DevOps.Status.Pages.Search
                 return Page();
             }
 
-            var queryUtil = new DotNetQueryUtil(Server);
             var testRuns = new List<DotNetTestRun>();
             var testSearchOptionSet = CreateTestSearchOptionSet();
+            var queryUtil = QueryUtilFactory.CreateForAnonymous();
             var builds = await queryUtil.ListBuildsAsync(testSearchOptionSet);
 
             foreach (var build in builds)
@@ -132,7 +133,7 @@ namespace DevOps.Status.Pages.Search
                     .GroupBy(x => x.HelixInfo)
                     .ToList()
                     .AsParallel()
-                    .Select(async g => (g.Key, await HelixUtil.GetHelixLogInfoAsync(Server, g.First())));
+                    .Select(async g => (g.Key, await HelixUtil.GetHelixLogInfoAsync(queryUtil.Server, g.First())));
                 await Task.WhenAll(query);
                 return query.ToDictionary(x => x.Result.Key, x => x.Result.Item2);
             }

@@ -12,6 +12,7 @@ using Mono.Options;
 using static RuntimeInfoUtil;
 using static DevOps.Util.DotNet.OptionSetUtil;
 using System.Text;
+using Octokit;
 
 internal sealed partial class RuntimeInfo
 {
@@ -21,13 +22,13 @@ internal sealed partial class RuntimeInfo
 
     private ReportBuilder ReportBuilder { get; } = new ReportBuilder();
 
-    internal RuntimeInfo(string personalAccessToken = null, bool cacheable = false)
+    internal RuntimeInfo(IGitHubClient gitHubClient, string personalAccessToken = null, bool cacheable = false)
     {
         var azureClient = cacheable
             ? (IAzureClient)new CachingAzureClient(RuntimeInfoUtil.CacheDirectory, personalAccessToken)
             : new AzureClient(personalAccessToken);
         Server = new DevOpsServer("dnceng", azureClient);
-        QueryUtil = new DotNetQueryUtil(Server);
+        QueryUtil = new DotNetQueryUtil(Server, gitHubClient);
     }
 
     internal async Task PrintBuildResults(IEnumerable<string> args)

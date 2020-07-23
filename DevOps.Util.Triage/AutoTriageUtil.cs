@@ -24,6 +24,8 @@ namespace DevOps.Util.Triage
 
         public DotNetQueryUtil QueryUtil { get; }
 
+        public IGitHubClient GitHubClient { get; }
+
         public TriageContextUtil TriageContextUtil { get; }
 
         private ILogger Logger { get; }
@@ -33,10 +35,12 @@ namespace DevOps.Util.Triage
         public AutoTriageUtil(
             DevOpsServer server,
             TriageContext context,
+            IGitHubClient gitHubClient,
             ILogger logger)
         {
             Server = server;
-            QueryUtil = new DotNetQueryUtil(server);
+            GitHubClient = gitHubClient;
+            QueryUtil = new DotNetQueryUtil(server, gitHubClient);
             TriageContextUtil = new TriageContextUtil(context);
             Logger = logger;
         }
@@ -125,6 +129,7 @@ namespace DevOps.Util.Triage
                 modelBuild,
                 Server,
                 TriageContextUtil,
+                GitHubClient,
                 Logger);
             await buildTriageUtil.TriageAsync().ConfigureAwait(false);
         }

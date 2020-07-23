@@ -8,6 +8,7 @@ using DevOps.Util;
 using DevOps.Util.DotNet;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using DevOps.Status.Util;
 
 namespace DevOps.Status.Controllers
 {
@@ -15,14 +16,11 @@ namespace DevOps.Status.Controllers
     [Produces(MediaTypeNames.Application.Json)]
     public sealed partial class RunfoController : ControllerBase
     {
-        public DevOpsServer Server { get; }
+        public DotNetQueryUtilFactory QueryUtilFactory { get; }
 
-        public DotNetQueryUtil QueryUtil { get; }
-
-        public RunfoController(DevOpsServer server)
+        public RunfoController(DotNetQueryUtilFactory factory)
         {
-            Server = server;
-            QueryUtil = new DotNetQueryUtil(server);
+            QueryUtilFactory = factory;
         }
 
         [HttpGet]
@@ -32,7 +30,8 @@ namespace DevOps.Status.Controllers
         {
             if (query is object)
             {
-                var builds = await QueryUtil.ListBuildsAsync(query);
+                var queryUtil = QueryUtilFactory.CreateForAnonymous();
+                var builds = await queryUtil.ListBuildsAsync(query);
                 var list = builds
                     .Select(x =>
                     {
@@ -58,10 +57,11 @@ namespace DevOps.Status.Controllers
             [FromQuery]string? query = null)
         {
             query = $"-d {definition} {query}";
-            var builds = await QueryUtil.ListBuildsAsync(query);
+            var queryUtil = QueryUtilFactory.CreateForAnonymous();
+            var builds = await queryUtil.ListBuildsAsync(query);
             var timelines = builds
                 .AsParallel()
-                .Select(async x => await Server.GetTimelineAsync(x.Project.Name, x.Id));
+                .Select(async x => await queryUtil.Server.GetTimelineAsync(x.Project.Name, x.Id));
             var trees = new List<TimelineTree>();
             foreach (var task in timelines)
             {

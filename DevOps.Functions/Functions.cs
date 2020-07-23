@@ -35,9 +35,9 @@ namespace DevOps.Functions
 
         public DevOpsServer Server { get; }
 
-        public GitHubClient GitHubClient { get; }
+        public IGitHubClient GitHubClient { get; }
 
-        public Functions(DevOpsServer server, GitHubClient gitHubClient, TriageContext context)
+        public Functions(DevOpsServer server, IGitHubClient gitHubClient, TriageContext context)
         {
             Server = server;
             GitHubClient = gitHubClient;
@@ -88,7 +88,7 @@ namespace DevOps.Functions
 
             logger.LogInformation($"Triaging build {projectName} {buildCompleteMessage.BuildNumber}");
 
-            var util = new AutoTriageUtil(Server, Context, logger);
+            var util = new AutoTriageUtil(Server, Context, GitHubClient, logger);
             await util.TriageBuildAsync(projectName, buildCompleteMessage.BuildNumber);
         }
 
@@ -99,7 +99,7 @@ namespace DevOps.Functions
             ILogger logger)
         {
             logger.LogInformation($"Triaging query: {message}");
-            var queryUtil = new DotNetQueryUtil(Server);
+            var queryUtil = new DotNetQueryUtil(Server, GitHubClient);
             foreach (var build in await queryUtil.ListBuildsAsync(message))
             {
                 var key = build.GetBuildKey();
@@ -136,7 +136,7 @@ namespace DevOps.Functions
             }
 
             var projectName = await Server.ConvertProjectIdToNameAsync(projectId);
-            var util = new AutoTriageUtil(Server, Context, logger);
+            var util = new AutoTriageUtil(Server, Context, GitHubClient, logger);
             await util.RetryOsxDeprovisionAsync(projectName, buildCompleteMessage.BuildNumber);
         }
     }

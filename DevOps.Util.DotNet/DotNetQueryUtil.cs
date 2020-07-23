@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
+using Octokit;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 
@@ -84,10 +85,12 @@ namespace DevOps.Util.DotNet
     public sealed class DotNetQueryUtil
     {
         public DevOpsServer Server { get; }
+        public IGitHubClient GitHubClient { get; }
 
-        public DotNetQueryUtil(DevOpsServer server)
+        public DotNetQueryUtil(DevOpsServer server, IGitHubClient gitHubClient)
         {
             Server = server;
+            GitHubClient = gitHubClient;
         }
 
         public Task<List<SearchTimelineResult>> SearchTimelineAsync(

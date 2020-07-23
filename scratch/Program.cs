@@ -1,4 +1,6 @@
-﻿using DevOps.Util;
+﻿#nullable enable
+
+using DevOps.Util;
 using System;
 using System.Threading.Tasks;
 using System.IO;
@@ -33,50 +35,49 @@ namespace QueryFun
 {
     public class Program
     {
-        public static string DefaultOrganization { get; set; } = "dnceng";
 
         public static async Task Main(string[] args)
         {
-            await Scratch();
-            // await ListStaleChecks();
-            // await ListBuildsFullAsync();
-            // await UploadCloneTime();
-            // await DumpCheckoutTimes("dnceng", "public", 196, top: 200);
-            // Roslyn
-            // await DumpCheckoutTimes("dnceng", "public", 15, top: 200);
-            // Roslyn Integration
-            // await DumpCheckoutTimes("dnceng", "public", 245, top: 200);
-            // CoreFx
-            // await DumpCheckoutTimes("dnceng", "public", 196, top: 200);
-            // CoreClr
-            // await DumpCheckoutTimes("dnceng", "public", 228, top: 200);
-            // CLI
-            // await DumpCheckoutTimes("dnceng", "public", 166, top: 200);
-            // ASP.NET
-            // await DumpCheckoutTimes("dnceng", "public", 278, top: 200);
-            // await DumpTimelines("dnceng", "public", 15, top: 20);
-            // await DumpTestTimes();
-            // await UploadNgenData();
-            // await DumpNgenData();
-            // await DumpNgenData(2916584;
-            // await Fun();
-            // await DumpTimeline("public", 196140);
+            var scratchUtil = new ScratchUtil();
+            await scratchUtil.Scratch();
+        }
+    }
+
+    internal sealed class ScratchUtil
+    { 
+        public static string DefaultOrganization { get; set; } = "dnceng";
+
+        public DevOpsServer DevOpsServer { get; set; }
+        public TriageContext TriageContext { get; set; }
+        public IGitHubClient GitHubClient { get; set; }
+        public DotNetQueryUtil DotNetQueryUtil { get; set; }
+
+
+#pragma warning disable 
+        public ScratchUtil()
+        {
+            Reset(DefaultOrganization);
         }
 
-        private static DevOpsServer CreateDevOpsServer(IConfiguration configuration = null, string organization = null)
+        public void Reset(string organization)
         {
-            configuration = configuration ?? CreateConfiguration();
-            var token = configuration["RUNFO_AZURE_TOKEN"];
-            organization ??= DefaultOrganization;
-            return new DevOpsServer(organization, token);
-        }
+            var configuration = CreateConfiguration();
+            var azureToken = configuration["RUNFO_AZURE_TOKEN"];
+            DevOpsServer = new DevOpsServer(organization, azureToken);
 
-        private static TriageContext CreateTriageContext(IConfiguration configuration = null)
-        {
-            configuration = configuration ?? CreateConfiguration();
             var builder = new DbContextOptionsBuilder<TriageContext>();
             builder.UseSqlServer(configuration["RUNFO_CONNECTION_STRING"]);
-            return new TriageContext(builder.Options);
+            TriageContext = new TriageContext(builder.Options);
+
+            var gitHubClient = new GitHubClient(new ProductHeaderValue("runfo-scratch-app"));
+            var value = configuration["RUNFO_GITHUB_TOKEN"];
+            if (value is object)
+            {
+                var both = value.Split(new[] { ':' }, count: 2);
+                gitHubClient.Credentials = new Credentials(both[0], both[1]);
+            }
+
+            GitHubClient = gitHubClient;
         }
 
         private static IConfiguration CreateConfiguration()
@@ -88,45 +89,24 @@ namespace QueryFun
                 return config;
         }
 
-
-        private static async Task<string> GetToken(string name)
-        {
-            var lines = await File.ReadAllLinesAsync(@"p:\tokens.txt");
-            foreach (var line in lines)
-            {
-                var split = line.Split(':', count: 2);
-                if (name == split[0])
-                {
-                    return split[1];
-                }
-            }
-
-            throw new Exception($"Could not find token with name {name}");
-
-        }
-
-        private static async Task Scratch()
+        internal async Task Scratch()
         {
             // await DumpMachineUsage();
             // await DumpJobFailures();
             // await DumpRoslynTestTimes();
 
-            using var context = CreateTriageContext();
-            var server = CreateDevOpsServer();
-            var queryUtil = new DotNetQueryUtil(server);
             // var builds = await server.ListBuildsAsync("public", definitions: new[] { 731 }, branchName: "refs/pull/39837/merge", repositoryId: "dotnet/runtime", repositoryType: "github");
 
-            var builds = await server.ListPullRequestBuilds(
+            var builds = await DevOpsServer.ListPullRequestBuilds(
                 new GitHubPullRequestKey("dotnet", "runtime", 39837),
                 "public",
                 definitions: new[] { 731 });
-
         }
 
-        public static async Task DumpRoslynTestTimes()
+        public async Task DumpRoslynTestTimes()
         {
-            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
-            var queryUtil = new DotNetQueryUtil(server);
+            var server = DevOpsServer;
+            var queryUtil = DotNetQueryUtil;
 
             foreach (var build in await queryUtil.ListBuildsAsync("-d roslyn -c 100 -br master -before 2020/4/22"))
             {
@@ -207,10 +187,10 @@ namespace QueryFun
             }
         }
 
-        public static async Task DumpTimelines()
+        public async Task DumpTimelines()
         {
-            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
-            var queryUtil = new DotNetQueryUtil(server);
+            var server = DevOpsServer;
+            var queryUtil = DotNetQueryUtil;
 
             foreach (var build in await queryUtil.ListBuildsAsync("-d runtime -c 30 -pr"))
             {
@@ -229,10 +209,10 @@ namespace QueryFun
             }
         }
 
-        public static async Task DumpJobFailures()
+        public async Task DumpJobFailures()
         {
-            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
-            var queryUtil = new DotNetQueryUtil(server);
+            var server = DevOpsServer;
+            var queryUtil = DotNetQueryUtil;
             var jobCount = 0;
             var testFailCount = 0;
             var otherFailCount = 0;
@@ -287,10 +267,10 @@ namespace QueryFun
 
         }
 
-        private static async Task DumpDownloadTimes()
+        private async Task DumpDownloadTimes()
         {
-            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
-            var queryUtil = new DotNetQueryUtil(server);
+            var server = DevOpsServer;
+            var queryUtil = DotNetQueryUtil;
 
             Console.WriteLine("Build Uri,Pull Request,Minutes");
             foreach (var build in await queryUtil.ListBuildsAsync("-d runtime -c 100 -pr"))
@@ -345,12 +325,12 @@ namespace QueryFun
             public BuildStats CIBuilds { get; set; } = new BuildStats();
         }
 
-        public static async Task DumpTestTotals()
+        public async Task DumpTestTotals()
         {
             var project = "public";
             var buildId = 642971;
-            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
-            var queryUtil = new DotNetQueryUtil(server);
+            var server = DevOpsServer;
+            var queryUtil = DotNetQueryUtil;
             var build = await server.GetBuildAsync(project, buildId);
             var testRuns = await queryUtil.ListDotNetTestRunsAsync(build);
             var testCases = testRuns.SelectMany(x => x.TestCaseResults).ToList();
@@ -417,10 +397,10 @@ namespace QueryFun
         }
 
 
-        private static async Task DumpTimelineToHelix(string project, int buildId)
+        private async Task DumpTimelineToHelix(string project, int buildId)
         {
-            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
-            var queryUtil = new DotNetQueryUtil(server);
+            var server = DevOpsServer;
+            var queryUtil = DotNetQueryUtil;
             var list = await queryUtil.ListHelixJobsAsync(project, buildId);
             var timeline = await server.GetTimelineAsync(project, buildId);
             var timelineTree = TimelineTree.Create(timeline);
@@ -466,9 +446,9 @@ namespace QueryFun
             }
         }
 
-        private static async Task Scratch2()
+        private async Task Scratch2()
         {
-            var server = new DevOpsServer("dnceng", await GetToken("dnceng"));
+            var server = DevOpsServer;
             var builds = await server.ListBuildsAsync("public", definitions: new[] { 686 }, top: 3000);
             var buildTimes = new List<(int BuildNumber, DateTime StartTime, DateTime EndTime)>();
             GetBuildTimes();
@@ -522,10 +502,9 @@ namespace QueryFun
             }
         }
 
-        private static async Task ListStaleChecks()
+        private async Task ListStaleChecks()
         {
-            var gitHub = new GitHubClient(new ProductHeaderValue("MyAmazingApp"));
-            gitHub.Credentials = new Credentials(await GetToken("github"));
+            var gitHub = GitHubClient;
             var apiConnection = new ApiConnection(gitHub.Connection);
             var checksClient = new ChecksClient(apiConnection);
             var server = new DevOpsServer("dnceng");
@@ -588,7 +567,7 @@ namespace QueryFun
             var builds2 = await server.ListBuildsAsync("public", top: 10);
         }
 
-        private static async Task DumpNgenData(int buildId)
+        private async Task DumpNgenData(int buildId)
         {
             var list = await GetNgenData(buildId);
             foreach (var data in list.OrderBy(x => x.AssemblyName))
@@ -597,7 +576,7 @@ namespace QueryFun
             }
         }
 
-        private static async Task<List<NgenEntryData>> GetNgenData(int buildId)
+        private async Task<List<NgenEntryData>> GetNgenData(int buildId)
         {
             static int countLines(StreamReader reader)
             {
@@ -610,7 +589,7 @@ namespace QueryFun
                 return count;
             }
 
-            var server = new DevOpsServer("devdiv", await GetToken("azure-devdiv"));
+            var server = DevOpsServer;
             var project = "DevDiv";
             var stream = new MemoryStream();
             var regex = new Regex(@"(.*)-([\w.]+).ngen.txt", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -638,9 +617,9 @@ namespace QueryFun
             }
         }
 
-        private static async Task DumpNgenLogFun()
+        private async Task DumpNgenLogFun()
         {
-            var server = new DevOpsServer("devdiv", await GetToken("azure-devdiv"));
+            var server = DevOpsServer;
             string project = "devdiv";
             var buildId = 2916584;
             var all = await server.ListArtifactsAsync(project, buildId);

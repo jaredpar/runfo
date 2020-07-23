@@ -20,7 +20,7 @@ namespace DevOps.Functions
             var gitHubToken = Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN");
             builder.Services.AddDbContext<TriageContext>(options => options.UseSqlServer(connectionString));
             builder.Services.AddScoped<DevOpsServer>(_ => new DevOpsServer(DotNetUtil.Organization, azdoToken));
-            builder.Services.AddScoped<GitHubClient>(_ =>
+            builder.Services.AddScoped<IGitHubClient>(_ =>
             {
                 var client = new GitHubClient(new ProductHeaderValue("RuntimeStatusPage"));
                 if (!string.IsNullOrEmpty(gitHubToken))

@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using DevOps.Status.Util;
 using DevOps.Util;
+using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -15,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Octokit;
 
 namespace DevOps.Status
 {
@@ -46,6 +50,9 @@ namespace DevOps.Status
                 options.AppendTrailingSlash = true;
             });
 
+            services.AddHttpContextAccessor();
+            services.AddSingleton<GitHubClientFactory>();
+            services.AddScoped<DotNetQueryUtilFactory>();
             services.AddScoped<DevOpsServer>(_ =>
             {
                 var token = Configuration["RUNFO_AZURE_TOKEN"];

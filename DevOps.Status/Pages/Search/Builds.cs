@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using Microsoft.AspNetCore.Mvc;
@@ -24,16 +25,16 @@ namespace DevOps.Status.Pages.Search
             public string BuildUri { get; set; }
         }
 
-        public DevOpsServer Server { get; }
+        public DotNetQueryUtilFactory QueryUtilFactory { get; }
 
         [BindProperty(SupportsGet = true)]
         public string Query { get; set; }
 
         public List<BuildData> Builds { get; set; } = new List<BuildData>();
 
-        public BuildsModel(DevOpsServer server)
+        public BuildsModel(DotNetQueryUtilFactory factory)
         {
-            Server = server;
+            QueryUtilFactory = factory;
         }
 
         public async Task OnGet()
@@ -43,7 +44,7 @@ namespace DevOps.Status.Pages.Search
                 return;
             }
 
-            var queryUtil = new DotNetQueryUtil(Server);
+            var queryUtil = QueryUtilFactory.CreateForAnonymous();
             var builds = await queryUtil.ListBuildsAsync(Query);
             Builds = builds
                 .Select(x =>
