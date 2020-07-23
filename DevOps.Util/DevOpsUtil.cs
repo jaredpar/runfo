@@ -96,19 +96,10 @@ namespace DevOps.Util
         public static string GetBuildUri(string organization, string project, int buildId) =>
             $"https://dev.azure.com/{organization}/{project}/_build/results?buildId={buildId}";
 
-        public static GitHubInfo? GetGitHubInfo(Build build)
-        {
-            if (GetRepositoryInfo(build) is RepositoryInfo { Type: "GitHub" } repoInfo)
-            {
-                var both = repoInfo.Id.Split("/");
-                if (both.Length == 2)
-                {
-                    return new GitHubInfo(both[0], both[1]);
-                }
-            }
-
-            return null;
-        }
+        public static GitHubInfo? GetGitHubInfo(Build build) =>
+            GetRepositoryInfo(build) is { } repositoryInfo
+            ? GitHubInfo.TryCreate(repositoryInfo)
+            : null;
 
         public static RepositoryInfo? GetRepositoryInfo(Build build)
         {

@@ -6,9 +6,13 @@ namespace DevOps.Util
 {
     public readonly struct GitHubInfo
     {
+        public const string TypeName = "GitHub";
+
         public string Organization { get; }
 
         public string Repository { get; }
+
+        public RepositoryInfo RepositoryInfo => new RepositoryInfo(id: $"{Organization}/{Repository}", TypeName);
 
         public GitHubInfo(
             string organization,
@@ -16,6 +20,21 @@ namespace DevOps.Util
         {
             Organization = organization;
             Repository = repository;
+        }
+
+        public static GitHubInfo? TryCreate(RepositoryInfo repositoryInfo)
+        {
+            if (repositoryInfo.Type == TypeName &&
+                repositoryInfo.Id is object)
+            {
+                var both = repositoryInfo.Id.Split("/");
+                if (both.Length == 2)
+                {
+                    return new GitHubInfo(both[0], both[1]);
+                }
+            }
+
+            return null;
         }
 
         public override string ToString() => $"{Organization} {Repository}";

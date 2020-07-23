@@ -207,5 +207,29 @@ namespace DevOps.Util
 
         public static Task<string> GetYamlAsync(this DevOpsServer server, string project, int buildNumber) =>
             server.GetBuildLogAsync(project, buildNumber, logId: 1);
+
+        /// <summary>
+        /// List the builds for the given pull request
+        /// </summary>
+        /// <remarks>
+        /// The request can filter on the definitions that it built against
+        /// 
+        /// If the repositoryId REST argument is provided it must be accompanied by repositoryType
+        /// </remarks>
+        public static Task<List<Build>> ListPullRequestBuilds(
+            this DevOpsServer server,
+            in GitHubPullRequestKey prKey,
+            string project,
+            int[]? definitions = null)
+        {
+            var branchName = $"refs/pull/{prKey.Number}/merge";
+            var repositoryInfo = prKey.GitHubInfo.RepositoryInfo;
+            return server.ListBuildsAsync(
+                project,
+                definitions: definitions,
+                branchName: branchName,
+                repositoryId: repositoryInfo.Id,
+                repositoryType: repositoryInfo.Type);
+        }
     }
 }

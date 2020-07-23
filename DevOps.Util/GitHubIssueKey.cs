@@ -45,6 +45,8 @@ namespace DevOps.Util
 
         public int Number { get; }
 
+        public GitHubInfo GitHubInfo => new GitHubInfo(Organization, Repository);
+
         public string PullRequestUri => $"https://github.com/{Organization}/{Repository}/pull/{Number}";
 
         public GitHubPullRequestKey(string organization, string repository, int number)

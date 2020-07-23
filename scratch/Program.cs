@@ -25,6 +25,7 @@ using YamlDotNet.Core;
 using Microsoft.Extensions.Configuration;
 using DevOps.Util.Triage;
 using Microsoft.EntityFrameworkCore;
+using System.Xml.Schema;
 
 [assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsId("67c4a872-5dd7-422a-acad-fdbe907ace33")]
 
@@ -112,40 +113,14 @@ namespace QueryFun
 
             using var context = CreateTriageContext();
             var server = CreateDevOpsServer();
-            var slice = 100;
-            for (int i = 0; i < 50; i++)
-            {
-                var query = context.ModelBuilds
-                    .Include(x => x.ModelBuildDefinition)
-                    .Where(x => x.GitHubOrganization == null)
-                    .OrderByDescending(x => x.Id)
-                    .Skip(i * slice)
-                    .Take(slice);
-                foreach (var modelBuild in query)
-                {
-                    try
-                    {
-                        var build = await server.GetBuildAsync(modelBuild.ModelBuildDefinition.AzureProject, modelBuild.BuildNumber);
-                        var buildInfo = build.GetBuildInfo();
-                        if (buildInfo.GitHubInfo is { } info)
-                        {
-                            modelBuild.GitHubOrganization = info.Organization;
-                            modelBuild.GitHubRepository = info.Repository;
-                        }
-                        else
-                        {
-                            Console.WriteLine($"Can't get build info for {buildInfo.Number}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error: {ex.Message}");
-                    }
-                }
+            var queryUtil = new DotNetQueryUtil(server);
+            // var builds = await server.ListBuildsAsync("public", definitions: new[] { 731 }, branchName: "refs/pull/39837/merge", repositoryId: "dotnet/runtime", repositoryType: "github");
 
-                Console.WriteLine($"Saving slice {i}");
-                context.SaveChanges();
-            }
+            var builds = await server.ListPullRequestBuilds(
+                new GitHubPullRequestKey("dotnet", "runtime", 39837),
+                "public",
+                definitions: new[] { 731 });
+
         }
 
         public static async Task DumpRoslynTestTimes()
@@ -566,31 +541,31 @@ namespace QueryFun
                     {
                         Console.WriteLine($"Checking {build.Repository.Id} {build.SourceVersion}");
                         // Build is complete for at  least five minutes. Results should be available 
-                        var name = build.Repository.Id.Split("/");
-                        var pullRequestId = int.Parse(build.SourceBranch.Split("/")[2]);
-                        var prUri = $"https://github.com/{build.Repository.Id}/pull/{pullRequestId}";
-                        var repository = await gitHub.Repository.Get(name[0], name[1]);
-
-                        var pullRequest = await gitHub.PullRequest.Get(repository.Id, pullRequestId);
-                        if (pullRequest.MergeableState.Value == MergeableState.Dirty ||
-                            pullRequest.MergeableState.Value == MergeableState.Unknown)
+                        if (build.GetBuildInfo().PullRequestKey is { } prKey)
                         {
-                            // There are merge conflicts. This seems to confuse things a bit below. 
-                            continue;
-                        }
+                            var repository = await gitHub.Repository.Get(prKey.Organization, prKey.Repository);
 
-                        // Need to use the HEAD of the PR not Build.SourceVersion here. The Build.SourceVersion
-                        // is the HEAD of the PR merged into HEAD of the target branch. The check suites only track
-                        // the HEAD of PR
-                        var response = await checksClient.Suite.GetAllForReference(repository.Id, pullRequest.Head.Sha);
-                        var devOpsResponses = response.CheckSuites.Where(x => x.App.Name == "Azure Pipelines").ToList();
-                        var allDone = devOpsResponses.All(x => x.Status.Value == CheckStatus.Completed);
-                        if (!allDone)
-                        {
-                            // There are merge conflicts. This seems to confuse things a bit below. 
-                            Console.WriteLine($"\t{DevOpsUtil.GetBuildUri(build)}");
-                            Console.WriteLine($"\t{prUri}");
-                            list.Add(prUri);
+                            var pullRequest = await gitHub.PullRequest.Get(repository.Id, prKey.Number);
+                            if (pullRequest.MergeableState.Value == MergeableState.Dirty ||
+                                pullRequest.MergeableState.Value == MergeableState.Unknown)
+                            {
+                                // There are merge conflicts. This seems to confuse things a bit below. 
+                                continue;
+                            }
+
+                            // Need to use the HEAD of the PR not Build.SourceVersion here. The Build.SourceVersion
+                            // is the HEAD of the PR merged into HEAD of the target branch. The check suites only track
+                            // the HEAD of PR
+                            var response = await checksClient.Suite.GetAllForReference(repository.Id, pullRequest.Head.Sha);
+                            var devOpsResponses = response.CheckSuites.Where(x => x.App.Name == "Azure Pipelines").ToList();
+                            var allDone = devOpsResponses.All(x => x.Status.Value == CheckStatus.Completed);
+                            if (!allDone)
+                            {
+                                // There are merge conflicts. This seems to confuse things a bit below. 
+                                Console.WriteLine($"\t{DevOpsUtil.GetBuildUri(build)}");
+                                Console.WriteLine($"\t{prKey.PullRequestUri}");
+                                list.Add(prKey.PullRequestUri);
+                            }
                         }
                     }
                     catch (Exception ex)
