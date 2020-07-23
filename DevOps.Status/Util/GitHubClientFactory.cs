@@ -71,7 +71,7 @@ namespace DevOps.Status.Util
             return CreateForToken(installationTokenResult.Token, AuthenticationType.Oauth);
         }
 
-        private static GitHubClient CreateForToken(string token, AuthenticationType authenticationType)
+        public static GitHubClient CreateForToken(string token, AuthenticationType authenticationType)
         {
             var productInformation = new ProductHeaderValue(Constants.ProductName);
             var client = new GitHubClient(productInformation)

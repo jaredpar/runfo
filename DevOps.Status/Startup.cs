@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -80,17 +81,16 @@ namespace DevOps.Status
                 options.ClientSecret = Configuration["GitHubClientSecret"];
                 options.SaveTokens = true;
                 options.ClaimActions.MapJsonKey(Constants.GitHubAvatarUrl, Constants.GitHubAvatarUrl);
-                options.Events.OnCreatingTicket = context =>
+                options.Events.OnCreatingTicket = async context =>
                 {
-                    switch (context.Identity.Name.ToLower())
-                    {
-                        case "jaredpar":
-                        case "pilchie":
-                            context.Identity.AddClaim(new Claim(context.Identity.RoleClaimType, Constants.TriageRole));
-                            break;
+                    var userName = context.Identity.Name.ToLower();
+                    var gitHubClient = GitHubClientFactory.CreateForToken(context.AccessToken, AuthenticationType.Oauth);
+                    var organizations = await gitHubClient.Organization.GetAllForUser(userName);
+                    var microsoftOrg = organizations.FirstOrDefault(x => x.Login.ToLower() == "microsoft");
+                    if (microsoftOrg is object)
+                    { 
+                        context.Identity.AddClaim(new Claim(context.Identity.RoleClaimType, Constants.TriageRole));
                     }
-
-                    return Task.CompletedTask;
                 };
             });
 

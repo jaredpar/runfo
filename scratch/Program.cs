@@ -97,6 +97,8 @@ namespace QueryFun
 
             // var builds = await server.ListBuildsAsync("public", definitions: new[] { 731 }, branchName: "refs/pull/39837/merge", repositoryId: "dotnet/runtime", repositoryType: "github");
 
+            var organization = await GitHubClient.Organization.GetAllForUser("jaredpar");
+
             var builds = await DevOpsServer.ListPullRequestBuilds(
                 new GitHubPullRequestKey("dotnet", "runtime", 39837),
                 "public",
