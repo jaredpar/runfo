@@ -11,7 +11,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "search/tests",
+      "launchUrl": "view/mpr",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

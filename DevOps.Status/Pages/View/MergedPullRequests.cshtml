@@ -1,0 +1,34 @@
+﻿@page "/view/mpr"
+@model MergedPullRequestsModel
+
+<form method="get">
+  <div class="form-group">
+    <label>Query</label>
+    <input name="q" type="text" class="form-control" value="@Model.QueryString">
+  </div>
+  <button class="btn btn-primary">Search</button>
+</form>
+
+<div>
+    <label>Pass Rate @Model.PassRate</label>
+</div>
+
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th class="column">Pull Request</th>
+            <th class="column">Merge Build</th>
+            <th class="column">Result</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var tuple in Model.MergedPullRequestBuilds)
+        {
+            <tr>
+                <td><a href=@tuple.PullRequest.HtmlUrl>@tuple.PullRequest.Number</a></td>
+                <td>@tuple.Build.Id</td>
+                <td>@tuple.Build.Result</td>
+            </tr>
+        }
+    </tbody>
+</table>

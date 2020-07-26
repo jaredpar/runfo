@@ -12,6 +12,8 @@ namespace DevOps.Util
 {
     public static class DevOpsUtilExtensions
     {
+        #region IEnumerable<T>
+
         public static IEnumerable<T> SelectNotNull<T>(this IEnumerable<T?> enumerable)
             where T : class
         {
@@ -42,6 +44,10 @@ namespace DevOps.Util
                 .Select(func)
                 .SelectNullableValue();
 
+        #endregion
+
+        #region IAsyncEnumerable<T>
+
         public static async Task<T?> FirstOrDefaultAsync<T>(this IAsyncEnumerable<T> enumerable)
             where T : class
         {
@@ -52,6 +58,30 @@ namespace DevOps.Util
 
             return default;
         }
+
+        public static async Task<List<T>> Take<T>(this IAsyncEnumerable<T> enumerable, int count)
+        {
+            var list = new List<T>();
+            if (count == 0)
+            {
+                return list;
+            }
+
+            await foreach (var current in enumerable.ConfigureAwait(false))
+            {
+                list.Add(current);
+                if (list.Count >= count)
+                {
+                    break;
+                }
+            }
+
+            return list;
+        }
+
+        #endregion
+
+        #region Build
 
         public static BuildKey GetBuildKey(this Build build) => DevOpsUtil.GetBuildKey(build);
 
@@ -65,11 +95,23 @@ namespace DevOps.Util
 
         public static DateTimeOffset? GetFinishTime(this Build build) => DevOpsUtil.ConvertFromRestTime(build.FinishTime);
 
+        #endregion
+
+        #region BuildArtifact
+
         public static int? GetByteSize(this BuildArtifact buildArtifact) => DevOpsUtil.GetArtifactByteSize(buildArtifact);
 
         public static BuildArtifactKind GetKind(this BuildArtifact buildArtifact) => DevOpsUtil.GetArtifactKind(buildArtifact);
 
+        #endregion
+
+        #region Timeline
+
         public static int GetAttempt(this Timeline timeline) => timeline.Records.Max(x => x.Attempt);
+
+        #endregion
+
+        #region TimelineRecord
 
         public static bool IsAnySuccess(this TimelineRecord record) =>
             record.Result == TaskResult.Succeeded ||
@@ -83,6 +125,10 @@ namespace DevOps.Util
         public static DateTimeOffset? GetStartTime(this TimelineRecord record) => DevOpsUtil.ConvertFromRestTime(record.StartTime);
 
         public static DateTimeOffset? GetFinishTime(this TimelineRecord record) => DevOpsUtil.ConvertFromRestTime(record.FinishTime);
+
+        #endregion
+
+        #region HttpClient
 
         public static async Task<string?> GetJsonAsync(this HttpClient httpClient, string uri, Action<Exception>? onError = null)
         {
@@ -135,6 +181,10 @@ namespace DevOps.Util
                 return null;
             }
         }
+
+        #endregion
+
+        #region DevOpsServer
 
         /// <summary>
         /// Get the timeline from the specified attempt
@@ -231,5 +281,7 @@ namespace DevOps.Util
                 repositoryId: repositoryInfo.Id,
                 repositoryType: repositoryInfo.Type);
         }
+
+        #endregion
     }
 }

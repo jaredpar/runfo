@@ -9,17 +9,17 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DevOps.Util.UnitTests", "De
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "scratch", "scratch\scratch.csproj", "{9972CB62-D44B-42C5-8F82-B73682C62EC9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevOps.Functions", "DevOps.Functions\DevOps.Functions.csproj", "{929EAB16-C5A0-4EAC-AB7B-8ED5412F167C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DevOps.Functions", "DevOps.Functions\DevOps.Functions.csproj", "{929EAB16-C5A0-4EAC-AB7B-8ED5412F167C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevOps.Util.DotNet", "DevOps.Util.DotNet\DevOps.Util.DotNet.csproj", "{D6BA752A-2858-43C6-B141-9A44EDE5CCFE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DevOps.Util.DotNet", "DevOps.Util.DotNet\DevOps.Util.DotNet.csproj", "{D6BA752A-2858-43C6-B141-9A44EDE5CCFE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "runfo", "runfo\runfo.csproj", "{C6FFEDBA-31FF-4361-ACEC-B13828269755}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "runfo", "runfo\runfo.csproj", "{C6FFEDBA-31FF-4361-ACEC-B13828269755}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevOps.Status", "DevOps.Status\DevOps.Status.csproj", "{1F330ABD-41D4-49F6-93E6-C6A3CAE74B52}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DevOps.Status", "DevOps.Status\DevOps.Status.csproj", "{1F330ABD-41D4-49F6-93E6-C6A3CAE74B52}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "triage", "triage\triage.csproj", "{B140C132-00AB-49DC-A179-086EAE9AD0F0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "triage", "triage\triage.csproj", "{B140C132-00AB-49DC-A179-086EAE9AD0F0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevOps.Util.Triage", "DevOps.Util.Triage\DevOps.Util.Triage.csproj", "{76156727-E84D-4DA5-B3AD-39D02A3E397C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DevOps.Util.Triage", "DevOps.Util.Triage\DevOps.Util.Triage.csproj", "{76156727-E84D-4DA5-B3AD-39D02A3E397C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
