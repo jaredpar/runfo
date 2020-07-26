@@ -24,7 +24,7 @@ namespace DevOps.Util.Triage
     /// This class is responsible for making the updates to GitHub based on the stored state 
     /// of the model
     /// </summary>
-    public sealed class GitHubUtil
+    public sealed class TriageGitHubUtil
     {
         public IGitHubClient GitHubClient { get; }
 
@@ -36,7 +36,7 @@ namespace DevOps.Util.Triage
 
         public TriageContext Context => TriageContextUtil.Context;
 
-        public GitHubUtil(
+        public TriageGitHubUtil(
             IGitHubClient gitHubClient,
             TriageContext context,
             ILogger logger)

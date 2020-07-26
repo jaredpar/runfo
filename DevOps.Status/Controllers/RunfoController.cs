@@ -9,6 +9,7 @@ using DevOps.Util.DotNet;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using DevOps.Status.Util;
+using Microsoft.AspNetCore.Authentication;
 
 namespace DevOps.Status.Controllers
 {

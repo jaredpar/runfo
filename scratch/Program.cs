@@ -53,11 +53,12 @@ namespace QueryFun
         public DotNetQueryUtil DotNetQueryUtil { get; set; }
 
 
-#pragma warning disable 
+#pragma warning disable CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
         public ScratchUtil()
         {
             Reset(DefaultOrganization);
         }
+#pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
 
         public void Reset(string organization)
         {
@@ -76,8 +77,9 @@ namespace QueryFun
                 var both = value.Split(new[] { ':' }, count: 2);
                 gitHubClient.Credentials = new Credentials(both[0], both[1]);
             }
-
             GitHubClient = gitHubClient;
+
+            DotNetQueryUtil = new DotNetQueryUtil(DevOpsServer, GitHubClient);
         }
 
         private static IConfiguration CreateConfiguration()
@@ -97,13 +99,18 @@ namespace QueryFun
 
             // var builds = await server.ListBuildsAsync("public", definitions: new[] { 731 }, branchName: "refs/pull/39837/merge", repositoryId: "dotnet/runtime", repositoryType: "github");
 
-            var organization = await GitHubClient.Organization.GetAllForUser("jaredpar");
-
-            var builds = await DevOpsServer.ListPullRequestBuilds(
-                new GitHubPullRequestKey("dotnet", "runtime", 39837),
-                "public",
-                definitions: new[] { 731 });
+            var key = DotNetUtil.GetBuildDefinitionKeyFromFriendlyName("roslyn")!.Value;
+            var gitHubUtil = new GitHubUtil(GitHubClient);
+            var organization = "dotnet";
+            var repository = "roslyn";
+            var gitHubInfo = new GitHubInfo(organization, repository);
+            await foreach (var (pr, build) in DotNetQueryUtil.EnumerateMergedPullRequestBuilds(gitHubInfo, key.Project, new[] { key.Id }))
+            {
+                Console.WriteLine($"{pr.Number} {build.GetBuildInfo().BuildUri} {build.Result}");
+            }
         }
+
+#nullable disable
 
         public async Task DumpRoslynTestTimes()
         {

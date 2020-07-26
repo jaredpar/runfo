@@ -216,7 +216,7 @@ namespace DevOps.Util
         /// 
         /// If the repositoryId REST argument is provided it must be accompanied by repositoryType
         /// </remarks>
-        public static Task<List<Build>> ListPullRequestBuilds(
+        public static Task<List<Build>> ListPullRequestBuildsAsync(
             this DevOpsServer server,
             in GitHubPullRequestKey prKey,
             string project,

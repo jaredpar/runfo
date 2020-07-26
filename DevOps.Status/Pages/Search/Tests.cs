@@ -48,7 +48,7 @@ namespace DevOps.Status.Pages.Search
 
             public TestSearchOptionSet()
             {
-                Add("n|name", "Test name to filter to", t => TestName = t);
+                Add("n|name=", "Test name to filter to", t => TestName = t);
             }
         }
 
