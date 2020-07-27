@@ -92,7 +92,7 @@ internal class Program
         }
 
         var autoTriageUtil = new AutoTriageUtil(server, context, gitHubClient, loggerFactory.CreateLogger<AutoTriageUtil>());
-        var gitHubUtil = new GitHubUtil(gitHubClient, context, loggerFactory.CreateLogger<GitHubUtil>());
+        var gitHubUtil = new TriageGitHubUtil(gitHubClient, context, loggerFactory.CreateLogger<GitHubUtil>());
         switch (command)
         {
             case "list":

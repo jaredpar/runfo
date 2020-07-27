@@ -117,7 +117,7 @@ namespace DevOps.Functions
             [TimerTrigger("0 */15 15-23 * * 1-5")] TimerInfo timerInfo,
             ILogger logger)
         { 
-            var util = new GitHubUtil(GitHubClient, Context, logger);
+            var util = new TriageGitHubUtil(GitHubClient, Context, logger);
             await util.UpdateGithubIssues();
             await util.UpdateStatusIssue();
         }
