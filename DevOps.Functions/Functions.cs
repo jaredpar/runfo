@@ -67,6 +67,16 @@ namespace DevOps.Functions
             return new OkResult();
         }
 
+        [FunctionName("webhook-github")]
+        public async Task<IActionResult> OnGitHubEvent(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest request,
+            ILogger logger)
+        {
+            string requestBody = await new StreamReader(request.Body).ReadToEndAsync().ConfigureAwait(false);
+            logger.LogInformation(requestBody);
+            return new OkResult();
+        }
+
         [FunctionName("triage-build")]
         public async Task TriageBuildAsync(
             [QueueTrigger("build-complete", Connection = "AzureWebJobsStorage")] string message,
