@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using DevOps.Status.Util;
 using DevOps.Util;
@@ -19,23 +20,65 @@ namespace DevOps.Status.Pages.View
 {
     public class MergedPullRequestsModel : PageModel
     {
-        public sealed class SearchOptionSet : OptionSet
+        public sealed class SearchOptions
         {
             public string Repository { get; set; } = "runtime";
 
-            public string Project { get; set; } = "public";
+            public string Definition { get; set; } = "runtime";
 
-            public string? Definition { get; set; } = null;
+            public int Count { get; set; } = 50;
 
-            public int SearchCount { get; set; } = 10;
-
-            public SearchOptionSet()
+            public string UserQuery
             {
-                Add("d|definition=", "build definition (name|id)(:project)?", d => Definition = d);
-                Add("p|project=", "default project to search (public)", p => Project = p);
-                Add("r|repository=", "default project to search (public)", r => Repository = r);
-                Add("c|count=", "count of builds to show for a definition", (int c) => SearchCount = c);
+                get
+                {
+                    var builder = new StringBuilder();
+                    if (!string.IsNullOrEmpty(Repository))
+                    {
+                        builder.Append($"repository:{Repository} ");
+                    }
+
+                    if (!string.IsNullOrEmpty(Definition))
+                    {
+                        builder.Append($"definition:{Definition} ");
+                    }
+
+                    builder.Append($"count:{Count} ");
+                    return builder.ToString();
+                }
             }
+
+            public SearchOptions()
+            {
+            }
+
+            public void Parse(string query)
+            {
+                foreach (var tuple in DotNetQueryUtil.TokenizeQueryPairs(query))
+                {
+                    switch (tuple.Name.ToLower())
+                    {
+                        case "repository":
+                            Repository = tuple.Value;
+                            break;
+                        case "definition":
+                            Definition = tuple.Value;
+                            break;
+                        case "count":
+                            Count = int.Parse(tuple.Value);
+                            break;
+                        default:
+                            throw new Exception($"Invalid option {tuple.Name}");
+                    }
+                }
+            }
+
+            public Dictionary<string, string> GetQueryParams() => new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "repository", Repository },
+                { "definition", Definition },
+                { "count", Count.ToString() }
+            };
         }
 
         public sealed class MergedBuildInfo
@@ -52,6 +95,9 @@ namespace DevOps.Status.Pages.View
 
         public TriageContext TriageContext { get; }
 
+        [BindProperty(SupportsGet = true)]
+        public SearchOptions Options { get; set; } = new SearchOptions();
+
         [BindProperty(SupportsGet = true, Name = "q")]
         public string? QueryString { get; set; }
 
@@ -64,30 +110,25 @@ namespace DevOps.Status.Pages.View
             TriageContext = triageContext;
         }
 
-        public async Task OnGet()
+        public async Task<IActionResult> OnGet()
         {
-            if (string.IsNullOrEmpty(QueryString))
+            if (!string.IsNullOrEmpty(QueryString))
             {
-                return;
-            }
-
-            var optionSet = new SearchOptionSet();
-            if (optionSet.Parse(DotNetQueryUtil.TokenizeQuery(QueryString)).Count != 0)
-            {
-                throw OptionSetUtil.CreateBadOptionException();
+                Options.Parse(QueryString);
+                return RedirectToPage("/View/MergedPullRequests", Options.GetQueryParams());
             }
 
             IQueryable<ModelBuild> query = TriageContext
                 .ModelBuilds
                 .Include(x => x.ModelBuildDefinition)
-                .Where(x => x.IsMergedPullRequest && x.GitHubOrganization == DotNetUtil.GitHubOrganization && x.GitHubRepository == optionSet.Repository.ToLower());
-            if (optionSet.Definition is object)
+                .Where(x => x.IsMergedPullRequest && x.GitHubOrganization == DotNetUtil.GitHubOrganization && x.GitHubRepository == Options.Repository.ToLower());
+            if (Options.Definition is object)
             {
-                var definitionId = DotNetUtil.GetDefinitionIdFromFriendlyName(optionSet.Definition);
+                var definitionId = DotNetUtil.GetDefinitionIdFromFriendlyName(Options.Definition);
                 query = query.Where(x => x.ModelBuildDefinition.DefinitionId == definitionId);
             }
 
-            query = query.Take(optionSet.SearchCount);
+            query = query.Take(Options.Count);
 
             var builds = (await query.ToListAsync())
                 .Select(b =>
@@ -110,6 +151,7 @@ namespace DevOps.Status.Pages.View
 
             var rate = builds.Count(x => x.Result == BuildResult.Succeeded || x.Result == BuildResult.PartiallySucceeded) / (double)builds.Count;
             PassRate = (100 * rate).ToString("F");
+            return Page();
         }
     }
 }

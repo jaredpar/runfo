@@ -363,6 +363,22 @@ namespace DevOps.Util.DotNet
             }
         }
 
+        public static IEnumerable<(string Name, string Value)> TokenizeQueryPairs(string query)
+        {
+            foreach (var item in TokenizeQuery(query))
+            {
+                if (item.Contains(':'))
+                {
+                    var split = item.Split(new[] { ':' }, count: 2);
+                    yield return (split[0], split[1]);
+                }
+                else
+                {
+                    yield return ("", item);
+                }
+            }
+        }
+
         public async Task<List<Build>> ListBuildsAsync(string buildQuery)
         {
             var optionSet = new BuildSearchOptionSet();
