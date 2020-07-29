@@ -76,7 +76,11 @@ internal class Program
 
     internal static async Task<int> MainCore(List<string> args)
     {
-        var (server, gitHubClient, context) = Create(ref args);
+        await Task.Delay(1);
+        return 1;
+        /*
+        var (server, context) = Create(ref args);
+        var gitHubClient = GitHubClientFactory.
         var queryUtil = new DotNetQueryUtil(server, gitHubClient);
         using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
 
@@ -155,7 +159,7 @@ internal class Program
         {
             autoTriageUtil.EnsureTriageIssues();
             await gitHubUtil.UpdateGithubIssues();
-            await gitHubUtil.UpdateStatusIssue();
+            // await gitHubUtil.UpdateStatusIssue();
         }
 
         async Task RunScratch()
@@ -170,7 +174,7 @@ internal class Program
             
         }
 
-        static (DevOpsServer Server, IGitHubClient githubClient, TriageContext Context) Create(ref List<string> args)
+        static (DevOpsServer Server, TriageContext Context) Create(ref List<string> args)
         {
             var azdoToken = Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN");
             var gitHubToken = Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN");
@@ -201,14 +205,9 @@ internal class Program
             var server = new DevOpsServer(
                 "dnceng",
                 new CachingAzureClient(cacheDirectory, azdoToken));
-            var realGitHubClient = new GitHubClient(new ProductHeaderValue("RuntimeStatusPage"));
-            // TODO: should not hard code jaredpar here
-            realGitHubClient.Credentials = new Credentials("jaredpar", gitHubToken);
 
-            var gitHubClient = devGitHub
-                ? (IGitHubClient)new DevGitHubClient(realGitHubClient)
-                : realGitHubClient;
-            return (server, gitHubClient, context);
+            return (server, context);
         }
+        */
     }
 }

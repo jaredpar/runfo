@@ -98,10 +98,9 @@ namespace QueryFun
             // await DumpRoslynTestTimes();
 
             // var builds = await server.ListBuildsAsync("public", definitions: new[] { 731 }, branchName: "refs/pull/39837/merge", repositoryId: "dotnet/runtime", repositoryType: "github");
-            var builds = await DevOpsServer.ListPullRequestBuildsAsync(
-                new GitHubPullRequestKey("dotnet", "roslyn", 46035),
-                "public",
-                new[] { DotNetUtil.GetDefinitionIdFromFriendlyName("roslyn") });
+            var factory = new GitHubClientFactory(CreateConfiguration());
+            var gitHubClient = await factory.CreateForAppAsync("jaredpar", "devops-util");
+            var comment = await gitHubClient.Issue.Comment.Create("jaredpar", "devops-util", 5, "This is a test comment");
     
         }
 

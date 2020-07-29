@@ -11,9 +11,9 @@ namespace DevOps.Status.Util
     public sealed class DotNetQueryUtilFactory
     {
         public DevOpsServer DevOpsServer { get; }
-        public GitHubClientFactory GitHubClientFactory { get; }
+        public StatusGitHubClientFactory GitHubClientFactory { get; }
 
-        public DotNetQueryUtilFactory(DevOpsServer devOpsServer, GitHubClientFactory gitHubClientFactory)
+        public DotNetQueryUtilFactory(DevOpsServer devOpsServer, StatusGitHubClientFactory gitHubClientFactory)
         {
             DevOpsServer = devOpsServer;
             GitHubClientFactory = gitHubClientFactory;

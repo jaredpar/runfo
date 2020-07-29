@@ -24,6 +24,8 @@ namespace DevOps.Util.Triage
 
         public DotNetQueryUtil QueryUtil { get; }
 
+        // TODO: need to remove this. Not all functions require this and it's hard to feed through from
+        // functions
         public IGitHubClient GitHubClient { get; }
 
         public TriageContextUtil TriageContextUtil { get; }

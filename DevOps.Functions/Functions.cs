@@ -16,6 +16,10 @@ using Octokit;
 using DevOps.Util;
 using System;
 using Microsoft.Extensions.Primitives;
+using System.Net.Http;
+using System.Dynamic;
+using System.Net;
+using System.Net.Http.Formatting;
 
 namespace DevOps.Functions
 {
@@ -43,14 +47,34 @@ namespace DevOps.Functions
 
         public DevOpsServer Server { get; }
 
-        public IGitHubClient GitHubClient { get; }
+        public GitHubClientFactory GitHubClientFactory { get; }
 
-        public Functions(DevOpsServer server, IGitHubClient gitHubClient, TriageContext context)
+        public Functions(DevOpsServer server, TriageContext context, GitHubClientFactory gitHubClientFactory)
         {
             Server = server;
-            GitHubClient = gitHubClient;
             Context = context;
             TriageContextUtil = new TriageContextUtil(context);
+            GitHubClientFactory = gitHubClientFactory;
+        }
+
+        [FunctionName("status")]
+        public async Task<IActionResult> OnStatusAsync(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
+            ILogger logger)
+        {
+            dynamic status = new ExpandoObject();
+            try
+            {
+                _ = await GitHubClientFactory.CreateForAppAsync("dotnet", "runtime");
+                status.CreatedGitHubApp = true;
+            }
+            catch (Exception ex)
+            {
+                status.CreatedGitHubApp = false;
+                status.CreatedGitHubAppException = ex.Message;
+            }
+
+            return new JsonResult((ExpandoObject)status);
         }
 
         [FunctionName("build")]
@@ -133,59 +157,17 @@ namespace DevOps.Functions
                 DotNetUtil.DefaultAzureProject);
         }
 
-        [FunctionName("triage-build")]
-        public async Task TriageBuildAsync(
-            [QueueTrigger("build-complete", Connection = "AzureWebJobsStorage")] string message,
-            ILogger logger)
-        {
-            var buildCompleteMessage = JsonConvert.DeserializeObject<BuildCompleteMessage>(message);
-            var projectName = buildCompleteMessage.ProjectName;
-            if (projectName is null)
-            {
-                var projectId = buildCompleteMessage.ProjectId;
-                if (projectId is null)
-                {
-                    logger.LogError("Both project name and id are null");
-                    return;
-                }
-
-                projectName = await Server.ConvertProjectIdToNameAsync(projectId);
-            }
-
-            logger.LogInformation($"Triaging build {projectName} {buildCompleteMessage.BuildNumber}");
-
-            var util = new AutoTriageUtil(Server, Context, GitHubClient, logger);
-            await util.TriageBuildAsync(projectName, buildCompleteMessage.BuildNumber);
-        }
-
-        [FunctionName("triage-query")]
-        public async Task TriageQueryAsync(
-            [QueueTrigger("triage-query", Connection = "AzureWebJobsStorage")] string message,
-            [Queue("build-complete", Connection = "AzureWebJobsStorage")] IAsyncCollector<BuildCompleteMessage> triageQueue,
-            ILogger logger)
-        {
-            logger.LogInformation($"Triaging query: {message}");
-            var queryUtil = new DotNetQueryUtil(Server, GitHubClient);
-            foreach (var build in await queryUtil.ListBuildsAsync(message))
-            {
-                var key = build.GetBuildKey();
-                var buildCompleteMessage = new BuildCompleteMessage()
-                {
-                    ProjectName = key.Project,
-                    BuildNumber = key.Number,
-                };
-                await triageQueue.AddAsync(buildCompleteMessage);
-            }
-        }
-
         [FunctionName("issues-update")]
         public async Task IssuesUpdate(
             [TimerTrigger("0 */15 15-23 * * 1-5")] TimerInfo timerInfo,
             ILogger logger)
         { 
-            var util = new TriageGitHubUtil(GitHubClient, Context, logger);
+            var util = new TriageGitHubUtil(GitHubClientFactory, Context, logger);
             await util.UpdateGithubIssues();
-            await util.UpdateStatusIssue();
+
+            // TODO: this should be repo specific
+            var runtimeGitHubClient = await GitHubClientFactory.CreateForAppAsync("dotnet", "runtime");
+            await util.UpdateStatusIssue(runtimeGitHubClient);
         }
 
         [FunctionName("osx-retry")]
@@ -202,7 +184,7 @@ namespace DevOps.Functions
             }
 
             var projectName = await Server.ConvertProjectIdToNameAsync(projectId);
-            var util = new AutoTriageUtil(Server, Context, GitHubClient, logger);
+            var util = new AutoTriageUtil(Server, Context, GitHubClientFactory.CreateAnonymous(), logger);
             await util.RetryOsxDeprovisionAsync(projectName, buildCompleteMessage.BuildNumber);
         }
     }

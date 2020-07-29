@@ -11,6 +11,7 @@
     <PackageReference Include="Mono.Options" Version="6.6.0.161" />
     <PackageReference Include="YamlDotNet" Version="8.1.1" />
     <PackageReference Include="Octokit" Version="0.47.0" />
+    <PackageReference Include="GitHubJwt" Version="0.0.4" />
   </ItemGroup>
 
 </Project>

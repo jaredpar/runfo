@@ -26,7 +26,7 @@ namespace DevOps.Util.Triage
     /// </summary>
     public sealed class TriageGitHubUtil
     {
-        public IGitHubClient GitHubClient { get; }
+        public GitHubClientFactory GitHubClientFactory { get; }
 
         public TriageContextUtil TriageContextUtil { get; }
 
@@ -37,11 +37,11 @@ namespace DevOps.Util.Triage
         public TriageContext Context => TriageContextUtil.Context;
 
         public TriageGitHubUtil(
-            IGitHubClient gitHubClient,
+            GitHubClientFactory gitHubClientFactory,
             TriageContext context,
             ILogger logger)
         {
-            GitHubClient = gitHubClient;
+            GitHubClientFactory = gitHubClientFactory;
             TriageContextUtil = new TriageContextUtil(context);
             Logger = logger;
         }
@@ -71,6 +71,19 @@ namespace DevOps.Util.Triage
 
             async Task UpdateIssueForSearchTimeline(ModelTriageIssue triageIssue, ModelTriageGitHubIssue gitHubIssue)
             {
+                GitHubClient gitHubClient;
+                try
+                {
+                    gitHubClient = await GitHubClientFactory.CreateForAppAsync(
+                        gitHubIssue.Organization,
+                        gitHubIssue.Repository).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError($"Cannot create GitHubClient for {gitHubIssue.Organization} {gitHubIssue.Repository}: {ex.Message}");
+                    return;
+                }
+
                 var results = TriageContextUtil.FindModelTriageIssueResults(triageIssue, gitHubIssue);
                 var footer = new StringBuilder();
                 var mostRecent = results
@@ -105,16 +118,16 @@ namespace DevOps.Util.Triage
                     includeDefinition: gitHubIssue.IncludeDefinitions,
                     footer.ToString());
 
-                var succeeded = await UpdateGitHubIssueReport(gitHubIssue.IssueKey, reportBody);
+                var succeeded = await UpdateGitHubIssueReport(gitHubClient, gitHubIssue.IssueKey, reportBody);
                 Logger.LogInformation($"Updated {gitHubIssue.IssueKey.IssueUri}");
             }
         }
 
-        private async Task<bool> UpdateGitHubIssueReport(GitHubIssueKey issueKey, string reportBody)
+        private async Task<bool> UpdateGitHubIssueReport(GitHubClient gitHubClient, GitHubIssueKey issueKey, string reportBody)
         {
             try
             {
-                var issueClient = GitHubClient.Issue;
+                var issueClient = gitHubClient.Issue;
                 var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Number);
                 if (TryUpdateIssueText(reportBody, issue.Body, out var newIssueBody))
                 {
@@ -183,7 +196,7 @@ namespace DevOps.Util.Triage
 
         }
 
-        public async Task UpdateStatusIssue()
+        public async Task UpdateStatusIssue(GitHubClient gitHubClient)
         {
             var header = new StringBuilder();
             var body = new StringBuilder();
@@ -200,7 +213,7 @@ namespace DevOps.Util.Triage
             header.AppendLine("");
             BuildFooter();
 
-            await UpdateIssue();
+            await UpdateIssue(gitHubClient);
 
             void BuildFooter()
             {
@@ -222,7 +235,7 @@ namespace DevOps.Util.Triage
                 body.AppendLine("|Status|Issue|Build Count|");
                 body.AppendLine("|---|---|---|");
 
-                var query = (await DoSearch(label))
+                var query = (await DoSearch(gitHubClient, label))
                     .Select(x => 
                         {
                             var issueKey = x.GetIssueKey();
@@ -249,7 +262,7 @@ namespace DevOps.Util.Triage
                 }
             }
 
-            async Task<List<Octokit.Issue>> DoSearch(string label)
+            async Task<List<Octokit.Issue>> DoSearch(GitHubClient gitHubClient, string label)
             {
                 var request = new SearchIssuesRequest()
                 {
@@ -258,18 +271,18 @@ namespace DevOps.Util.Triage
                     Type = IssueTypeQualifier.Issue,
                     Repos = { { "dotnet", "runtime" } },
                 };
-                var result = await GitHubClient.Search.SearchIssues(request);
+                var result = await gitHubClient.Search.SearchIssues(request);
                 return result.Items.ToList();
             }
 
-            async Task UpdateIssue()
+            async Task UpdateIssue(GitHubClient gitHubClient)
             {
                 var issueKey = new GitHubIssueKey("dotnet", "runtime", 702);
-                var issueClient = GitHubClient.Issue;
+                var issueClient = gitHubClient.Issue;
                 var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Number);
                 var updateIssue = issue.ToUpdate();
                 updateIssue.Body = header.ToString() + body.ToString() + footer.ToString();
-                await GitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, updateIssue);
+                await gitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, updateIssue).ConfigureAwait(false);
             }
 
             int? GetImpactedBuildsCount(GitHubIssueKey issueKey, BuildDefinitionKey definitionKey)

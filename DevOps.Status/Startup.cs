@@ -77,8 +77,8 @@ namespace DevOps.Status
             })
             .AddGitHub(options =>
             {
-                options.ClientId = Configuration["GitHubClientId"];
-                options.ClientSecret = Configuration["GitHubClientSecret"];
+                options.ClientId = Configuration[DotNetConstants.ConfigurationGitHubClientId];
+                options.ClientSecret = Configuration[DotNetConstants.ConfigurationGitHubClientSecret];
                 options.SaveTokens = true;
                 options.ClaimActions.MapJsonKey(Constants.GitHubAvatarUrl, Constants.GitHubAvatarUrl);
                 options.Events.OnCreatingTicket = async context =>

@@ -4,9 +4,11 @@ using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Octokit;
 
+[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsId("67c4a872-5dd7-422a-acad-fdbe907ace33")]
 [assembly: FunctionsStartup(typeof(DevOps.Functions.Startup))]
 
 namespace DevOps.Functions
@@ -15,20 +17,20 @@ namespace DevOps.Functions
     {
         public override void Configure(IFunctionsHostBuilder builder)
         {
-            var connectionString = Environment.GetEnvironmentVariable("RUNFO_CONNECTION_STRING");
-            var azdoToken = Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN");
-            var gitHubToken = Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN");
+            var config = new ConfigurationBuilder()
+                .AddUserSecrets<Startup>()
+                .AddEnvironmentVariables()
+                .Build();
+
+            var connectionString = config["RUNFO_CONNECTION_STRING"];
+            var azdoToken = config["RUNFO_AZURE_TOKEN"];
             builder.Services.AddDbContext<TriageContext>(options => options.UseSqlServer(connectionString));
             builder.Services.AddScoped<DevOpsServer>(_ => new DevOpsServer(DotNetUtil.AzureOrganization, azdoToken));
-            builder.Services.AddScoped<IGitHubClient>(_ =>
+            builder.Services.AddScoped<GitHubClientFactory>(_ =>
             {
-                var client = new GitHubClient(new ProductHeaderValue("RuntimeStatusPage"));
-                if (!string.IsNullOrEmpty(gitHubToken))
-                {
-                    client.Credentials = new Credentials("jaredpar", gitHubToken);
-                }
-
-                return client;
+                var appId = int.Parse(config[DotNetConstants.ConfigurationGitHubAppId]);
+                var appPrivateKey = config[DotNetConstants.ConfigurationGitHubAppPrivateKey];
+                return new GitHubClientFactory(appId, appPrivateKey);
             });
         }
     }

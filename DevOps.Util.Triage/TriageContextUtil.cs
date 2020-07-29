@@ -55,7 +55,7 @@ namespace DevOps.Util.Triage
                 build.FinishTime,
                 build.BuildResult ?? BuildResult.None);
 
-        public ModelBuildDefinition EnsureBuildDefinition(BuildDefinitionInfo definitionInfo)
+        public async Task<ModelBuildDefinition> EnsureBuildDefinitionAsync(BuildDefinitionInfo definitionInfo)
         {
             var buildDefinition = Context.ModelBuildDefinitions
                 .Where(x =>
@@ -65,6 +65,12 @@ namespace DevOps.Util.Triage
                 .FirstOrDefault();
             if (buildDefinition is object)
             {
+                if (buildDefinition.DefinitionName != definitionInfo.Name)
+                {
+                    buildDefinition.DefinitionName = definitionInfo.Name;
+                    await Context.SaveChangesAsync().ConfigureAwait(false);
+                }
+
                 return buildDefinition;
             }
 
@@ -77,7 +83,7 @@ namespace DevOps.Util.Triage
             };
 
             Context.ModelBuildDefinitions.Add(buildDefinition);
-            Context.SaveChanges();
+            await Context.SaveChangesAsync().ConfigureAwait(false);
             return buildDefinition;
         }
 
@@ -101,10 +107,11 @@ namespace DevOps.Util.Triage
             }
 
             var prKey = buildInfo.PullRequestKey;
+            var modelBuildDefinition = await EnsureBuildDefinitionAsync(buildInfo.DefinitionInfo).ConfigureAwait(false);
             modelBuild = new ModelBuild()
             {
                 Id = modelBuildId,
-                ModelBuildDefinitionId = EnsureBuildDefinition(buildInfo.DefinitionInfo).Id,
+                ModelBuildDefinitionId = modelBuildDefinition.Id,
                 GitHubOrganization = buildInfo.GitHubInfo?.Organization ?? null,
                 GitHubRepository = buildInfo.GitHubInfo?.Repository ?? null,
                 PullRequestNumber = prKey?.Number,
