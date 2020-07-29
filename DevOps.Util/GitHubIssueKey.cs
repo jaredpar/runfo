@@ -47,7 +47,7 @@ namespace DevOps.Util
 
         public GitHubInfo GitHubInfo => new GitHubInfo(Organization, Repository);
 
-        public string PullRequestUri => $"https://github.com/{Organization}/{Repository}/pull/{Number}";
+        public string PullRequestUri => GetPullRequestUri(Organization, Repository, Number);
 
         public GitHubPullRequestKey(string organization, string repository, int number)
         {
@@ -57,6 +57,9 @@ namespace DevOps.Util
         }
 
         public GitHubIssueKey ToIssueKey() => new GitHubIssueKey(Organization, Repository, Number);
+
+        public static string GetPullRequestUri(string organization, string repository, int number) => 
+            $"https://github.com/{organization}/{repository}/pull/{number}";
 
         public static bool operator==(GitHubPullRequestKey left, GitHubPullRequestKey right) => left.Equals(right);
 

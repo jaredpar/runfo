@@ -25,9 +25,9 @@
         @foreach (var build in Model.MergedPullRequestBuilds)
         {
             <tr>
-                <td>@build.PullRequestNumber</td>
-                <td>@build.BuildNumber</td>
-                <td>Blah</td>
+                <td><a href=@build.PullRequestUri>@build.PullRequestNumber</a></td>
+                <td><a href=@build.BuildUri>@build.BuildNumber</a></td>
+                <td>@build.Result</td>
             </tr>
         }
     </tbody>

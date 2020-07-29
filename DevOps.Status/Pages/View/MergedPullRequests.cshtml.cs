@@ -38,14 +38,23 @@ namespace DevOps.Status.Pages.View
             }
         }
 
+        public sealed class MergedBuildInfo
+        {
+            public string? PullRequestUri { get; set; }
+            public int PullRequestNumber { get; set; }
+            public string? BuildUri { get; set; }
+            public int BuildNumber { get; set; }
+            public BuildResult Result { get; set; }
+        }
+
         public TriageContext TriageContext { get; }
 
         [BindProperty(SupportsGet = true, Name = "q")]
         public string? QueryString { get; set; }
 
-        public List<ModelBuild> MergedPullRequestBuilds { get; set; } = new List<ModelBuild>();
+        public List<MergedBuildInfo> MergedPullRequestBuilds { get; set; } = new List<MergedBuildInfo>();
 
-        public double PassRate { get; set; }
+        public string? PassRate { get; set; }
 
         public MergedPullRequestsModel(TriageContext triageContext)
         {
@@ -71,14 +80,30 @@ namespace DevOps.Status.Pages.View
                 .Where(x => x.IsMergedPullRequest && x.GitHubOrganization == "dotnet" && x.GitHubRepository == optionSet.Repository.ToLower());
             if (optionSet.Definition is object)
             {
-                var key = DotNetUtil.GetBuildDefinitionKeyFromFriendlyName(optionSet.Definition)!.Value;
-                query = query.Where(x => x.ModelBuildDefinitionId == key.Id);
+                var definitionId = DotNetUtil.GetDefinitionIdFromFriendlyName(optionSet.Definition);
+                query = query.Where(x => x.ModelBuildDefinition.DefinitionId == definitionId);
             }
 
             query = query.Take(optionSet.SearchCount);
 
-            var builds = await query.ToListAsync();
+            var builds = (await query.ToListAsync())
+                .Select(b =>
+                {
+                    var prNumber = b.PullRequestNumber!.Value;
+                    return new MergedBuildInfo()
+                    {
+                        PullRequestUri = GitHubPullRequestKey.GetPullRequestUri(b.GitHubOrganization, b.GitHubRepository, prNumber),
+                        PullRequestNumber = prNumber,
+                        BuildUri = TriageContextUtil.GetBuildInfo(b).BuildUri,
+                        BuildNumber = b.BuildNumber,
+                        Result = b.BuildResult!.Value,
+                    };
+                })
+                .ToList();
             MergedPullRequestBuilds = builds;
+
+            var rate = builds.Count(x => x.Result == BuildResult.Succeeded || x.Result == BuildResult.PartiallySucceeded) / (double)builds.Count;
+            PassRate = (100 * rate).ToString("F");
         }
     }
 }

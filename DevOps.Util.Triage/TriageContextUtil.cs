@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace DevOps.Util.Triage
 {
@@ -42,6 +43,7 @@ namespace DevOps.Util.Triage
         public static BuildKey GetBuildKey(ModelBuild build) =>
             new BuildKey(build.ModelBuildDefinition.AzureOrganization, build.ModelBuildDefinition.AzureProject, build.BuildNumber);
 
+        // TODO: Should be an extension method
         public static BuildInfo GetBuildInfo(ModelBuild build) =>
             new BuildInfo(
                 GetBuildKey(build),
@@ -50,7 +52,8 @@ namespace DevOps.Util.Triage
                 build.GitHubRepository,
                 build.PullRequestNumber,
                 build.StartTime,
-                build.FinishTime);
+                build.FinishTime,
+                build.BuildResult ?? BuildResult.None);
 
         public ModelBuildDefinition EnsureBuildDefinition(BuildDefinitionInfo definitionInfo)
         {
@@ -78,7 +81,7 @@ namespace DevOps.Util.Triage
             return buildDefinition;
         }
 
-        public ModelBuild EnsureBuild(BuildInfo buildInfo)
+        public async Task<ModelBuild> EnsureBuildAsync(BuildInfo buildInfo)
         {
             var modelBuildId = GetModelBuildId(buildInfo.Key);
             var modelBuild = Context.ModelBuilds
@@ -86,6 +89,14 @@ namespace DevOps.Util.Triage
                 .FirstOrDefault();
             if (modelBuild is object)
             {
+                if (modelBuild.BuildResult != buildInfo.BuildResult)
+                {
+                    modelBuild.StartTime = buildInfo.StartTime;
+                    modelBuild.FinishTime = buildInfo.FinishTime;
+                    modelBuild.BuildResult = buildInfo.BuildResult;
+                    await Context.SaveChangesAsync().ConfigureAwait(false);
+                }
+
                 return modelBuild;
             }
 
@@ -100,10 +111,23 @@ namespace DevOps.Util.Triage
                 StartTime = buildInfo.StartTime,
                 FinishTime = buildInfo.FinishTime,
                 BuildNumber = buildInfo.Number,
+                BuildResult = buildInfo.BuildResult,
             };
             Context.ModelBuilds.Add(modelBuild);
             Context.SaveChanges();
             return modelBuild;
+        }
+
+        public async Task EnsureResult(ModelBuild modelBuild, Build build)
+        {
+            if (modelBuild.BuildResult != build.Result)
+            {
+                var buildInfo = build.GetBuildInfo();
+                modelBuild.BuildResult = build.Result;
+                modelBuild.StartTime = buildInfo.StartTime;
+                modelBuild.FinishTime = buildInfo.FinishTime;
+                await Context.SaveChangesAsync().ConfigureAwait(false);
+            }
         }
 
         /// <summary>

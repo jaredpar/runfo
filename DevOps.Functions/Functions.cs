@@ -125,7 +125,7 @@ namespace DevOps.Functions
         {
             var functionUtil = new FunctionUtil();
             var prMessage = JsonConvert.DeserializeObject<PullRequestMergedMessage>(message);
-            var prKey = new GitHubPullRequestKey(prMessage.Organization, prMessage.Repository, prMessage.PullRequestNumber);
+            var prKey = new GitHubPullRequestKey(prMessage.Organization!, prMessage.Repository!, prMessage.PullRequestNumber);
             await functionUtil.OnPullRequestMergedAsync(
                 Server,
                 TriageContextUtil,

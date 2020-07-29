@@ -54,6 +54,8 @@ namespace DevOps.Util
 
         public DateTime? FinishTime { get; }
 
+        public BuildResult BuildResult { get; }
+
         public GitHubPullRequestKey? PullRequestKey => PullRequestNumber.HasValue && GitHubInfo.HasValue
             ? (GitHubPullRequestKey?)new GitHubPullRequestKey(GitHubInfo.Value.Organization, GitHubInfo.Value.Repository, PullRequestNumber.Value)
             : null;
@@ -73,7 +75,8 @@ namespace DevOps.Util
             BuildDefinitionInfo buildDefinitionInfo,
             GitHubPullRequestKey pullRequestKey,
             DateTime? startTime,
-            DateTime? finishTime)
+            DateTime? finishTime,
+            BuildResult buildResult)
         {
             Key = buildKey;
             DefinitionInfo = buildDefinitionInfo;
@@ -81,6 +84,7 @@ namespace DevOps.Util
             PullRequestNumber = pullRequestKey.Number;
             StartTime = startTime;
             FinishTime = finishTime;
+            BuildResult = buildResult;
         }
 
         public BuildInfo(
@@ -88,7 +92,8 @@ namespace DevOps.Util
             BuildDefinitionInfo buildDefinitionInfo,
             GitHubInfo? gitHubInfo,
             DateTime? startTime,
-            DateTime? finishTime)
+            DateTime? finishTime,
+            BuildResult buildResult)
         {
             Key = buildKey;
             DefinitionInfo = buildDefinitionInfo;
@@ -96,6 +101,7 @@ namespace DevOps.Util
             PullRequestNumber = null;
             StartTime = startTime;
             FinishTime = finishTime;
+            BuildResult = buildResult;
         }
 
         public BuildInfo(
@@ -105,7 +111,8 @@ namespace DevOps.Util
             string? gitHubRepository,
             int? pullRequestNumber,
             DateTime? startTime,
-            DateTime? finishTime)
+            DateTime? finishTime,
+            BuildResult buildResult)
         {
             Key = buildKey;
             DefinitionInfo = buildDefinitionInfo;

@@ -72,6 +72,8 @@ namespace DevOps.Util.Triage
         {
             Logger.LogInformation($"Triaging {DevOpsUtil.GetBuildUri(Build)}");
 
+            await TriageContextUtil.EnsureResult(ModelBuild, Build).ConfigureAwait(false);
+
             var query = 
                 from issue in Context.ModelTriageIssues
                 from complete in Context.ModelTriageIssueResultCompletes

@@ -38,11 +38,11 @@ namespace DevOps.Util
             var finishTime = build.GetFinishTime()?.UtcDateTime;
             if (TryGetPullRequestKey(build, out var pullRequestKey))
             {
-                return new BuildInfo(key, definitionInfo, pullRequestKey, startTime, finishTime);
+                return new BuildInfo(key, definitionInfo, pullRequestKey, startTime, finishTime, build.Result);
             }
 
             var gitHubInfo = GetGitHubInfo(build);
-            return new BuildInfo(key, definitionInfo, gitHubInfo, startTime, finishTime);
+            return new BuildInfo(key, definitionInfo, gitHubInfo, startTime, finishTime, build.Result);
         }
 
         public static bool TryParseBuildKey(Uri uri, out BuildKey buildKey)

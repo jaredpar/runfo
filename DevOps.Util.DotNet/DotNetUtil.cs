@@ -12,6 +12,7 @@ using System.Data.SqlClient;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Threading.Tasks;
+using Octokit;
 
 namespace DevOps.Util.DotNet
 {
@@ -54,6 +55,16 @@ namespace DevOps.Util.DotNet
             }
 
             return null;
+        }
+
+        public static int GetDefinitionIdFromFriendlyName(string name)
+        {
+            if (!TryGetDefinitionId(name, out _, out var id))
+            {
+                throw new InvalidOperationException($"Invalid friendly name {name}");
+            }
+
+            return id;
         }
 
         public static string GetDefinitionName(Build build) => 

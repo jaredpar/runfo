@@ -33,6 +33,10 @@ namespace DevOps.Util.Triage
                 .Property(x => x.IsMergedPullRequest)
                 .HasDefaultValue(false);
 
+            modelBuilder.Entity<ModelBuild>()
+                .Property(x => x.BuildResult)
+                .HasConversion<string>();
+
             modelBuilder.Entity<ModelBuildDefinition>()
                 .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionId })
                 .IsUnique();
@@ -91,6 +95,11 @@ namespace DevOps.Util.Triage
         public int? PullRequestNumber { get; set; }
 
         public bool IsMergedPullRequest { get; set; }
+
+        /// <summary>
+        /// The result of the most recent build attempt
+        /// </summary>
+        public BuildResult? BuildResult { get; set; }
 
         [Column(TypeName="smalldatetime")]
         public DateTime? StartTime { get; set; }

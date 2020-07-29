@@ -98,16 +98,39 @@ namespace QueryFun
             // await DumpRoslynTestTimes();
 
             // var builds = await server.ListBuildsAsync("public", definitions: new[] { 731 }, branchName: "refs/pull/39837/merge", repositoryId: "dotnet/runtime", repositoryType: "github");
+            var builds = await DevOpsServer.ListPullRequestBuildsAsync(
+                new GitHubPullRequestKey("dotnet", "roslyn", 46035),
+                "public",
+                new[] { DotNetUtil.GetDefinitionIdFromFriendlyName("roslyn") });
+    
+        }
+
+        internal async Task BuildMergedPullRequestBuilds()
+        {
             var functionUtil = new FunctionUtil();
             var gitHubUtil = new GitHubUtil(GitHubClient);
             var triageContextUtil = new TriageContextUtil(TriageContext);
+            foreach (var modelBuild in await TriageContext.ModelBuilds.Include(x => x.ModelBuildDefinition).Where(x => x.IsMergedPullRequest).ToListAsync())
+            {
+                try
+                {
+                    Console.WriteLine(modelBuild.BuildNumber);
+                    var build = await DevOpsServer.GetBuildAsync(modelBuild.ModelBuildDefinition.AzureProject, modelBuild.BuildNumber);
+                    await triageContextUtil.EnsureBuildAsync(build.GetBuildInfo());
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+
             var organization = "dotnet";
             var repository = "roslyn";
             await foreach (var pr in gitHubUtil.EnumerateMergedPullRequests(organization, repository))
             {
                 Console.WriteLine($"Processing {pr.HtmlUrl}");
                 var prKey = new GitHubPullRequestKey(organization, repository, pr.Number);
-                await functionUtil.OnPullRequestMerged(
+                await functionUtil.OnPullRequestMergedAsync(
                     DevOpsServer,
                     triageContextUtil,
                     prKey,

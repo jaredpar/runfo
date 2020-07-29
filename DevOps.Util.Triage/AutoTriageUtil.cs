@@ -122,7 +122,7 @@ namespace DevOps.Util.Triage
         public async Task TriageBuildAsync(Build build)
         {
             var buildInfo = build.GetBuildInfo();
-            var modelBuild = TriageContextUtil.EnsureBuild(buildInfo);
+            var modelBuild = await TriageContextUtil.EnsureBuildAsync(buildInfo).ConfigureAwait(false);
             var buildTriageUtil = new BuildTriageUtil(
                 build,
                 buildInfo,
@@ -179,7 +179,7 @@ namespace DevOps.Util.Triage
             Logger.LogInformation("Retrying");
             await Server.RetryBuildAsync(projectName, buildNumber).ConfigureAwait(false);
 
-            var modelBuild = TriageContextUtil.EnsureBuild(build.GetBuildInfo());
+            var modelBuild = await TriageContextUtil.EnsureBuildAsync(build.GetBuildInfo()).ConfigureAwait(false);
             var model = new ModelOsxDeprovisionRetry()
             {
                 OsxJobFailedCount = osxCount,
