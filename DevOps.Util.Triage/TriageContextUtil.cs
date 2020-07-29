@@ -236,7 +236,7 @@ namespace DevOps.Util.Triage
                 throw new NotSupportedException();
             }
 
-            var project = optionSet.Project ?? DotNetUtil.DefaultProject;
+            var project = optionSet.Project ?? DotNetUtil.DefaultAzureProject;
 
             if (!string.IsNullOrEmpty(optionSet.Repository))
             {
@@ -324,7 +324,7 @@ namespace DevOps.Util.Triage
                 throw new NotSupportedException();
             }
 
-            var project = optionSet.Project ?? DotNetUtil.DefaultProject;
+            var project = optionSet.Project ?? DotNetUtil.DefaultAzureProject;
             var count = optionSet.SearchCount ?? 100;
             var list = new List<ModelBuild>();
 

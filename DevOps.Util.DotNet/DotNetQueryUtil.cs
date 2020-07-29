@@ -453,7 +453,7 @@ namespace DevOps.Util.DotNet
             {
                 if (optionSet.Definitions.Count == 0)
                 {
-                    return (optionSet.Project ?? DotNetUtil.DefaultProject, Array.Empty<int>());
+                    return (optionSet.Project ?? DotNetUtil.DefaultAzureProject, Array.Empty<int>());
                 }
 
                 string? project = null;
@@ -481,14 +481,14 @@ namespace DevOps.Util.DotNet
                     list.Add(definitionId);
                 }
 
-                project ??= DotNetUtil.DefaultProject;
+                project ??= DotNetUtil.DefaultAzureProject;
                 return (project, list.ToArray());
             }
         }
 
         public static bool TryGetBuildId(BuildSearchOptionSet optionSet, string build, [NotNullWhen(true)] out string? project, out int buildId)
         {
-            var defaultProject = optionSet.Project ?? DotNetUtil.DefaultProject;
+            var defaultProject = optionSet.Project ?? DotNetUtil.DefaultAzureProject;
             return TryGetBuildId(build, defaultProject, out project, out buildId);
         }
 

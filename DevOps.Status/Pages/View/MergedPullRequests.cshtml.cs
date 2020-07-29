@@ -40,10 +40,13 @@ namespace DevOps.Status.Pages.View
 
         public sealed class MergedBuildInfo
         {
+            public string? Repository { get; set; }
             public string? PullRequestUri { get; set; }
             public int PullRequestNumber { get; set; }
             public string? BuildUri { get; set; }
             public int BuildNumber { get; set; }
+            public string? DefinitionName { get; set; }
+            public string? DefinitionUri { get; set; }
             public BuildResult Result { get; set; }
         }
 
@@ -77,7 +80,7 @@ namespace DevOps.Status.Pages.View
             IQueryable<ModelBuild> query = TriageContext
                 .ModelBuilds
                 .Include(x => x.ModelBuildDefinition)
-                .Where(x => x.IsMergedPullRequest && x.GitHubOrganization == "dotnet" && x.GitHubRepository == optionSet.Repository.ToLower());
+                .Where(x => x.IsMergedPullRequest && x.GitHubOrganization == DotNetUtil.GitHubOrganization && x.GitHubRepository == optionSet.Repository.ToLower());
             if (optionSet.Definition is object)
             {
                 var definitionId = DotNetUtil.GetDefinitionIdFromFriendlyName(optionSet.Definition);
@@ -92,10 +95,13 @@ namespace DevOps.Status.Pages.View
                     var prNumber = b.PullRequestNumber!.Value;
                     return new MergedBuildInfo()
                     {
+                        Repository = b.GitHubRepository,
                         PullRequestUri = GitHubPullRequestKey.GetPullRequestUri(b.GitHubOrganization, b.GitHubRepository, prNumber),
                         PullRequestNumber = prNumber,
                         BuildUri = TriageContextUtil.GetBuildInfo(b).BuildUri,
                         BuildNumber = b.BuildNumber,
+                        DefinitionUri = TriageContextUtil.GetBuildDefinitionInfo(b.ModelBuildDefinition).DefinitionUri,
+                        DefinitionName = b.ModelBuildDefinition.DefinitionName,
                         Result = b.BuildResult!.Value,
                     };
                 })

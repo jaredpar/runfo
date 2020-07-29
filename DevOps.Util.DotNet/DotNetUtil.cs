@@ -18,9 +18,11 @@ namespace DevOps.Util.DotNet
 {
     public static class DotNetUtil
     {
-        public static string Organization => "dnceng";
+        public static string GitHubOrganization => "dotnet";
 
-        public static string DefaultProject => "public";
+        public static string AzureOrganization => "dnceng";
+
+        public static string DefaultAzureProject => "public";
 
         public static TestOutcome[] FailedTestOutcomes = new[]
         {
@@ -51,7 +53,7 @@ namespace DevOps.Util.DotNet
             var item = BuildDefinitions.FirstOrDefault(x => x.BuildName == name);
             if (item.Project is object)
             {
-                return new BuildDefinitionKey(Organization, item.Project, item.DefinitionId);
+                return new BuildDefinitionKey(AzureOrganization, item.Project, item.DefinitionId);
             }
 
             return null;

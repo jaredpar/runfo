@@ -19,7 +19,7 @@ namespace DevOps.Functions
             var azdoToken = Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN");
             var gitHubToken = Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN");
             builder.Services.AddDbContext<TriageContext>(options => options.UseSqlServer(connectionString));
-            builder.Services.AddScoped<DevOpsServer>(_ => new DevOpsServer(DotNetUtil.Organization, azdoToken));
+            builder.Services.AddScoped<DevOpsServer>(_ => new DevOpsServer(DotNetUtil.AzureOrganization, azdoToken));
             builder.Services.AddScoped<IGitHubClient>(_ =>
             {
                 var client = new GitHubClient(new ProductHeaderValue("RuntimeStatusPage"));

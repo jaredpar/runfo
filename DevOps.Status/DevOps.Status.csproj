@@ -7,6 +7,7 @@
   <ItemGroup>
     <PackageReference Include="GitHubJwt" Version="0.0.4" />
     <PackageReference Include="AspNet.Security.OAuth.GitHub" Version="3.1.2" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.1.3" />
     <ProjectReference Include="..\DevOps.Util\DevOps.Util.csproj" />
     <ProjectReference Include="..\DevOps.Util.DotNet\DevOps.Util.DotNet.csproj" />
     <ProjectReference Include="..\DevOps.Util.Triage\DevOps.Util.Triage.csproj" />

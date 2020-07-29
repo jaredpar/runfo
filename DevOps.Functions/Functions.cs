@@ -130,7 +130,7 @@ namespace DevOps.Functions
                 Server,
                 TriageContextUtil,
                 prKey,
-                DotNetUtil.DefaultProject);
+                DotNetUtil.DefaultAzureProject);
         }
 
         [FunctionName("triage-build")]

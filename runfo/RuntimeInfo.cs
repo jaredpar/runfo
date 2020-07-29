@@ -827,7 +827,7 @@ internal sealed partial class RuntimeInfo
 
         ParseAll(optionSet, args);
 
-        var project = DotNetUtil.DefaultProject;
+        var project = DotNetUtil.DefaultAzureProject;
         IEnumerable<int> definitions = null;
         if (definition is object)
         {
