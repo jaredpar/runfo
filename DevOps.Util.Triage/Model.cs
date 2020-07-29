@@ -29,6 +29,10 @@ namespace DevOps.Util.Triage
         }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<ModelBuild>()
+                .Property(x => x.IsMergedPullRequest)
+                .HasDefaultValue(false);
+
             modelBuilder.Entity<ModelBuildDefinition>()
                 .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionId })
                 .IsUnique();
@@ -85,6 +89,8 @@ namespace DevOps.Util.Triage
         public string GitHubRepository { get; set; }
 
         public int? PullRequestNumber { get; set; }
+
+        public bool IsMergedPullRequest { get; set; }
 
         [Column(TypeName="smalldatetime")]
         public DateTime? StartTime { get; set; }

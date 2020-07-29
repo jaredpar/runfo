@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util
 {
+    // TODO: rename to Azure Server
     public class DevOpsServer
     {
         public IAzureClient AzureClient { get; }

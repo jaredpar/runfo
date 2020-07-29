@@ -7,8 +7,10 @@ using System.Threading.Tasks;
 using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
+using DevOps.Util.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using Mono.Options;
 using Octokit;
 using Org.BouncyCastle.Asn1;
@@ -36,18 +38,18 @@ namespace DevOps.Status.Pages.View
             }
         }
 
-        public DotNetQueryUtilFactory QueryUtilFactory { get; }
+        public TriageContext TriageContext { get; }
 
         [BindProperty(SupportsGet = true, Name = "q")]
         public string? QueryString { get; set; }
 
-        public List<(PullRequest PullRequest, Build Build)> MergedPullRequestBuilds { get; set; } = new List<(PullRequest PullRequest, Build Build)>();
+        public List<ModelBuild> MergedPullRequestBuilds { get; set; } = new List<ModelBuild>();
 
         public double PassRate { get; set; }
 
-        public MergedPullRequestsModel(DotNetQueryUtilFactory queryUtilFactory)
+        public MergedPullRequestsModel(TriageContext triageContext)
         {
-            QueryUtilFactory = queryUtilFactory;
+            TriageContext = triageContext;
         }
 
         public async Task OnGet()
@@ -63,17 +65,20 @@ namespace DevOps.Status.Pages.View
                 throw OptionSetUtil.CreateBadOptionException();
             }
 
-            var queryUtil = await QueryUtilFactory.CreateForUserAsync();
-            var gitHubInfo = new GitHubInfo("dotnet", optionSet.Repository.ToLower());
-            var definitions = optionSet.Definition is null
-                ? null
-                : new[] { DotNetUtil.GetBuildDefinitionKeyFromFriendlyName(optionSet.Definition)!.Value.Id };
-            MergedPullRequestBuilds = await (queryUtil.EnumerateMergedPullRequestBuilds(
-                gitHubInfo,
-                optionSet.Project,
-                definitions)
-                .Take(optionSet.SearchCount));
-            PassRate = MergedPullRequestBuilds.Count(x => x.Build.Result == BuildResult.Succeeded) / (double)MergedPullRequestBuilds.Count;
+            IQueryable<ModelBuild> query = TriageContext
+                .ModelBuilds
+                .Include(x => x.ModelBuildDefinition)
+                .Where(x => x.IsMergedPullRequest && x.GitHubOrganization == "dotnet" && x.GitHubRepository == optionSet.Repository.ToLower());
+            if (optionSet.Definition is object)
+            {
+                var key = DotNetUtil.GetBuildDefinitionKeyFromFriendlyName(optionSet.Definition)!.Value;
+                query = query.Where(x => x.ModelBuildDefinitionId == key.Id);
+            }
+
+            query = query.Take(optionSet.SearchCount);
+
+            var builds = await query.ToListAsync();
+            MergedPullRequestBuilds = builds;
         }
     }
 }

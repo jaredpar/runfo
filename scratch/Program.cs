@@ -98,16 +98,22 @@ namespace QueryFun
             // await DumpRoslynTestTimes();
 
             // var builds = await server.ListBuildsAsync("public", definitions: new[] { 731 }, branchName: "refs/pull/39837/merge", repositoryId: "dotnet/runtime", repositoryType: "github");
-
-            var key = DotNetUtil.GetBuildDefinitionKeyFromFriendlyName("roslyn")!.Value;
+            var functionUtil = new FunctionUtil();
             var gitHubUtil = new GitHubUtil(GitHubClient);
+            var triageContextUtil = new TriageContextUtil(TriageContext);
             var organization = "dotnet";
             var repository = "roslyn";
-            var gitHubInfo = new GitHubInfo(organization, repository);
-            await foreach (var (pr, build) in DotNetQueryUtil.EnumerateMergedPullRequestBuilds(gitHubInfo, key.Project, new[] { key.Id }))
+            await foreach (var pr in gitHubUtil.EnumerateMergedPullRequests(organization, repository))
             {
-                Console.WriteLine($"{pr.Number} {build.GetBuildInfo().BuildUri} {build.Result}");
+                Console.WriteLine($"Processing {pr.HtmlUrl}");
+                var prKey = new GitHubPullRequestKey(organization, repository, pr.Number);
+                await functionUtil.OnPullRequestMerged(
+                    DevOpsServer,
+                    triageContextUtil,
+                    prKey,
+                    "public");
             }
+
         }
 
 #nullable disable

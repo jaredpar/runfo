@@ -5,20 +5,23 @@ using System.Text.RegularExpressions;
 using DevOps.Util;
 using Octokit;
 
-internal static class Extensions
+namespace DevOps.Util.Triage
 {
-    internal static GitHubIssueKey GetIssueKey(this Octokit.Issue issue)
+    internal static class Extensions
     {
-        var regex = new Regex(@"https://github.com/([\w\d-]+)/([\w\d-]+)/issues/\d+");
-        var match = regex.Match(issue.HtmlUrl.ToString());
-        if (!match.Success)
+        internal static GitHubIssueKey GetIssueKey(this Octokit.Issue issue)
         {
-            throw new Exception("Cannot parse GitHub issue URL");
-        }
+            var regex = new Regex(@"https://github.com/([\w\d-]+)/([\w\d-]+)/issues/\d+");
+            var match = regex.Match(issue.HtmlUrl.ToString());
+            if (!match.Success)
+            {
+                throw new Exception("Cannot parse GitHub issue URL");
+            }
 
-        return new GitHubIssueKey(
-            match.Groups[1].Value,
-            match.Groups[2].Value,
-            issue.Number);
+            return new GitHubIssueKey(
+                match.Groups[1].Value,
+                match.Groups[2].Value,
+                issue.Number);
+        }
     }
 }

@@ -22,12 +22,12 @@
         </tr>
     </thead>
     <tbody>
-        @foreach (var tuple in Model.MergedPullRequestBuilds)
+        @foreach (var build in Model.MergedPullRequestBuilds)
         {
             <tr>
-                <td><a href=@tuple.PullRequest.HtmlUrl>@tuple.PullRequest.Number</a></td>
-                <td>@tuple.Build.Id</td>
-                <td>@tuple.Build.Result</td>
+                <td>@build.PullRequestNumber</td>
+                <td>@build.BuildNumber</td>
+                <td>Blah</td>
             </tr>
         }
     </tbody>

@@ -15,6 +15,7 @@ using DevOps.Util.Triage;
 using Octokit;
 using DevOps.Util;
 using System;
+using Microsoft.Extensions.Primitives;
 
 namespace DevOps.Functions
 {
@@ -25,6 +26,13 @@ namespace DevOps.Functions
         public string? ProjectName { get; set; }
 
         public int BuildNumber { get; set; }
+    }
+
+    public class PullRequestMergedMessage
+    {
+        public string? Organization { get; set; }
+        public string? Repository { get; set; }
+        public int PullRequestNumber { get; set; }
     }
 
     public class Functions
@@ -70,11 +78,59 @@ namespace DevOps.Functions
         [FunctionName("webhook-github")]
         public async Task<IActionResult> OnGitHubEvent(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest request,
+            [Queue("pull-request-merged", Connection = "AzureWebJobsStorage")] IAsyncCollector<string> collector,
             ILogger logger)
         {
-            string requestBody = await new StreamReader(request.Body).ReadToEndAsync().ConfigureAwait(false);
-            logger.LogInformation(requestBody);
+            request.Headers.TryGetValue("X-GitHub-Event", out StringValues eventName);
+            logger.LogInformation(eventName);
+            if (eventName == "pull_request")
+            {
+                string requestBody = await new StreamReader(request.Body).ReadToEndAsync().ConfigureAwait(false);
+                dynamic prInfo = JsonConvert.DeserializeObject(requestBody);
+                if (prInfo.action == "closed" &&
+                    prInfo.pull_request != null &&
+                    prInfo.pull_request.merged == true)
+                {
+
+                    try
+                    {
+                        string fullName = prInfo.repository.full_name;
+                        var both = fullName.Split("/");
+                        var organization = both[0];
+                        var repository = both[1];
+                        var message = new PullRequestMergedMessage()
+                        {
+                            Organization = organization,
+                            Repository = repository,
+                            PullRequestNumber = prInfo.pull_request.number
+                        };
+
+                        await collector.AddAsync(JsonConvert.SerializeObject(message));
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError("Error reading pull request info: " + ex.Message);
+                        throw;
+                    }
+                }
+            }
+
             return new OkResult();
+        }
+
+        [FunctionName("pull-request-merged")]
+        public async Task OnPullRequestMergedAsync(
+            [QueueTrigger("pull-request-merged", Connection = "AzureWebJobsStorage")] string message,
+            ILogger logger)
+        {
+            var functionUtil = new FunctionUtil();
+            var prMessage = JsonConvert.DeserializeObject<PullRequestMergedMessage>(message);
+            var prKey = new GitHubPullRequestKey(prMessage.Organization, prMessage.Repository, prMessage.PullRequestNumber);
+            await functionUtil.OnPullRequestMergedAsync(
+                Server,
+                TriageContextUtil,
+                prKey,
+                DotNetUtil.DefaultProject);
         }
 
         [FunctionName("triage-build")]
