@@ -52,7 +52,7 @@ namespace DevOps.Status
             });
 
             services.AddHttpContextAccessor();
-            services.AddSingleton<GitHubClientFactory>();
+            services.AddSingleton<StatusGitHubClientFactory>();
             services.AddScoped<DotNetQueryUtilFactory>();
             services.AddScoped<DevOpsServer>(_ =>
             {

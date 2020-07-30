@@ -33,6 +33,8 @@ namespace DevOps.Status.Pages.View
         [BindProperty(SupportsGet = true)]
         public string? Repository { get; set; }
 
+        public string? PullRequestHtmlUri { get; set; }
+
         public List<PullRequestBuildInfo> Builds { get; set; } = new List<PullRequestBuildInfo>();
 
         public PullRequestsModel(TriageContext triageContext)
@@ -47,6 +49,10 @@ namespace DevOps.Status.Pages.View
                 return;
             }
 
+            PullRequestHtmlUri = GitHubPullRequestKey.GetPullRequestUri(
+                DotNetUtil.GitHubOrganization,
+                Repository,
+                Number.Value);
             var builds = await TriageContext
                 .ModelBuilds
                 .Include(x => x.ModelBuildDefinition)
@@ -54,6 +60,7 @@ namespace DevOps.Status.Pages.View
                     x.GitHubOrganization == DotNetUtil.GitHubOrganization &&
                     x.GitHubRepository == Repository &&
                     x.PullRequestNumber == Number)
+                .OrderByDescending(x => x.BuildNumber)
                 .ToListAsync();
             Builds = builds
                 .Select(b => new PullRequestBuildInfo()

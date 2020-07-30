@@ -128,7 +128,9 @@ namespace DevOps.Status.Pages.View
                 query = query.Where(x => x.ModelBuildDefinition.DefinitionId == definitionId);
             }
 
-            query = query.Take(Options.Count);
+            query = query
+                .OrderByDescending(x => x.BuildNumber)
+                .Take(Options.Count);
 
             var builds = (await query.ToListAsync())
                 .Select(b =>

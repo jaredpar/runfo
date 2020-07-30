@@ -98,9 +98,10 @@ namespace QueryFun
             // await DumpRoslynTestTimes();
 
             // var builds = await server.ListBuildsAsync("public", definitions: new[] { 731 }, branchName: "refs/pull/39837/merge", repositoryId: "dotnet/runtime", repositoryType: "github");
-            var factory = new GitHubClientFactory(CreateConfiguration());
-            var gitHubClient = await factory.CreateForAppAsync("jaredpar", "devops-util");
-            var comment = await gitHubClient.Issue.Comment.Create("jaredpar", "devops-util", 5, "This is a test comment");
+            //var factory = new GitHubClientFactory(CreateConfiguration());
+            //var gitHubClient = await factory.CreateForAppAsync("jaredpar", "devops-util");
+            //var comment = await gitHubClient.Issue.Comment.Create("jaredpar", "devops-util", 5, "This is a test comment");
+            await BuildMergedPullRequestBuilds();
     
         }
 
@@ -109,6 +110,7 @@ namespace QueryFun
             var functionUtil = new FunctionUtil();
             var gitHubUtil = new GitHubUtil(GitHubClient);
             var triageContextUtil = new TriageContextUtil(TriageContext);
+            /*
             foreach (var modelBuild in await TriageContext.ModelBuilds.Include(x => x.ModelBuildDefinition).Where(x => x.IsMergedPullRequest).ToListAsync())
             {
                 try
@@ -122,9 +124,11 @@ namespace QueryFun
                     Console.WriteLine(ex.Message);
                 }
             }
+            */
 
             var organization = "dotnet";
-            var repository = "roslyn";
+            var repository = "runtime";
+            int count = 0;
             await foreach (var pr in gitHubUtil.EnumerateMergedPullRequests(organization, repository))
             {
                 Console.WriteLine($"Processing {pr.HtmlUrl}");
@@ -134,6 +138,11 @@ namespace QueryFun
                     triageContextUtil,
                     prKey,
                     "public");
+                count++;
+                if (count >= 500)
+                {
+                    break;
+                }
             }
 
         }
