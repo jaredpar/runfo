@@ -121,7 +121,11 @@ namespace DevOps.Status.Pages.View
             IQueryable<ModelBuild> query = TriageContext
                 .ModelBuilds
                 .Include(x => x.ModelBuildDefinition)
-                .Where(x => x.IsMergedPullRequest && x.GitHubOrganization == DotNetUtil.GitHubOrganization && x.GitHubRepository == Options.Repository.ToLower());
+                .Where(x =>
+                    x.IsMergedPullRequest &&
+                    x.GitHubOrganization == DotNetUtil.GitHubOrganization &&
+                    x.GitHubRepository == Options.Repository.ToLower() &&
+                    x.PullRequestNumber.HasValue);
             if (Options.Definition is object)
             {
                 var definitionId = DotNetUtil.GetDefinitionIdFromFriendlyName(Options.Definition);

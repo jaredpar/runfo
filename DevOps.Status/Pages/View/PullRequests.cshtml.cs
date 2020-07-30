@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
@@ -27,19 +28,22 @@ namespace DevOps.Status.Pages.View
 
         public TriageContext TriageContext { get; set; }
 
+        public StatusGitHubClientFactory GitHubClientFactory { get; set; }
+
         [BindProperty(SupportsGet = true)]
         public int? Number { get; set; }
 
         [BindProperty(SupportsGet = true)]
         public string? Repository { get; set; }
 
-        public string? PullRequestHtmlUri { get; set; }
+        public PullRequest? PullRequest { get; set; }
 
         public List<PullRequestBuildInfo> Builds { get; set; } = new List<PullRequestBuildInfo>();
 
-        public PullRequestsModel(TriageContext triageContext)
+        public PullRequestsModel(TriageContext triageContext, StatusGitHubClientFactory gitHubClientFactory)
         {
             TriageContext = triageContext;
+            GitHubClientFactory = gitHubClientFactory;
         }
 
         public async Task OnGet()
@@ -49,10 +53,9 @@ namespace DevOps.Status.Pages.View
                 return;
             }
 
-            PullRequestHtmlUri = GitHubPullRequestKey.GetPullRequestUri(
-                DotNetUtil.GitHubOrganization,
-                Repository,
-                Number.Value);
+            var gitHubClient = await GitHubClientFactory.CreateForAppAsync(DotNetUtil.GitHubOrganization, Repository);
+            PullRequest = await gitHubClient.PullRequest.Get(DotNetUtil.GitHubOrganization, Repository, Number.Value);
+
             var builds = await TriageContext
                 .ModelBuilds
                 .Include(x => x.ModelBuildDefinition)
