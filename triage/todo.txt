@@ -1,3 +1,0 @@
-- Define a way to search helix logs
-- Update GitHub issues based on tests that have hit this
-- Need a way to disable search items so they don't take up processing power

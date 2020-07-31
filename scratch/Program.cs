@@ -1,37 +1,26 @@
 ﻿#nullable enable
 
 using DevOps.Util;
-using System;
-using System.Threading.Tasks;
-using System.IO;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using System.Net.Security;
-using System.IO.Compression;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using System.Runtime.InteropServices.ComTypes;
-using Newtonsoft.Json.Serialization;
-using Newtonsoft.Json;
-using Microsoft.Azure.Documents;
-using Microsoft.Azure.Documents.Client;
 using DevOps.Util.DotNet;
-using System.Net;
-using System.ComponentModel.DataAnnotations;
-using Octokit;
-using System.Dynamic;
-using System.Net.Http;
-using System.Text;
-using YamlDotNet.RepresentationModel;
-using YamlDotNet.Core;
-using Microsoft.Extensions.Configuration;
 using DevOps.Util.Triage;
 using Microsoft.EntityFrameworkCore;
-using System.Xml.Schema;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Octokit;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
-[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsId("67c4a872-5dd7-422a-acad-fdbe907ace33")]
+// [assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsId("67c4a872-5dd7-422a-acad-fdbe907ace33")]
 
-namespace QueryFun
+namespace Scratch
 {
     public class Program
     {
@@ -40,6 +29,26 @@ namespace QueryFun
         {
             var scratchUtil = new ScratchUtil();
             await scratchUtil.Scratch();
+        }
+
+        // This entry point exists so that `dotnet ef database` and `migrations` has an 
+        // entry point to create TriageDbContext
+        public static IHostBuilder CreateHostBuilder(string[] args)
+        {
+            return Host
+                .CreateDefaultBuilder()
+                .ConfigureServices((hostContext, services) =>
+                {
+                    services.AddDbContext<TriageContext>(options => Config(options));
+                });
+
+            static void Config(DbContextOptionsBuilder builder)
+            {
+                var configuration = ScratchUtil.CreateConfiguration();
+                var kind = ScratchUtil.IsDevelopment(configuration) ? "dev" : "production";
+                Console.WriteLine($"Using  sql");
+                builder.UseSqlServer(ScratchUtil.GetConnectionString(configuration));
+            }
         }
     }
 
@@ -67,7 +76,7 @@ namespace QueryFun
             DevOpsServer = new DevOpsServer(organization, azureToken);
 
             var builder = new DbContextOptionsBuilder<TriageContext>();
-            builder.UseSqlServer(configuration["RUNFO_CONNECTION_STRING"]);
+            builder.UseSqlServer(GetConnectionString(configuration));
             TriageContext = new TriageContext(builder.Options);
 
             var gitHubClient = new GitHubClient(new ProductHeaderValue("runfo-scratch-app"));
@@ -82,7 +91,14 @@ namespace QueryFun
             DotNetQueryUtil = new DotNetQueryUtil(DevOpsServer, GitHubClient);
         }
 
-        private static IConfiguration CreateConfiguration()
+        internal static bool IsDevelopment(IConfiguration configuration) => !string.IsNullOrEmpty(configuration["RUNFO_DEV"]);
+
+        internal static string GetConnectionString(IConfiguration configuration) =>
+            IsDevelopment(configuration)
+                ? configuration["RUNFO_CONNECTION_STRING_DEV"]
+                : configuration["RUNFO_CONNECTION_STRING"];
+
+        internal static IConfiguration CreateConfiguration()
         {
             var config = new ConfigurationBuilder()
                 .AddUserSecrets<Program>()
