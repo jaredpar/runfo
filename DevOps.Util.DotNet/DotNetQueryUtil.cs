@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Azure.Storage.Blobs;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using Octokit;
@@ -86,11 +87,18 @@ namespace DevOps.Util.DotNet
     {
         public DevOpsServer Server { get; }
         public IGitHubClient GitHubClient { get; }
+        public BlobStorageUtil BlobStorageUtil { get; }
 
         public DotNetQueryUtil(DevOpsServer server, IGitHubClient gitHubClient)
         {
             Server = server;
             GitHubClient = gitHubClient;
+            BlobStorageUtil = null!;
+            var connectionString = Environment.GetEnvironmentVariable(DotNetConstants.ConfigurationAzureBlobConnectionString);
+            if (connectionString is object)
+            {
+                BlobStorageUtil = new BlobStorageUtil(connectionString);
+            }
         }
 
         public Task<List<SearchTimelineResult>> SearchTimelineAsync(
@@ -116,7 +124,7 @@ namespace DevOps.Util.DotNet
             var list = new List<SearchTimelineResult>();
             foreach (var build in builds)
             {
-                var timeline = await Server.GetTimelineAttemptAsync(build.Project.Name, build.Id, attempt).ConfigureAwait(false);
+                var timeline = await BlobStorageUtil.GetTimelineAttemptAsync(DotNetUtil.AzureOrganization, build.Project.Name, build.Id, attempt).ConfigureAwait(false);
                 if (timeline is null)
                 {
                     continue;

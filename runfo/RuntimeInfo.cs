@@ -205,6 +205,7 @@ internal sealed partial class RuntimeInfo
         var hadDefinition = optionSet.Definitions.Any();
         var builds = await QueryUtil.ListBuildsAsync(optionSet);
         var found = new List<SearchTimelineResult>();
+        Console.WriteLine("Got builds");
         foreach (var build in builds)
         {
             foreach (var timeline in await ListTimelinesAsync(build, attempt))

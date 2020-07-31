@@ -10,5 +10,6 @@ namespace DevOps.Util.DotNet
         public const string ConfigurationGitHubAppPrivateKey = "GitHubAppPrivateKey";
         public const string ConfigurationGitHubClientId = "GitHubClientId";
         public const string ConfigurationGitHubClientSecret = "GitHubClientSecret";
+        public const string ConfigurationAzureBlobConnectionString = "AzureBlobConnectionString";
     }
 }

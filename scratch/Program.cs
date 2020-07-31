@@ -76,7 +76,7 @@ namespace Scratch
             DevOpsServer = new DevOpsServer(organization, azureToken);
 
             var builder = new DbContextOptionsBuilder<TriageContext>();
-            builder.UseSqlServer(GetConnectionString(configuration));
+            builder.UseSqlServer(configuration["RUNFO_CONNECTION_STRING"]);
             TriageContext = new TriageContext(builder.Options);
 
             var gitHubClient = new GitHubClient(new ProductHeaderValue("runfo-scratch-app"));
@@ -117,7 +117,17 @@ namespace Scratch
             //var factory = new GitHubClientFactory(CreateConfiguration());
             //var gitHubClient = await factory.CreateForAppAsync("jaredpar", "devops-util");
             //var comment = await gitHubClient.Issue.Comment.Create("jaredpar", "devops-util", 5, "This is a test comment");
-            await BuildMergedPullRequestBuilds();
+
+            var blobClient = new BlobStorageUtil(CreateConfiguration()[DotNetConstants.ConfigurationAzureBlobConnectionString]);
+            foreach (var build in await DotNetQueryUtil.ListBuildsAsync("-d runtime -c 10 -pr"))
+            {
+                var buildInfo = build.GetBuildInfo();
+                var timelines = await DevOpsServer.ListTimelineAttemptsAsync(buildInfo.Project, buildInfo.Number);
+                await blobClient.SaveTimelineAsync(DevOpsServer.Organization, buildInfo.Project, buildInfo.Number, timelines);
+
+                // var found = await blobClient.GetTimelineAsync(DevOpsServer.Organization, buildInfo.Project, buildInfo.Number);
+                // Console.WriteLine(found);
+            }
     
         }
 
