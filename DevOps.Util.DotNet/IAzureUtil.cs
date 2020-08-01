@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+#nullable enable
+
 namespace DevOps.Util.DotNet
 {
     public interface IAzureUtil
@@ -21,6 +23,8 @@ namespace DevOps.Util.DotNet
         Task<Timeline> GetTimelineAsync(string project, int buildNumber, CancellationToken cancellationToken = default);
 
         Task<List<TestRun>> ListTestRunsAsync(string project, int buildNumber, CancellationToken cancellationToken = default);
+
+        Task<List<TestCaseResult>> ListTestResultsAsync(string project, int testRunId, TestOutcome[]? outcomes = null, CancellationToken cancellationToken = default);
 
         async Task<List<Timeline>> ListTimelineAttemptsAsync(string project, int buildNumber)
         {
@@ -63,6 +67,7 @@ namespace DevOps.Util.DotNet
     {
         Task SaveTimelineAsync(string project, int buildNumber, List<Timeline> timelineList, CancellationToken cancellationToken = default);
         Task SaveTestRunsAsync(string project, int buildNumber, List<TestRun> testRunList, CancellationToken cancellationToken = default);
+        Task SaveTestResultsAsync(string project, int testRunId, TestOutcome[]? outcomes, List<TestCaseResult> testResults, CancellationToken cancellationToken = default);
     }
 
     public sealed class AzureUtil : IAzureUtil
@@ -76,12 +81,33 @@ namespace DevOps.Util.DotNet
             DevOpsServer = server;
         }
 
-        public Task<Timeline> GetTimelineAttemptAsync(string project, int buildNumber, int attempt, CancellationToken cancellationToken = default) =>
-            DevOpsServer.GetTimelineAttemptAsync(project, buildNumber, attempt);
+        public async Task<Timeline> GetTimelineAttemptAsync(string project, int buildNumber, int attempt, CancellationToken cancellationToken = default)
+        {
+            var timeline = await DevOpsServer.GetTimelineAttemptAsync(project, buildNumber, attempt).ConfigureAwait(false);
+            if (timeline is null)
+            {
+                throw new InvalidOperationException();
+            }
 
+            return timeline;
+        }
 
-        public Task<Timeline> GetTimelineAsync(string project, int buildNumber, CancellationToken cancellationToken = default) =>
-            DevOpsServer.GetTimelineAsync(project, buildNumber);
+        public async Task<Timeline> GetTimelineAsync(string project, int buildNumber, CancellationToken cancellationToken = default)
+        {
+            var timeline = await DevOpsServer.GetTimelineAsync(project, buildNumber).ConfigureAwait(false);
+            if (timeline is null)
+            {
+                throw new InvalidOperationException();
+            }
+
+            return timeline;
+        }
+
+        public Task<List<Timeline>> ListTimelineAttemptsAsync(string project, int buildNumber)
+        {
+            IAzureUtil azureUtil = this;
+            return azureUtil.ListTimelineAttemptsAsync(project, buildNumber);
+        }
 
         public async Task<List<TestRun>> ListTestRunsAsync(string project, int buildNumber, CancellationToken cancellationToken = default)
         {
@@ -89,10 +115,10 @@ namespace DevOps.Util.DotNet
             return new List<TestRun>(runs);
         }
 
-        public Task<List<Timeline>> ListTimelineAttemptsAsync(string project, int buildNumber)
+        public async Task<List<TestCaseResult>> ListTestResultsAsync(string project, int testRunId, TestOutcome[]? outcomes = null, CancellationToken cancellationToken = default)
         {
-            IAzureUtil azureUtil = this;
-            return azureUtil.ListTimelineAttemptsAsync(project, buildNumber);
+            var testResults = await DevOpsServer.ListTestResultsAsync(project, testRunId, outcomes).ConfigureAwait(false);
+            return testResults;
         }
     }
 
@@ -176,6 +202,21 @@ namespace DevOps.Util.DotNet
             return await ListAndCacheTestRunsAsync(project, buildNumber, cancellationToken).ConfigureAwait(false);
         }
 
+
+        public async Task<List<TestCaseResult>> ListTestResultsAsync(string project, int testRunId, TestOutcome[]? outcomes = null, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                return await MainAzureStorageUtil.ListTestResultsAsync(project, testRunId, outcomes, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                // Go to backup
+            }
+
+            return await ListAndCacheTestResultsAsync(project, testRunId, outcomes, cancellationToken).ConfigureAwait(false);
+        }
+
         private async Task<List<TestRun>> ListAndCacheTestRunsAsync(string project, int buildNumber, CancellationToken cancellationToken)
         {
             var list = await BackupAzureUtil.ListTestRunsAsync(project, buildNumber, cancellationToken).ConfigureAwait(false);
@@ -187,6 +228,13 @@ namespace DevOps.Util.DotNet
         {
             var list = await BackupAzureUtil.ListTimelineAttemptsAsync(project, buildNumber).ConfigureAwait(false);
             await MainAzureStorageUtil.SaveTimelineAsync(project, buildNumber, list, cancellationToken).ConfigureAwait(false);
+            return list;
+        }
+
+        private async Task<List<TestCaseResult>> ListAndCacheTestResultsAsync(string project, int testRunId, TestOutcome[]? outcomes, CancellationToken cancellationToken)
+        {
+            var list = await BackupAzureUtil.ListTestResultsAsync(project, testRunId, outcomes).ConfigureAwait(false);
+            await MainAzureStorageUtil.SaveTestResultsAsync(project, testRunId, outcomes, list, cancellationToken).ConfigureAwait(false);
             return list;
         }
     }

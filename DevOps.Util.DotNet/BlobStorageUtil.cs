@@ -1,6 +1,7 @@
 ﻿using Azure.Storage.Blobs;
 using Newtonsoft.Json;
 using Octokit;
+using Org.BouncyCastle.Bcpg;
 using Org.BouncyCastle.Math.EC.Rfc7748;
 using System;
 using System.Collections.Generic;
@@ -8,6 +9,7 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,6 +29,8 @@ namespace DevOps.Util.DotNet
 
         public BlobContainerClient TimelineContainerClient { get; }
         public BlobContainerClient TestRunsContainerClient { get; }
+        public BlobContainerClient TestResultsContainerClient { get; }
+
         public string Organization { get; }
 
         public BlobStorageUtil(string organization, string connectionString)
@@ -34,10 +38,22 @@ namespace DevOps.Util.DotNet
             Organization = organization;
             TimelineContainerClient = new BlobContainerClient(connectionString, "timelines");
             TestRunsContainerClient = new BlobContainerClient(connectionString, "testruns");
+            TestResultsContainerClient = new BlobContainerClient(connectionString, "testresults");
         }
 
         public string GetBlobName(string project, int buildNumber) =>
             $"{Organization}-{project}-{buildNumber}.json";
+
+        public string GetBlobName(string project, int testRunId, TestOutcome[]? outcomes)
+        {
+            var o = "none";
+            if (outcomes is object)
+            {
+                o = string.Join('-', outcomes.Select(x => x.ToString()));
+            }
+
+            return $"{Organization}-{project}-{testRunId}-{o}.json";
+        }
 
         public async Task<Timeline> GetTimelineAttemptAsync(string project, int buildNumber, int attempt, CancellationToken cancellationToken = default)
         {
@@ -88,13 +104,6 @@ namespace DevOps.Util.DotNet
             await SaveJsonAsync(TimelineContainerClient, blobName, timelineStorage, cancellationToken);
         }
 
-        public async Task<List<TestRun>> ListTestRunsAsync(string project, int buildNumber, CancellationToken cancellationToken = default)
-        {
-            var blobName = GetBlobName(project, buildNumber);
-            var array = await LoadJsonAsync<TestRun[]>(TestRunsContainerClient, blobName, cancellationToken).ConfigureAwait(false);
-            return new List<TestRun>(array);
-        }
-
         public async Task SaveTestRunsAsync(string project, int buildNumber, List<TestRun> testRunList, CancellationToken cancellationToken = default)
         {
             if (testRunList.Count > 100)
@@ -105,6 +114,32 @@ namespace DevOps.Util.DotNet
 
             var blobName = GetBlobName(project, buildNumber);
             await SaveJsonAsync(TestRunsContainerClient, blobName, testRunList.ToArray(), cancellationToken).ConfigureAwait(false);
+        }
+
+        public async Task<List<TestRun>> ListTestRunsAsync(string project, int buildNumber, CancellationToken cancellationToken = default)
+        {
+            var blobName = GetBlobName(project, buildNumber);
+            var array = await LoadJsonAsync<TestRun[]>(TestRunsContainerClient, blobName, cancellationToken).ConfigureAwait(false);
+            return new List<TestRun>(array);
+        }
+
+        public async Task SaveTestResultsAsync(string project, int testRunId, TestOutcome[]? outcomes, List<TestCaseResult> testResults, CancellationToken cancellationToken = default)
+        {
+            if (testResults.Count > 200)
+            {
+                // Aribtrary limit
+                return;
+            }
+
+            var blobName = GetBlobName(project, testRunId, outcomes);
+            await SaveJsonAsync(TestResultsContainerClient, blobName, testResults.ToArray(), cancellationToken);
+        }
+
+        public async Task<List<TestCaseResult>> ListTestResultsAsync(string project, int testRunId, TestOutcome[]? outcomes = null, CancellationToken cancellationToken = default)
+        {
+            var blobName = GetBlobName(project, testRunId, outcomes);
+            var array = await LoadJsonAsync<TestCaseResult[]>(TestResultsContainerClient, blobName, cancellationToken).ConfigureAwait(false);
+            return new List<TestCaseResult>(array);
         }
 
         private static async Task<T> LoadJsonAsync<T>(BlobContainerClient containerClient, string blobName, CancellationToken cancellationToken)

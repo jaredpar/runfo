@@ -25,6 +25,7 @@ namespace DevOps.Util.DotNet
         public string CacheDirectory { get; }
         public string TimelineCacheDirectory { get; }
         public string TestRunsCacheDirectory { get; }
+        public string TestResultsCacheDirectory { get; }
 
         public LocalAzureStorageUtil(string organization, string cacheDirectory)
         {
@@ -32,9 +33,21 @@ namespace DevOps.Util.DotNet
             CacheDirectory = cacheDirectory;
             TimelineCacheDirectory = Path.Combine(cacheDirectory, "timelines");
             TestRunsCacheDirectory = Path.Combine(cacheDirectory, "testruns");
+            TestResultsCacheDirectory = Path.Combine(cacheDirectory, "testresults");
         }
 
         private string GetFileName(string project, int buildNumber) => $"{Organization}-{project}-{buildNumber}.json";
+
+        private string GetFileName(string project, int testRunId, TestOutcome[]? outcomes)
+        {
+            var o = "none";
+            if (outcomes is object)
+            {
+                o = string.Join('-', outcomes.Select(x => x.ToString()));
+            }
+
+            return $"{Organization}-{project}-{testRunId}-{o}.json";
+        }
 
         private static void SaveJson<T>(string directory, string fileName, List<T> value)
         {
@@ -102,5 +115,18 @@ namespace DevOps.Util.DotNet
             SaveJson(TestRunsCacheDirectory, GetFileName(project, buildNumber), testRunList);
             return Task.CompletedTask;
         }
+
+        public Task<List<TestCaseResult>> ListTestResultsAsync(string project, int testRunId, TestOutcome[]? outcomes = null, CancellationToken cancellationToken = default)
+        {
+            var list = LoadJson<TestCaseResult>(TestResultsCacheDirectory, GetFileName(project, testRunId, outcomes));
+            return Task.FromResult(list);
+        }
+
+        public Task SaveTestResultsAsync(string project, int testRunId, TestOutcome[]? outcomes, List<TestCaseResult> testResults, CancellationToken cancellationToken = default)
+        {
+            SaveJson(TestResultsCacheDirectory, GetFileName(project, testRunId, outcomes), testResults);
+            return Task.CompletedTask;
+        }
+
     }
 }
