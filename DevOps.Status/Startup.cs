@@ -57,7 +57,14 @@ namespace DevOps.Status
             services.AddScoped<DevOpsServer>(_ =>
             {
                 var token = Configuration["RUNFO_AZURE_TOKEN"];
-                return new DevOpsServer("dnceng", token);
+                return new DevOpsServer(DotNetUtil.AzureOrganization, token);
+            });
+
+            services.AddScoped<BlobStorageUtil>(_ =>
+            {
+                return new BlobStorageUtil(
+                    DotNetUtil.AzureOrganization,
+                    Configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
             });
 
             services.AddDbContext<TriageContext>(options => 

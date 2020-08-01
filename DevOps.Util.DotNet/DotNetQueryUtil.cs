@@ -87,18 +87,18 @@ namespace DevOps.Util.DotNet
     {
         public DevOpsServer Server { get; }
         public IGitHubClient GitHubClient { get; }
-        public BlobStorageUtil BlobStorageUtil { get; }
+        public IAzureUtil AzureUtil { get; }
 
-        public DotNetQueryUtil(DevOpsServer server, IGitHubClient gitHubClient)
+        public DotNetQueryUtil(DevOpsServer server, IAzureUtil azureUtil, IGitHubClient gitHubClient)
         {
+            if (Server.Organization != azureUtil.Organization)
+            {
+                throw new ArgumentException();
+            }
+
             Server = server;
             GitHubClient = gitHubClient;
-            BlobStorageUtil = null!;
-            var connectionString = Environment.GetEnvironmentVariable(DotNetConstants.ConfigurationAzureBlobConnectionString);
-            if (connectionString is object)
-            {
-                BlobStorageUtil = new BlobStorageUtil(connectionString);
-            }
+            AzureUtil = azureUtil;
         }
 
         public Task<List<SearchTimelineResult>> SearchTimelineAsync(
@@ -124,7 +124,7 @@ namespace DevOps.Util.DotNet
             var list = new List<SearchTimelineResult>();
             foreach (var build in builds)
             {
-                var timeline = await BlobStorageUtil.GetTimelineAttemptAsync(DotNetUtil.AzureOrganization, build.Project.Name, build.Id, attempt).ConfigureAwait(false);
+                var timeline = await AzureUtil.GetTimelineAttemptAsync(build.Project.Name, build.Id, attempt).ConfigureAwait(false);
                 if (timeline is null)
                 {
                     continue;
@@ -623,7 +623,7 @@ namespace DevOps.Util.DotNet
 
         public async Task<List<HelixTimelineResult>> ListHelixJobsAsync(string project, int buildNumber, int? attempt = null)
         {
-            var timeline = await Server.GetTimelineAttemptAsync(project, buildNumber, attempt).ConfigureAwait(false);
+            var timeline = await AzureUtil.GetTimelineAttemptAsync(project, buildNumber, attempt).ConfigureAwait(false);
             if (timeline is null)
             {
                 return new List<HelixTimelineResult>();

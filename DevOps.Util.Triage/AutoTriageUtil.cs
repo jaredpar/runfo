@@ -42,7 +42,7 @@ namespace DevOps.Util.Triage
         {
             Server = server;
             GitHubClient = gitHubClient;
-            QueryUtil = new DotNetQueryUtil(server, gitHubClient);
+            QueryUtil = new DotNetQueryUtil(server, new AzureUtil(server), gitHubClient);
             TriageContextUtil = new TriageContextUtil(context);
             Logger = logger;
         }

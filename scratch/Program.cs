@@ -60,6 +60,7 @@ namespace Scratch
         public TriageContext TriageContext { get; set; }
         public IGitHubClient GitHubClient { get; set; }
         public DotNetQueryUtil DotNetQueryUtil { get; set; }
+        public BlobStorageUtil BlobStorageUtil { get; set; }
 
 
 #pragma warning disable CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
@@ -88,7 +89,12 @@ namespace Scratch
             }
             GitHubClient = gitHubClient;
 
-            DotNetQueryUtil = new DotNetQueryUtil(DevOpsServer, GitHubClient);
+            BlobStorageUtil = new BlobStorageUtil(organization, configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
+
+            DotNetQueryUtil = new DotNetQueryUtil(
+                DevOpsServer,
+                new CachingAzureUtil(BlobStorageUtil, DevOpsServer),
+                GitHubClient);
         }
 
         internal static bool IsDevelopment(IConfiguration configuration) => !string.IsNullOrEmpty(configuration["RUNFO_DEV"]);
@@ -118,12 +124,12 @@ namespace Scratch
             //var gitHubClient = await factory.CreateForAppAsync("jaredpar", "devops-util");
             //var comment = await gitHubClient.Issue.Comment.Create("jaredpar", "devops-util", 5, "This is a test comment");
 
-            var blobClient = new BlobStorageUtil(CreateConfiguration()[DotNetConstants.ConfigurationAzureBlobConnectionString]);
+            var blobClient = BlobStorageUtil;
             foreach (var build in await DotNetQueryUtil.ListBuildsAsync("-d runtime -c 10 -pr"))
             {
                 var buildInfo = build.GetBuildInfo();
                 var timelines = await DevOpsServer.ListTimelineAttemptsAsync(buildInfo.Project, buildInfo.Number);
-                await blobClient.SaveTimelineAsync(DevOpsServer.Organization, buildInfo.Project, buildInfo.Number, timelines);
+                await blobClient.SaveTimelineAsync(buildInfo.Project, buildInfo.Number, timelines);
 
                 // var found = await blobClient.GetTimelineAsync(DevOpsServer.Organization, buildInfo.Project, buildInfo.Number);
                 // Console.WriteLine(found);

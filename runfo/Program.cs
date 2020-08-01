@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using DevOps.Util;
+using DevOps.Util.DotNet;
 using Mono.Options;
 using Octokit;
 using static RuntimeInfoUtil;
@@ -25,10 +26,15 @@ public class Program
             args = optionSet.Parse(args).ToArray();
             if (token is null)
             {
-                token = await GetPersonalAccessTokenFromFile("dnceng");
+                token = await GetPersonalAccessTokenFromFile(DotNetUtil.AzureOrganization);
             }
 
-            var runtimeInfo = new RuntimeInfo(CreateGitHubClient(), token, cacheable: !disableCache);
+            var server = new DevOpsServer(DotNetUtil.AzureOrganization, token);
+            var azureUtil = new CachingAzureUtil(
+                new LocalAzureStorageUtil(DotNetUtil.AzureOrganization, RuntimeInfoUtil.CacheDirectory),
+                new AzureUtil(server));
+
+            var runtimeInfo = new RuntimeInfo(server, azureUtil, CreateGitHubClient());
 
             // Kick off a collection of the file system cache
             var collectTask = runtimeInfo.CollectCache();

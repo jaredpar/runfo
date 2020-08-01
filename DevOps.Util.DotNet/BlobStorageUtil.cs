@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet
 {
-    public sealed class BlobStorageUtil
+    public sealed class BlobStorageUtil : IAzureStorageUtil
     {
         private sealed class TimelineStorage
         {
@@ -25,23 +25,20 @@ namespace DevOps.Util.DotNet
         }
 
         public BlobContainerClient BlobContainerClient { get; }
+        public string Organization { get; }
 
-        public BlobStorageUtil(string connectionString)
+        public BlobStorageUtil(string organization, string connectionString)
         {
+            Organization = organization;
             BlobContainerClient = new BlobContainerClient(connectionString, "timelines");
         }
 
-        public string GetBlobName(string organization, string project, int buildNumber) =>
-            $"{organization}-{project}-{buildNumber}.json";
+        public string GetBlobName(string project, int buildNumber) =>
+            $"{Organization}-{project}-{buildNumber}.json";
 
-        public Task<Timeline> GetTimelineAttemptAsync(string organization, string project, int buildNumber, int? attempt, CancellationToken cancellationToken = default) =>
-            attempt is { } n
-            ? GetTimelineAttemptAsync(organization, project, buildNumber, n, cancellationToken)
-            : GetTimelineAsync(organization, project, buildNumber, cancellationToken);
-
-        public async Task<Timeline> GetTimelineAttemptAsync(string organization, string project, int buildNumber, int attempt, CancellationToken cancellationToken = default)
+        public async Task<Timeline> GetTimelineAttemptAsync(string project, int buildNumber, int attempt, CancellationToken cancellationToken = default)
         {
-            var timelineStorage = await GetTimelineStorageAsync(organization, project, buildNumber, cancellationToken).ConfigureAwait(false);
+            var timelineStorage = await GetTimelineStorageAsync(project, buildNumber, cancellationToken).ConfigureAwait(false);
             var timelineAttempt = timelineStorage.Timelines.First(x => x.GetAttempt() == attempt);
             if (timelineAttempt is null)
             {
@@ -51,15 +48,15 @@ namespace DevOps.Util.DotNet
             return timelineAttempt;
         }
 
-        public async Task<Timeline> GetTimelineAsync(string organization, string project, int buildNumber, CancellationToken cancellationToken = default)
+        public async Task<Timeline> GetTimelineAsync(string project, int buildNumber, CancellationToken cancellationToken = default)
         {
-            var timelineStorage = await GetTimelineStorageAsync(organization, project, buildNumber, cancellationToken).ConfigureAwait(false);
+            var timelineStorage = await GetTimelineStorageAsync(project, buildNumber, cancellationToken).ConfigureAwait(false);
             return timelineStorage.Timelines![timelineStorage.LatestIndex];
         }
 
-        private async Task<TimelineStorage> GetTimelineStorageAsync(string organization, string project, int buildNumber, CancellationToken cancellationToken = default)
+        private async Task<TimelineStorage> GetTimelineStorageAsync(string project, int buildNumber, CancellationToken cancellationToken = default)
         {
-            var blobName = GetBlobName(organization, project, buildNumber);
+            var blobName = GetBlobName(project, buildNumber);
             var blobClient = BlobContainerClient.GetBlobClient(blobName);
             var response = await blobClient.DownloadAsync(cancellationToken).ConfigureAwait(false);
             using var reader = new StreamReader(response.Value.Content, Encoding.UTF8);
@@ -67,7 +64,7 @@ namespace DevOps.Util.DotNet
             return JsonConvert.DeserializeObject<TimelineStorage>(json);
         }
 
-        public async Task SaveTimelineAsync(string organization, string project, int buildNumber, List<Timeline> timelineList, CancellationToken cancellationToken = default)
+        public async Task SaveTimelineAsync(string project, int buildNumber, List<Timeline> timelineList, CancellationToken cancellationToken = default)
         {
             var latestIndex = 0;
             var latestAttempt = 0;
@@ -89,7 +86,7 @@ namespace DevOps.Util.DotNet
             };
 
             var json = JsonConvert.SerializeObject(timelineStorage);
-            var blobName = $"{organization}-{project}-{buildNumber}.json";
+            var blobName = GetBlobName(project, buildNumber);
             var blobClient = BlobContainerClient.GetBlobClient(blobName);
 
             var bytes = Encoding.UTF8.GetBytes(json);

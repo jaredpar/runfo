@@ -18,17 +18,19 @@ internal sealed partial class RuntimeInfo
 {
     internal DevOpsServer Server { get; }
 
+    internal IAzureUtil AzureUtil { get; }
+
     internal DotNetQueryUtil QueryUtil { get; }
 
     private ReportBuilder ReportBuilder { get; } = new ReportBuilder();
 
-    internal RuntimeInfo(IGitHubClient gitHubClient, string personalAccessToken = null, bool cacheable = false)
+    internal RuntimeInfo(
+        DevOpsServer server,
+        IAzureUtil azureUtil,
+        IGitHubClient gitHubClient)
     {
-        var azureClient = cacheable
-            ? (IAzureClient)new CachingAzureClient(RuntimeInfoUtil.CacheDirectory, personalAccessToken)
-            : new AzureClient(personalAccessToken);
-        Server = new DevOpsServer("dnceng", azureClient);
-        QueryUtil = new DotNetQueryUtil(Server, gitHubClient);
+        AzureUtil = azureUtil;
+        QueryUtil = new DotNetQueryUtil(Server, azureUtil, gitHubClient);
     }
 
     internal async Task PrintBuildResults(IEnumerable<string> args)
@@ -658,7 +660,7 @@ internal sealed partial class RuntimeInfo
         foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
         {
             var buildInfo = build.GetBuildInfo();
-            var timeline = await Server.GetTimelineAttemptAsync(build.Project.Name, build.Id, attempt);
+            var timeline = await AzureUtil.GetTimelineAttemptAsync(build.Project.Name, build.Id, attempt);
             if (timeline is null)
             {
                 Console.WriteLine($"Error: no timeline for {buildInfo.BuildUri}");
@@ -1149,16 +1151,16 @@ internal sealed partial class RuntimeInfo
         {
             case -1:
             {
-                return await Server.ListTimelineAttemptsAsync(buildInfo.Project, buildInfo.Number);
+                return await AzureUtil.ListTimelineAttemptsAsync(buildInfo.Project, buildInfo.Number);
             }
             case null:
             {
-                var single = await Server.GetTimelineAsync(buildInfo.Project, buildInfo.Number);
+                var single = await AzureUtil.GetTimelineAsync(buildInfo.Project, buildInfo.Number);
                 return new[] { single };
             }
             case int attemptId when attemptId >= 1:
             {
-                var single = await Server.GetTimelineAttemptAsync(buildInfo.Project, buildInfo.Number, attemptId);
+                var single = await AzureUtil.GetTimelineAttemptAsync(buildInfo.Project, buildInfo.Number, attemptId);
                 return new[] { single };
             }
             default:
