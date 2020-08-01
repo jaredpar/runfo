@@ -99,6 +99,33 @@ namespace DevOps.Functions
             return new OkResult();
         }
 
+        [FunctionName("triage-build")]
+        public async Task TriageBuildAsync(
+            [QueueTrigger("build-complete", Connection = "AzureWebJobsStorage")] string message,
+            ILogger logger)
+        {
+            var buildCompleteMessage = JsonConvert.DeserializeObject<BuildCompleteMessage>(message);
+            var projectName = buildCompleteMessage.ProjectName;
+            if (projectName is null)
+            {
+                var projectId = buildCompleteMessage.ProjectId;
+                if (projectId is null)
+                {
+                    logger.LogError("Both project name and id are null");
+                    return;
+                }
+
+                projectName = await Server.ConvertProjectIdToNameAsync(projectId);
+            }
+
+            logger.LogInformation($"Triaging build {projectName} {buildCompleteMessage.BuildNumber}");
+
+            // TODO: this should be repo specific
+            var runtimeGitHubClient = await GitHubClientFactory.CreateForAppAsync("dotnet", "runtime");
+            var util = new AutoTriageUtil(Server, Context, runtimeGitHubClient, logger);
+            await util.TriageBuildAsync(projectName, buildCompleteMessage.BuildNumber);
+        }
+
         [FunctionName("webhook-github")]
         public async Task<IActionResult> OnGitHubEvent(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest request,
