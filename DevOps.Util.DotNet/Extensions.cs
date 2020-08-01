@@ -15,7 +15,7 @@ namespace DevOps.Util.DotNet
 
         public static Task<List<Timeline>> ListTimelineAttemptsAsync(this DevOpsServer server, string project, int buildNumber)
         {
-            var azureUtil = new AzureUtil(server);
+            IAzureUtil azureUtil = new AzureUtil(server);
             return azureUtil.ListTimelineAttemptsAsync(project, buildNumber);
         }
 

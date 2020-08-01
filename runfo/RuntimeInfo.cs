@@ -29,6 +29,7 @@ internal sealed partial class RuntimeInfo
         IAzureUtil azureUtil,
         IGitHubClient gitHubClient)
     {
+        Server = server;
         AzureUtil = azureUtil;
         QueryUtil = new DotNetQueryUtil(Server, azureUtil, gitHubClient);
     }

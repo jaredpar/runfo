@@ -103,12 +103,6 @@ namespace DevOps.Util.DotNet
             return timeline;
         }
 
-        public Task<List<Timeline>> ListTimelineAttemptsAsync(string project, int buildNumber)
-        {
-            IAzureUtil azureUtil = this;
-            return azureUtil.ListTimelineAttemptsAsync(project, buildNumber);
-        }
-
         public async Task<List<TestRun>> ListTestRunsAsync(string project, int buildNumber, CancellationToken cancellationToken = default)
         {
             var runs = await DevOpsServer.ListTestRunsAsync(project, buildNumber).ConfigureAwait(false);

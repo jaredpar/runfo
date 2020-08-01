@@ -91,7 +91,7 @@ namespace DevOps.Util.DotNet
 
         public DotNetQueryUtil(DevOpsServer server, IAzureUtil azureUtil, IGitHubClient gitHubClient)
         {
-            if (Server.Organization != azureUtil.Organization)
+            if (server.Organization != azureUtil.Organization)
             {
                 throw new ArgumentException();
             }
