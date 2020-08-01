@@ -546,11 +546,11 @@ namespace DevOps.Util.DotNet
         // that encapsulates the attempt
         public async Task<List<DotNetTestRun>> ListDotNetTestRunsAsync(Build build, params TestOutcome[] outcomes)
         {
-            var testRuns = await Server.ListTestRunsAsync(build.Project.Name, build.Id).ConfigureAwait(false);
+            var testRuns = await AzureUtil.ListTestRunsAsync(build.Project.Name, build.Id).ConfigureAwait(false);
             var taskList = new List<Task<DotNetTestRun>>();
             foreach (var testRun in testRuns)
             {
-                taskList.Add(GetDotNetTestRunAsync(Server, build, testRun, outcomes));
+                taskList.Add(GetDotNetTestRunAsync(AzureUtil, build, testRun, outcomes));
             }
 
             await Task.WhenAll(taskList).ConfigureAwait(false);
@@ -562,9 +562,9 @@ namespace DevOps.Util.DotNet
 
             return list;
 
-            static async Task<DotNetTestRun> GetDotNetTestRunAsync(DevOpsServer server, Build build, TestRun testRun, TestOutcome[] outcomes)
+            static async Task<DotNetTestRun> GetDotNetTestRunAsync(IAzureUtil azureUtil, Build build, TestRun testRun, TestOutcome[] outcomes)
             {
-                var all = await server.ListTestResultsAsync(build.Project.Name, testRun.Id, outcomes: outcomes).ConfigureAwait(false);
+                var all = await azureUtil.ListTestResultsAsync(build.Project.Name, testRun.Id, outcomes: outcomes).ConfigureAwait(false);
                 var info = new DotNetTestRunInfo(build, testRun);
                 var list = ToDotNetTestCaseResult(info, all.ToList());
                 return new DotNetTestRun(info, new ReadOnlyCollection<DotNetTestCaseResult>(list));

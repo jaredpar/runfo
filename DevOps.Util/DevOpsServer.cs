@@ -523,7 +523,7 @@ namespace DevOps.Util
 
         private void EnsurePersonalAuthorizationTokenForTests()
         {
-            if (!string.IsNullOrEmpty(PersonalAccessToken))
+            if (string.IsNullOrEmpty(PersonalAccessToken))
             {
                 throw new InvalidOperationException("Must have a personal access token specified to view test information");
             }

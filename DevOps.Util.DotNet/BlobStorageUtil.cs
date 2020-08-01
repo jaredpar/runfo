@@ -131,6 +131,12 @@ namespace DevOps.Util.DotNet
                 return;
             }
 
+            if (outcomes is null || outcomes.Any(x => !DotNetUtil.FailedTestOutcomes.Contains(x)))
+            {
+                // Only store failed outcems
+                return;
+            }
+
             var blobName = GetBlobName(project, testRunId, outcomes);
             await SaveJsonAsync(TestResultsContainerClient, blobName, testResults.ToArray(), cancellationToken);
         }
