@@ -20,6 +20,7 @@ using System.Net.Http;
 using System.Dynamic;
 using System.Net;
 using System.Net.Http.Formatting;
+using static DevOps.Util.DotNet.DotNetConstants;
 
 namespace DevOps.Functions
 {
@@ -80,8 +81,8 @@ namespace DevOps.Functions
         [FunctionName("build")]
         public async Task<IActionResult> OnBuild(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
-            [Queue("build-complete", Connection = "AzureWebJobsStorage")] IAsyncCollector<string> completeCollector,
-            [Queue("osx-retry", Connection = "AzureWebJobsStorage")] IAsyncCollector<string> retryCollector,
+            [Queue("build-complete", Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> completeCollector,
+            [Queue("osx-retry", Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> retryCollector,
             ILogger logger)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync().ConfigureAwait(false);
@@ -129,7 +130,7 @@ namespace DevOps.Functions
         [FunctionName("webhook-github")]
         public async Task<IActionResult> OnGitHubEvent(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest request,
-            [Queue("pull-request-merged", Connection = "AzureWebJobsStorage")] IAsyncCollector<string> collector,
+            [Queue("pull-request-merged", Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> collector,
             ILogger logger)
         {
             request.Headers.TryGetValue("X-GitHub-Event", out StringValues eventName);
@@ -171,7 +172,7 @@ namespace DevOps.Functions
 
         [FunctionName("pull-request-merged")]
         public async Task OnPullRequestMergedAsync(
-            [QueueTrigger("pull-request-merged", Connection = "AzureWebJobsStorage")] string message,
+            [QueueTrigger("pull-request-merged", Connection = ConfigurationAzureBlobConnectionString)] string message,
             ILogger logger)
         {
             var functionUtil = new FunctionUtil();
@@ -199,7 +200,7 @@ namespace DevOps.Functions
 
         [FunctionName("osx-retry")]
         public async Task RetryMac(
-            [QueueTrigger("osx-retry", Connection = "AzureWebJobsStorage")] string message,
+            [QueueTrigger("osx-retry", Connection = ConfigurationAzureBlobConnectionString)] string message,
             ILogger logger)
         {
             var buildCompleteMessage = JsonConvert.DeserializeObject<BuildCompleteMessage>(message);
