@@ -177,7 +177,7 @@ namespace DevOps.Util
         public Task<Timeline?> GetTimelineAsync(string project, int buildId)
         {
             var builder = GetBuilder(project, $"build/builds/{buildId}/timeline");
-            return GetJsonAsync<Timeline?>(builder, cacheable: true);
+            return GetJsonAsync<Timeline?>(builder);
         }
 
         public Task<Timeline?> GetTimelineAsync(Build build) => GetTimelineAsync(build.Project.Name, build.Id);
@@ -186,7 +186,7 @@ namespace DevOps.Util
         {
             var builder = GetBuilder(project, $"build/builds/{buildId}/timeline/{timelineId}");
             builder.AppendInt("changeId", changeId);
-            return GetJsonAsync<Timeline?>(builder, cacheable: true);
+            return GetJsonAsync<Timeline?>(builder);
         }
 
         public Task<List<BuildArtifact>> ListArtifactsAsync(string project, int buildId)
@@ -207,7 +207,7 @@ namespace DevOps.Util
         public Task<BuildArtifact> GetArtifactAsync(string project, int buildId, string artifactName)
         {
             var uri = GetArtifactUri(project, buildId, artifactName);
-            return GetJsonAsync<BuildArtifact>(uri, cacheable: true);
+            return GetJsonAsync<BuildArtifact>(uri);
         }
 
         /// <summary>
@@ -291,7 +291,6 @@ namespace DevOps.Util
             var count = 0;
             var json = await GetJsonWithRetryAsync(
                 builder.ToString(),
-                cacheable: true,
                 async response =>
                 {
                     count++;
@@ -362,7 +361,7 @@ namespace DevOps.Util
                 builder.AppendInt("$top", top);
                 builder.AppendInt("$skip", skip);
 
-                var result = await GetJsonArrayAsync<TestCaseResult>(builder, cacheable: true).ConfigureAwait(true);
+                var result = await GetJsonArrayAsync<TestCaseResult>(builder).ConfigureAwait(true);
                 foreach (var item in result)
                 {
                     yield return item;
@@ -418,18 +417,18 @@ namespace DevOps.Util
 
         private RequestBuilder GetBuilder(string? project, string apiPath) => new RequestBuilder(Organization, project, apiPath);
 
-        private Task<T> GetJsonAsync<T>(RequestBuilder builder, bool cacheable = false) =>
-            GetJsonAsync<T>(builder.ToString(), cacheable);
+        private Task<T> GetJsonAsync<T>(RequestBuilder builder) =>
+            GetJsonAsync<T>(builder.ToString());
 
-        private async Task<T> GetJsonAsync<T>(string uri, bool cacheable = false)
+        private async Task<T> GetJsonAsync<T>(string uri)
         {
-            var json = await GetJsonAsync(uri, cacheable).ConfigureAwait(false);
+            var json = await GetJsonAsync(uri).ConfigureAwait(false);
             return AzureJsonUtil.GetObject<T>(json);
         }
 
-        private async Task<T[]> GetJsonArrayAsync<T>(RequestBuilder builder, bool cacheable = false)
+        private async Task<T[]> GetJsonArrayAsync<T>(RequestBuilder builder)
         {
-            var json = await GetJsonAsync(builder.ToString(), cacheable).ConfigureAwait(false);
+            var json = await GetJsonAsync(builder.ToString()).ConfigureAwait(false);
             return AzureJsonUtil.GetArray<T>(json);
         }
 
@@ -552,7 +551,7 @@ namespace DevOps.Util
             return responseBody;
         }
 
-        private async Task<string> GetJsonWithRetryAsync(string uri, bool cacheable, Func<HttpResponseMessage, Task<bool>> predicate)
+        private async Task<string> GetJsonWithRetryAsync(string uri, Func<HttpResponseMessage, Task<bool>> predicate)
         {
             do
             {
@@ -574,7 +573,7 @@ namespace DevOps.Util
             } while (true);
         }
 
-        private async Task<string> GetJsonAsync(string uri, bool cacheable)
+        private async Task<string> GetJsonAsync(string uri)
         {
             var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
