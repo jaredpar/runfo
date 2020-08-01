@@ -102,7 +102,7 @@ namespace DevOps.Functions
 
         [FunctionName("triage-build")]
         public async Task TriageBuildAsync(
-            [QueueTrigger("build-complete", Connection = "AzureWebJobsStorage")] string message,
+            [QueueTrigger("build-complete", Connection = ConfigurationAzureBlobConnectionString)] string message,
             ILogger logger)
         {
             var buildCompleteMessage = JsonConvert.DeserializeObject<BuildCompleteMessage>(message);
