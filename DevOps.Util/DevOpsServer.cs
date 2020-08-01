@@ -17,22 +17,16 @@ namespace DevOps.Util
     // TODO: rename to Azure Server
     public class DevOpsServer
     {
-        public IAzureClient AzureClient { get; }
+        private string? PersonalAccessToken { get; }
 
         public string Organization { get; }
+        public HttpClient HttpClient { get;  }
 
-        public HttpClient HttpClient => AzureClient.HttpClient;
-
-        public DevOpsServer(string organization, IAzureClient azureClient)
+        public DevOpsServer(string organization, string? personalAccessToken = null, HttpClient? httpClient = null)
         {
             Organization = organization;
-            AzureClient = azureClient;
-        }
-
-        public DevOpsServer(string organization, string? personalAccessToken = null) 
-            : this(organization, new AzureClient(personalAccessToken))
-        {
-
+            HttpClient = httpClient ?? new HttpClient();
+            PersonalAccessToken = personalAccessToken;
         }
 
         /// <summary>
@@ -142,8 +136,8 @@ namespace DevOps.Util
         {
             var builder = GetBuilder(project, $"build/builds/{buildId}");
             builder.AppendBool("retry", true);
-            var request = AzureClient.CreateHttpRequestMessage(HttpMethod.Patch, builder.ToString());
-            var response = await AzureClient.HttpClient.SendAsync(request).ConfigureAwait(false);
+            var request = CreateHttpRequestMessage(HttpMethod.Patch, builder.ToString());
+            var response = await HttpClient.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
         }
 
@@ -164,7 +158,7 @@ namespace DevOps.Util
             var builder = GetBuildLogRequestBuilder(project, buildId, logId);
             builder.AppendInt("startLine", startLine);
             builder.AppendInt("endLine", endLine);
-            return AzureClient.GetTextAsync(builder.ToString());
+            return GetTextAsync(builder.ToString());
         }
 
         public Task DownloadBuildLogAsync(string project, int buildId, int logId, Stream destinationStream) =>
@@ -295,7 +289,7 @@ namespace DevOps.Util
             builder.AppendInt("$top", top);
 
             var count = 0;
-            var json = await AzureClient.GetJsonWithRetryAsync(
+            var json = await GetJsonWithRetryAsync(
                 builder.ToString(),
                 cacheable: true,
                 async response =>
@@ -429,24 +423,35 @@ namespace DevOps.Util
 
         private async Task<T> GetJsonAsync<T>(string uri, bool cacheable = false)
         {
-            var json = await AzureClient.GetJsonAsync(uri, cacheable).ConfigureAwait(false);
+            var json = await GetJsonAsync(uri, cacheable).ConfigureAwait(false);
             return AzureJsonUtil.GetObject<T>(json);
         }
 
         private async Task<T[]> GetJsonArrayAsync<T>(RequestBuilder builder, bool cacheable = false)
         {
-            var json = await AzureClient.GetJsonAsync(builder.ToString(), cacheable).ConfigureAwait(false);
+            var json = await GetJsonAsync(builder.ToString(), cacheable).ConfigureAwait(false);
             return AzureJsonUtil.GetArray<T>(json);
         }
 
-        public Task DownloadFileAsync(string uri, Stream destinationStream) =>
-            AzureClient.DownloadFileAsync(uri, destinationStream);
+        public async Task DownloadFileAsync(string uri, Stream destinationStream)
+        {
+            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
+            using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            await response.Content.CopyToAsync(destinationStream).ConfigureAwait(false);
+        }
 
         public Task<MemoryStream> DownloadFileAsync(string uri) =>
             WithMemoryStream(s => DownloadFileAsync(uri, s));
 
-        public Task DownloadZipFileAsync(string uri, Stream destinationStream) => 
-            AzureClient.DownloadZipFileAsync(uri, destinationStream);
+        public async Task DownloadZipFileAsync(string uri, Stream destinationStream)
+        {
+            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
+            message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/zip"));
+            using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            await response.Content.CopyToAsync(destinationStream).ConfigureAwait(false);
+        }
 
         public Task DownloadZipFileAsync(string uri, string destinationFilePath) =>
             WithFileStream(destinationFilePath, fileStream => DownloadZipFileAsync(uri, fileStream));
@@ -495,7 +500,7 @@ namespace DevOps.Util
             var count = 0;
             do
             {
-                var (json, token) = await AzureClient.GetJsonAndContinuationTokenAsync(builder.ToString()).ConfigureAwait(false);
+                var (json, token) = await GetJsonAndContinuationTokenAsync(builder.ToString()).ConfigureAwait(false);
                 var items = AzureJsonUtil.GetArray<T>(json);
                 foreach (var item in items)
                 {
@@ -519,10 +524,82 @@ namespace DevOps.Util
 
         private void EnsurePersonalAuthorizationTokenForTests()
         {
-            if (!AzureClient.IsAuthenticated)
+            if (!string.IsNullOrEmpty(PersonalAccessToken))
             {
                 throw new InvalidOperationException("Must have a personal access token specified to view test information");
             }
         }
+
+        private HttpRequestMessage CreateHttpRequestMessage(HttpMethod method, string uri)
+        {
+            var message = new HttpRequestMessage(method ?? HttpMethod.Get, uri);
+            if (!string.IsNullOrEmpty(PersonalAccessToken))
+            {
+                message.Headers.Authorization =  new AuthenticationHeaderValue(
+                    "Basic",
+                    Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes($":{PersonalAccessToken}")));
+            }
+
+            return message;
+        }
+
+        private async Task<string> GetTextAsync(string uri)
+        {
+            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
+            using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            return responseBody;
+        }
+
+        private async Task<string> GetJsonWithRetryAsync(string uri, bool cacheable, Func<HttpResponseMessage, Task<bool>> predicate)
+        {
+            do
+            {
+                var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
+                message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var tryAgain = await predicate(response).ConfigureAwait(false);
+                    if (tryAgain)
+                    {
+                        continue;
+                    }
+                }
+                response.EnsureSuccessStatusCode();
+                string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return responseBody;
+
+            } while (true);
+        }
+
+        private async Task<string> GetJsonAsync(string uri, bool cacheable)
+        {
+            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
+            message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            return responseBody;
+        }
+
+        private async Task<(string Json, string? ContinuationToken)> GetJsonAndContinuationTokenAsync(string uri)
+        {
+            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
+            message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+
+            string? continuationToken = null;
+            if (response.Headers.TryGetValues("x-ms-continuationtoken", out var values))
+            {
+                continuationToken = values.FirstOrDefault();
+            }
+
+            string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            return (responseBody, continuationToken);
+        }
+
     }
 }

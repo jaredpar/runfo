@@ -459,22 +459,6 @@ namespace Scratch
             var suites = await client.Check.Suite.GetAllForReference("dotnet", "runtime", pr.Head.Sha);
         }
 
-        private static async Task Retry()
-        {
-
-            var organization = "dnceng";
-            var project = "public";
-            var buildId = 633511;
-            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
-            var build = await server.GetBuildAsync(project, buildId);
-            var message = server.AzureClient.CreateHttpRequestMessage(
-                HttpMethod.Patch,
-                $"https://dev.azure.com/{organization}/{project}/_apis/build/builds/{buildId}?retry=true&api-version=5.1");
-            var repsonse = await server.AzureClient.HttpClient.SendAsync(message);
-
-        }
-
-
         private async Task DumpTimelineToHelix(string project, int buildId)
         {
             var server = DevOpsServer;
