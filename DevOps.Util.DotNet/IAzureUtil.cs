@@ -20,6 +20,8 @@ namespace DevOps.Util.DotNet
 
         Task<Timeline> GetTimelineAsync(string project, int buildNumber, CancellationToken cancellationToken = default);
 
+        Task<List<TestRun>> ListTestRunsAsync(string project, int buildNumber, CancellationToken cancellationToken = default);
+
         async Task<List<Timeline>> ListTimelineAttemptsAsync(string project, int buildNumber)
         {
             var list = new List<Timeline>();
@@ -60,6 +62,7 @@ namespace DevOps.Util.DotNet
     public interface IAzureStorageUtil : IAzureUtil
     {
         Task SaveTimelineAsync(string project, int buildNumber, List<Timeline> timelineList, CancellationToken cancellationToken = default);
+        Task SaveTestRunsAsync(string project, int buildNumber, List<TestRun> testRunList, CancellationToken cancellationToken = default);
     }
 
     public sealed class AzureUtil : IAzureUtil
@@ -79,6 +82,12 @@ namespace DevOps.Util.DotNet
 
         public Task<Timeline> GetTimelineAsync(string project, int buildNumber, CancellationToken cancellationToken = default) =>
             DevOpsServer.GetTimelineAsync(project, buildNumber);
+
+        public async Task<List<TestRun>> ListTestRunsAsync(string project, int buildNumber, CancellationToken cancellationToken = default)
+        {
+            var runs = await DevOpsServer.ListTestRunsAsync(project, buildNumber).ConfigureAwait(false);
+            return new List<TestRun>(runs);
+        }
 
         public Task<List<Timeline>> ListTimelineAttemptsAsync(string project, int buildNumber)
         {
@@ -127,7 +136,7 @@ namespace DevOps.Util.DotNet
                 // Go to backup on error
             }
 
-            var list = await ListAndCacheTimelines(project, buildNumber, cancellationToken).ConfigureAwait(false);
+            var list = await ListAndCacheTimelinesAsync(project, buildNumber, cancellationToken).ConfigureAwait(false);
             return list.First(x => x.GetAttempt() == attempt);
         }
 
@@ -147,13 +156,34 @@ namespace DevOps.Util.DotNet
                 // Go to backup on error
             }
 
-            var list = await ListAndCacheTimelines(project, buildNumber, cancellationToken).ConfigureAwait(false);
+            var list = await ListAndCacheTimelinesAsync(project, buildNumber, cancellationToken).ConfigureAwait(false);
             return list
                 .OrderByDescending(x => x.GetAttempt())
                 .First();
         }
 
-        private async Task<List<Timeline>> ListAndCacheTimelines(string project, int buildNumber, CancellationToken cancellationToken)
+        public async Task<List<TestRun>> ListTestRunsAsync(string project, int buildNumber, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                return await MainAzureStorageUtil.ListTestRunsAsync(project, buildNumber, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                // Go to backup
+            }
+
+            return await ListAndCacheTestRunsAsync(project, buildNumber, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task<List<TestRun>> ListAndCacheTestRunsAsync(string project, int buildNumber, CancellationToken cancellationToken)
+        {
+            var list = await BackupAzureUtil.ListTestRunsAsync(project, buildNumber, cancellationToken).ConfigureAwait(false);
+            await MainAzureStorageUtil.SaveTestRunsAsync(project, buildNumber, list, cancellationToken).ConfigureAwait(false);
+            return list;
+        }
+
+        private async Task<List<Timeline>> ListAndCacheTimelinesAsync(string project, int buildNumber, CancellationToken cancellationToken)
         {
             var list = await BackupAzureUtil.ListTimelineAttemptsAsync(project, buildNumber).ConfigureAwait(false);
             await MainAzureStorageUtil.SaveTimelineAsync(project, buildNumber, list, cancellationToken).ConfigureAwait(false);

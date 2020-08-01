@@ -23,47 +23,53 @@ namespace DevOps.Util.DotNet
     {
         public string Organization { get; }
         public string CacheDirectory { get; }
+        public string TimelineCacheDirectory { get; }
+        public string TestRunsCacheDirectory { get; }
 
         public LocalAzureStorageUtil(string organization, string cacheDirectory)
         {
             Organization = organization;
             CacheDirectory = cacheDirectory;
+            TimelineCacheDirectory = Path.Combine(cacheDirectory, "timelines");
+            TestRunsCacheDirectory = Path.Combine(cacheDirectory, "testruns");
         }
 
         private string GetFileName(string project, int buildNumber) => $"{Organization}-{project}-{buildNumber}.json";
 
-        public Task SaveTimelineAsync(string project, int buildNumber, List<Timeline> timelineList, CancellationToken cancellationToken = default)
+        private static void SaveJson<T>(string directory, string fileName, List<T> value)
         {
             try
             {
-                Directory.CreateDirectory(CacheDirectory);
-                var filePath = Path.Combine(CacheDirectory, GetFileName(project, buildNumber));
+                Directory.CreateDirectory(directory);
+                var filePath = Path.Combine(directory, fileName);
 
                 using var fileStream = File.Open(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
                 using var streamWriter = new StreamWriter(fileStream);
                 var jsonSerializer = new JsonSerializer();
-                jsonSerializer.Serialize(streamWriter, timelineList.ToArray());
+                jsonSerializer.Serialize(streamWriter, value.ToArray());
             }
             catch
             {
                 // Don't worry about cache errors
             }
-
-            return Task.CompletedTask;
         }
 
-        public List<Timeline> GetTimelineList(string project, int buildNumber)
+        private static List<T> LoadJson<T>(string directory, string fileName)
         {
-            var filePath = Path.Combine(CacheDirectory, GetFileName(project, buildNumber));
+            var filePath = Path.Combine(directory, fileName);
 
             using var fileStream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             using var streamReader = new StreamReader(fileStream);
             using var jsonTextReader = new JsonTextReader(streamReader);
             var jsonSerializer = new JsonSerializer();
-            var array = jsonSerializer.Deserialize<Timeline[]>(jsonTextReader);
-
-            return new List<Timeline>(array);
+            var array = jsonSerializer.Deserialize<T[]>(jsonTextReader);
+            return new List<T>(array);
         }
+
+        private List<Timeline> GetTimelineList(string project, int buildNumber) =>
+            LoadJson<Timeline>(
+                TimelineCacheDirectory,
+                GetFileName(project, buildNumber));
 
         public Task<Timeline> GetTimelineAttemptAsync(string project, int buildNumber, int attempt, CancellationToken cancellationToken = default)
         {
@@ -77,6 +83,24 @@ namespace DevOps.Util.DotNet
                 .OrderByDescending(x => x.GetAttempt())
                 .First();
             return Task.FromResult(timeline);
+        }
+
+        public Task SaveTimelineAsync(string project, int buildNumber, List<Timeline> timelineList, CancellationToken cancellationToken = default)
+        {
+            SaveJson(TimelineCacheDirectory, GetFileName(project, buildNumber), timelineList);
+            return Task.CompletedTask;
+        }
+
+        public Task<List<TestRun>> ListTestRunsAsync(string project, int buildNumber, CancellationToken cancellationToken = default)
+        {
+            var list = LoadJson<TestRun>(TestRunsCacheDirectory, GetFileName(project, buildNumber));
+            return Task.FromResult(list);
+        }
+
+        public Task SaveTestRunsAsync(string project, int buildNumber, List<TestRun> testRunList, CancellationToken cancellationToken = default)
+        {
+            SaveJson(TestRunsCacheDirectory, GetFileName(project, buildNumber), testRunList);
+            return Task.CompletedTask;
         }
     }
 }

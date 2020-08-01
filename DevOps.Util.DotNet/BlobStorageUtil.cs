@@ -4,6 +4,7 @@ using Octokit;
 using Org.BouncyCastle.Math.EC.Rfc7748;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
@@ -24,13 +25,15 @@ namespace DevOps.Util.DotNet
             public List<Timeline>? Timelines { get; set; }
         }
 
-        public BlobContainerClient BlobContainerClient { get; }
+        public BlobContainerClient TimelineContainerClient { get; }
+        public BlobContainerClient TestRunsContainerClient { get; }
         public string Organization { get; }
 
         public BlobStorageUtil(string organization, string connectionString)
         {
             Organization = organization;
-            BlobContainerClient = new BlobContainerClient(connectionString, "timelines");
+            TimelineContainerClient = new BlobContainerClient(connectionString, "timelines");
+            TestRunsContainerClient = new BlobContainerClient(connectionString, "testruns");
         }
 
         public string GetBlobName(string project, int buildNumber) =>
@@ -54,14 +57,10 @@ namespace DevOps.Util.DotNet
             return timelineStorage.Timelines![timelineStorage.LatestIndex];
         }
 
-        private async Task<TimelineStorage> GetTimelineStorageAsync(string project, int buildNumber, CancellationToken cancellationToken = default)
+        private async Task<TimelineStorage> GetTimelineStorageAsync(string project, int buildNumber, CancellationToken cancellationToken) 
         {
             var blobName = GetBlobName(project, buildNumber);
-            var blobClient = BlobContainerClient.GetBlobClient(blobName);
-            var response = await blobClient.DownloadAsync(cancellationToken).ConfigureAwait(false);
-            using var reader = new StreamReader(response.Value.Content, Encoding.UTF8);
-            var json = reader.ReadToEnd();
-            return JsonConvert.DeserializeObject<TimelineStorage>(json);
+            return await LoadJsonAsync<TimelineStorage>(TimelineContainerClient, blobName, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task SaveTimelineAsync(string project, int buildNumber, List<Timeline> timelineList, CancellationToken cancellationToken = default)
@@ -85,9 +84,42 @@ namespace DevOps.Util.DotNet
                 Timelines = timelineList,
             };
 
-            var json = JsonConvert.SerializeObject(timelineStorage);
             var blobName = GetBlobName(project, buildNumber);
-            var blobClient = BlobContainerClient.GetBlobClient(blobName);
+            await SaveJsonAsync(TimelineContainerClient, blobName, timelineStorage, cancellationToken);
+        }
+
+        public async Task<List<TestRun>> ListTestRunsAsync(string project, int buildNumber, CancellationToken cancellationToken = default)
+        {
+            var blobName = GetBlobName(project, buildNumber);
+            var array = await LoadJsonAsync<TestRun[]>(TestRunsContainerClient, blobName, cancellationToken).ConfigureAwait(false);
+            return new List<TestRun>(array);
+        }
+
+        public async Task SaveTestRunsAsync(string project, int buildNumber, List<TestRun> testRunList, CancellationToken cancellationToken = default)
+        {
+            if (testRunList.Count > 100)
+            {
+                // Aribtary limit
+                return;
+            }
+
+            var blobName = GetBlobName(project, buildNumber);
+            await SaveJsonAsync(TestRunsContainerClient, blobName, testRunList.ToArray(), cancellationToken).ConfigureAwait(false);
+        }
+
+        private static async Task<T> LoadJsonAsync<T>(BlobContainerClient containerClient, string blobName, CancellationToken cancellationToken)
+        {
+            var blobClient = containerClient.GetBlobClient(blobName);
+            var response = await blobClient.DownloadAsync(cancellationToken).ConfigureAwait(false);
+            using var reader = new StreamReader(response.Value.Content, Encoding.UTF8);
+            var json = reader.ReadToEnd();
+            return JsonConvert.DeserializeObject<T>(json);
+        }
+
+        private static async Task SaveJsonAsync<T>(BlobContainerClient containerClient, string blobName, T value, CancellationToken cancellationToken)
+        {
+            var json = JsonConvert.SerializeObject(value);
+            var blobClient = containerClient.GetBlobClient(blobName);
 
             var bytes = Encoding.UTF8.GetBytes(json);
             using var memoryStream = new MemoryStream(bytes);
