@@ -408,7 +408,7 @@ namespace DevOps.Util.Triage
         public IQueryable<ModelBuild> GetModelBuildsQuery(
             int? definitionId = null,
             string? definitionName = null,
-            ModelBuildKind? kind = ModelBuildKind.All,
+            ModelBuildKind kind = ModelBuildKind.All,
             bool descendingOrder = true,
             int? count = null)
         {

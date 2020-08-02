@@ -16,16 +16,18 @@
 <table class="table">
     <thead>
         <tr>
-            <th scope="column">Result</th>
             <th scope="column">Build</th>
+            <th scope="column">Kind</th>
+            <th scope="column">Result</th>
         </tr>
     </thead>
     <tbody>
         @foreach(var build in @Model.Builds)
         {
             <tr>
-                <td>@build.Result</td>
                 <td><a href=@build.BuildUri>@build.BuildNumber</a></td>
+                <td>@build.Kind</td>
+                <td>@build.Result</td>
             </tr>
         }
     </tbody>

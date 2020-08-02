@@ -20,75 +20,12 @@ namespace DevOps.Status.Pages.Search
 {
     public class BuildsModel : PageModel
     {
-        public sealed class BuildSearchOptions
-        {
-            public string Definition { get; set; }
-
-            public int Count { get; set; } = 10;
-
-            public int? DefinitionId
-            {
-                get
-                {
-                    if (!string.IsNullOrEmpty(Definition))
-                    {
-                        if (DotNetUtil.TryGetDefinitionId(Definition, out var _, out var id))
-                        {
-                            return id;
-                        }
-
-                        if (int.TryParse(Definition, out id))
-                        {
-                            return id;
-                        }
-                    }
-
-                    return null;
-                }
-            }
-
-            public IQueryable<ModelBuild> GetModelBuildsQuery(TriageContext triageContext) =>
-                GetModelBuildsQuery(new TriageContextUtil(triageContext));
-
-            public IQueryable<ModelBuild> GetModelBuildsQuery(TriageContextUtil triageContextUtil)
-            {
-                var definitionId = DefinitionId;
-                string? definitionName = definitionId is null
-                    ? Definition
-                    : null;
-                var count = Count;
-                return triageContextUtil.GetModelBuildsQuery(
-                    definitionId: definitionId,
-                    definitionName: definitionName,
-                    count: count);
-            }
-
-            public void Parse(string userQuery)
-            {
-                foreach (var tuple in DotNetQueryUtil.TokenizeQueryPairs(userQuery))
-                {
-                    switch (tuple.Name.ToLower())
-                    {
-                        case "definition":
-                            Definition = tuple.Value;
-                            break;
-                        case "count":
-                            Count = int.Parse(tuple.Value);
-                            break;
-                        default:
-                            throw new Exception($"Invalid option {tuple.Name}");
-                    }
-                }
-            }
-        }
-
         public class BuildData
         {
             public string? Result { get; set; }
-
             public int BuildNumber { get; set; }
-
             public string? BuildUri { get; set; }
+            public string? Kind { get; set; }
         }
 
         public TriageContext TriageContext { get; }
@@ -111,7 +48,7 @@ namespace DevOps.Status.Pages.Search
                 return;
             }
 
-            var options = new BuildSearchOptions();
+            var options = new StatusBuildSearchOptions();
             options.Parse(Query);
 
             Builds = (await options.GetModelBuildsQuery(TriageContext).ToListAsync())
@@ -122,7 +59,8 @@ namespace DevOps.Status.Pages.Search
                     {
                         Result = x.BuildResult.ToString(),
                         BuildNumber = buildInfo.Number,
-                        BuildUri = buildInfo.BuildUri
+                        Kind = buildInfo.PullRequestNumber.HasValue ? "Pull Request" : "Rolling",
+                        BuildUri = buildInfo.BuildUri,
                     };
                 })
                 .ToList();
