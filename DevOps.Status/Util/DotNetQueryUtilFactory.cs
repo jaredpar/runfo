@@ -1,4 +1,6 @@
-﻿using DevOps.Util;
+﻿#nullable enable
+
+using DevOps.Util;
 using DevOps.Util.DotNet;
 using Octokit;
 using System;
@@ -19,7 +21,7 @@ namespace DevOps.Status.Util
         {
             DevOpsServer = devOpsServer;
             BlobStorageUtil = BlobStorageUtil;
-            AzureUtil = new CachingAzureUtil(BlobStorageUtil, devOpsServer);
+            AzureUtil = new CachingAzureUtil(blobStorageUtil, devOpsServer);
             GitHubClientFactory = gitHubClientFactory;
         }
 
