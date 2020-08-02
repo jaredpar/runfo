@@ -1,3 +1,4 @@
+#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -23,7 +24,44 @@ namespace DevOps.Status.Pages.Search
         {
             public string Definition { get; set; }
 
-            public int Count { get; set; }
+            public int Count { get; set; } = 10;
+
+            public int? DefinitionId
+            {
+                get
+                {
+                    if (!string.IsNullOrEmpty(Definition))
+                    {
+                        if (DotNetUtil.TryGetDefinitionId(Definition, out var _, out var id))
+                        {
+                            return id;
+                        }
+
+                        if (int.TryParse(Definition, out id))
+                        {
+                            return id;
+                        }
+                    }
+
+                    return null;
+                }
+            }
+
+            public IQueryable<ModelBuild> GetModelBuildsQuery(TriageContext triageContext) =>
+                GetModelBuildsQuery(new TriageContextUtil(triageContext));
+
+            public IQueryable<ModelBuild> GetModelBuildsQuery(TriageContextUtil triageContextUtil)
+            {
+                var definitionId = DefinitionId;
+                string? definitionName = definitionId is null
+                    ? Definition
+                    : null;
+                var count = Count;
+                return triageContextUtil.GetModelBuildsQuery(
+                    definitionId: definitionId,
+                    definitionName: definitionName,
+                    count: count);
+            }
 
             public void Parse(string userQuery)
             {
@@ -46,17 +84,17 @@ namespace DevOps.Status.Pages.Search
 
         public class BuildData
         {
-            public string Result { get; set; }
+            public string? Result { get; set; }
 
             public int BuildNumber { get; set; }
 
-            public string BuildUri { get; set; }
+            public string? BuildUri { get; set; }
         }
 
         public TriageContext TriageContext { get; }
 
         [BindProperty(SupportsGet = true)]
-        public string Query { get; set; }
+        public string? Query { get; set; }
 
         public List<BuildData> Builds { get; set; } = new List<BuildData>();
 
@@ -70,30 +108,13 @@ namespace DevOps.Status.Pages.Search
             if (string.IsNullOrEmpty(Query))
             {
                 Query = "definition:runtime count:10";
+                return;
             }
 
             var options = new BuildSearchOptions();
             options.Parse(Query);
 
-            IQueryable<ModelBuild> query = TriageContext
-                .ModelBuilds
-                .Include(x => x.ModelBuildDefinition)
-                .OrderByDescending(x => x.BuildNumber);
-
-            if (!string.IsNullOrEmpty(options.Definition))
-            {
-                var definitionId = DotNetUtil.GetDefinitionIdFromFriendlyName(options.Definition);
-                query = query.Where(x => x.ModelBuildDefinition.DefinitionId == definitionId);
-            }
-
-            var count = options.Count < 5 ? 5 : options.Count;
-            if (count > 500)
-            {
-                throw new Exception("Count too high");
-            }
-            query = query.Take(count);
-
-            Builds = (await query.ToListAsync())
+            Builds = (await options.GetModelBuildsQuery(TriageContext).ToListAsync())
                 .Select(x =>
                 {
                     var buildInfo = TriageContextUtil.GetBuildInfo(x);

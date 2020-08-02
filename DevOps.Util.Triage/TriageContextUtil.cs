@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DevOps.Util;
@@ -16,6 +17,14 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace DevOps.Util.Triage
 {
+    public enum ModelBuildKind
+    {
+        All,
+        Rolling,
+        PullRequest,
+        MergedPullRequest
+    }
+
     public sealed class TriageContextUtil
     {
         public TriageContext Context { get; }
@@ -395,5 +404,62 @@ namespace DevOps.Util.Triage
                 .OrderByDescending(x => x.BuildNumber)
                 .Take(count)
                 .ToList();
+
+        public IQueryable<ModelBuild> GetModelBuildsQuery(
+            int? definitionId = null,
+            string? definitionName = null,
+            ModelBuildKind? kind = ModelBuildKind.All,
+            bool descendingOrder = true,
+            int? count = null)
+        {
+            if (definitionId is object && definitionName is object)
+            {
+                throw new Exception($"Cannot specify {nameof(definitionId)} and {nameof(definitionName)}");
+            }
+
+            // Need to always include ModelBuildDefinition at this point because the GetBuildKey function
+            // depends on that being there.
+            IQueryable<ModelBuild> query = Context
+                .ModelBuilds
+                .Include(x => x.ModelBuildDefinition);
+
+            query = descendingOrder
+                ? query.OrderByDescending(x => x.BuildNumber)
+                : query.OrderBy(x => x.BuildNumber);
+
+            if (definitionId is { } d)
+            {
+                query = query.Where(x => x.ModelBuildDefinition.DefinitionId == definitionId);
+            }
+            else if (definitionName is object)
+            {
+                query = query.Where(x => EF.Functions.Like(definitionName, x.ModelBuildDefinition.DefinitionName));
+            }
+
+            switch (kind)
+            {
+                case ModelBuildKind.All:
+                    // Nothing to filter
+                    break;
+                case ModelBuildKind.MergedPullRequest:
+                    query = query.Where(x => x.IsMergedPullRequest);
+                    break;
+                case ModelBuildKind.PullRequest:
+                    query = query.Where(x => x.PullRequestNumber.HasValue);
+                    break;
+                case ModelBuildKind.Rolling:
+                    query = query.Where(x => x.PullRequestNumber == null);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Invalid kind {kind}");
+            }
+
+            if (count is { } c)
+            {
+                query = query.Take(c);
+            }
+
+            return query;
+        }
     }
 }
