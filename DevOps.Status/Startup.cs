@@ -72,6 +72,7 @@ namespace DevOps.Status
                 var connectionString = Configuration["RUNFO_CONNECTION_STRING"];
                 options.UseSqlServer(connectionString);
             });
+            services.AddScoped<TriageContextUtil>();
 
             services.AddAuthentication(options =>
             {

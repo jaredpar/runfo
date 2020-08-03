@@ -5,15 +5,20 @@ using DevOps.Util.Triage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace DevOps.Status.Util
 {
     public class StatusBuildSearchOptions
     {
-        public string? Definition { get; set; }
+        public const int DefaultCount = 10;
+        public const ModelBuildKind DefaultKind = ModelBuildKind.All;
 
-        public int Count { get; set; } = 10;
+        public string? Definition { get; set; }
+        public int Count { get; set; } = DefaultCount;
+        public ModelBuildKind Kind { get; set; } = DefaultKind;
+        public string? Repository { get; set; }
 
         public int? DefinitionId
         {
@@ -36,8 +41,6 @@ namespace DevOps.Status.Util
             }
         }
 
-        public ModelBuildKind Kind { get; set; } = ModelBuildKind.All;
-
         public IQueryable<ModelBuild> GetModelBuildsQuery(TriageContext triageContext) =>
             GetModelBuildsQuery(new TriageContextUtil(triageContext));
 
@@ -55,6 +58,50 @@ namespace DevOps.Status.Util
                 kind: Kind);
         }
 
+        public string GetUserQueryString()
+        {
+            var builder = new StringBuilder();
+            if (!string.IsNullOrEmpty(Definition))
+            {
+                Append($"definition:{Definition} ");
+            }
+
+            if (!string.IsNullOrEmpty(Repository))
+            {
+                Append($"repository:{Repository}");
+            }
+
+            if (Kind != DefaultKind)
+            {
+                var kind = Kind switch
+                {
+                    ModelBuildKind.All => "all",
+                    ModelBuildKind.MergedPullRequest => "mpr",
+                    ModelBuildKind.PullRequest => "pr",
+                    ModelBuildKind.Rolling => "rolling",
+                    _ => throw new InvalidOperationException($"Invalid kind {Kind}"),
+                };
+                Append($"kind:{kind}");
+            }
+
+            if (Count != DefaultCount)
+            {
+                Append($"count:{Count}");
+            }
+
+            return builder.ToString();
+
+            void Append(string message)
+            {
+                if (builder.Length != 0)
+                {
+                    builder.Append(" ");
+                }
+
+                builder.Append(message);
+            }
+        }
+
         public void Parse(string userQuery)
         {
             foreach (var tuple in DotNetQueryUtil.TokenizeQueryPairs(userQuery))
@@ -63,6 +110,9 @@ namespace DevOps.Status.Util
                 {
                     case "definition":
                         Definition = tuple.Value;
+                        break;
+                    case "repository":
+                        Repository = tuple.Value;
                         break;
                     case "count":
                         Count = int.Parse(tuple.Value);

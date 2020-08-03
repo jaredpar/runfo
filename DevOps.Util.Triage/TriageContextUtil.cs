@@ -406,10 +406,12 @@ namespace DevOps.Util.Triage
                 .ToList();
 
         public IQueryable<ModelBuild> GetModelBuildsQuery(
+            bool descendingOrder = true,
             int? definitionId = null,
             string? definitionName = null,
             ModelBuildKind kind = ModelBuildKind.All,
-            bool descendingOrder = true,
+            string? gitHubRepository = null,
+            string? gitHubOrganization = null,
             int? count = null)
         {
             if (definitionId is object && definitionName is object)
@@ -434,6 +436,18 @@ namespace DevOps.Util.Triage
             else if (definitionName is object)
             {
                 query = query.Where(x => EF.Functions.Like(definitionName, x.ModelBuildDefinition.DefinitionName));
+            }
+
+            if (gitHubOrganization is object)
+            {
+                gitHubOrganization = gitHubOrganization.ToLower();
+                query = query.Where(x => x.GitHubOrganization == gitHubOrganization);
+            }
+
+            if (gitHubRepository is object)
+            {
+                gitHubRepository = gitHubRepository.ToLower();
+                query = query.Where(x => x.GitHubRepository == gitHubRepository);
             }
 
             switch (kind)

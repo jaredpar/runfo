@@ -28,7 +28,7 @@ namespace DevOps.Util.UnitTests
             var timeline = GetTimeline("timeline-1.json");
             var tree = TimelineTree.Create(timeline);
             var jobs = tree.Nodes.Where(x => tree.IsJob(x.TimelineRecord.Id));
-            Assert.Equal(143, jobs.Count());
+            Assert.Equal(142, jobs.Count());
         }
 
         [Fact]

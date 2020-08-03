@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DevOps.Status\DevOps.Status.csproj" />
     <ProjectReference Include="..\DevOps.Util\DevOps.Util.csproj" />
     <ProjectReference Include="..\DevOps.Util.DotNet\DevOps.Util.DotNet.csproj" />
   </ItemGroup>

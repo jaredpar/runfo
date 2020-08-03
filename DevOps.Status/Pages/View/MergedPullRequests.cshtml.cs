@@ -20,67 +20,6 @@ namespace DevOps.Status.Pages.View
 {
     public class MergedPullRequestsModel : PageModel
     {
-        public sealed class SearchOptions
-        {
-            public string Repository { get; set; } = "runtime";
-
-            public string Definition { get; set; } = "runtime";
-
-            public int Count { get; set; } = 50;
-
-            public string UserQuery
-            {
-                get
-                {
-                    var builder = new StringBuilder();
-                    if (!string.IsNullOrEmpty(Repository))
-                    {
-                        builder.Append($"repository:{Repository} ");
-                    }
-
-                    if (!string.IsNullOrEmpty(Definition))
-                    {
-                        builder.Append($"definition:{Definition} ");
-                    }
-
-                    builder.Append($"count:{Count} ");
-                    return builder.ToString();
-                }
-            }
-
-            public SearchOptions()
-            {
-            }
-
-            public void Parse(string query)
-            {
-                foreach (var tuple in DotNetQueryUtil.TokenizeQueryPairs(query))
-                {
-                    switch (tuple.Name.ToLower())
-                    {
-                        case "repository":
-                            Repository = tuple.Value;
-                            break;
-                        case "definition":
-                            Definition = tuple.Value;
-                            break;
-                        case "count":
-                            Count = int.Parse(tuple.Value);
-                            break;
-                        default:
-                            throw new Exception($"Invalid option {tuple.Name}");
-                    }
-                }
-            }
-
-            public Dictionary<string, string> GetQueryParams() => new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "repository", Repository },
-                { "definition", Definition },
-                { "count", Count.ToString() }
-            };
-        }
-
         public sealed class MergedBuildInfo
         {
             public string? Repository { get; set; }
@@ -93,49 +32,31 @@ namespace DevOps.Status.Pages.View
             public BuildResult Result { get; set; }
         }
 
-        public TriageContext TriageContext { get; }
-
-        [BindProperty(SupportsGet = true)]
-        public SearchOptions Options { get; set; } = new SearchOptions();
+        public TriageContextUtil TriageContextUtil { get; }
 
         [BindProperty(SupportsGet = true, Name = "q")]
-        public string? QueryString { get; set; }
+        public string? Query { get; set; }
 
         public List<MergedBuildInfo> MergedPullRequestBuilds { get; set; } = new List<MergedBuildInfo>();
 
         public string? PassRate { get; set; }
 
-        public MergedPullRequestsModel(TriageContext triageContext)
+        public MergedPullRequestsModel(TriageContextUtil triageContextUtil)
         {
-            TriageContext = triageContext;
+            TriageContextUtil = triageContextUtil;
         }
 
         public async Task<IActionResult> OnGet()
         {
-            if (!string.IsNullOrEmpty(QueryString))
+            if (string.IsNullOrEmpty(Query))
             {
-                Options.Parse(QueryString);
-                return RedirectToPage("/View/MergedPullRequests", Options.GetQueryParams());
+                Query = new StatusBuildSearchOptions() { Repository = "runtime", Count = 10 }.ToString();
+                return Page();
             }
 
-            IQueryable<ModelBuild> query = TriageContext
-                .ModelBuilds
-                .Include(x => x.ModelBuildDefinition)
-                .Where(x =>
-                    x.IsMergedPullRequest &&
-                    x.GitHubOrganization == DotNetUtil.GitHubOrganization &&
-                    x.GitHubRepository == Options.Repository.ToLower() &&
-                    x.PullRequestNumber.HasValue);
-            if (Options.Definition is object)
-            {
-                var definitionId = DotNetUtil.GetDefinitionIdFromFriendlyName(Options.Definition);
-                query = query.Where(x => x.ModelBuildDefinition.DefinitionId == definitionId);
-            }
-
-            query = query
-                .OrderByDescending(x => x.BuildNumber)
-                .Take(Options.Count);
-
+            var options = new StatusBuildSearchOptions();
+            options.Parse(Query);
+            var query = options.GetModelBuildsQuery(TriageContextUtil);
             var builds = (await query.ToListAsync())
                 .Select(b =>
                 {

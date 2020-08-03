@@ -30,7 +30,7 @@ namespace DevOps.Status.Pages.Search
 
         public TriageContext TriageContext { get; }
 
-        [BindProperty(SupportsGet = true)]
+        [BindProperty(SupportsGet = true, Name = "q")]
         public string? Query { get; set; }
 
         public List<BuildData> Builds { get; set; } = new List<BuildData>();
@@ -44,7 +44,7 @@ namespace DevOps.Status.Pages.Search
         {
             if (string.IsNullOrEmpty(Query))
             {
-                Query = "definition:runtime count:10";
+                Query = new StatusBuildSearchOptions() { Repository = "runtime", Count = 10 }.GetUserQueryString();
                 return;
             }
 
