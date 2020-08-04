@@ -1,0 +1,18 @@
+﻿@page
+@model DevOps.Status.Pages.Search.TimelinesModel
+@{
+    ViewData["Title"] = "Timelines";
+}
+
+<form method="get">
+  <div class="form-group">
+    <label>Build Query</label>
+    <input name="bq" type="text" class="form-control" value="@Model.BuildQuery">
+    <label>Timeline Query</label>
+    <input name="tq" type="text" class="form-control" value="@Model.TimelineQuery">
+  </div>
+  <button class="btn btn-primary">Search</button>
+</form>
+
+<h1>Timelines</h1>
+
