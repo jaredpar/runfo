@@ -50,13 +50,15 @@ namespace DevOps.Status.Pages.View
         {
             if (string.IsNullOrEmpty(Query))
             {
-                Query = new StatusBuildSearchOptions() { Repository = "runtime", Count = 10 }.ToString();
+                Query = new StatusBuildSearchOptions() { Repository = "runtime", Count = 10 }.GetUserQueryString();
                 return Page();
             }
 
             var options = new StatusBuildSearchOptions();
             options.Parse(Query);
-            var query = options.GetModelBuildsQuery(TriageContextUtil);
+            var query = options.GetModelBuildsQuery(
+                TriageContextUtil,
+                beforeCountFunc: q => q.Where(x => x.PullRequestNumber != null && x.IsMergedPullRequest));
             var builds = (await query.ToListAsync())
                 .Select(b =>
                 {

@@ -44,18 +44,26 @@ namespace DevOps.Status.Util
         public IQueryable<ModelBuild> GetModelBuildsQuery(TriageContext triageContext) =>
             GetModelBuildsQuery(new TriageContextUtil(triageContext));
 
-        public IQueryable<ModelBuild> GetModelBuildsQuery(TriageContextUtil triageContextUtil)
+        public IQueryable<ModelBuild> GetModelBuildsQuery(
+            TriageContextUtil triageContextUtil,
+            Func<IQueryable<ModelBuild>, IQueryable<ModelBuild>>? beforeCountFunc = null)
         {
             var definitionId = DefinitionId;
             string? definitionName = definitionId is null
                 ? Definition
                 : null;
-            var count = Count;
-            return triageContextUtil.GetModelBuildsQuery(
+            var query = triageContextUtil.GetModelBuildsQuery(
                 definitionId: definitionId,
                 definitionName: definitionName,
-                count: count,
+                count: null,
                 kind: Kind);
+
+            if (beforeCountFunc is object)
+            {
+                query = beforeCountFunc(query);
+            }
+
+            return query.Take(Count);
         }
 
         public string GetUserQueryString()
