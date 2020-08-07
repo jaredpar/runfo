@@ -34,7 +34,7 @@ public class Program
                 new LocalAzureStorageUtil(DotNetUtil.AzureOrganization, RuntimeInfoUtil.CacheDirectory),
                 new AzureUtil(server));
 
-            var runtimeInfo = new RuntimeInfo(server, azureUtil, CreateGitHubClient());
+            var runtimeInfo = new RuntimeInfo(server, azureUtil);
 
             // Kick off a collection of the file system cache
             var collectTask = runtimeInfo.CollectCache();

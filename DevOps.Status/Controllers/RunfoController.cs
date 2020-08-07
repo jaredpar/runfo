@@ -31,7 +31,7 @@ namespace DevOps.Status.Controllers
         {
             if (query is object)
             {
-                var queryUtil = QueryUtilFactory.CreateForAnonymous();
+                var queryUtil = QueryUtilFactory.DotNetQueryUtil;
                 var builds = await queryUtil.ListBuildsAsync(query);
                 var list = builds
                     .Select(x =>
@@ -58,7 +58,7 @@ namespace DevOps.Status.Controllers
             [FromQuery]string? query = null)
         {
             query = $"-d {definition} {query}";
-            var queryUtil = QueryUtilFactory.CreateForAnonymous();
+            var queryUtil = QueryUtilFactory.DotNetQueryUtil;
             var builds = await queryUtil.ListBuildsAsync(query);
             var timelines = builds
                 .AsParallel()

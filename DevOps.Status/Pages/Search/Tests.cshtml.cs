@@ -77,7 +77,7 @@ namespace DevOps.Status.Pages.Search
 
             var testRuns = new List<DotNetTestRun>();
             var testSearchOptionSet = CreateTestSearchOptionSet();
-            var queryUtil = QueryUtilFactory.CreateForAnonymous();
+            var queryUtil = QueryUtilFactory.DotNetQueryUtil;
             var builds = await queryUtil.ListBuildsAsync(testSearchOptionSet);
 
             foreach (var build in builds)

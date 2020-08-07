@@ -87,11 +87,9 @@ namespace DevOps.Util.DotNet
     public sealed class DotNetQueryUtil
     {
         public DevOpsServer Server { get; }
-        public IGitHubClient GitHubClient { get; }
         public IAzureUtil AzureUtil { get; }
 
-        // TODO: Do we really need IGitHUbClient here anymore?
-        public DotNetQueryUtil(DevOpsServer server, IAzureUtil azureUtil, IGitHubClient gitHubClient)
+        public DotNetQueryUtil(DevOpsServer server, IAzureUtil azureUtil)
         {
             if (server.Organization != azureUtil.Organization)
             {
@@ -99,7 +97,6 @@ namespace DevOps.Util.DotNet
             }
 
             Server = server;
-            GitHubClient = gitHubClient;
             AzureUtil = azureUtil;
         }
 
@@ -858,39 +855,6 @@ namespace DevOps.Util.DotNet
                 foreach (var item in helixJobs)
                 {
                     list.Add(item.HelixJob.MachineInfo);
-                }
-            }
-        }
-
-        public async IAsyncEnumerable<(PullRequest PullReuqest, Build Build)> EnumerateMergedPullRequestBuilds(
-            GitHubInfo gitHubInfo,
-            string project,
-            int[]? definitions)
-        {
-            var gitHubUtil = new GitHubUtil(GitHubClient);
-            await foreach (var pullRequest in gitHubUtil.EnumerateClosedPullRequests(gitHubInfo.Organization, gitHubInfo.Repository).ConfigureAwait(false))
-            {
-                var prKey = new GitHubPullRequestKey(gitHubInfo.Organization, gitHubInfo.Repository, pullRequest.Number);
-                Build? build = null;
-                try
-                {
-                    var builds = (await Server.ListPullRequestBuildsAsync(prKey, project, definitions).ConfigureAwait(false))
-                        .OrderByDescending(b => b.BuildNumber)
-                        .Where(x => x.Status == BuildStatus.Completed && x.Result != BuildResult.Canceled)
-                        .ToList();
-                    if (builds.Count > 0)
-                    {
-                        build = builds[0];
-                    }
-                }
-                catch (Exception)
-                {
-                    // Error enumerating builds, continue to the next one
-                }
-
-                if (build is object)
-                {
-                    yield return (pullRequest, build);
                 }
             }
         }

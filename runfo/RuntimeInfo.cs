@@ -26,12 +26,11 @@ internal sealed partial class RuntimeInfo
 
     internal RuntimeInfo(
         DevOpsServer server,
-        IAzureUtil azureUtil,
-        IGitHubClient gitHubClient)
+        IAzureUtil azureUtil)
     {
         Server = server;
         AzureUtil = azureUtil;
-        QueryUtil = new DotNetQueryUtil(Server, azureUtil, gitHubClient);
+        QueryUtil = new DotNetQueryUtil(Server, azureUtil);
     }
 
     internal async Task PrintBuildResults(IEnumerable<string> args)

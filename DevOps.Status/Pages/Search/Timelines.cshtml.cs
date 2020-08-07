@@ -20,8 +20,8 @@ namespace DevOps.Status.Pages.Search
         {
             public int BuildNumber { get; set; }
             public string? BuildUri { get; set; }
-            public string JobName { get; set; }
-            public string Line { get; set; }
+            public string? JobName { get; set; }
+            public string? Line { get; set; }
         }
 
         [BindProperty(SupportsGet = true, Name = "bq")]
@@ -70,7 +70,7 @@ namespace DevOps.Status.Pages.Search
             var query = buildSearchOptions.GetModelBuildsQuery(TriageContextUtil);
             var builds = await query.ToListAsync();
 
-            var dotnetQueryUtil = DotNetQueryUtilFactory.CreateForAnonymous();
+            var dotnetQueryUtil = DotNetQueryUtilFactory.DotNetQueryUtil;
             var results = await dotnetQueryUtil.SearchTimelineAsync(
                 builds.Select(x => TriageContextUtil.GetBuildInfo(x)),
                 text: timelineSearchOptions.Value!);

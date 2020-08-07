@@ -93,8 +93,7 @@ namespace Scratch
 
             DotNetQueryUtil = new DotNetQueryUtil(
                 DevOpsServer,
-                new CachingAzureUtil(BlobStorageUtil, DevOpsServer),
-                GitHubClient);
+                new CachingAzureUtil(BlobStorageUtil, DevOpsServer));
         }
 
         internal static bool IsDevelopment(IConfiguration configuration) => !string.IsNullOrEmpty(configuration["RUNFO_DEV"]);

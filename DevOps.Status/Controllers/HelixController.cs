@@ -26,7 +26,7 @@ namespace DevOps.Status.Controllers
         [Route("api/helix/jobs/{project}/{buildNumber}")]
         public async Task<List<HelixJobRestInfo>> Jobs(string project, int buildNumber)
         {
-            var queryUtil = QueryUtilFactory.CreateForAnonymous();
+            var queryUtil = QueryUtilFactory.DotNetQueryUtil;
             var jobs = await queryUtil.ListHelixJobsAsync(project, buildNumber);
             return jobs
                 .Select(x =>
@@ -52,7 +52,7 @@ namespace DevOps.Status.Controllers
                 throw new Exception("Not supported");
             }
 
-            var queryUtil = QueryUtilFactory.CreateForAnonymous();
+            var queryUtil = QueryUtilFactory.DotNetQueryUtil;
             var build = await queryUtil.Server.GetBuildAsync(project, buildNumber);
             var workItems = await queryUtil.ListHelixWorkItemsAsync(build, DotNetUtil.FailedTestOutcomes);
             var list = new List<HelixWorkItemRestInfo>();
