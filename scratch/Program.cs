@@ -45,9 +45,12 @@ namespace Scratch
             static void Config(DbContextOptionsBuilder builder)
             {
                 var configuration = ScratchUtil.CreateConfiguration();
-                var kind = ScratchUtil.IsDevelopment(configuration) ? "dev" : "production";
-                Console.WriteLine($"Using  sql");
-                builder.UseSqlServer(ScratchUtil.GetConnectionString(configuration));
+                var connectionString = configuration[DotNetConstants.ConfigurationSqlConnectionString];
+                var message = connectionString.Contains("triage-scratch-dev")
+                    ? "Using sql dev"
+                    : "Using sql production";
+                Console.WriteLine(message);
+                builder.UseSqlServer(connectionString);
             }
         }
     }
@@ -77,7 +80,7 @@ namespace Scratch
             DevOpsServer = new DevOpsServer(organization, azureToken);
 
             var builder = new DbContextOptionsBuilder<TriageContext>();
-            builder.UseSqlServer(configuration["RUNFO_CONNECTION_STRING"]);
+            builder.UseSqlServer(configuration[DotNetConstants.ConfigurationSqlConnectionString]);
             TriageContext = new TriageContext(builder.Options);
 
             var gitHubClient = new GitHubClient(new ProductHeaderValue("runfo-scratch-app"));
@@ -95,13 +98,6 @@ namespace Scratch
                 DevOpsServer,
                 new CachingAzureUtil(BlobStorageUtil, DevOpsServer));
         }
-
-        internal static bool IsDevelopment(IConfiguration configuration) => !string.IsNullOrEmpty(configuration["RUNFO_DEV"]);
-
-        internal static string GetConnectionString(IConfiguration configuration) =>
-            IsDevelopment(configuration)
-                ? configuration["RUNFO_CONNECTION_STRING_DEV"]
-                : configuration["RUNFO_CONNECTION_STRING"];
 
         internal static IConfiguration CreateConfiguration()
         {
@@ -123,6 +119,26 @@ namespace Scratch
             //var gitHubClient = await factory.CreateForAppAsync("jaredpar", "devops-util");
             //var comment = await gitHubClient.Issue.Comment.Create("jaredpar", "devops-util", 5, "This is a test comment");
 
+            var triageContextUtil = new TriageContextUtil(TriageContext);
+            foreach (var build in await DotNetQueryUtil.ListBuildsAsync("-d runtime -c 50 -pr"))
+            {
+                var buildInfo = build.GetBuildInfo();
+                try
+                {
+                    Console.WriteLine($"Populating {buildInfo.BuildUri}");
+                    var list = await DevOpsServer.ListTimelineAttemptsAsync(buildInfo.Project, buildInfo.Number);
+                    foreach (var timeline in list)
+                    {
+                        await triageContextUtil.EnsureBuildAttemptAsync(buildInfo, timeline);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error with {buildInfo.Number}: {ex.Message}");
+                }
+            }
+
+            /*
             var blobClient = BlobStorageUtil;
             foreach (var build in await DotNetQueryUtil.ListBuildsAsync("-d runtime -c 10 -pr"))
             {
@@ -134,6 +150,7 @@ namespace Scratch
                 // Console.WriteLine(found);
             }
     
+            */
         }
 
         internal async Task BuildMergedPullRequestBuilds()

@@ -8,6 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DevOps.Util;
@@ -132,6 +133,82 @@ namespace DevOps.Util.Triage
             Context.ModelBuilds.Add(modelBuild);
             Context.SaveChanges();
             return modelBuild;
+        }
+
+        public async Task<ModelBuildAttempt> EnsureBuildAttemptAsync(BuildInfo buildInfo, Timeline timeline)
+        {
+            var modelBuild = await EnsureBuildAsync(buildInfo).ConfigureAwait(false);
+            return await EnsureBuildAttemptAsync(modelBuild, buildInfo.BuildResult, timeline).ConfigureAwait(false);
+        }
+
+        public async Task<ModelBuildAttempt> EnsureBuildAttemptAsync(ModelBuild modelBuild, BuildResult buildResult, Timeline timeline)
+        {
+            var attempt = timeline.GetAttempt();
+            var modelBuildAttempt = await Context.ModelBuildAttempts
+                .Where(x => x.ModelBuildId == modelBuild.Id && x.Attempt == attempt)
+                .FirstOrDefaultAsync().ConfigureAwait(false);
+            if (modelBuildAttempt is object)
+            {
+                return modelBuildAttempt;
+            }
+
+            var startTimeQuery = timeline
+                .Records
+                .Where(x => x.Attempt == attempt)
+                .Select(x => DevOpsUtil.ConvertFromRestTime(x.StartTime))
+                .SelectNullableValue()
+                .Select(x => (DateTime?)x.DateTime);
+            var startTime = startTimeQuery.Any()
+                ? startTimeQuery.Min()
+                : modelBuild.StartTime;
+            
+            var finishTimeQuery = timeline
+                .Records
+                .Where(x => x.Attempt == attempt)
+                .Select(x => DevOpsUtil.ConvertFromRestTime(x.FinishTime))
+                .SelectNullableValue()
+                .Select(x => (DateTime?)x.DateTime);
+            var finishTime = finishTimeQuery.Any()
+                ? finishTimeQuery.Max()
+                : modelBuild.FinishTime;
+
+            modelBuildAttempt = new ModelBuildAttempt()
+            {
+                Attempt = attempt,
+                BuildResult = buildResult,
+                StartTime = startTime,
+                FinishTime = finishTime,
+                ModelBuild = modelBuild,
+            };
+            Context.ModelBuildAttempts.Add(modelBuildAttempt);
+
+            var timelineTree = TimelineTree.Create(timeline);
+            foreach (var record in timeline.Records)
+            {
+                if (record.Issues is null ||
+                    !timelineTree.TryGetJob(record, out var job))
+                {
+                    continue;
+                }
+
+                foreach (var issue in record.Issues)
+                {
+                    var timelineIssue = new ModelTimelineIssue()
+                    {
+                        Attempt = attempt,
+                        JobName = job.Name,
+                        RecordName = record.Name,
+                        RecordId = record.Id,
+                        Message = issue.Message,
+                        ModelBuild = modelBuild,
+                        ModelBuildAttempt = modelBuildAttempt,
+                    };
+                    Context.ModelTimelineIssues.Add(timelineIssue);
+                }
+            }
+
+            await Context.SaveChangesAsync().ConfigureAwait(false);
+            return modelBuildAttempt;
         }
 
         public async Task EnsureResult(ModelBuild modelBuild, Build build)

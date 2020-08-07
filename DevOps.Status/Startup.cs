@@ -19,6 +19,7 @@ using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Octokit;
 
 namespace DevOps.Status
@@ -69,7 +70,10 @@ namespace DevOps.Status
 
             services.AddDbContext<TriageContext>(options => 
             {
-                var connectionString = Configuration["RUNFO_CONNECTION_STRING"];
+                var connectionString = Configuration[DotNetConstants.ConfigurationSqlConnectionString];
+#if DEBUG
+                options.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+#endif
                 options.UseSqlServer(connectionString);
             });
             services.AddScoped<TriageContextUtil>();

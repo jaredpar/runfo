@@ -8,7 +8,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Threading;
@@ -42,7 +44,7 @@ namespace DevOps.Util.DotNet
         }
 
         public string GetBlobName(string project, int buildNumber) =>
-            $"{Organization}-{project}-{buildNumber}.json";
+            $"{Organization}-{project}-{buildNumber}.zip";
 
         public string GetBlobName(string project, int testRunId, TestOutcome[]? outcomes)
         {
@@ -152,7 +154,8 @@ namespace DevOps.Util.DotNet
         {
             var blobClient = containerClient.GetBlobClient(blobName);
             var response = await blobClient.DownloadAsync(cancellationToken).ConfigureAwait(false);
-            using var reader = new StreamReader(response.Value.Content, Encoding.UTF8);
+            using var zipStream = new GZipStream(response.Value.Content, CompressionMode.Decompress, leaveOpen: true);
+            using var reader = new StreamReader(zipStream, Encoding.UTF8);
             var json = reader.ReadToEnd();
             return JsonConvert.DeserializeObject<T>(json);
         }
@@ -162,8 +165,13 @@ namespace DevOps.Util.DotNet
             var json = JsonConvert.SerializeObject(value);
             var blobClient = containerClient.GetBlobClient(blobName);
 
+            using var memoryStream = new MemoryStream();
+            using var zipStream = new GZipStream(memoryStream, CompressionLevel.Fastest, leaveOpen: true);
+
             var bytes = Encoding.UTF8.GetBytes(json);
-            using var memoryStream = new MemoryStream(bytes);
+            await zipStream.WriteAsync(bytes.AsMemory(), cancellationToken);
+            zipStream.Dispose();
+
             memoryStream.Position = 0;
             await blobClient.UploadAsync(
                 memoryStream,

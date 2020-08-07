@@ -10,6 +10,8 @@ namespace DevOps.Util.Triage
     {
         public DbSet<ModelBuild> ModelBuilds { get; set; }
 
+        public DbSet<ModelBuildAttempt> ModelBuildAttempts { get; set; }
+
         public DbSet<ModelBuildDefinition> ModelBuildDefinitions { get; set; }
 
         public DbSet<ModelTriageIssue> ModelTriageIssues { get; set; }
@@ -21,6 +23,8 @@ namespace DevOps.Util.Triage
         public DbSet<ModelTriageGitHubIssue> ModelTriageGitHubIssues { get; set; }
 
         public DbSet<ModelOsxDeprovisionRetry> ModelOsxDeprovisionRetry { get; set; }
+
+        public DbSet<ModelTimelineIssue> ModelTimelineIssues { get; set; }
 
         public TriageContext(DbContextOptions<TriageContext> options)
             : base(options)
@@ -82,7 +86,6 @@ namespace DevOps.Util.Triage
 
     public class ModelBuild
     {
-
         [Column(TypeName="nvarchar(100)")]
         public string Id { get; set; }
 
@@ -110,6 +113,8 @@ namespace DevOps.Util.Triage
         public int ModelBuildDefinitionId { get; set; }
 
         public ModelBuildDefinition ModelBuildDefinition { get; set; }
+
+        public List<ModelTimelineIssue> ModelTimelineIssues { get; set; }
     }
 
     public enum TriageIssueKind
@@ -262,5 +267,49 @@ namespace DevOps.Util.Triage
         public string ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
+    }
+
+    public class ModelBuildAttempt
+    {
+        public int Id { get; set; }
+
+        public int Attempt { get; set; }
+
+        [Column(TypeName="smalldatetime")]
+        public DateTime? StartTime { get; set; }
+
+        [Column(TypeName="smalldatetime")]
+        public DateTime? FinishTime { get; set; }
+
+        public BuildResult BuildResult { get; set; }
+
+        [Column(TypeName="nvarchar(100)")]
+        public string ModelBuildId { get; set; }
+
+        public ModelBuild ModelBuild { get; set; }
+    }
+
+    public class ModelTimelineIssue
+    {
+        public int Id { get; set; }
+
+        public int Attempt { get; set; }
+
+        public string JobName { get; set; }
+
+        public string RecordName { get; set; }
+
+        public string RecordId { get; set; }
+
+        public string Message { get; set; }
+
+        [Column(TypeName = "nvarchar(100)")]
+        public string ModelBuildId { get; set; }
+
+        public ModelBuild ModelBuild { get; set; }
+
+        public int ModelBuildAttemptId { get; set; }
+
+        public ModelBuildAttempt ModelBuildAttempt { get; set; } 
     }
 }

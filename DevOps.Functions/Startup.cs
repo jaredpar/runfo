@@ -22,7 +22,7 @@ namespace DevOps.Functions
                 .AddEnvironmentVariables()
                 .Build();
 
-            var connectionString = config["RUNFO_CONNECTION_STRING"];
+            var connectionString = config[DotNetConstants.ConfigurationSqlConnectionString];
             var azdoToken = config["RUNFO_AZURE_TOKEN"];
             builder.Services.AddDbContext<TriageContext>(options => options.UseSqlServer(connectionString));
             builder.Services.AddScoped<DevOpsServer>(_ => new DevOpsServer(DotNetUtil.AzureOrganization, azdoToken));

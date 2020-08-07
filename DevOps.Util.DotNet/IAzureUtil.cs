@@ -196,7 +196,6 @@ namespace DevOps.Util.DotNet
             return await ListAndCacheTestRunsAsync(project, buildNumber, cancellationToken).ConfigureAwait(false);
         }
 
-
         public async Task<List<TestCaseResult>> ListTestResultsAsync(string project, int testRunId, TestOutcome[]? outcomes = null, CancellationToken cancellationToken = default)
         {
             try

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography.Xml;
 using System.Threading.Tasks;
 using DevOps.Status.Util;
+using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
 using Microsoft.AspNetCore.Mvc;
@@ -67,20 +68,48 @@ namespace DevOps.Status.Pages.Search
             var timelineSearchOptions = new StatusTimelineSearchOptions();
             timelineSearchOptions.Parse(TimelineQuery);
 
-            var query = buildSearchOptions.GetModelBuildsQuery(TriageContextUtil);
-            var builds = await query.ToListAsync();
+            /*
+            var query = buildSearchOptions
+                .GetModelBuildsQuery(TriageContextUtil)
+                .Join(
+                    TriageContextUtil.Context.ModelTimelineIssues,
+                    b => b.Id,
+                    t => t.ModelBuildId,
+                    (b, t) => new { b, t })
+                .Where(t => EF.Functions.Like(t.t.Message, timelineSearchOptions.Value!));
+            */
 
-            var dotnetQueryUtil = DotNetQueryUtilFactory.DotNetQueryUtil;
-            var results = await dotnetQueryUtil.SearchTimelineAsync(
-                builds.Select(x => TriageContextUtil.GetBuildInfo(x)),
-                text: timelineSearchOptions.Value!);
+            var value = timelineSearchOptions.Value!.Replace('*', '%');
+            value = '%' + value.Trim('%') + '%';
+            var query = TriageContextUtil.Context
+                .ModelBuilds
+                .Include(x => x.ModelBuildDefinition)
+                .Join(
+                    TriageContextUtil.Context.ModelTimelineIssues,
+                    b => b.Id,
+                    t => t.ModelBuildId,
+                    (b, t) => new { b, t })
+                .Where(t => EF.Functions.Like(t.t.Message, value));
+            /*
+            var query = TriageContextUtil.Context
+                .ModelBuilds
+                .Include(x => x.ModelBuildDefinition)
+                .Join(
+                    TriageContextUtil.Context.ModelTimelineIssues,
+                    b => b.Id,
+                    t => t.ModelBuildId,
+                    (b, t) => new { b, t })
+                .Take(10);
+            */
+
+            var results = await query.ToListAsync();
             TimelineDataList = results
                 .Select(x => new TimelineData()
                 {
-                    BuildNumber = x.BuildInfo.Number,
-                    BuildUri = x.BuildInfo.BuildUri,
-                    JobName = x.Record.JobName ?? "",
-                    Line = x.Line,
+                    BuildNumber = x.b.BuildNumber,
+                    BuildUri = TriageContextUtil.GetBuildInfo(x.b).BuildUri,
+                    JobName = x.t.JobName,
+                    Line = x.t.Message,
                 })
                 .ToList();
             return Page();

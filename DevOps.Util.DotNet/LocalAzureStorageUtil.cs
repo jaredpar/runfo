@@ -16,6 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
 using DevOps.Util.DotNet;
+using System.IO.Compression;
 
 namespace DevOps.Util.DotNet
 {

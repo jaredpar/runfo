@@ -131,6 +131,7 @@ public class Program
             optionSet.WriteOptionDescriptions(Console.Out);
         }
 
+        /*
         static GitHubClient CreateGitHubClient()
         {
             var gitHubClient = new GitHubClient(new ProductHeaderValue("runfo-app"));
@@ -143,6 +144,7 @@ public class Program
 
             return gitHubClient;
         }
+        */
     }
 
     // TODO: need to make this usable by others
