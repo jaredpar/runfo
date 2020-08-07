@@ -159,7 +159,7 @@ namespace DevOps.Util.Triage
             }
 
             var osxCount = QueryUtil.SearchTimeline(
-                build,
+                build.GetBuildInfo(),
                 timeline,
                 text: "Received request to deprovision: The request was cancelled by the remote provider")
                 .Select(x => x.Record.JobRecord)

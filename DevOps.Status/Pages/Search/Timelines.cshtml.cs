@@ -3,11 +3,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.Xml;
 using System.Threading.Tasks;
 using DevOps.Status.Util;
+using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 
 namespace DevOps.Status.Pages.Search
 {
@@ -17,9 +20,8 @@ namespace DevOps.Status.Pages.Search
         {
             public int BuildNumber { get; set; }
             public string? BuildUri { get; set; }
-            public string? Message { get; set; }
-            public int Attempt { get; set; }
-            public string? Kind { get; set; }
+            public string JobName { get; set; }
+            public string Line { get; set; }
         }
 
         [BindProperty(SupportsGet = true, Name = "bq")]
@@ -30,11 +32,14 @@ namespace DevOps.Status.Pages.Search
 
         public List<TimelineData> TimelineDataList { get; set; } = new List<TimelineData>();
 
-        public TriageContextUtil TriageContextUtil { get; set; }
+        public DotNetQueryUtilFactory DotNetQueryUtilFactory { get;  }
 
-        public TimelinesModel(TriageContextUtil triageContextUtil)
+        public TriageContextUtil TriageContextUtil { get; }
+
+        public TimelinesModel(TriageContextUtil triageContextUtil, DotNetQueryUtilFactory dotnetQueryUtilFactory)
         {
             TriageContextUtil = triageContextUtil;
+            DotNetQueryUtilFactory = dotnetQueryUtilFactory;
         }
 
         public async Task<IActionResult> OnGet()
@@ -43,7 +48,7 @@ namespace DevOps.Status.Pages.Search
             {
                 if (string.IsNullOrEmpty(BuildQuery))
                 {
-                    BuildQuery = new StatusBuildSearchOptions() { Repository = "runtime" }.GetUserQueryString();
+                    BuildQuery = new StatusBuildSearchOptions() { Definition = "runtime" }.GetUserQueryString();
                 }
 
                 if (string.IsNullOrEmpty(TimelineQuery))
@@ -54,10 +59,31 @@ namespace DevOps.Status.Pages.Search
                 return Page();
             }
 
-            var buildSearchOptions = new StatusBuildSearchOptions();
-            buildOptions.Parse(BuildQuery);
-
+            var buildSearchOptions = new StatusBuildSearchOptions()
+            {
+                Count = 50,
+            };
+            buildSearchOptions.Parse(BuildQuery);
             var timelineSearchOptions = new StatusTimelineSearchOptions();
+            timelineSearchOptions.Parse(TimelineQuery);
+
+            var query = buildSearchOptions.GetModelBuildsQuery(TriageContextUtil);
+            var builds = await query.ToListAsync();
+
+            var dotnetQueryUtil = DotNetQueryUtilFactory.CreateForAnonymous();
+            var results = await dotnetQueryUtil.SearchTimelineAsync(
+                builds.Select(x => TriageContextUtil.GetBuildInfo(x)),
+                text: timelineSearchOptions.Value!);
+            TimelineDataList = results
+                .Select(x => new TimelineData()
+                {
+                    BuildNumber = x.BuildInfo.Number,
+                    BuildUri = x.BuildInfo.BuildUri,
+                    JobName = x.Record.JobName ?? "",
+                    Line = x.Line,
+                })
+                .ToList();
+            return Page();
         }
     }
 }

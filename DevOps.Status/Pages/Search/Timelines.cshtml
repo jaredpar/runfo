@@ -16,3 +16,23 @@
 
 <h1>Timelines</h1>
 
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th class="column">Build</th>
+            <th class="column">Job</th>
+            <th class="column">Text</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var timelineData in Model.TimelineDataList)
+        {
+            <tr>
+                <td><a href=@timelineData.BuildUri>@timelineData.BuildNumber</a></td>
+                <td>@timelineData.JobName</td>
+                <td>@timelineData.Line</td>
+            </tr>
+        }
+    </tbody>
+</table>
+

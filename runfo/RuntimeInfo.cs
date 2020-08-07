@@ -214,7 +214,7 @@ internal sealed partial class RuntimeInfo
             foreach (var timeline in await ListTimelinesAsync(build, attempt))
             {
                 found.AddRange(QueryUtil.SearchTimeline(
-                    build,
+                    build.GetBuildInfo(),
                     timeline,
                     text,
                     name,
@@ -222,7 +222,7 @@ internal sealed partial class RuntimeInfo
             }
         }
         Console.WriteLine(ReportBuilder.BuildSearchTimeline(
-            found.Select(x => (x.Build.GetBuildInfo(), x.Record.JobName)),
+            found.Select(x => (x.BuildInfo, x.Record.JobName)),
             markdown: markdown,
             includeDefinition: !hadDefinition));
 

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Azure.Storage.Blobs;
 using DevOps.Util;
 using DevOps.Util.DotNet;
+using Newtonsoft.Json.Serialization;
 using Octokit;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
@@ -53,17 +54,17 @@ namespace DevOps.Util.DotNet
     {
         public TimelineRecordItem Record { get; }
 
-        public Build Build { get; }
+        public BuildInfo BuildInfo { get; }
 
         public string Line { get; }
 
         public SearchTimelineResult(
             TimelineRecordItem record,
-            Build build, 
+            BuildInfo buildInfo,
             string line)
         {
             Record = record;
-            Build = build;
+            BuildInfo = buildInfo;
             Line = line;
         }
     }
@@ -89,6 +90,7 @@ namespace DevOps.Util.DotNet
         public IGitHubClient GitHubClient { get; }
         public IAzureUtil AzureUtil { get; }
 
+        // TODO: Do we really need IGitHUbClient here anymore?
         public DotNetQueryUtil(DevOpsServer server, IAzureUtil azureUtil, IGitHubClient gitHubClient)
         {
             if (server.Organization != azureUtil.Organization)
@@ -102,42 +104,54 @@ namespace DevOps.Util.DotNet
         }
 
         public Task<List<SearchTimelineResult>> SearchTimelineAsync(
-            IEnumerable<Build> builds,
+            IEnumerable<BuildInfo> buildInfos,
             string text,
             string? name = null,
             string? task = null,
-            int? attempt = null)
+            int? attempt = null,
+            Action<Exception>? onError = null)
         {
             var textRegex = CreateSearchRegex(text);
             var nameRegex = CreateSearchRegex(name);
             var taskRegex = CreateSearchRegex(task);
-            return SearchTimelineAsync(builds, textRegex, nameRegex, taskRegex, attempt);
+            return SearchTimelineAsync(buildInfos, textRegex, nameRegex, taskRegex, attempt, onError);
         }
 
         public async Task<List<SearchTimelineResult>> SearchTimelineAsync(
-            IEnumerable<Build> builds,
+            IEnumerable<BuildInfo> buildInfos,
             Regex text,
             Regex? name = null,
             Regex? task = null,
-            int? attempt = null)
+            int? attempt = null,
+            Action<Exception>? onError = null)
         {
             var list = new List<SearchTimelineResult>();
-            foreach (var build in builds)
+            foreach (var buildInfo in buildInfos)
             {
-                var timeline = await AzureUtil.GetTimelineAttemptAsync(build.Project.Name, build.Id, attempt).ConfigureAwait(false);
+                Timeline? timeline = null;
+                try
+                {
+                    timeline = await AzureUtil.GetTimelineAttemptAsync(buildInfo.Project, buildInfo.Number, attempt).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    onError?.Invoke(ex);
+                    timeline = null;
+                }
+
                 if (timeline is null)
                 {
                     continue;
                 }
 
-                list.AddRange(SearchTimeline(build, timeline, text, name, task));
+                list.AddRange(SearchTimeline(buildInfo, timeline, text, name, task));
             }
 
             return list;
         }
 
         public IEnumerable<SearchTimelineResult> SearchTimeline(
-            Build build,
+            BuildInfo buildInfo,
             Timeline timeline,
             string text,
             string? name = null,
@@ -147,11 +161,11 @@ namespace DevOps.Util.DotNet
             var textRegex = CreateSearchRegex(text);
             var nameRegex = CreateSearchRegex(name);
             var taskRegex = CreateSearchRegex(task);
-            return SearchTimeline(build, timeline, textRegex, nameRegex, taskRegex);
+            return SearchTimeline(buildInfo, timeline, textRegex, nameRegex, taskRegex);
         }
 
         public IEnumerable<SearchTimelineResult> SearchTimeline(
-            Build build,
+            BuildInfo buildInfo,
             Timeline timeline,
             Regex text,
             Regex? name = null,
@@ -183,7 +197,7 @@ namespace DevOps.Util.DotNet
                 {
                     yield return new SearchTimelineResult(
                         new TimelineRecordItem(record, timelineTree),
-                        build,
+                        buildInfo,
                         line);
                 }
             }

@@ -135,7 +135,7 @@ namespace DevOps.Util.Triage
             }
 
             var count = 0;
-            foreach (var result in QueryUtil.SearchTimeline(Build, timeline, text: searchText))
+            foreach (var result in QueryUtil.SearchTimeline(Build.GetBuildInfo(), timeline, text: searchText))
             {
                 count++;
 
@@ -147,7 +147,7 @@ namespace DevOps.Util.Triage
                     Line = result.Line,
                     ModelBuild = ModelBuild,
                     ModelTriageIssue = modelTriageIssue,
-                    BuildNumber = result.Build.GetBuildKey().Number,
+                    BuildNumber = result.BuildInfo.GetBuildKey().Number,
                 };
                 Context.ModelTriageIssueResults.Add(modelTriageIssueResult);
             }

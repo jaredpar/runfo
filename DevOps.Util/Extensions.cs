@@ -97,6 +97,12 @@ namespace DevOps.Util
 
         #endregion
 
+        #region BuildInfo
+
+        public static BuildKey GetBuildKey(this BuildInfo buildInfo) => DevOpsUtil.GetBuildKey(buildInfo);
+
+        #endregion
+
         #region BuildArtifact
 
         public static int? GetByteSize(this BuildArtifact buildArtifact) => DevOpsUtil.GetArtifactByteSize(buildArtifact);

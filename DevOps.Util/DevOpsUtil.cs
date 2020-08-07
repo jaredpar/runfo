@@ -20,6 +20,9 @@ namespace DevOps.Util
             return new BuildKey(organization, build.Project.Name, build.Id);
         }
 
+        public static BuildKey GetBuildKey(BuildInfo buildInfo) =>
+            new BuildKey(buildInfo.Organization, buildInfo.Project, buildInfo.Number);
+
         public static BuildDefinitionInfo GetBuildDefinitionInfo(Build build)
         {
             var organization = GetOrganization(build);
