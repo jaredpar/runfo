@@ -1,1 +1,2 @@
-﻿SELECT * FROM ModelTimelineIssues
+﻿/*SELECT * FROM ModelTimelineIssues */
+SELECT COUNT(*) FROM ModelTimelineIssues
