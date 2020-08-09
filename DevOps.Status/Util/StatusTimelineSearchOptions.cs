@@ -2,10 +2,12 @@
 
 using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
+using Microsoft.EntityFrameworkCore;
 using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -13,14 +15,35 @@ namespace DevOps.Status.Util
 {
     public class StatusTimelineSearchOptions
     {
-        public string? Value { get; set; }
+        public string? Text { get; set; }
+
+        public IQueryable<ModelTimelineIssue> GetModeTimelinesQuery(
+            TriageContextUtil triageContextUtil,
+            IQueryable<ModelBuild> buildQuery)
+        {
+            IQueryable<ModelTimelineIssue> query = buildQuery
+                .Join(
+                    triageContextUtil.Context.ModelTimelineIssues,
+                    b => b.Id,
+                    t => t.ModelBuildId,
+                    (b, t) => t);
+
+            if (Text is object)
+            {
+                var text = Text.Replace('*', '%');
+                text = '%' + text.Trim('%') + '%';
+                query = query.Where(t => EF.Functions.Like(t.Message, text));
+            }
+
+            return query;
+        }
 
         public string GetUserQueryString()
         {
             var builder = new StringBuilder();
-            if (!string.IsNullOrEmpty(Value))
+            if (!string.IsNullOrEmpty(Text))
             {
-                Append($"value:\"{Value}\"");
+                Append($"text:\"{Text}\"");
             }
 
             return builder.ToString();
@@ -40,7 +63,7 @@ namespace DevOps.Status.Util
         {
             if (!userQuery.Contains(":"))
             {
-                Value = userQuery.Trim('"');
+                Text = userQuery.Trim('"');
                 return;
             }
 
@@ -48,8 +71,8 @@ namespace DevOps.Status.Util
             {
                 switch (tuple.Name.ToLower())
                 {
-                    case "value":
-                        Value = tuple.Value.Trim('"');
+                    case "text":
+                        Text = tuple.Value.Trim('"');
                         break;
                     default:
                         throw new Exception($"Invalid option {tuple.Name}");

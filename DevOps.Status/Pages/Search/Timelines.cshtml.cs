@@ -68,48 +68,20 @@ namespace DevOps.Status.Pages.Search
             var timelineSearchOptions = new StatusTimelineSearchOptions();
             timelineSearchOptions.Parse(TimelineQuery);
 
-            /*
-            var query = buildSearchOptions
-                .GetModelBuildsQuery(TriageContextUtil)
-                .Join(
-                    TriageContextUtil.Context.ModelTimelineIssues,
-                    b => b.Id,
-                    t => t.ModelBuildId,
-                    (b, t) => new { b, t })
-                .Where(t => EF.Functions.Like(t.t.Message, timelineSearchOptions.Value!));
-            */
-
-            var value = timelineSearchOptions.Value!.Replace('*', '%');
-            value = '%' + value.Trim('%') + '%';
-            var query = TriageContextUtil.Context
-                .ModelBuilds
-                .Include(x => x.ModelBuildDefinition)
-                .Join(
-                    TriageContextUtil.Context.ModelTimelineIssues,
-                    b => b.Id,
-                    t => t.ModelBuildId,
-                    (b, t) => new { b, t })
-                .Where(t => EF.Functions.Like(t.t.Message, value));
-            /*
-            var query = TriageContextUtil.Context
-                .ModelBuilds
-                .Include(x => x.ModelBuildDefinition)
-                .Join(
-                    TriageContextUtil.Context.ModelTimelineIssues,
-                    b => b.Id,
-                    t => t.ModelBuildId,
-                    (b, t) => new { b, t })
-                .Take(10);
-            */
+            var query = timelineSearchOptions.GetModeTimelinesQuery(
+                TriageContextUtil,
+                buildSearchOptions.GetModelBuildsQuery(TriageContextUtil))
+                .Include(x => x.ModelBuild)
+                .ThenInclude(x => x.ModelBuildDefinition);
 
             var results = await query.ToListAsync();
             TimelineDataList = results
                 .Select(x => new TimelineData()
                 {
-                    BuildNumber = x.b.BuildNumber,
-                    BuildUri = TriageContextUtil.GetBuildInfo(x.b).BuildUri,
-                    JobName = x.t.JobName,
-                    Line = x.t.Message,
+                    BuildNumber = x.ModelBuild.BuildNumber,
+                    BuildUri = TriageContextUtil.GetBuildInfo(x.ModelBuild).BuildUri,
+                    JobName = x.JobName,
+                    Line = x.Message,
                 })
                 .ToList();
             return Page();
