@@ -37,8 +37,8 @@ namespace DevOps.Util.UnitTests
             var timeline = GetTimeline("timeline-1.json");
             var tree = TimelineTree.Create(timeline);
             Assert.True(tree.TryGetNode("dfefcd06-03ef-5951-c8ec-02f90019bee7", out var node));
-            Assert.True(tree.TryGetJob(node.TimelineRecord, out var job));
-            Assert.Equal("CoreCLR Common Pri0 Test Build Windows_NT arm64 checked", job.Name);
+            Assert.True(tree.TryGetJob(node!.TimelineRecord, out var job));
+            Assert.Equal("CoreCLR Common Pri0 Test Build Windows_NT arm64 checked", job!.Name);
         }
     }
 }

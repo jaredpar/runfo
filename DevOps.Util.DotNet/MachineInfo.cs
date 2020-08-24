@@ -1,5 +1,3 @@
-#nullable enable
-
 namespace DevOps.Util.DotNet
 {
     public sealed class MachineInfo

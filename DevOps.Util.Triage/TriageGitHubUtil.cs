@@ -1,6 +1,4 @@
 
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -111,7 +109,7 @@ namespace DevOps.Util.Triage
                 // item specifies a different organization. Need to replace Server with 
                 // a map from org -> DevOpsServer
                 var searchResults = results
-                    .Select(x => (TriageContextUtil.GetBuildInfo(x.ModelBuild), x.JobName));
+                    .Select(x => (TriageContextUtil.GetBuildInfo(x.ModelBuild), (string?)x.JobName));
                 var reportBody = ReportBuilder.BuildSearchTimeline(
                     searchResults,
                     markdown: true,

@@ -1,5 +1,3 @@
-#nullable enable
-
 using DevOps.Util;
 using Newtonsoft.Json.Linq;
 using System;

@@ -1,5 +1,3 @@
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,7 +16,7 @@ namespace DevOps.Util.DotNet
         public static readonly Regex MarkdownReportEndRegex = new Regex(@"<!--\s*runfo report end\s*-->", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         public string BuildSearchTimeline(
-            IEnumerable<(BuildInfo BuildInfo, string JobName)> results,
+            IEnumerable<(BuildInfo BuildInfo, string? JobName)> results,
             bool markdown,
             bool includeDefinition,
             string? footer = null)
@@ -85,7 +83,7 @@ namespace DevOps.Util.DotNet
         }
 
         public string BuildSearchHelix(
-            IEnumerable<(BuildInfo BuildInfo, HelixLogInfo HelixLogInfo)> results,
+            IEnumerable<(BuildInfo BuildInfo, HelixLogInfo? HelixLogInfo)> results,
             HelixLogKind[] kinds,
             bool markdown,
             string? footer = null)
@@ -117,7 +115,7 @@ namespace DevOps.Util.DotNet
                     builder.Append("|");
                     foreach (var kind in kinds)
                     {
-                        var uri = helixLogInfo.GetUri(kind);
+                        var uri = helixLogInfo?.GetUri(kind);
                         if (uri is null)
                         {
                             builder.Append("|");
@@ -144,7 +142,7 @@ namespace DevOps.Util.DotNet
                     foreach (var kind in kinds)
                     {
                         var name = GetTitleName(kind);
-                        var uri = helixLogInfo.GetUri(kind);
+                        var uri = helixLogInfo?.GetUri(kind);
                         builder.AppendLine($"  {name} - {uri}");
                     }
                 }

@@ -1,5 +1,3 @@
-#nullable enable
-
 using System.Linq;
 using System.IO;
 using System.Threading.Tasks;

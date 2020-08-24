@@ -1,3 +1,9 @@
+// These are all REST types which are primarily constructed through reflection. 
+// Hence this warning is suppressed. As members are discovered that are expected
+// to be null they can be annotated here and provide value to the rest of the 
+// program
+#pragma warning disable 8618
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
@@ -19,9 +25,9 @@ namespace DevOps.Status.Controllers
 
             public string TimelineCoreRecordId { get; set; }
 
-            public string TimelineJobRecordName { get; set; }
+            public string? TimelineJobRecordName { get; set; }
 
-            public string TimelineJobRecordId { get; set; }
+            public string? TimelineJobRecordId { get; set; }
         }
 
         public class HelixWorkItemRestInfo

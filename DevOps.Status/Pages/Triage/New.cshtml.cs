@@ -14,13 +14,13 @@ namespace DevOps.Status.Pages.Triage
         public TriageContext TriageContext { get; set; }
 
         [BindProperty]
-        public TriageIssueKind TriageIssueKind { get; set;  }
+        public TriageIssueKind TriageIssueKind { get; set; }
 
         [BindProperty]
-        public SearchKind SearchKind { get; set;  }
+        public SearchKind SearchKind { get; set; }
 
         [BindProperty]
-        public string Text { get; set;  }
+        public string Text { get; set; } = "";
 
         public NewTriageIssueModel(TriageContext triageContext)
         {

@@ -11,7 +11,7 @@ namespace DevOps.Util.UnitTests
         {
             var fullName = $"DevOps.Util.UnitTests.JsonData._5._0.{fileName}";
             var assembly = typeof(ResourceUtil).Assembly;
-            return assembly.GetManifestResourceStream(fullName);
+            return assembly.GetManifestResourceStream(fullName) ?? throw new Exception("Could not get resource stream");
         }
 
         internal static string GetJsonFile(string fileName)

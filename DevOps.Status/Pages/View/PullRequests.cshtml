@@ -21,7 +21,7 @@
 </form>
 
 <h3>Pull Request Info</h3>
-<p>Title: @Model.PullRequest.Title</p>
+<p>Title: @Model.PullRequest!.Title</p>
 <p>GitHub Pull Request: <a href="@Model.PullRequest.HtmlUrl">@Model.PullRequest.Number</a></p>
 <p>Developer <a href=@Model.PullRequest.User.HtmlUrl>@Model.PullRequest.User.Login</a></p>
 

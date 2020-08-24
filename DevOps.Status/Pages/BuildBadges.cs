@@ -15,11 +15,10 @@ namespace DevOps.Status.Pages
         private readonly IConfiguration _configuration;
         private readonly ILogger<BuildBadgesModel> _logger;
 
-        public List<Issue> BlockingOfficial { get; set; }
-
-        public List<Issue> BlockingNormal { get; set; }
-        public List<Issue> BlockingNormalOptional { get; set; }
-        public List<Issue> BlockingOuterloop { get; set; }
+        public List<Issue> BlockingOfficial { get; set; } = new List<Issue>();
+        public List<Issue> BlockingNormal { get; set; } = new List<Issue>();
+        public List<Issue> BlockingNormalOptional { get; set; } = new List<Issue>();
+        public List<Issue> BlockingOuterloop { get; set; } = new List<Issue>();
 
         public BuildBadgesModel(IConfiguration configuration, ILogger<BuildBadgesModel> logger)
         {
@@ -34,12 +33,12 @@ namespace DevOps.Status.Pages
             var gitHub = new GitHubClient(new ProductHeaderValue("RuntimeStatusPage"));
             gitHub.Credentials = new Credentials("jaredpar", token);
 
-            BlockingOfficial = await DoSearch(gitHub, "blocking-official-build");
-            BlockingNormal = await DoSearch(gitHub, "blocking-clean-ci");
-            BlockingNormalOptional = await DoSearch(gitHub, "blocking-clean-ci-optional");
-            BlockingOuterloop = await DoSearch(gitHub, "blocking-outerloop");
+            await DoSearch(BlockingOfficial, gitHub, "blocking-official-build");
+            await DoSearch(BlockingNormal, gitHub, "blocking-clean-ci");
+            await DoSearch(BlockingNormalOptional, gitHub, "blocking-clean-ci-optional");
+            await DoSearch(BlockingOuterloop, gitHub, "blocking-outerloop");
 
-            static async Task<List<Issue>> DoSearch(GitHubClient gitHub, string label)
+            static async Task DoSearch(List<Issue> list, GitHubClient gitHub, string label)
             {
                 var request = new SearchIssuesRequest()
                 {
@@ -49,7 +48,7 @@ namespace DevOps.Status.Pages
                     Repos = { { "dotnet", "runtime" } }
                 };
                 var result = await gitHub.Search.SearchIssues(request);
-                return result.Items.ToList();
+                list.AddRange(result.Items);
             }
         }
     }

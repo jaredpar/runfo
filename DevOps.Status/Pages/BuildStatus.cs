@@ -12,11 +12,10 @@ namespace DevOps.Status.Pages
 {
     public class BuildStatus
     {
-        public string Result { get; set; }
+        public string? Result { get; set; }
 
         public int BuildNumber { get; set; }
 
-        public string BuildUri { get; set; }
+        public string? BuildUri { get; set; }
     }
-
 }

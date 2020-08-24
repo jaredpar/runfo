@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using DevOps.Util;
+﻿using DevOps.Util;
 using DevOps.Util.DotNet;
 using Octokit;
 using System;
