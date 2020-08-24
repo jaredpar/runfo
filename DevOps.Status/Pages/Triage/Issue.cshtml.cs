@@ -21,17 +21,17 @@ namespace DevOps.Status.Pages
         {
             public int BuildNumber { get; set; }
 
-            public string BuildUri { get; set; }
+            public string? BuildUri { get; set; }
 
-            public string BuildKind { get; set; }
+            public string? BuildKind { get; set; }
 
-            public string JobName { get; set; }
+            public string? JobName { get; set; }
 
             public int Attempt { get; set; }
 
-            public string RepositoryName { get; set; }
+            public string? RepositoryName { get; set; }
 
-            public string RepositoryUri { get; set; }
+            public string? RepositoryUri { get; set; }
         }
 
         public TriageContext Context { get; }

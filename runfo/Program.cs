@@ -148,7 +148,7 @@ public class Program
     }
 
     // TODO: need to make this usable by others
-    internal static async Task<string> GetPersonalAccessTokenFromFile(string name)
+    internal static async Task<string?> GetPersonalAccessTokenFromFile(string name)
     {
         try
         {

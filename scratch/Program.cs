@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using DevOps.Util;
+﻿using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
 using Microsoft.EntityFrameworkCore;

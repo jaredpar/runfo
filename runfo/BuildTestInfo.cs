@@ -49,7 +49,7 @@ internal sealed class BuildTestInfo
     internal IEnumerable<HelixWorkItem> GetHelixWorkItems() => DataList
         .Select(x => x.HelixWorkItem)
         .Where(x => x is object)
-        .Select(x => x.Value)
+        .Select(x => x!.Value)
         .GroupBy(x => x.HelixInfo.WorkItemName)
         .Select(x => x.First())
         .OrderBy(x => x.JobId);

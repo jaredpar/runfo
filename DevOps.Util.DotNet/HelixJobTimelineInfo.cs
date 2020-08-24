@@ -1,6 +1,4 @@
 
-#nullable enable
-
 using System;
 
 namespace DevOps.Util.DotNet

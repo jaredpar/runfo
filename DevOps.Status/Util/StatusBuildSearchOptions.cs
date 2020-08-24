@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using DevOps.Util.DotNet;
+﻿using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
 using System;
 using System.Collections.Generic;

@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-// These are all REST types which are primarily constructed through reflection. 
+﻿// These are all REST types which are primarily constructed through reflection. 
 // Hence this warning is suppressed. As members are discovered that are expected
 // to be null they can be annotated here and provide value to the rest of the 
 // program

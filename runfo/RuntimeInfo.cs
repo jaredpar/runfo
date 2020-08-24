@@ -107,7 +107,7 @@ internal sealed partial class RuntimeInfo
 
     internal async Task<int> PrintSearchHelix(IEnumerable<string> args)
     {
-        string text = null;
+        string? text = null;
         bool markdown = false;
         var optionSet = new BuildSearchOptionSet()
         {
@@ -142,7 +142,7 @@ internal sealed partial class RuntimeInfo
 
         return ExitSuccess;
 
-        static async Task<(Build Build, HelixLogInfo LogInfo, List<string> BadLogs)> SearchBuild(
+        static async Task<(Build Build, HelixLogInfo? LogInfo, List<string> BadLogs)> SearchBuild(
             DevOpsServer server,
             DotNetQueryUtil queryUtil,
             Regex textRegex,
@@ -181,9 +181,9 @@ internal sealed partial class RuntimeInfo
 
     internal async Task<int> PrintSearchTimeline(IEnumerable<string> args)
     {
-        string name = null;
-        string text = null;
-        string task = null;
+        string? name = null;
+        string? text = null;
+        string? task = null;
         bool markdown = false;
         int? attempt = null;
         var optionSet = new BuildSearchOptionSet()
@@ -230,8 +230,8 @@ internal sealed partial class RuntimeInfo
 
     internal async Task<int> PrintSearchBuildLogs(IEnumerable<string> args)
     {
-        string name = null;
-        string text = null;
+        string? name = null;
+        string? text = null;
         bool markdown = false;
         bool trace = false;
         var optionSet = new BuildSearchOptionSet()
@@ -253,7 +253,7 @@ internal sealed partial class RuntimeInfo
 
         var builds = await QueryUtil.ListBuildsAsync(optionSet);
         var textRegex = new Regex(text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        Regex nameRegex = null;
+        Regex? nameRegex = null;
         if (name is object)
         {
             nameRegex = new Regex(name, RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -293,17 +293,17 @@ internal sealed partial class RuntimeInfo
 
         return ExitSuccess;
 
-        static async Task<(List<(Build Build, TimelineRecord TimelineRecord, string Line)>, int Count)> SearchBuildLogs(
+        static async Task<(List<(Build Build, TimelineRecord TimelineRecord, string? Line)>, int Count)> SearchBuildLogs(
             DevOpsServer server,
             IEnumerable<Build> builds,
-            Regex nameRegex,
+            Regex? nameRegex,
             Regex textRegex,
             bool trace)
         {
             // Deliberately iterating the build serially vs. using AsParallel because othewise we 
             // end up sending way too many requests to AzDO. Eventually it will begin rate limiting
             // us.
-            var list = new List<(Build Build, TimelineRecord TimelineRecord, string Line)>();
+            var list = new List<(Build Build, TimelineRecord TimelineRecord, string? Line)>();
             var count = 0;
             foreach (var build in builds)
             {
@@ -322,7 +322,7 @@ internal sealed partial class RuntimeInfo
             return (list, count);
         }
 
-        static async Task<IEnumerable<(TimelineRecord TimelineRecord, string Line)>> SearchTimelineRecords(
+        static async Task<IEnumerable<(TimelineRecord TimelineRecord, string? Line)>> SearchTimelineRecords(
             DevOpsServer server,
             Build build,
             IEnumerable<TimelineRecord> records,
@@ -361,7 +361,7 @@ internal sealed partial class RuntimeInfo
                 .Select(x => (x.TimelineRecord, x.Line));
         }
 
-        static async Task<(bool IsMatch, string Line)> SearchTimelineRecord(DevOpsServer server, TimelineRecord record, Regex textRegex)
+        static async Task<(bool IsMatch, string? Line)> SearchTimelineRecord(DevOpsServer server, TimelineRecord record, Regex textRegex)
         {
             if (record.Log is null)
             {
@@ -492,7 +492,7 @@ internal sealed partial class RuntimeInfo
         return ExitSuccess;
     }
 
-    private async Task<List<(HelixLogInfo HelixLogInfo, string ConsoleText)>> GetHelixLogsAsync(BuildTestInfo buildTestInfo, bool includeConsoleText)
+    private async Task<List<(HelixLogInfo HelixLogInfo, string? ConsoleText)>> GetHelixLogsAsync(BuildTestInfo buildTestInfo, bool includeConsoleText)
     {
         var logs = buildTestInfo
             .GetHelixWorkItems()
@@ -501,7 +501,7 @@ internal sealed partial class RuntimeInfo
             .Select(async (Task<HelixLogInfo> task) =>
             {
                 var helixLogInfo = await task;
-                string consoleText = null;
+                string? consoleText = null;
                 if (includeConsoleText && helixLogInfo.ConsoleUri is object)
                 {
                     consoleText = await HelixUtil.GetHelixConsoleText(Server, helixLogInfo.ConsoleUri);
@@ -582,8 +582,8 @@ internal sealed partial class RuntimeInfo
         {
             var sizes = artifacts
                 .Select(x => x.GetByteSize() is int i ? (double?)i : null)
-                .Where(x => x.HasValue)
-                .Select(x => x.Value / mb);
+                .SelectNullableValue()
+                .Select(x => x / mb);
             if (!sizes.Any())
             {
                 return (0, 0, 0);
@@ -622,7 +622,7 @@ internal sealed partial class RuntimeInfo
 
                 var sorted = artifacts
                     .Where(x => x.GetByteSize().HasValue)
-                    .Select(x => (Artifact: x, Size: (double)x.GetByteSize() / mb))
+                    .Select(x => (Artifact: x, Size: (double)x.GetByteSize()!.Value / mb))
                     .OrderByDescending(x => x.Size)
                     .Take(top);
                 Console.WriteLine("Detailed");
@@ -642,7 +642,7 @@ internal sealed partial class RuntimeInfo
         bool failed = false;
         bool verbose = false;
         bool summary = false;
-        string name = null;
+        string? name = null;
         int? attempt = null;
         var optionSet = new BuildSearchOptionSet()
         {
@@ -818,9 +818,9 @@ internal sealed partial class RuntimeInfo
 
     internal async Task<int> PrintPullRequestBuilds(IEnumerable<string> args)
     {
-        string repository = null;
+        string? repository = null;
         int? number = null;
-        string definition = null;
+        string? definition = null;
         var optionSet = new OptionSet()
         {
             { "d|definition=", "definition to print tests for", d => definition = d },
@@ -831,10 +831,10 @@ internal sealed partial class RuntimeInfo
         ParseAll(optionSet, args);
 
         var project = DotNetUtil.DefaultAzureProject;
-        IEnumerable<int> definitions = null;
+        IEnumerable<int>? definitions = null;
         if (definition is object)
         {
-            if (!DotNetUtil.TryGetDefinitionId(definition, out string definitionProject, out int definitionId))
+            if (!DotNetUtil.TryGetDefinitionId(definition, out string? definitionProject, out int definitionId))
             {
                 OptionSetUtil.OptionFailureDefinition(definition, optionSet);
                 return ExitFailure;
@@ -877,7 +877,7 @@ internal sealed partial class RuntimeInfo
         bool verbose = false;
         bool markdown = false;
         bool includeAllTests = false;
-        string name = null;
+        string? name = null;
         string grouping = "tests";
         var optionSet = new BuildSearchOptionSet()
         {
@@ -898,7 +898,7 @@ internal sealed partial class RuntimeInfo
     private async Task PrintFailureInfo(
         BuildTestInfoCollection collection,
         string grouping,
-        string name,
+        string? name,
         bool verbose,
         bool markdown)
     {
@@ -985,7 +985,7 @@ internal sealed partial class RuntimeInfo
                         Console.WriteLine($"{GetIndent(2)} test results  {GetUri(helixLogInfo.TestResultsUri)}");
                     }
 
-                    string GetUri(string uri) => uri ?? "null";
+                    string GetUri(string? uri) => uri ?? "null";
                 }
             }
         }
@@ -1031,7 +1031,7 @@ internal sealed partial class RuntimeInfo
                     Console.WriteLine("|");
                 }
 
-                static void PrintUri(string uri, string displayName)
+                static void PrintUri(string? uri, string displayName)
                 {
                     if (uri is null)
                     {

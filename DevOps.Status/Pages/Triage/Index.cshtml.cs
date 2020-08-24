@@ -20,9 +20,9 @@ namespace DevOps.Status.Pages.Triage
         {
             public int Id { get; set; }
 
-            public string SearchText { get; set; }
+            public string? SearchText { get; set; }
 
-            public string SearchKind { get; set; }
+            public string? SearchKind { get; set; }
 
             public int WeekCount { get; set; }
 
@@ -31,7 +31,7 @@ namespace DevOps.Status.Pages.Triage
 
         public TriageContext Context { get; }
 
-        public List<IssueData> Issues { get; set; }
+        public List<IssueData> Issues { get; set; } = new List<IssueData>();
 
         public TriageIndexModel(TriageContext context)
         {
