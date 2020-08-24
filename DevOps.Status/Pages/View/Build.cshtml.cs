@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
 using Microsoft.AspNetCore.Mvc;
@@ -31,7 +32,13 @@ namespace DevOps.Status.Pages.View
         [BindProperty(SupportsGet = true)]
         public int? Number { get; set; }
 
+        public string? BuildUri { get; set; }
+
+        public BuildResult BuildResult { get; set; }
+
         public int Attempts { get; set; }
+
+        public GitHubPullRequestKey? PullRequestKey { get; set; }
 
         public List<TimelineData> TimelineDataList { get; } = new List<TimelineData>();
 
@@ -49,8 +56,32 @@ namespace DevOps.Status.Pages.View
                 return;
             }
 
+            var organization = DotNetUtil.AzureOrganization;
+            var project = DotNetUtil.DefaultAzureProject;
+
+            await PopulateBuildInfo();
             await PopulateTimeline();
             await PopulateTests();
+
+            async Task PopulateBuildInfo()
+            {
+                var modelBuild = await TriageContextUtil.FindModelBuildAsync(organization, project, number);
+                if (modelBuild is null)
+                {
+                    return;
+                }
+
+                BuildUri = DevOpsUtil.GetBuildUri(organization, project, number);
+                BuildResult = modelBuild.BuildResult ?? BuildResult.None;
+
+                if (modelBuild.PullRequestNumber is { } prNumber)
+                {
+                    PullRequestKey = new GitHubPullRequestKey(
+                        modelBuild.GitHubOrganization,
+                        modelBuild.GitHubRepository,
+                        prNumber);
+                }
+            }
 
             async Task PopulateTimeline()
             {
@@ -59,8 +90,8 @@ namespace DevOps.Status.Pages.View
                     .ModelTimelineIssues
                     .Where(x =>
                         x.ModelBuild.BuildNumber == number &&
-                        x.ModelBuild.ModelBuildDefinition.AzureOrganization == DotNetUtil.AzureOrganization &&
-                        x.ModelBuild.ModelBuildDefinition.AzureProject == DotNetUtil.DefaultAzureProject);
+                        x.ModelBuild.ModelBuildDefinition.AzureOrganization == organization &&
+                        x.ModelBuild.ModelBuildDefinition.AzureProject == project);
                 Attempts = 1;
                 foreach (var modelTimeline in (await query.ToListAsync()).OrderBy(x => x.Attempt))
                 {
@@ -85,8 +116,8 @@ namespace DevOps.Status.Pages.View
                     .ModelTestResults
                     .Where(x =>
                         x.ModelBuild.BuildNumber == number &&
-                        x.ModelBuild.ModelBuildDefinition.AzureOrganization == DotNetUtil.AzureOrganization &&
-                        x.ModelBuild.ModelBuildDefinition.AzureProject == DotNetUtil.DefaultAzureProject)
+                        x.ModelBuild.ModelBuildDefinition.AzureOrganization == organization &&
+                        x.ModelBuild.ModelBuildDefinition.AzureProject == project)
                     .Select(x => new TestData()
                     {
                         TestFullName = x.TestFullName,

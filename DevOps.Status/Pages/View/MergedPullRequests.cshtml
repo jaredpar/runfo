@@ -26,7 +26,7 @@
         @foreach (var build in Model.MergedPullRequestBuilds)
         {
             <tr>
-                <td><a asp-page="/View/PullRequests" asp-route-repository="@build.Repository" asp-route-number=@build.PullRequestNumber>@build.PullRequestNumber</a></td>
+                <td><a asp-page="/View/PullRequest" asp-route-repository="@build.Repository" asp-route-number=@build.PullRequestNumber>@build.PullRequestNumber</a></td>
                 <td><a href=@build.BuildUri>@build.BuildNumber</a></td>
                 <td><a href=@build.DefinitionUri>@build.DefinitionName</a></td>
                 <td>@build.Result</td>

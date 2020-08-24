@@ -221,6 +221,15 @@ namespace DevOps.Util.Triage
             return modelBuildAttempt;
         }
 
+        public Task<ModelBuild> FindModelBuildAsync(string organization, string project, int buildNumber) =>
+            Context.
+            ModelBuilds
+            .Where(x =>
+                x.BuildNumber == buildNumber &&
+                x.ModelBuildDefinition.AzureOrganization == organization &&
+                x.ModelBuildDefinition.AzureProject == project)
+            .FirstOrDefaultAsync();
+
         public Task<ModelTestRun> FindModelTestRunAsync(ModelBuild modelBuild, int testRunid) =>
             Context
             .ModelTestRuns

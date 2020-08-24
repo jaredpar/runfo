@@ -13,7 +13,7 @@ using Octokit;
 
 namespace DevOps.Status.Pages.View
 {
-    public class PullRequestsModel : PageModel
+    public class PullRequestModel : PageModel
     {
         public sealed class PullRequestBuildInfo
         {
@@ -38,7 +38,7 @@ namespace DevOps.Status.Pages.View
 
         public List<PullRequestBuildInfo> Builds { get; set; } = new List<PullRequestBuildInfo>();
 
-        public PullRequestsModel(TriageContext triageContext, StatusGitHubClientFactory gitHubClientFactory)
+        public PullRequestModel(TriageContext triageContext, StatusGitHubClientFactory gitHubClientFactory)
         {
             TriageContext = triageContext;
             GitHubClientFactory = gitHubClientFactory;
