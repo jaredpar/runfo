@@ -20,6 +20,8 @@ using Octokit;
 
 namespace DevOps.Util.Triage
 {
+    // TODO: this should no longer use the DevOPs API for most ops. Grab everything from the DB. It's all there now. 
+    // well except for the build logs
     internal sealed class BuildTriageUtil
     {
         internal DevOpsServer Server { get; }
@@ -48,7 +50,7 @@ namespace DevOps.Util.Triage
 
         internal TriageContext Context => TriageContextUtil.Context;
 
-        internal BuildTriageUtil(
+        public BuildTriageUtil(
             Build build,
             BuildInfo buildInfo,
             ModelBuild modelBuild,
@@ -74,7 +76,7 @@ namespace DevOps.Util.Triage
             // work should be divided into different queues:
             // 1. Update the model
             // 2. Do the triage
-            await EnsureModelInfo();
+            await EnsureModelInfoAsync().ConfigureAwait(false);
 
             var query = 
                 from issue in Context.ModelTriageIssues
@@ -125,25 +127,72 @@ namespace DevOps.Util.Triage
             }
         }
 
-        private async Task EnsureModelInfo()
+        // TODO: this method should likely exist in a completely different type
+        public async Task EnsureModelInfoAsync()
         {
-            await TriageContextUtil.EnsureResult(ModelBuild, Build).ConfigureAwait(false);
+            await TriageContextUtil.EnsureResultAsync(ModelBuild, Build).ConfigureAwait(false);
+            await EnsureTimeline().ConfigureAwait(false);
+            await EnsureTestRuns().ConfigureAwait(false);
 
-            try
+            async Task EnsureTimeline()
             {
-                Timeline = await Server.GetTimelineAttemptAsync(BuildInfo.Project, BuildInfo.Number, attempt: 1);
-                if (Timeline is null)
+                try
                 {
-                    Logger.LogWarning("No timeline");
+                    Timeline = await Server.GetTimelineAttemptAsync(BuildInfo.Project, BuildInfo.Number, attempt: 1).ConfigureAwait(false);
+                    if (Timeline is null)
+                    {
+                        Logger.LogWarning("No timeline");
+                    }
+                    else
+                    {
+                        await TriageContextUtil.EnsureBuildAttemptAsync(BuildInfo, Timeline);
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    await TriageContextUtil.EnsureBuildAttemptAsync(BuildInfo, Timeline);
+                    Logger.LogWarning($"Error getting timeline: {ex.Message}");
                 }
             }
-            catch (Exception ex)
+
+            async Task EnsureTestRuns()
             {
-                Logger.LogWarning($"Error getting timeline: {ex.Message}");
+                TestRun[] testRuns;
+                try
+                {
+                    testRuns = await Server.ListTestRunsAsync(BuildInfo.Project, BuildInfo.Number).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning($"Error getting test runs: {ex.Message}");
+                    return;
+                }
+
+                foreach (var testRun in testRuns)
+                {
+                    await EnsureTestRun(testRun).ConfigureAwait(false);
+                }
+            }
+
+            async Task EnsureTestRun(TestRun testRun)
+            {
+                try
+                {
+                    var modelTestRun = await TriageContextUtil.FindModelTestRunAsync(ModelBuild, testRun.Id).ConfigureAwait(false);
+                    if (modelTestRun is object)
+                    {
+                        return;
+                    }
+
+                    var dotNetTestRun = await QueryUtil.GetDotNetTestRunAsync(Build, testRun, DotNetUtil.FailedTestOutcomes).ConfigureAwait(false);
+                    var helixMap = await Server.GetHelixMapAsync(dotNetTestRun).ConfigureAwait(false);
+
+                    await TriageContextUtil.EnsureTestRunAsync(ModelBuild, dotNetTestRun, helixMap).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning($"Error uploading test run: {ex.Message}");
+                    return;
+                }
             }
         }
 

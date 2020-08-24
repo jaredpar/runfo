@@ -89,7 +89,7 @@ namespace DevOps.Status.Pages.Search
             var testCaseResults = testRuns.SelectMany(x => x.TestCaseResults).ToList();
             FilterTestName();
 
-            var helixMap = await GetHelixMap();
+            var helixMap = await queryUtil.Server.GetHelixMapAsync(testCaseResults);
             var count = 0;
             foreach (var group in testCaseResults.GroupBy(x => x.TestCaseTitle).OrderByDescending(x => x.Count()))
             {
@@ -124,19 +124,6 @@ namespace DevOps.Status.Pages.Search
             }
 
             return Page();
-
-            async Task<Dictionary<HelixInfo, HelixLogInfo>> GetHelixMap()
-            {
-                var query = testCaseResults
-                    .Where(x => x.HelixWorkItem.HasValue)
-                    .Select(x => x.HelixWorkItem!.Value)
-                    .GroupBy(x => x.HelixInfo)
-                    .ToList()
-                    .AsParallel()
-                    .Select(async g => (g.Key, await HelixUtil.GetHelixLogInfoAsync(queryUtil.Server, g.First())));
-                await Task.WhenAll(query);
-                return query.ToDictionary(x => x.Result.Key, x => x.Result.Item2);
-            }
 
             void FilterTestName()
             {

@@ -135,6 +135,18 @@ namespace DevOps.Util.Triage
             return modelBuild;
         }
 
+        public async Task EnsureResultAsync(ModelBuild modelBuild, Build build)
+        {
+            if (modelBuild.BuildResult != build.Result)
+            {
+                var buildInfo = build.GetBuildInfo();
+                modelBuild.BuildResult = build.Result;
+                modelBuild.StartTime = buildInfo.StartTime;
+                modelBuild.FinishTime = buildInfo.FinishTime;
+                await Context.SaveChangesAsync().ConfigureAwait(false);
+            }
+        }
+
         public async Task<ModelBuildAttempt> EnsureBuildAttemptAsync(BuildInfo buildInfo, Timeline timeline)
         {
             var modelBuild = await EnsureBuildAsync(buildInfo).ConfigureAwait(false);
@@ -211,16 +223,57 @@ namespace DevOps.Util.Triage
             return modelBuildAttempt;
         }
 
-        public async Task EnsureResult(ModelBuild modelBuild, Build build)
+        public Task<ModelTestRun> FindModelTestRunAsync(ModelBuild modelBuild, int testRunid) =>
+            Context
+            .ModelTestRuns
+            .Where(x => x.ModelBuildId == modelBuild.Id && x.TestRunId == testRunid)
+            .FirstOrDefaultAsync();
+
+        public async Task<ModelTestRun> EnsureTestRunAsync(ModelBuild modelBuild, DotNetTestRun testRun, Dictionary<HelixInfo, HelixLogInfo> helixMap)
         {
-            if (modelBuild.BuildResult != build.Result)
+            var modelTestRun = await FindModelTestRunAsync(modelBuild, testRun.TestRun.Id).ConfigureAwait(false);
+            if (modelTestRun is object)
             {
-                var buildInfo = build.GetBuildInfo();
-                modelBuild.BuildResult = build.Result;
-                modelBuild.StartTime = buildInfo.StartTime;
-                modelBuild.FinishTime = buildInfo.FinishTime;
-                await Context.SaveChangesAsync().ConfigureAwait(false);
+                return modelTestRun;
             }
+
+            var buildInfo = testRun.Build.GetBuildInfo();
+            modelTestRun = new ModelTestRun()
+            {
+                AzureOrganization = buildInfo.Organization,
+                AzureProject = buildInfo.Project,
+                ModelBuild = modelBuild,
+                TestRunId = testRun.TestRun.Id,
+                Name = testRun.TestRun.Name,
+            };
+            Context.ModelTestRuns.Add(modelTestRun);
+
+            foreach (var dotnetTestCaseResult in testRun.TestCaseResults)
+            {
+                var testCaseResult = dotnetTestCaseResult.TestCaseResult;
+                var testResult = new ModelTestResult()
+                {
+                    TestFullName = testCaseResult.TestCaseTitle,
+                    Outcome = testCaseResult.Outcome,
+                    ModelTestRun = modelTestRun,
+                    ModelBuild = modelBuild,
+                };
+
+                if (dotnetTestCaseResult.HelixInfo is { } helixInfo &&
+                    helixMap.TryGetValue(helixInfo, out var helixLogInfo))
+                {
+                    testResult.IsHelixTestResult = true;
+                    testResult.HelixConsoleUri = helixLogInfo.ConsoleUri;
+                    testResult.HelixCoreDumpUri = helixLogInfo.CoreDumpUri;
+                    testResult.HelixRunClientUri = helixLogInfo.RunClientUri;
+                    testResult.HelixTestResultsUri = helixLogInfo.TestResultsUri;
+                }
+
+                Context.ModelTestResults.Add(testResult);
+            }
+
+            await Context.SaveChangesAsync().ConfigureAwait(false);
+            return modelTestRun;
         }
 
         /// <summary>

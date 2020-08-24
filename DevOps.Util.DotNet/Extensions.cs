@@ -20,6 +20,22 @@ namespace DevOps.Util.DotNet
             return azureUtil.ListTimelineAttemptsAsync(project, buildNumber);
         }
 
+        public static Task<Dictionary<HelixInfo, HelixLogInfo>> GetHelixMapAsync(this DevOpsServer server, DotNetTestRun testRun) =>
+            GetHelixMapAsync(server, testRun.TestCaseResults);
+
+        public static async Task<Dictionary<HelixInfo, HelixLogInfo>> GetHelixMapAsync(this DevOpsServer server, IEnumerable<DotNetTestCaseResult> testCaseResults)
+        {
+            var query = testCaseResults
+                .Where(x => x.HelixWorkItem.HasValue)
+                .Select(x => x.HelixWorkItem!.Value)
+                .GroupBy(x => x.HelixInfo)
+                .ToList()
+                .AsParallel()
+                .Select(async g => (g.Key, await HelixUtil.GetHelixLogInfoAsync(server, g.First())));
+            await Task.WhenAll(query).ConfigureAwait(false);
+            return query.ToDictionary(x => x.Result.Key, x => x.Result.Item2);
+        }
+
         #endregion
     }
 }

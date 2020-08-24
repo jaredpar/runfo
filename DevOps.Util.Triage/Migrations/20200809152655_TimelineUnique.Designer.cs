@@ -4,14 +4,16 @@ using DevOps.Util.Triage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace DevOps.Util.Triage.Migrations
 {
     [DbContext(typeof(TriageContext))]
-    partial class TriageContextModelSnapshot : ModelSnapshot
+    [Migration("20200809152655_TimelineUnique")]
+    partial class TimelineUnique
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -142,82 +144,6 @@ namespace DevOps.Util.Triage.Migrations
                     b.HasIndex("ModelBuildId");
 
                     b.ToTable("ModelOsxDeprovisionRetry");
-                });
-
-            modelBuilder.Entity("DevOps.Util.Triage.ModelTestResult", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
-
-                    b.Property<string>("HelixConsoleUri")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("HelixCoreDumpUri")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("HelixRunClientUri")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("HelixTestResultsUri")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsHelixTestResult")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("ModelBuildId")
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("ModelTestRunId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Outcome")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TestFullName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ModelBuildId");
-
-                    b.HasIndex("ModelTestRunId");
-
-                    b.ToTable("ModelTestResults");
-                });
-
-            modelBuilder.Entity("DevOps.Util.Triage.ModelTestRun", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
-
-                    b.Property<string>("AzureOrganization")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("AzureProject")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ModelBuildId")
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("TestRunId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ModelBuildId");
-
-                    b.HasIndex("AzureOrganization", "AzureProject", "TestRunId")
-                        .IsUnique()
-                        .HasFilter("[AzureOrganization] IS NOT NULL AND [AzureProject] IS NOT NULL");
-
-                    b.ToTable("ModelTestRuns");
                 });
 
             modelBuilder.Entity("DevOps.Util.Triage.ModelTimelineIssue", b =>
@@ -413,26 +339,6 @@ namespace DevOps.Util.Triage.Migrations
                 });
 
             modelBuilder.Entity("DevOps.Util.Triage.ModelOsxDeprovisionRetry", b =>
-                {
-                    b.HasOne("DevOps.Util.Triage.ModelBuild", "ModelBuild")
-                        .WithMany()
-                        .HasForeignKey("ModelBuildId");
-                });
-
-            modelBuilder.Entity("DevOps.Util.Triage.ModelTestResult", b =>
-                {
-                    b.HasOne("DevOps.Util.Triage.ModelBuild", "ModelBuild")
-                        .WithMany()
-                        .HasForeignKey("ModelBuildId");
-
-                    b.HasOne("DevOps.Util.Triage.ModelTestRun", "ModelTestRun")
-                        .WithMany()
-                        .HasForeignKey("ModelTestRunId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("DevOps.Util.Triage.ModelTestRun", b =>
                 {
                     b.HasOne("DevOps.Util.Triage.ModelBuild", "ModelBuild")
                         .WithMany()

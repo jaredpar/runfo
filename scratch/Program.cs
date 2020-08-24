@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Octokit;
 using System;
 using System.Collections.Generic;
@@ -61,6 +62,7 @@ namespace Scratch
 
         public DevOpsServer DevOpsServer { get; set; }
         public TriageContext TriageContext { get; set; }
+        public TriageContextUtil TriageContextUtil { get; set; }
         public IGitHubClient GitHubClient { get; set; }
         public DotNetQueryUtil DotNetQueryUtil { get; set; }
         public BlobStorageUtil BlobStorageUtil { get; set; }
@@ -82,6 +84,7 @@ namespace Scratch
             var builder = new DbContextOptionsBuilder<TriageContext>();
             builder.UseSqlServer(configuration[DotNetConstants.ConfigurationSqlConnectionString]);
             TriageContext = new TriageContext(builder.Options);
+            TriageContextUtil = new TriageContextUtil(TriageContext);
 
             var gitHubClient = new GitHubClient(new ProductHeaderValue("runfo-scratch-app"));
             var value = configuration["RUNFO_GITHUB_TOKEN"];
@@ -108,6 +111,9 @@ namespace Scratch
                 return config;
         }
 
+        internal static ILogger CreateLogger() => LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Scratch");
+
+
         internal async Task Scratch()
         {
             // await DumpMachineUsage();
@@ -119,6 +125,31 @@ namespace Scratch
             //var gitHubClient = await factory.CreateForAppAsync("jaredpar", "devops-util");
             //var comment = await gitHubClient.Issue.Comment.Create("jaredpar", "devops-util", 5, "This is a test comment");
 
+            foreach (var build in await DotNetQueryUtil.ListBuildsAsync("-d roslyn -pr -count 200"))
+            {
+                var modelDataUtil = new ModelDataUtil(DotNetQueryUtil, TriageContextUtil, CreateLogger());
+                Console.WriteLine($"Uploading {build.GetBuildInfo().BuildUri}");
+                await modelDataUtil.EnsureModelInfoAsync(build).ConfigureAwait(false);
+            }
+
+
+            /*
+            var blobClient = BlobStorageUtil;
+            foreach (var build in await DotNetQueryUtil.ListBuildsAsync("-d runtime -c 10 -pr"))
+            {
+                var buildInfo = build.GetBuildInfo();
+                var timelines = await DevOpsServer.ListTimelineAttemptsAsync(buildInfo.Project, buildInfo.Number);
+                await blobClient.SaveTimelineAsync(buildInfo.Project, buildInfo.Number, timelines);
+
+                // var found = await blobClient.GetTimelineAsync(DevOpsServer.Organization, buildInfo.Project, buildInfo.Number);
+                // Console.WriteLine(found);
+            }
+    
+            */
+        }
+
+        internal async Task PopulateTimelines()
+        {
             var triageContextUtil = new TriageContextUtil(TriageContext);
             foreach (var build in await DotNetQueryUtil.ListBuildsAsync("-d runtime -c 50 -pr"))
             {
@@ -137,20 +168,6 @@ namespace Scratch
                     Console.WriteLine($"Error with {buildInfo.Number}: {ex.Message}");
                 }
             }
-
-            /*
-            var blobClient = BlobStorageUtil;
-            foreach (var build in await DotNetQueryUtil.ListBuildsAsync("-d runtime -c 10 -pr"))
-            {
-                var buildInfo = build.GetBuildInfo();
-                var timelines = await DevOpsServer.ListTimelineAttemptsAsync(buildInfo.Project, buildInfo.Number);
-                await blobClient.SaveTimelineAsync(buildInfo.Project, buildInfo.Number, timelines);
-
-                // var found = await blobClient.GetTimelineAsync(DevOpsServer.Organization, buildInfo.Project, buildInfo.Number);
-                // Console.WriteLine(found);
-            }
-    
-            */
         }
 
         internal async Task BuildMergedPullRequestBuilds()

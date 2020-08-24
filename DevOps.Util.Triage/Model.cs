@@ -26,6 +26,10 @@ namespace DevOps.Util.Triage
 
         public DbSet<ModelTimelineIssue> ModelTimelineIssues { get; set; }
 
+        public DbSet<ModelTestRun> ModelTestRuns { get; set; }
+
+        public DbSet<ModelTestResult> ModelTestResults { get; set; }
+
         public TriageContext(DbContextOptions<TriageContext> options)
             : base(options)
         {
@@ -40,6 +44,10 @@ namespace DevOps.Util.Triage
             modelBuilder.Entity<ModelBuild>()
                 .Property(x => x.BuildResult)
                 .HasConversion<string>();
+
+            modelBuilder.Entity<ModelBuildAttempt>()
+                .HasIndex(x => new { x.Attempt, x.ModelBuildId })
+                .IsUnique();
 
             modelBuilder.Entity<ModelBuildDefinition>()
                 .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionId })
@@ -67,6 +75,10 @@ namespace DevOps.Util.Triage
 
             modelBuilder.Entity<ModelTriageIssueResultComplete>()
                 .HasIndex(x => new { x.ModelTriageIssueId, x.ModelBuildId })
+                .IsUnique();
+
+            modelBuilder.Entity<ModelTestRun>()
+                .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.TestRunId })
                 .IsUnique();
         }
     }
@@ -311,5 +323,51 @@ namespace DevOps.Util.Triage
         public int ModelBuildAttemptId { get; set; }
 
         public ModelBuildAttempt ModelBuildAttempt { get; set; } 
+    }
+
+    public class ModelTestRun
+    {
+        public int Id { get; set; }
+
+        public string AzureOrganization { get; set; }
+
+        public string AzureProject { get; set; }
+
+        public int TestRunId { get; set; }
+
+        public string Name { get; set; }
+
+        [Column(TypeName = "nvarchar(100)")]
+        public string ModelBuildId { get; set; }
+
+        public ModelBuild ModelBuild { get; set; }
+    }
+
+    public class ModelTestResult
+    {
+        public int Id { get; set; }
+
+        public string TestFullName { get; set; }
+
+        public string Outcome { get; set; }
+
+        public bool IsHelixTestResult { get; set; }
+
+        public string HelixConsoleUri { get; set; }
+
+        public string HelixRunClientUri { get; set; }
+
+        public string HelixCoreDumpUri { get; set; }
+
+        public string HelixTestResultsUri { get; set; }
+
+        public int ModelTestRunId { get; set; }
+
+        public ModelTestRun ModelTestRun { get; set; }
+
+        [Column(TypeName = "nvarchar(100)")]
+        public string ModelBuildId { get; set; }
+
+        public ModelBuild ModelBuild { get; set; }
     }
 }
