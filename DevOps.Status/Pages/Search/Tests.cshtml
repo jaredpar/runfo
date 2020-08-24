@@ -8,8 +8,10 @@
 
 <form method="get">
   <div class="form-group">
-    <label>Query</label>
-    <input name="q" type="text" class="form-control" value="@Model.QueryString">
+    <label>Build Query</label>
+    <input name="bq" type="text" class="form-control" value="@Model.BuildQuery">
+    <label>Timeline Query</label>
+    <input name="tq" type="text" class="form-control" value="@Model.TestsQuery">
   </div>
   <button class="btn btn-primary">Search</button>
 </form>
@@ -71,9 +73,11 @@
                         }
                     </tbody>
                 </table>
+                    <!-- TODO: need to re-implement this
                 <div>
-                    <a asp-route-q=@Model.InitialSearchText asp-route-testName=@testInfo.TestName>Filter to this test</a>
+                    <a asp-route-q=initial search text asp-route-testName=@testInfo.TestName>Filter to this test</a>
                 </div>
+        -->
             </div>
         </div>
     }

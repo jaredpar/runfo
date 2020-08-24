@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
+using DevOps.Util.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Octokit;
@@ -40,56 +42,50 @@ namespace DevOps.Status.Pages.Search
             public string? HelixTestResultsUri { get; set; }
         }
 
-        public sealed class TestSearchOptionSet : BuildSearchOptionSet
-        {
-            public string? TestName { get; set; }
+        public TriageContextUtil TriageContextUtil { get; }
 
-            public TestSearchOptionSet()
-            {
-                Add("n|name=", "Test name to filter to", t => TestName = t);
-            }
-        }
+        [BindProperty(SupportsGet = true, Name = "bq")]
+        public string? BuildQuery { get; set; }
 
-        public DotNetQueryUtilFactory QueryUtilFactory { get; }
-
-        [BindProperty(SupportsGet = true, Name = "q")]
-        public string? QueryString { get; set; }
-
-        public string? InitialSearchText { get; set; }
+        [BindProperty(SupportsGet = true, Name = "tq")]
+        public string? TestsQuery { get; set; }
 
         public List<TestInfo> TestInfos { get; set; } = new List<TestInfo>();
 
-        public TestsModel(DotNetQueryUtilFactory factory)
+        public TestsModel(TriageContextUtil triageContextUtil)
         {
-            QueryUtilFactory = factory;
+            TriageContextUtil = triageContextUtil;
         }
 
         public async Task<IActionResult> OnGet()
         {
-            // No query string, this is an initial page load. Just set the default and 
-            // let the user specify the search.
-            if (!HttpContext.Request.QueryString.HasValue)
+            if (string.IsNullOrEmpty(BuildQuery))
             {
+                if (string.IsNullOrEmpty(BuildQuery))
+                {
+                    BuildQuery = new StatusBuildSearchOptions() { Definition = "runtime" }.GetUserQueryString();
+                }
+
                 return Page();
             }
 
-            var testRuns = new List<DotNetTestRun>();
-            var testSearchOptionSet = CreateTestSearchOptionSet();
-            var queryUtil = QueryUtilFactory.DotNetQueryUtil;
-            var builds = await queryUtil.ListBuildsAsync(testSearchOptionSet);
-
-            foreach (var build in builds)
+            var buildSearchOptions = new StatusBuildSearchOptions()
             {
-                var result = await queryUtil.ListDotNetTestRunsAsync(build, DotNetUtil.FailedTestOutcomes);
-                testRuns.AddRange(result);
-            }
+                Count = 50,
+            };
+            buildSearchOptions.Parse(BuildQuery);
+            var testSearchOptions = new StatusTestSearchOptions();
+            testSearchOptions.Parse(TestsQuery ?? "");
 
-            var testCaseResults = testRuns.SelectMany(x => x.TestCaseResults).ToList();
-            FilterTestName();
+            var query = testSearchOptions.GetModelTestResultsQuery(
+                TriageContextUtil,
+                buildSearchOptions.GetModelBuildsQuery(TriageContextUtil))
+                .Include(x => x.ModelBuild)
+                .ThenInclude(x => x.ModelBuildDefinition);
 
-            var helixMap = await queryUtil.Server.GetHelixMapAsync(testCaseResults);
+            var results = await query.ToListAsync();
             var count = 0;
-            foreach (var group in testCaseResults.GroupBy(x => x.TestCaseTitle).OrderByDescending(x => x.Count()))
+            foreach (var group in results.GroupBy(x => x.TestFullName).OrderByDescending(x => x.Count()))
             {
                 count++;
 
@@ -101,19 +97,14 @@ namespace DevOps.Status.Pages.Search
 
                 foreach (var item in group)
                 {
-                    if (!item.HelixInfo.HasValue || !helixMap.TryGetValue(item.HelixInfo.Value, out var logInfo))
-                    {
-                        logInfo = null;
-                    }
-
                     var testResultInfo = new TestResultInfo()
                     {
-                        BuildNumber = item.Build.Id,
-                        BuildUri = DevOpsUtil.GetBuildUri(item.Build),
-                        HelixConsoleUri = logInfo?.ConsoleUri,
-                        HelixRunClientUri = logInfo?.RunClientUri,
-                        HelixCoreDumpUri = logInfo?.CoreDumpUri,
-                        HelixTestResultsUri = logInfo?.TestResultsUri,
+                        BuildNumber = item.ModelBuild.BuildNumber,
+                        BuildUri = DevOpsUtil.GetBuildUri(item.ModelBuild.ModelBuildDefinition.AzureOrganization, item.ModelBuild.ModelBuildDefinition.AzureProject, item.ModelBuild.BuildNumber),
+                        HelixConsoleUri = item.HelixConsoleUri,
+                        HelixRunClientUri = item.HelixRunClientUri,
+                        HelixCoreDumpUri = item.HelixCoreDumpUri,
+                        HelixTestResultsUri = item.HelixTestResultsUri,
                     };
                     testInfo.Results.Add(testResultInfo);
                 }
@@ -122,29 +113,6 @@ namespace DevOps.Status.Pages.Search
             }
 
             return Page();
-
-            void FilterTestName()
-            {
-                if (string.IsNullOrEmpty(testSearchOptionSet.TestName))
-                {
-                    return;
-                }
-
-                var regex = new Regex(testSearchOptionSet.TestName, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-                testCaseResults.RemoveAll(x => !regex.IsMatch(x.TestCaseTitle));
-            }
-        }
-
-        private TestSearchOptionSet CreateTestSearchOptionSet()
-        {
-            var optionSet = new TestSearchOptionSet();
-            if (!string.IsNullOrEmpty(QueryString) &&
-                optionSet.Parse(DotNetQueryUtil.TokenizeQuery(QueryString)).Count != 0)
-            {
-                throw OptionSetUtil.CreateBadOptionException();
-            }
-
-            return optionSet;
         }
     }
 }

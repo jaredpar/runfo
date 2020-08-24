@@ -23,6 +23,8 @@ namespace DevOps.Status.Pages.Search
             public string? Line { get; set; }
         }
 
+        public TriageContextUtil TriageContextUtil { get; }
+
         [BindProperty(SupportsGet = true, Name = "bq")]
         public string? BuildQuery { get; set; }
 
@@ -31,14 +33,9 @@ namespace DevOps.Status.Pages.Search
 
         public List<TimelineData> TimelineDataList { get; set; } = new List<TimelineData>();
 
-        public DotNetQueryUtilFactory DotNetQueryUtilFactory { get;  }
-
-        public TriageContextUtil TriageContextUtil { get; }
-
-        public TimelinesModel(TriageContextUtil triageContextUtil, DotNetQueryUtilFactory dotnetQueryUtilFactory)
+        public TimelinesModel(TriageContextUtil triageContextUtil)
         {
             TriageContextUtil = triageContextUtil;
-            DotNetQueryUtilFactory = dotnetQueryUtilFactory;
         }
 
         public async Task<IActionResult> OnGet()
