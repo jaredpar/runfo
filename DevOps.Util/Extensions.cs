@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -43,6 +44,9 @@ namespace DevOps.Util
             enumerable
                 .Select(func)
                 .SelectNullableValue();
+
+        public static ReadOnlyCollection<T> ToReadOnlyCollection<T>(this IEnumerable<T> enumerable) =>
+            new ReadOnlyCollection<T>(enumerable.ToList());
 
         #endregion
 

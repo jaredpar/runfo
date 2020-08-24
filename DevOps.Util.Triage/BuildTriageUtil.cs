@@ -183,9 +183,19 @@ namespace DevOps.Util.Triage
                         return;
                     }
 
+                    // TODO: Need to record when the maximum test results are exceeded. The limit here is to 
+                    // protect us from a catastrophic run that has say several million failures (this is a real
+                    // possibility
+                    const int maxTestCaseResultCount = 200;
                     var dotNetTestRun = await QueryUtil.GetDotNetTestRunAsync(Build, testRun, DotNetUtil.FailedTestOutcomes).ConfigureAwait(false);
-                    var helixMap = await Server.GetHelixMapAsync(dotNetTestRun).ConfigureAwait(false);
+                    if (dotNetTestRun.TestCaseResults.Count > maxTestCaseResultCount)
+                    {
+                        dotNetTestRun = new DotNetTestRun(
+                            dotNetTestRun.TestRunInfo,
+                            dotNetTestRun.TestCaseResults.Take(maxTestCaseResultCount).ToReadOnlyCollection());
+                    }
 
+                    var helixMap = await Server.GetHelixMapAsync(dotNetTestRun).ConfigureAwait(false);
                     await TriageContextUtil.EnsureTestRunAsync(ModelBuild, dotNetTestRun, helixMap).ConfigureAwait(false);
                 }
                 catch (Exception ex)
