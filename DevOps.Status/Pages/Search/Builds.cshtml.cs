@@ -24,12 +24,17 @@ namespace DevOps.Status.Pages.Search
             public int BuildNumber { get; set; }
             public string? BuildUri { get; set; }
             public string? Kind { get; set; }
+            public string? Definition { get; set; }
+            public string? DefinitionUri { get; set; }
+            public GitHubPullRequestKey? PullRequestKey { get; set; }
         }
 
         public TriageContext TriageContext { get; }
 
         [BindProperty(SupportsGet = true, Name = "q")]
         public string? Query { get; set; }
+
+        public bool IncludeDefinitionColumn { get; set; }
 
         public List<BuildData> Builds { get; set; } = new List<BuildData>();
 
@@ -42,12 +47,14 @@ namespace DevOps.Status.Pages.Search
         {
             if (string.IsNullOrEmpty(Query))
             {
-                Query = new StatusBuildSearchOptions() { Repository = "runtime", Count = 10 }.GetUserQueryString();
+                Query = new StatusBuildSearchOptions() { Definition = "runtime", Count = 10 }.GetUserQueryString();
                 return;
             }
 
             var options = new StatusBuildSearchOptions();
             options.Parse(Query);
+
+            IncludeDefinitionColumn = !options.HasDefinition;
 
             Builds = (await options.GetModelBuildsQuery(TriageContext).ToListAsync())
                 .Select(x =>
@@ -58,7 +65,10 @@ namespace DevOps.Status.Pages.Search
                         Result = x.BuildResult.ToString(),
                         BuildNumber = buildInfo.Number,
                         Kind = buildInfo.PullRequestNumber.HasValue ? "Pull Request" : "Rolling",
+                        PullRequestKey = buildInfo.PullRequestKey,
                         BuildUri = buildInfo.BuildUri,
+                        Definition = x.ModelBuildDefinition.DefinitionName,
+                        DefinitionUri = buildInfo.DefinitionInfo.DefinitionUri,
                     };
                 })
                 .ToList();

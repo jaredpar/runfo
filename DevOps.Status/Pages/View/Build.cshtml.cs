@@ -38,6 +38,10 @@ namespace DevOps.Status.Pages.View
 
         public int Attempts { get; set; }
 
+        public string? Repository { get; set; }
+
+        public string? RepositoryUri { get; set; }
+
         public GitHubPullRequestKey? PullRequestKey { get; set; }
 
         public List<TimelineData> TimelineDataList { get; } = new List<TimelineData>();
@@ -73,6 +77,8 @@ namespace DevOps.Status.Pages.View
 
                 BuildUri = DevOpsUtil.GetBuildUri(organization, project, number);
                 BuildResult = modelBuild.BuildResult ?? BuildResult.None;
+                Repository = $"{modelBuild.GitHubOrganization}/{modelBuild.GitHubRepository}";
+                RepositoryUri = $"https://{modelBuild.GitHubOrganization}/{modelBuild.GitHubRepository}";
 
                 if (modelBuild.PullRequestNumber is { } prNumber)
                 {

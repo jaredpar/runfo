@@ -18,6 +18,8 @@ namespace DevOps.Status.Util
         public ModelBuildKind Kind { get; set; } = DefaultKind;
         public string? Repository { get; set; }
 
+        public bool HasDefinition => !string.IsNullOrEmpty(Definition);
+
         public int? DefinitionId
         {
             get
@@ -50,9 +52,17 @@ namespace DevOps.Status.Util
             string? definitionName = definitionId is null
                 ? Definition
                 : null;
+            string? gitHubRepository = string.IsNullOrEmpty(Repository)
+                ? null
+                : Repository.ToLower();
+            string? gitHubOrganization = gitHubRepository is null
+                ? null
+                : DotNetUtil.GitHubOrganization;
             var query = triageContextUtil.GetModelBuildsQuery(
                 definitionId: definitionId,
                 definitionName: definitionName,
+                gitHubOrganization: gitHubOrganization,
+                gitHubRepository: gitHubRepository,
                 count: null,
                 kind: Kind);
 

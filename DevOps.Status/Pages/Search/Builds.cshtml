@@ -13,22 +13,40 @@
   <button class="btn btn-primary">Search</button>
 </form>
 
-<table class="table">
-    <thead>
-        <tr>
-            <th scope="column">Build</th>
-            <th scope="column">Kind</th>
-            <th scope="column">Result</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach(var build in @Model.Builds)
-        {
+@if (Model.Builds.Count > 0)
+{
+    <table class="table">
+        <thead>
             <tr>
-                <td><a href=@build.BuildUri>@build.BuildNumber</a></td>
-                <td>@build.Kind</td>
-                <td>@build.Result</td>
+                <th scope="column">Build</th>
+                <th scope="column">Kind</th>
+                <th scope="column">Result</th>
+                @if (Model.IncludeDefinitionColumn)
+                {
+                    <th scope="column">Definition</th>
+                }
             </tr>
-        }
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            @foreach (var build in Model.Builds)
+            {
+                <tr>
+                    <td><a asp-page="/view/build" asp-route-number="@build.BuildNumber">@build.BuildNumber</a></td>
+                    @if (build.PullRequestKey is { } prKey)
+                    {
+                        <td><a asp-page="/view/pullrequest" asp-route-repository="@prKey.Repository" asp-route-number="@prKey.Number">@build.Kind</a></td>
+                    }
+                    else
+                    {
+                        <td>@build.Kind</td>
+                    }
+                    <td>@build.Result</td>
+                    @if (Model.IncludeDefinitionColumn)
+                    {
+                        <td><a href="@build.DefinitionUri">@build.Definition</a></td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}

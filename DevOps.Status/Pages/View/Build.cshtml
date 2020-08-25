@@ -18,13 +18,14 @@
 {
     <h3>Build Info</h3>
     <p>Azure DevOps Build: <a href="@Model.BuildUri">@number</a></p>
-    <p>Attempts: @Model.Attempts</p>
-    <p>Result: @Model.BuildResult</p>
-
+    <p>Repository: <a href="@Model.RepositoryUri">@Model.Repository</a></p>
     @if (Model.PullRequestKey is { } prKey)
     {
         <p>Pull Request: <a asp-page="/View/PullRequest" asp-route-repository="@prKey.Repository" asp-route-number=@prKey.Number>@prKey.Number</a></p>
     }
+
+    <p>Attempts: @Model.Attempts</p>
+    <p>Result: @Model.BuildResult</p>
 
     <div>
         <h3>Timeline Issues</h3>
