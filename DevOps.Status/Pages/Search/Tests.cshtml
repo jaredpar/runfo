@@ -34,6 +34,7 @@
                     <thead>
                         <tr>
                             <th scope="column">Build</th>
+                            <th scope="column">Test Run</th>
                             @if (testInfo.IncludeKindColumn)
                             {
                                 <th scope="column">Kind</th>
@@ -52,6 +53,7 @@
                         {
                             <tr>
                                 <td><a asp-page="/view/build" asp-route-number="@result.BuildNumber">@result.BuildNumber</a></td>
+                                <td>@result.TestRun</td>
                                 @if (testInfo.IncludeKindColumn)
                                 {
                                     <td>@result.Kind</td>

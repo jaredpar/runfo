@@ -35,7 +35,9 @@ namespace DevOps.Status.Pages.Search
         {
             public int BuildNumber { get; set; }
 
-            public string Kind { get; set; }
+            public string? TestRun { get; set; }
+
+            public string? Kind { get; set; }
 
             public string? BuildUri { get; set; }
 
@@ -86,6 +88,7 @@ namespace DevOps.Status.Pages.Search
             var query = testSearchOptions.GetModelTestResultsQuery(
                 TriageContextUtil,
                 buildSearchOptions.GetModelBuildsQuery(TriageContextUtil))
+                .Include(x => x.ModelTestRun)
                 .Include(x => x.ModelBuild)
                 .ThenInclude(x => x.ModelBuildDefinition);
 
@@ -115,6 +118,7 @@ namespace DevOps.Status.Pages.Search
                         BuildNumber = item.ModelBuild.BuildNumber,
                         BuildUri = DevOpsUtil.GetBuildUri(item.ModelBuild.ModelBuildDefinition.AzureOrganization, item.ModelBuild.ModelBuildDefinition.AzureProject, item.ModelBuild.BuildNumber),
                         Kind = item.ModelBuild.GetModelBuildKind().GetDisplayString(),
+                        TestRun = item.ModelTestRun.Name,
                         HelixConsoleUri = item.HelixConsoleUri,
                         HelixRunClientUri = item.HelixRunClientUri,
                         HelixCoreDumpUri = item.HelixCoreDumpUri,
