@@ -27,11 +27,15 @@ namespace DevOps.Status.Pages.Search
             public List<TestResultInfo> Results { get; } = new List<TestResultInfo>();
 
             public bool IncludeHelixColumns { get; set; }
+
+            public bool IncludeKindColumn { get; set; }
         }
 
         public class TestResultInfo
         {
             public int BuildNumber { get; set; }
+
+            public string Kind { get; set; }
 
             public string? BuildUri { get; set; }
 
@@ -95,6 +99,7 @@ namespace DevOps.Status.Pages.Search
                 {
                     TestName = group.Key,
                     CollapseName = $"collapse{count}",
+                    IncludeKindColumn = buildSearchOptions.Kind == ModelBuildKind.All,
                 };
 
                 var anyHelix = false;
@@ -109,6 +114,7 @@ namespace DevOps.Status.Pages.Search
                     {
                         BuildNumber = item.ModelBuild.BuildNumber,
                         BuildUri = DevOpsUtil.GetBuildUri(item.ModelBuild.ModelBuildDefinition.AzureOrganization, item.ModelBuild.ModelBuildDefinition.AzureProject, item.ModelBuild.BuildNumber),
+                        Kind = item.ModelBuild.GetModelBuildKind().GetDisplayString(),
                         HelixConsoleUri = item.HelixConsoleUri,
                         HelixRunClientUri = item.HelixRunClientUri,
                         HelixCoreDumpUri = item.HelixCoreDumpUri,

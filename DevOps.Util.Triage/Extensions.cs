@@ -5,9 +5,39 @@ using Octokit;
 
 namespace DevOps.Util.Triage
 {
-    internal static class Extensions
+    public static class Extensions
     {
-        internal static GitHubIssueKey GetIssueKey(this Octokit.Issue issue)
+        #region ModelBuild
+
+        public static ModelBuildKind GetModelBuildKind(this ModelBuild modelBuild)
+        {
+            if (modelBuild.IsMergedPullRequest)
+            {
+                return ModelBuildKind.MergedPullRequest;
+            }
+
+            if (modelBuild.PullRequestNumber.HasValue)
+            {
+                return ModelBuildKind.PullRequest;
+            }
+
+            return ModelBuildKind.Rolling;
+        }
+
+        #endregion
+
+        #region Misc
+
+        public static string GetDisplayString(this ModelBuildKind kind) => kind switch
+        {
+            ModelBuildKind.All => "All",
+            ModelBuildKind.MergedPullRequest => "Merged Pull Request",
+            ModelBuildKind.PullRequest => "Pull Request",
+            ModelBuildKind.Rolling => "Rolling",
+            _ => throw new InvalidOperationException($"Unexpected value: {kind}")
+        };
+
+        public static GitHubIssueKey GetIssueKey(this Octokit.Issue issue)
         {
             var regex = new Regex(@"https://github.com/([\w\d-]+)/([\w\d-]+)/issues/\d+");
             var match = regex.Match(issue.HtmlUrl.ToString());
@@ -21,5 +51,7 @@ namespace DevOps.Util.Triage
                 match.Groups[2].Value,
                 issue.Number);
         }
+
+        #endregion
     }
 }

@@ -34,6 +34,10 @@
                     <thead>
                         <tr>
                             <th scope="column">Build</th>
+                            @if (testInfo.IncludeKindColumn)
+                            {
+                                <th scope="column">Kind</th>
+                            }
                             @if (testInfo.IncludeHelixColumns)
                             {
                                 <th scope="column">Helix Console</th>
@@ -48,6 +52,10 @@
                         {
                             <tr>
                                 <td><a asp-page="/view/build" asp-route-number="@result.BuildNumber">@result.BuildNumber</a></td>
+                                @if (testInfo.IncludeKindColumn)
+                                {
+                                    <td>@result.Kind</td>
+                                }
                                 @if (testInfo.IncludeHelixColumns)
                                 {
                                     <td>
