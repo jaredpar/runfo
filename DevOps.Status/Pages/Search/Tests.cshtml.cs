@@ -25,6 +25,8 @@ namespace DevOps.Status.Pages.Search
             public string? CollapseName { get; set; }
 
             public List<TestResultInfo> Results { get; } = new List<TestResultInfo>();
+
+            public bool IncludeHelixColumns { get; set; }
         }
 
         public class TestResultInfo
@@ -95,8 +97,14 @@ namespace DevOps.Status.Pages.Search
                     CollapseName = $"collapse{count}",
                 };
 
+                var anyHelix = false;
                 foreach (var item in group)
                 {
+                    if (item.IsHelixTestResult)
+                    {
+                        anyHelix = true;
+                    }
+
                     var testResultInfo = new TestResultInfo()
                     {
                         BuildNumber = item.ModelBuild.BuildNumber,
@@ -109,6 +117,7 @@ namespace DevOps.Status.Pages.Search
                     testInfo.Results.Add(testResultInfo);
                 }
 
+                testInfo.IncludeHelixColumns = anyHelix;
                 TestInfos.Add(testInfo);
             }
 

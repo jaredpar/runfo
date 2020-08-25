@@ -1,0 +1,35 @@
+﻿@page "/search-doc"
+
+
+<h1>Build Serach</h1>
+
+<p>These are the various ways in which you can restrict the set of builds that are searched. This is used in both build searches as well as timeline and tests queries</p>
+
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th class="column">Qualifier</th>
+            <th class="column">Example</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td class="font-weight-bold">definition:runtime</td>
+            <td>Filter to builds against the build definition named <a href="https://dnceng.visualstudio.com/public/_build?definitionId=686">runtime</a></td>
+        </tr>
+        <tr>
+            <td class="font-weight-bold">definition:15</td>
+            <td>Filter to builds against the build befinition with id 15 (in this case <a href="https://dnceng.visualstudio.com/public/_build?definitionId=15">roslyn</a>)</td>
+        </tr>
+        <tr>
+            <td class="font-weight-bold">kind:rolling</td>
+            <td>Filter to rolling builds only. Valid options are rolling, pullrequest and mergedpullrequest</td>
+        </tr>
+        <tr>
+            <td class="font-weight-bold">count:50</td>
+            <td>Filter the result to 50 builds. Most pages default to 10</td>
+        </tr>
+    </tbody>
+</table>
+
+
