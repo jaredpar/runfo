@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -29,6 +31,8 @@ namespace DevOps.Status.Pages.Search
             public bool IncludeHelixColumns { get; set; }
 
             public bool IncludeKindColumn { get; set; }
+
+            public string? GitHubRepository { get; set; }
         }
 
         public class TestResultInfo
@@ -51,6 +55,7 @@ namespace DevOps.Status.Pages.Search
         }
 
         public TriageContextUtil TriageContextUtil { get; }
+        public StatusGitHubClientFactory GitHubClientFactory { get; }
 
         [BindProperty(SupportsGet = true, Name = "bq")]
         public string? BuildQuery { get; set; }
@@ -60,28 +65,22 @@ namespace DevOps.Status.Pages.Search
 
         public List<TestInfo> TestInfos { get; set; } = new List<TestInfo>();
 
-        public TestsModel(TriageContextUtil triageContextUtil)
+        public TestsModel(TriageContextUtil triageContextUtil, StatusGitHubClientFactory gitHubClientFactory)
         {
             TriageContextUtil = triageContextUtil;
+            GitHubClientFactory = gitHubClientFactory;
         }
 
         public async Task<IActionResult> OnGet()
         {
             if (string.IsNullOrEmpty(BuildQuery))
             {
-                if (string.IsNullOrEmpty(BuildQuery))
-                {
-                    BuildQuery = new StatusBuildSearchOptions() { Definition = "runtime" }.GetUserQueryString();
-                }
+                BuildQuery = new StatusBuildSearchOptions() { Definition = "runtime" }.GetUserQueryString();
 
                 return Page();
             }
 
-            var buildSearchOptions = new StatusBuildSearchOptions()
-            {
-                Count = 50,
-            };
-            buildSearchOptions.Parse(BuildQuery);
+            var buildSearchOptions = GetBuildSearchOptions();
             var testSearchOptions = new StatusTestSearchOptions();
             testSearchOptions.Parse(TestsQuery ?? "");
 
@@ -106,12 +105,11 @@ namespace DevOps.Status.Pages.Search
                 };
 
                 var anyHelix = false;
+                string? gitHubRepository = null;
                 foreach (var item in group)
                 {
-                    if (item.IsHelixTestResult)
-                    {
-                        anyHelix = true;
-                    }
+                    anyHelix = anyHelix || item.IsHelixTestResult;
+                    gitHubRepository ??= item.ModelBuild.GitHubRepository;
 
                     var testResultInfo = new TestResultInfo()
                     {
@@ -128,10 +126,70 @@ namespace DevOps.Status.Pages.Search
                 }
 
                 testInfo.IncludeHelixColumns = anyHelix;
+                testInfo.GitHubRepository = gitHubRepository;
                 TestInfos.Add(testInfo);
             }
 
             return Page();
+        }
+
+        public async Task<IActionResult> OnPost(string testFullName, string gitHubRepository)
+        {
+            if (string.IsNullOrEmpty(testFullName) || string.IsNullOrEmpty(BuildQuery))
+            {
+                throw new Exception("Invalid request");
+            }
+
+            var reportText = await GetReportText();
+            var gitHubApp = await GitHubClientFactory.CreateForAppAsync(DotNetUtil.GitHubOrganization, gitHubRepository);
+            var newIssue = new NewIssue($"Test failures: {testFullName}")
+            {
+                Body = reportText,
+            };
+            var issue = await gitHubApp.Issue.Create(DotNetUtil.GitHubOrganization, gitHubRepository, newIssue);
+            return Redirect(issue.HtmlUrl);
+
+            async Task<string> GetReportText()
+            {
+                var buildSearchOptions = GetBuildSearchOptions();
+                var testSearchOptions = new StatusTestSearchOptions()
+                {
+                    Name = testFullName,
+                };
+                var query = testSearchOptions.GetModelTestResultsQuery(
+                    TriageContextUtil,
+                    buildSearchOptions.GetModelBuildsQuery(TriageContextUtil))
+                    .Include(x => x.ModelBuild)
+                    .ThenInclude(x => x.ModelBuildDefinition)
+                    .Include(x => x.ModelTestRun);
+
+                var results = new List<(BuildInfo BuildInfo, string? TestRunName, HelixLogInfo? LogInfo)>();
+                var includeHelix = false;
+                foreach (var item in await query.ToListAsync())
+                {
+                    var buildInfo = item.ModelBuild.GetBuildInfo();
+                    var helixLogInfo = item.GetHelixLogInfo();
+                    includeHelix = includeHelix || helixLogInfo is object;
+                    results.Add((buildInfo, item.ModelTestRun.Name, helixLogInfo));
+                }
+
+                var builder = new ReportBuilder();
+                return builder.BuildSearchTests(
+                    results,
+                    includeDefinition: !buildSearchOptions.HasDefinition,
+                    includeHelix: includeHelix);
+            }
+        }
+
+        private StatusBuildSearchOptions GetBuildSearchOptions()
+        {
+            Debug.Assert(!string.IsNullOrEmpty(BuildQuery));
+            var buildSearchOptions = new StatusBuildSearchOptions()
+            {
+                Count = 50,
+            };
+            buildSearchOptions.Parse(BuildQuery);
+            return buildSearchOptions;
         }
     }
 }

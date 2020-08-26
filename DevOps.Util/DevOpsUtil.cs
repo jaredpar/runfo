@@ -27,8 +27,8 @@ namespace DevOps.Util
             return new BuildDefinitionInfo(
                 organization,
                 build.Definition.Project.Name,
-                build.Definition.Name,
-                build.Definition.Id);
+                build.Definition.Id,
+                build.Definition.Name);
         }
 
         public static BuildInfo GetBuildInfo(Build build)

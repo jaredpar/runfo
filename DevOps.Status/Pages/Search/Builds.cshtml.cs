@@ -59,7 +59,7 @@ namespace DevOps.Status.Pages.Search
             Builds = (await options.GetModelBuildsQuery(TriageContext).ToListAsync())
                 .Select(x =>
                 {
-                    var buildInfo = TriageContextUtil.GetBuildInfo(x);
+                    var buildInfo = x.GetBuildInfo();
                     return new BuildData()
                     {
                         Result = x.BuildResult.ToString(),

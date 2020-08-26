@@ -91,7 +91,7 @@ namespace DevOps.Util.Triage
                 if (mostRecent is object && mostRecent.StartTime is DateTime startTime)
                 {
                     Debug.Assert(mostRecent.StartTime.HasValue);
-                    var buildKey = TriageContextUtil.GetBuildKey(mostRecent);
+                    var buildKey = mostRecent.GetBuildKey();
                     var zone = TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time");
                     startTime = TimeZoneInfo.ConvertTimeFromUtc(startTime, zone);
 
@@ -109,7 +109,7 @@ namespace DevOps.Util.Triage
                 // item specifies a different organization. Need to replace Server with 
                 // a map from org -> DevOpsServer
                 var searchResults = results
-                    .Select(x => (TriageContextUtil.GetBuildInfo(x.ModelBuild), (string?)x.JobName));
+                    .Select(x => (x.ModelBuild.GetBuildInfo(), (string?)x.JobName));
                 var reportBody = ReportBuilder.BuildSearchTimeline(
                     searchResults,
                     markdown: true,

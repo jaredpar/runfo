@@ -129,22 +129,23 @@ namespace DevOps.Util
 
     public sealed class BuildDefinitionInfo
     {
-        public string Organization { get; }
-
-        public string Project { get; }
-
+        public BuildDefinitionKey Key { get; }
         public string Name { get; }
 
-        public int Id { get; }
+        public string Organization => Key.Organization;
+        public string Project => Key.Project;
+        public int Id => Key.Id;
+        public string DefinitionUri => Key.DefinitionUri;
 
-        public string DefinitionUri => DevOpsUtil.GetBuildDefinitionUri(Organization, Project, Id);
-
-        public BuildDefinitionInfo(string organization, string project, string name, int id)
+        public BuildDefinitionInfo(BuildDefinitionKey key, string name)
         {
-            Organization = organization;
-            Project = project;
+            Key = key;
             Name = name;
-            Id = id;
+        }
+
+        public BuildDefinitionInfo(string organization, string project, int id, string name) 
+            : this(new BuildDefinitionKey(organization, project, id), name)
+        {
         }
 
         public override string ToString() => $"{Project} {Name} {Id}";

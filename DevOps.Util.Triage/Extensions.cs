@@ -1,6 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
 using DevOps.Util;
+using DevOps.Util.DotNet;
 using Octokit;
 
 namespace DevOps.Util.Triage
@@ -8,6 +9,23 @@ namespace DevOps.Util.Triage
     public static class Extensions
     {
         #region ModelBuild
+
+        public static BuildKey GetBuildKey(this ModelBuild modelBuild) =>
+            new BuildKey(
+                modelBuild.ModelBuildDefinition.AzureOrganization,
+                modelBuild.ModelBuildDefinition.AzureProject,
+                modelBuild.BuildNumber);
+
+        public static BuildInfo GetBuildInfo(this ModelBuild modelBuild) =>
+            new BuildInfo(
+                GetBuildKey(modelBuild),
+                GetBuildDefinitionInfo(modelBuild.ModelBuildDefinition),
+                modelBuild.GitHubOrganization,
+                modelBuild.GitHubRepository,
+                modelBuild.PullRequestNumber,
+                modelBuild.StartTime,
+                modelBuild.FinishTime,
+                modelBuild.BuildResult ?? BuildResult.None);
 
         public static ModelBuildKind GetModelBuildKind(this ModelBuild modelBuild)
         {
@@ -22,6 +40,37 @@ namespace DevOps.Util.Triage
             }
 
             return ModelBuildKind.Rolling;
+        }
+
+        #endregion
+
+        #region ModelBuildDefinition
+
+        public static BuildDefinitionKey GetBuildDefinitionKey(this ModelBuildDefinition modelBuildDefinition) =>
+            new BuildDefinitionKey(
+                modelBuildDefinition.AzureOrganization,
+                modelBuildDefinition.AzureProject,
+                modelBuildDefinition.DefinitionId);
+
+        public static BuildDefinitionInfo GetBuildDefinitionInfo(this ModelBuildDefinition modelBuildDefinition) =>
+            new BuildDefinitionInfo(GetBuildDefinitionKey(modelBuildDefinition), modelBuildDefinition.DefinitionName);
+
+        #endregion
+
+        #region ModelTestResult
+
+        public static HelixLogInfo? GetHelixLogInfo(this ModelTestResult modelTestResult)
+        {
+            if (!modelTestResult.IsHelixTestResult)
+            {
+                return null;
+            }
+
+            return new HelixLogInfo(
+                runClientUri: modelTestResult.HelixRunClientUri,
+                consoleUri: modelTestResult.HelixConsoleUri,
+                coreDumpUri: modelTestResult.HelixCoreDumpUri,
+                testResultsUri: modelTestResult.HelixTestResultsUri);
         }
 
         #endregion

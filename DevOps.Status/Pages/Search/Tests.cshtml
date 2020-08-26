@@ -89,8 +89,17 @@
                         }
                     </tbody>
                 </table>
-                <div>
-                    <a class="btn btn-primary" asp-route-bq=@Model.BuildQuery asp-route-tq=@filterTestQuery>Filter to test</a>
+                <div class="row">
+                    <div class="m-2">
+                        <a class="btn btn-primary" asp-route-bq=@Model.BuildQuery asp-route-tq=@filterTestQuery>Filter to test</a>
+                    </div>
+                    <div class="m-2">
+                        <form method="post">
+                            <input type="hidden" name="testFullName" value="@testInfo.TestName" />
+                            <input type="hidden" name="gitHubRepository" value="@testInfo.GitHubRepository" />
+                            <button class="btn btn-primary">Create Issue</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

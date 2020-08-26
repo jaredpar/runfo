@@ -91,6 +91,8 @@ namespace DevOps.Util
         public string Project { get; }
         public int Id { get; }
 
+        public string DefinitionUri => DevOpsUtil.GetBuildDefinitionUri(Organization, Project, Id);
+
         public BuildDefinitionKey(string organization, string project, int id)
         {
             Organization = organization;

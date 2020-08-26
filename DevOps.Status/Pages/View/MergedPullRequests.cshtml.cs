@@ -65,9 +65,9 @@ namespace DevOps.Status.Pages.View
                         Repository = b.GitHubRepository,
                         PullRequestUri = GitHubPullRequestKey.GetPullRequestUri(b.GitHubOrganization, b.GitHubRepository, prNumber),
                         PullRequestNumber = prNumber,
-                        BuildUri = TriageContextUtil.GetBuildInfo(b).BuildUri,
+                        BuildUri = b.GetBuildInfo().BuildUri,
                         BuildNumber = b.BuildNumber,
-                        DefinitionUri = TriageContextUtil.GetBuildDefinitionInfo(b.ModelBuildDefinition).DefinitionUri,
+                        DefinitionUri = b.ModelBuildDefinition.GetBuildDefinitionKey().DefinitionUri,
                         DefinitionName = b.ModelBuildDefinition.DefinitionName,
                         Result = b.BuildResult!.Value,
                     };

@@ -74,7 +74,7 @@ namespace DevOps.Status.Pages.Search
                 .Select(x => new TimelineData()
                 {
                     BuildNumber = x.ModelBuild.BuildNumber,
-                    BuildUri = TriageContextUtil.GetBuildInfo(x.ModelBuild).BuildUri,
+                    BuildUri = x.ModelBuild.GetBuildInfo().BuildUri,
                     JobName = x.JobName,
                     Line = x.Message,
                 })

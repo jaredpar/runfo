@@ -41,28 +41,6 @@ namespace DevOps.Util.Triage
                 ? (GitHubPullRequestKey?)new GitHubPullRequestKey(build.GitHubOrganization, build.GitHubRepository, build.PullRequestNumber.Value)
                 : null;
 
-        public static BuildDefinitionInfo GetBuildDefinitionInfo(ModelBuildDefinition buildDefinition) =>
-            new BuildDefinitionInfo(
-                buildDefinition.AzureOrganization,
-                buildDefinition.AzureProject,
-                buildDefinition.DefinitionName,
-                buildDefinition.DefinitionId);
-
-        public static BuildKey GetBuildKey(ModelBuild build) =>
-            new BuildKey(build.ModelBuildDefinition.AzureOrganization, build.ModelBuildDefinition.AzureProject, build.BuildNumber);
-
-        // TODO: Should be an extension method
-        public static BuildInfo GetBuildInfo(ModelBuild build) =>
-            new BuildInfo(
-                GetBuildKey(build),
-                GetBuildDefinitionInfo(build.ModelBuildDefinition),
-                build.GitHubOrganization,
-                build.GitHubRepository,
-                build.PullRequestNumber,
-                build.StartTime,
-                build.FinishTime,
-                build.BuildResult ?? BuildResult.None);
-
         public async Task<ModelBuildDefinition> EnsureBuildDefinitionAsync(BuildDefinitionInfo definitionInfo)
         {
             var buildDefinition = Context.ModelBuildDefinitions

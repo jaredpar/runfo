@@ -66,10 +66,10 @@ namespace DevOps.Status.Pages.View
             Builds = builds
                 .Select(b => new PullRequestBuildInfo()
                 {
-                    BuildUri = TriageContextUtil.GetBuildInfo(b).BuildUri,
+                    BuildUri = b.GetBuildInfo().BuildUri,
                     BuildNumber = b.BuildNumber,
                     Result = b.BuildResult ?? BuildResult.None,
-                    DefinitionUri = TriageContextUtil.GetBuildDefinitionInfo(b.ModelBuildDefinition).DefinitionUri,
+                    DefinitionUri = b.ModelBuildDefinition.GetBuildDefinitionInfo().DefinitionUri,
                     DefinitionName = b.ModelBuildDefinition.DefinitionName,
                 })
                 .ToList();
