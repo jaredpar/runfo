@@ -5,30 +5,32 @@ using System.IO;
 using System.Threading.Tasks;
 using Mono.Options;
 
-internal static class RuntimeInfoUtil
+namespace Runfo
 {
-    internal const int ExitSuccess = 0;
-    internal const int ExitFailure = 1;
-
-    internal static readonly string CacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "runfo", "json");
-
-    internal static TimeSpan? TryGetDuration(string startTime, string finishTime)
+    internal static class RuntimeInfoUtil
     {
-        if (startTime is null ||
-            finishTime is null ||
-            !DateTime.TryParse(startTime, out var s) ||
-            !DateTime.TryParse(finishTime, out var f))
+        internal const int ExitSuccess = 0;
+        internal const int ExitFailure = 1;
+
+        internal static readonly string CacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "runfo", "json");
+
+        internal static TimeSpan? TryGetDuration(string startTime, string finishTime)
         {
-            return null;
+            if (startTime is null ||
+                finishTime is null ||
+                !DateTime.TryParse(startTime, out var s) ||
+                !DateTime.TryParse(finishTime, out var f))
+            {
+                return null;
+            }
+
+            return f - s;
         }
 
-        return f - s;
+        internal static async Task<List<T>> ToListAsync<T>(IEnumerable<Task<T>> e)
+        {
+            await Task.WhenAll(e);
+            return e.Select(x => x.Result).ToList();
+        }
     }
-
-    internal static async Task<List<T>> ToListAsync<T>(IEnumerable<Task<T>> e)
-    {
-        await Task.WhenAll(e);
-        return e.Select(x => x.Result).ToList();
-    }
-
 }

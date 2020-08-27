@@ -8,31 +8,33 @@ using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 
-internal static class Extensions
+namespace Runfo
 {
-    internal static async Task<BuildTestInfoCollection> ListBuildTestInfosAsync(this DotNetQueryUtil queryUtil, BuildSearchOptionSet optionSet, bool includeAllTests = false)
+    internal static class Extensions
     {
-        TestOutcome[] outcomes = includeAllTests
-            ? Array.Empty<TestOutcome>()
-            : DotNetUtil.FailedTestOutcomes;
-
-        var list = new List<BuildTestInfo>();
-        foreach (var build in await queryUtil.ListBuildsAsync(optionSet).ConfigureAwait(false))
+        internal static async Task<BuildTestInfoCollection> ListBuildTestInfosAsync(this DotNetQueryUtil queryUtil, BuildSearchOptionSet optionSet, bool includeAllTests = false)
         {
-            try
+            TestOutcome[] outcomes = includeAllTests
+                ? Array.Empty<TestOutcome>()
+                : DotNetUtil.FailedTestOutcomes;
+
+            var list = new List<BuildTestInfo>();
+            foreach (var build in await queryUtil.ListBuildsAsync(optionSet).ConfigureAwait(false))
             {
-                var collection = await queryUtil.ListDotNetTestRunsAsync(build, outcomes);
-                var buildTestInfo = new BuildTestInfo(build, collection.SelectMany(x => x.TestCaseResults).ToList());
-                list.Add(buildTestInfo);
+                try
+                {
+                    var collection = await queryUtil.ListDotNetTestRunsAsync(build, outcomes);
+                    var buildTestInfo = new BuildTestInfo(build, collection.SelectMany(x => x.TestCaseResults).ToList());
+                    list.Add(buildTestInfo);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Cannot get test info for {build.Id} {DevOpsUtil.GetBuildUri(build)}");
+                    Console.WriteLine(ex.Message);
+                }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Cannot get test info for {build.Id} {DevOpsUtil.GetBuildUri(build)}");
-                Console.WriteLine(ex.Message);
-            }
+
+            return new BuildTestInfoCollection(new ReadOnlyCollection<BuildTestInfo>(list));
         }
-
-        return new BuildTestInfoCollection(new ReadOnlyCollection<BuildTestInfo>(list));
     }
-
 }
