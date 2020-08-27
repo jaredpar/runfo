@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using DevOps.Util;
-using Mono.Options;
 
 namespace DevOps.Util.DotNet
 {

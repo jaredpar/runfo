@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Mono.Options;
 
-namespace DevOps.Util.DotNet
+namespace Runfo
 {
     public class BuildSearchOptionSet : OptionSet
     {

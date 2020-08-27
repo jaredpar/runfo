@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
+using DevOps.Util.DotNet;
 using Mono.Options;
 
-namespace DevOps.Util.DotNet
+namespace Runfo
 {
     // TODO: a bit weird here to be using Console.WriteLine now that this gets used in
     // a lot of different places. May need to move this around. 

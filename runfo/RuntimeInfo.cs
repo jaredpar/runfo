@@ -10,7 +10,7 @@ using DevOps.Util;
 using DevOps.Util.DotNet;
 using Mono.Options;
 using static Runfo.RuntimeInfoUtil;
-using static DevOps.Util.DotNet.OptionSetUtil;
+using static Runfo.OptionSetUtil;
 using System.Text;
 using Octokit;
 

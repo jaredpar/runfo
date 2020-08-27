@@ -28,6 +28,8 @@ namespace DevOps.Util.DotNet
             TestOutcome.Aborted
         };
 
+        // TODO: This should all be moved back to runfo at this point. These libraries should be using the real names
+        // at this point
         public static readonly (string BuildName, string Project, int DefinitionId)[] BuildDefinitions = new[]
             {
                 ("runtime", "public", 686),
