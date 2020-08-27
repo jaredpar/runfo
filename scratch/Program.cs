@@ -123,13 +123,6 @@ namespace Scratch
             //var gitHubClient = await factory.CreateForAppAsync("jaredpar", "devops-util");
             //var comment = await gitHubClient.Issue.Comment.Create("jaredpar", "devops-util", 5, "This is a test comment");
 
-            foreach (var build in await DotNetQueryUtil.ListBuildsAsync("-d roslyn -pr -count 200"))
-            {
-                var modelDataUtil = new ModelDataUtil(DotNetQueryUtil, TriageContextUtil, CreateLogger());
-                Console.WriteLine($"Uploading {build.GetBuildInfo().BuildUri}");
-                await modelDataUtil.EnsureModelInfoAsync(build).ConfigureAwait(false);
-            }
-
 
             /*
             var blobClient = BlobStorageUtil;

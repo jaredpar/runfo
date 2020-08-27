@@ -60,7 +60,7 @@ namespace DevOps.Util.Triage
                 TriageIssueKind.Infra,
                 SearchKind.SearchTimeline,
                 searchText: "HTTP request to.*api.nuget.org.*timed out",
-                Create("dotnet", "core-eng", 9634, "-p public"),
+                Create("dotnet", "core-eng", 9634),
                 Create("dotnet", "runtime", 35074));
             TriageContextUtil.EnsureTriageIssue(
                 TriageIssueKind.Infra,
@@ -90,15 +90,15 @@ namespace DevOps.Util.Triage
                 TriageIssueKind.Test,
                 SearchKind.SearchTimeline,
                 searchText: "OutOfMemoryException",
-                Create("dotnet", "aspnetcore", 21802, "-d aspnet"));
+                Create("dotnet", "aspnetcore", 21802, "definitionId:278"));
 
-            static ModelTriageGitHubIssue Create(string organization, string repository, int number, string? buildQuery = null, bool includeDefinitions = true) =>
+            static ModelTriageGitHubIssue Create(string organization, string repository, int number, string? searchBuildsQueryString = null, bool includeDefinitions = true) =>
                 new ModelTriageGitHubIssue()
                 {
                     Organization = organization,
                     Repository = repository, 
                     IssueNumber = number,
-                    BuildQuery = buildQuery,
+                    SearchBuildsQueryString = searchBuildsQueryString,
                     IncludeDefinitions = includeDefinitions
                 };
         }

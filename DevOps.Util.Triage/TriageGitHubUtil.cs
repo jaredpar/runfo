@@ -82,7 +82,7 @@ namespace DevOps.Util.Triage
                     return;
                 }
 
-                var results = TriageContextUtil.FindModelTriageIssueResults(triageIssue, gitHubIssue);
+                var results = await TriageContextUtil.FindModelTriageIssueResultsAsync(triageIssue, gitHubIssue).ConfigureAwait(false);
                 var footer = new StringBuilder();
                 var mostRecent = results
                     .Select(x => x.ModelBuild)

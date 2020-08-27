@@ -207,10 +207,18 @@ namespace DevOps.Util.Triage
         // Whether or not to include BuildDefinitions in the report
         public bool IncludeDefinitions { get; set; }
 
-        // The query to use to filter builds hitting the overall triage issue to this specific
-        // GitHub issue. If empty it will filter to builds against the repository where this 
-        // issue was defined
+        /// <summary>
+        /// This property uses the old style query string, from Mono.Options, to get the builds. 
+        /// </summary>
+        [Obsolete("Use BuildQueryString instead")]
         public string BuildQuery { get; set; }
+
+        /// <summary>
+        /// The query to use to filter builds hitting the overall triage issue to this specific
+        /// GitHub issue. If empty it will filter to builds against the repository where this 
+        /// issue was defined
+        /// </summary>
+        public string SearchBuildsQueryString { get; set; }
 
         [NotMapped]
         public GitHubIssueKey IssueKey => new GitHubIssueKey(Organization, Repository, IssueNumber);
