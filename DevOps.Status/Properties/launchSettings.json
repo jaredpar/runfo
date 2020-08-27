@@ -11,7 +11,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "search/tests/?bq=definition%3Aroslyn+count%3A100&tq=name%3A\"microsoft.codeanalysis.csharp.unittests.getdiagnosticstests.testconcurrentgetanalyzerdiagnostics_symbolstartanalyzer\"",
+      "launchUrl": "search/builds",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

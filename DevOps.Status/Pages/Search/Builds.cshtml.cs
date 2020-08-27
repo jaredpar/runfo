@@ -20,6 +20,7 @@ namespace DevOps.Status.Pages.Search
     {
         public class BuildData
         {
+            public BuildResult BuildResult { get; set; }
             public string? Result { get; set; }
             public int BuildNumber { get; set; }
             public string? BuildUri { get; set; }
@@ -33,6 +34,8 @@ namespace DevOps.Status.Pages.Search
 
         [BindProperty(SupportsGet = true, Name = "q")]
         public string? Query { get; set; }
+
+        public string? PassRate { get; set; }
 
         public bool IncludeDefinitionColumn { get; set; }
 
@@ -60,9 +63,11 @@ namespace DevOps.Status.Pages.Search
                 .Select(x =>
                 {
                     var buildInfo = x.GetBuildInfo();
+                    var buildResult = x.BuildResult ?? BuildResult.None;
                     return new BuildData()
                     {
-                        Result = x.BuildResult.ToString(),
+                        BuildResult = buildResult,
+                        Result = buildResult.ToString(),
                         BuildNumber = buildInfo.Number,
                         Kind = buildInfo.PullRequestNumber.HasValue ? "Pull Request" : "Rolling",
                         PullRequestKey = buildInfo.PullRequestKey,
@@ -72,6 +77,9 @@ namespace DevOps.Status.Pages.Search
                     };
                 })
                 .ToList();
+            var passRate = (double)Builds.Count(x => x.BuildResult == BuildResult.Succeeded || x.BuildResult == BuildResult.PartiallySucceeded) / Builds.Count;
+            passRate *= 100;
+            PassRate = $"{passRate:N2}%";
         }
     }
 }

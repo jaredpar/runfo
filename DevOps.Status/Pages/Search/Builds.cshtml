@@ -15,6 +15,10 @@
 
 @if (Model.Builds.Count > 0)
 {
+    <p>Pass Rate: @Model.PassRate</p>
+    <p>Count: @Model.Builds.Count</p>
+
+    <h3>Results</h3>
     <table class="table">
         <thead>
             <tr>
