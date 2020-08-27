@@ -47,16 +47,16 @@ namespace DevOps.Status.Pages.Search
         {
             if (string.IsNullOrEmpty(Query))
             {
-                Query = new StatusBuildSearchOptions() { Definition = "runtime", Count = 10 }.GetUserQueryString();
+                Query = new SearchBuildsRequest() { Definition = "runtime", Count = 10 }.GetQueryString();
                 return;
             }
 
-            var options = new StatusBuildSearchOptions();
-            options.Parse(Query);
+            var options = new SearchBuildsRequest();
+            options.ParseQueryString(Query);
 
             IncludeDefinitionColumn = !options.HasDefinition;
 
-            Builds = (await options.GetModelBuildsQuery(TriageContext).ToListAsync())
+            Builds = (await options.GetQuery(TriageContext).ToListAsync())
                 .Select(x =>
                 {
                     var buildInfo = x.GetBuildInfo();

@@ -9,39 +9,39 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DevOps.Status.Util
+namespace DevOps.Util.Triage
 {
-    public class StatusTestSearchOptions
+    public class SearchTimelinesRequest
     {
-        public string? Name { get; set; }
+        public string? Text { get; set; }
 
-        public IQueryable<ModelTestResult> GetModelTestResultsQuery(
+        public IQueryable<ModelTimelineIssue> GetQuery(
             TriageContextUtil triageContextUtil,
             IQueryable<ModelBuild> buildQuery)
         {
-            IQueryable<ModelTestResult> query = buildQuery
+            IQueryable<ModelTimelineIssue> query = buildQuery
                 .Join(
-                    triageContextUtil.Context.ModelTestResults,
+                    triageContextUtil.Context.ModelTimelineIssues,
                     b => b.Id,
                     t => t.ModelBuildId,
                     (b, t) => t);
 
-            if (!string.IsNullOrEmpty(Name))
+            if (Text is object)
             {
-                var text = Name.Replace('*', '%');
+                var text = Text.Replace('*', '%');
                 text = '%' + text.Trim('%') + '%';
-                query = query.Where(t => EF.Functions.Like(t.TestFullName, text));
+                query = query.Where(t => EF.Functions.Like(t.Message, text));
             }
 
             return query;
         }
 
-        public string GetUserQueryString()
+        public string GetQueryString()
         {
             var builder = new StringBuilder();
-            if (!string.IsNullOrEmpty(Name))
+            if (!string.IsNullOrEmpty(Text))
             {
-                Append($"name:\"{Name}\"");
+                Append($"text:\"{Text}\"");
             }
 
             return builder.ToString();
@@ -57,11 +57,11 @@ namespace DevOps.Status.Util
             }
         }
 
-        public void Parse(string userQuery)
+        public void ParseQueryString(string userQuery)
         {
             if (!userQuery.Contains(":"))
             {
-                Name = userQuery.Trim('"');
+                Text = userQuery.Trim('"');
                 return;
             }
 
@@ -69,8 +69,8 @@ namespace DevOps.Status.Util
             {
                 switch (tuple.Name.ToLower())
                 {
-                    case "name":
-                        Name = tuple.Value.Trim('"');
+                    case "text":
+                        Text = tuple.Value.Trim('"');
                         break;
                     default:
                         throw new Exception($"Invalid option {tuple.Name}");

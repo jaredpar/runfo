@@ -75,18 +75,18 @@ namespace DevOps.Status.Pages.Search
         {
             if (string.IsNullOrEmpty(BuildQuery))
             {
-                BuildQuery = new StatusBuildSearchOptions() { Definition = "runtime" }.GetUserQueryString();
+                BuildQuery = new SearchBuildsRequest() { Definition = "runtime" }.GetQueryString();
 
                 return Page();
             }
 
             var buildSearchOptions = GetBuildSearchOptions();
-            var testSearchOptions = new StatusTestSearchOptions();
-            testSearchOptions.Parse(TestsQuery ?? "");
+            var testSearchOptions = new SearchTestsRequest();
+            testSearchOptions.ParseQueryString(TestsQuery ?? "");
 
-            var query = testSearchOptions.GetModelTestResultsQuery(
+            var query = testSearchOptions.GetQuery(
                 TriageContextUtil,
-                buildSearchOptions.GetModelBuildsQuery(TriageContextUtil))
+                buildSearchOptions.GetQuery(TriageContextUtil))
                 .Include(x => x.ModelTestRun)
                 .Include(x => x.ModelBuild)
                 .ThenInclude(x => x.ModelBuildDefinition);
@@ -152,13 +152,13 @@ namespace DevOps.Status.Pages.Search
             async Task<string> GetReportText()
             {
                 var buildSearchOptions = GetBuildSearchOptions();
-                var testSearchOptions = new StatusTestSearchOptions()
+                var testSearchOptions = new SearchTestsRequest()
                 {
                     Name = testFullName,
                 };
-                var query = testSearchOptions.GetModelTestResultsQuery(
+                var query = testSearchOptions.GetQuery(
                     TriageContextUtil,
-                    buildSearchOptions.GetModelBuildsQuery(TriageContextUtil))
+                    buildSearchOptions.GetQuery(TriageContextUtil))
                     .Include(x => x.ModelBuild)
                     .ThenInclude(x => x.ModelBuildDefinition)
                     .Include(x => x.ModelTestRun);
@@ -181,14 +181,14 @@ namespace DevOps.Status.Pages.Search
             }
         }
 
-        private StatusBuildSearchOptions GetBuildSearchOptions()
+        private SearchBuildsRequest GetBuildSearchOptions()
         {
             Debug.Assert(!string.IsNullOrEmpty(BuildQuery));
-            var buildSearchOptions = new StatusBuildSearchOptions()
+            var buildSearchOptions = new SearchBuildsRequest()
             {
                 Count = 50,
             };
-            buildSearchOptions.Parse(BuildQuery);
+            buildSearchOptions.ParseQueryString(BuildQuery);
             return buildSearchOptions;
         }
     }

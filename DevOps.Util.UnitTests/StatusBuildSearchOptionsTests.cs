@@ -1,5 +1,6 @@
 ﻿using DevOps.Status.Util;
 using DevOps.Util.DotNet;
+using DevOps.Util.Triage;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -19,9 +20,9 @@ namespace DevOps.Util.UnitTests
         [InlineData("count:1 repository:roslyn kind:mpr", "repository:roslyn kind:mpr count:1")]
         public void RoundTripQueryString(string toParse, string userQuery)
         {
-            var options = new StatusBuildSearchOptions();
-            options.Parse(toParse);
-            Assert.Equal(userQuery, options.GetUserQueryString());
+            var options = new SearchBuildsRequest();
+            options.ParseQueryString(toParse);
+            Assert.Equal(userQuery, options.GetQueryString());
         }
     }
 }

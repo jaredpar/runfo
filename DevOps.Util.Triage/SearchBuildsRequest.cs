@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DevOps.Status.Util
+namespace DevOps.Util.Triage
 {
-    public class StatusBuildSearchOptions
+    public class SearchBuildsRequest
     {
         public const int DefaultCount = 10;
         public const ModelBuildKind DefaultKind = ModelBuildKind.All;
@@ -41,10 +41,10 @@ namespace DevOps.Status.Util
             }
         }
 
-        public IQueryable<ModelBuild> GetModelBuildsQuery(TriageContext triageContext) =>
-            GetModelBuildsQuery(new TriageContextUtil(triageContext));
+        public IQueryable<ModelBuild> GetQuery(TriageContext triageContext) =>
+            GetQuery(new TriageContextUtil(triageContext));
 
-        public IQueryable<ModelBuild> GetModelBuildsQuery(
+        public IQueryable<ModelBuild> GetQuery(
             TriageContextUtil triageContextUtil,
             Func<IQueryable<ModelBuild>, IQueryable<ModelBuild>>? beforeCountFunc = null)
         {
@@ -74,7 +74,7 @@ namespace DevOps.Status.Util
             return query.Take(Count);
         }
 
-        public string GetUserQueryString()
+        public string GetQueryString()
         {
             var builder = new StringBuilder();
             if (!string.IsNullOrEmpty(Definition))
@@ -118,7 +118,7 @@ namespace DevOps.Status.Util
             }
         }
 
-        public void Parse(string userQuery)
+        public void ParseQueryString(string userQuery)
         {
             foreach (var tuple in DotNetQueryUtil.TokenizeQueryPairs(userQuery))
             {

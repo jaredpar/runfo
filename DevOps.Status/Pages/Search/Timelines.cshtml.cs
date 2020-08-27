@@ -44,7 +44,7 @@ namespace DevOps.Status.Pages.Search
             {
                 if (string.IsNullOrEmpty(BuildQuery))
                 {
-                    BuildQuery = new StatusBuildSearchOptions() { Definition = "runtime" }.GetUserQueryString();
+                    BuildQuery = new SearchBuildsRequest() { Definition = "runtime" }.GetQueryString();
                 }
 
                 if (string.IsNullOrEmpty(TimelineQuery))
@@ -55,17 +55,17 @@ namespace DevOps.Status.Pages.Search
                 return Page();
             }
 
-            var buildSearchOptions = new StatusBuildSearchOptions()
+            var buildSearchOptions = new SearchBuildsRequest()
             {
                 Count = 50,
             };
-            buildSearchOptions.Parse(BuildQuery);
-            var timelineSearchOptions = new StatusTimelineSearchOptions();
-            timelineSearchOptions.Parse(TimelineQuery);
+            buildSearchOptions.ParseQueryString(BuildQuery);
+            var timelineSearchOptions = new SearchTimelinesRequest();
+            timelineSearchOptions.ParseQueryString(TimelineQuery);
 
-            var query = timelineSearchOptions.GetModeTimelinesQuery(
+            var query = timelineSearchOptions.GetQuery(
                 TriageContextUtil,
-                buildSearchOptions.GetModelBuildsQuery(TriageContextUtil))
+                buildSearchOptions.GetQuery(TriageContextUtil))
                 .Include(x => x.ModelBuild)
                 .ThenInclude(x => x.ModelBuildDefinition);
 
