@@ -11,4 +11,8 @@
     <ProjectReference Include="..\DevOps.Util.DotNet\DevOps.Util.DotNet.csproj" />
     <ProjectReference Include="..\DevOps.Util.Triage\DevOps.Util.Triage.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\js\view\" />
+  </ItemGroup>
 </Project>

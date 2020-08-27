@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using DevOps.Status.Util;
 using Microsoft.AspNetCore.Authentication;
+using DevOps.Util.Triage;
+using Microsoft.EntityFrameworkCore;
 
 namespace DevOps.Status.Controllers
 {
@@ -15,11 +17,13 @@ namespace DevOps.Status.Controllers
     [Produces(MediaTypeNames.Application.Json)]
     public sealed partial class RunfoController : ControllerBase
     {
+        public TriageContextUtil TriageContextUtil { get; }
         public DotNetQueryUtilFactory QueryUtilFactory { get; }
 
-        public RunfoController(DotNetQueryUtilFactory factory)
+        public RunfoController(DotNetQueryUtilFactory factory, TriageContextUtil triageContextUtil)
         {
             QueryUtilFactory = factory;
+            TriageContextUtil = triageContextUtil;
         }
 
         [HttpGet]
@@ -29,15 +33,16 @@ namespace DevOps.Status.Controllers
         {
             if (query is object)
             {
-                var queryUtil = QueryUtilFactory.DotNetQueryUtil;
-                var builds = await queryUtil.ListBuildsAsync(query);
+                var searchBuildsRequest = new SearchBuildsRequest() { Count = 50 };
+                searchBuildsRequest.ParseQueryString(query);
+                var builds = await searchBuildsRequest.GetQuery(TriageContextUtil).Include(x => x.ModelBuildDefinition).ToListAsync();
                 var list = builds
                     .Select(x =>
                     {
                         var buildInfo = x.GetBuildInfo();
                         return new BuildStatusRestInfo()
                         {
-                            Result = x.Result.ToString(),
+                            Result = (x.BuildResult ?? BuildResult.None).ToString(),
                             BuildNumber = buildInfo.Number,
                             BuildUri = buildInfo.BuildUri
                         };
@@ -55,12 +60,22 @@ namespace DevOps.Status.Controllers
             string definition,
             [FromQuery]string? query = null)
         {
-            query = $"-d {definition} {query}";
+            
+            var searchBuildsRequest = new SearchBuildsRequest()
+            { 
+                Definition = definition,
+                Count = 50
+            };
+            if (query is object)
+            {
+                searchBuildsRequest.ParseQueryString(query);
+            }
+
+            var builds = await searchBuildsRequest.GetQuery(TriageContextUtil).Include(x => x.ModelBuildDefinition).ToListAsync();
             var queryUtil = QueryUtilFactory.DotNetQueryUtil;
-            var builds = await queryUtil.ListBuildsAsync(query);
             var timelines = builds
                 .AsParallel()
-                .Select(async x => await queryUtil.Server.GetTimelineAsync(x.Project.Name, x.Id));
+                .Select(async x => await queryUtil.Server.GetTimelineAsync(x.ModelBuildDefinition.AzureProject, x.BuildNumber));
             var trees = new List<TimelineTree>();
             foreach (var task in timelines)
             {

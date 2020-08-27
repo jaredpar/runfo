@@ -46,7 +46,7 @@ internal sealed partial class RuntimeInfo
         var data = DotNetUtil.BuildDefinitions
             .AsParallel()
             .AsOrdered()
-            .Select(async t => (t.BuildName, t.DefinitionId, await QueryUtil.ListBuildsAsync(t.Project, count, new[] { t.DefinitionId })));
+            .Select(async t => (t.BuildName, t.DefinitionId, await QueryUtil.ListBuildsAsync(count, t.Project, new[] { t.DefinitionId })));
 
         foreach (var task in data)
         {

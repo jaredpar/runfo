@@ -109,14 +109,6 @@ namespace DevOps.Util.Triage
             await TriageBuildAsync(build).ConfigureAwait(false);
         }
 
-        public async Task TriageQueryAsync(string buildQuery)
-        {
-            foreach (var build in await QueryUtil.ListBuildsAsync(buildQuery))
-            {
-                await TriageBuildAsync(build).ConfigureAwait(false);
-            }
-        }
-
         // TODO: need overload that takes builds and groups up the issue and PR updates
         // or maybe just make that a separate operation from triage
         public async Task TriageBuildAsync(Build build)

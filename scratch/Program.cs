@@ -142,7 +142,7 @@ namespace Scratch
         internal async Task PopulateTimelines()
         {
             var triageContextUtil = new TriageContextUtil(TriageContext);
-            foreach (var build in await DotNetQueryUtil.ListBuildsAsync("-d runtime -c 50 -pr"))
+            foreach (var build in await DotNetQueryUtil.ListBuildsAsync(definition: "runtime", includePullRequests: true))
             {
                 var buildInfo = build.GetBuildInfo();
                 try
@@ -210,7 +210,7 @@ namespace Scratch
             var server = DevOpsServer;
             var queryUtil = DotNetQueryUtil;
 
-            foreach (var build in await queryUtil.ListBuildsAsync("-d roslyn -c 100 -br master -before 2020/4/22"))
+            foreach (var build in await queryUtil.ListBuildsAsync(definition: "roslyn", count: 100, branch: "master", before: "2020/4/22"))
             {
                 var buildInfo = build.GetBuildInfo();
                 try
@@ -294,7 +294,7 @@ namespace Scratch
             var server = DevOpsServer;
             var queryUtil = DotNetQueryUtil;
 
-            foreach (var build in await queryUtil.ListBuildsAsync("-d runtime -c 30 -pr"))
+            foreach (var build in await queryUtil.ListBuildsAsync(definition: "runtime", count: 30, includePullRequests: true))
             {
                 var timeline = await server.GetTimelineAsync(build.Project.Name, build.Id);
                 if (timeline is null)
@@ -319,7 +319,7 @@ namespace Scratch
             var testFailCount = 0;
             var otherFailCount = 0;
 
-            foreach (var build in await queryUtil.ListBuildsAsync("-d runtime -c 100"))
+            foreach (var build in await queryUtil.ListBuildsAsync(definition: "runtime", count: 100))
             {
                 try
                 {
@@ -375,7 +375,7 @@ namespace Scratch
             var queryUtil = DotNetQueryUtil;
 
             Console.WriteLine("Build Uri,Pull Request,Minutes");
-            foreach (var build in await queryUtil.ListBuildsAsync("-d runtime -c 100 -pr"))
+            foreach (var build in await queryUtil.ListBuildsAsync(definition: "runtime", count: 100, includePullRequests: true))
             {
                 try
                 {

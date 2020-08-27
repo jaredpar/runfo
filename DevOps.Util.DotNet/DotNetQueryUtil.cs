@@ -262,16 +262,68 @@ namespace DevOps.Util.DotNet
                 .ToList();
         }
 
+        public Task<List<Build>> ListBuildsAsync(
+            int count = 50,
+            string? project = null,
+            string? definition = null,
+            string? repositoryName = null,
+            string? branch = null,
+            bool includePullRequests = false,
+            string? before = null,
+            string? after = null)
+        {
+            string? repositoryId = null;
+            if (repositoryName is object)
+            {
+                repositoryId = $"{DotNetUtil.GitHubOrganization}/{repositoryName}";
+            }
+
+            int[]? definitions = null;
+            if (definition is object)
+            {
+                if (!DotNetUtil.TryGetDefinitionId(definition, out _, out var definitionId))
+                {
+                    throw new Exception($"Invalid definition name {definition}");
+                }
+
+                definitions = new[] { definitionId };
+            }
+
+            DateTimeOffset? beforeDateTimeOffset = null;
+            if (before is object)
+            {
+                beforeDateTimeOffset = DateTimeOffset.Parse(before);
+            }
+
+            DateTimeOffset? afterDateTimeOffset = null;
+            if (after is object)
+            {
+                afterDateTimeOffset = DateTimeOffset.Parse(after);
+            }
+
+            return ListBuildsAsync(
+                count: count,
+                project: project,
+                definitions: definitions,
+                repositoryId: repositoryId,
+                branch: branch,
+                includePullRequests: includePullRequests,
+                before: beforeDateTimeOffset,
+                after: afterDateTimeOffset);
+        }
+
         public async Task<List<Build>> ListBuildsAsync(
-            string project,
             int count,
+            string? project = null,
             int[]? definitions = null,
             string? repositoryId = null,
-            string? branchName = null,
+            string? branch = null,
             bool includePullRequests = false,
             DateTimeOffset? before = null,
             DateTimeOffset? after = null)
         {
+            project ??= DotNetUtil.DefaultAzureProject;
+
             // When doing before / after comparisons always use QueueTime. The StartTime parameter
             // in REST refers to when the latest build attempt started, not the original. Using that
             // means the jobs returned can violate the before / after constraint. The queue time is
@@ -289,7 +341,7 @@ namespace DevOps.Util.DotNet
                 project,
                 definitions: definitions,
                 repositoryId: repositoryId,
-                branchName: branchName,
+                branchName: branch,
                 statusFilter: statusFilter,
                 queryOrder: queryOrder,
                 maxTime: before,
@@ -396,17 +448,6 @@ namespace DevOps.Util.DotNet
             }
         }
 
-        public async Task<List<Build>> ListBuildsAsync(string buildQuery)
-        {
-            var optionSet = new BuildSearchOptionSet();
-            if (optionSet.Parse(TokenizeQuery(buildQuery)).Count != 0)
-            {
-                throw CreateBadOptionException();
-            }
-
-            return await ListBuildsAsync(optionSet).ConfigureAwait(false);
-        }
-
         public async Task<List<Build>> ListBuildsAsync(BuildSearchOptionSet optionSet)
         {
             if (optionSet.BuildIds.Count > 0 && optionSet.Definitions.Count > 0)
@@ -463,11 +504,11 @@ namespace DevOps.Util.DotNet
             {
                 var (project, definitions) = GetProjectAndDefinitions();
                 var collection = await ListBuildsAsync(
-                    project,
                     searchCount,
+                    project,
                     definitions: definitions,
                     repositoryId: repository,
-                    branchName: branch,
+                    branch: branch,
                     includePullRequests: optionSet.IncludePullRequests,
                     before: optionSet.Before,
                     after: optionSet.After);
