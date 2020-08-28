@@ -26,7 +26,7 @@ namespace DevOps.Status.Pages.Search
 
             public string? CollapseName { get; set; }
 
-            public TestResultsDisplay TestResultsDisplay { get; set; }
+            public TestResultsDisplay? TestResultsDisplay { get; set; }
         }
 
         public TriageContextUtil TriageContextUtil { get; }
@@ -78,7 +78,8 @@ namespace DevOps.Status.Pages.Search
                     CollapseName = $"collapse{count}",
                     TestResultsDisplay = new TestResultsDisplay(group)
                     {
-                        IncludeKindColumn = buildSearchOptions.Kind == ModelBuildKind.All,
+                        IncludeBuildColumn = true,
+                        IncludeBuildKindColumn = buildSearchOptions.Kind == ModelBuildKind.All,
                     }
                 };
 

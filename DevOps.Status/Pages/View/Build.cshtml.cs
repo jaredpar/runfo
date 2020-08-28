@@ -125,7 +125,9 @@ namespace DevOps.Status.Pages.View
                 var modelTestResults = await query.ToListAsync();
                 TestResultsDisplay = new TestResultsDisplay(modelTestResults)
                 {
-                    IncludeKindColumn = false,
+                    IncludeBuildColumn = false,
+                    IncludeBuildKindColumn = false,
+                    IncludeTestFullNameColumn = true,
                 };
             }
         }

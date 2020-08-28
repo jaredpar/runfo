@@ -3,9 +3,16 @@
 <table class="table table-striped table-bordered">
     <thead>
         <tr>
-            <th scope="column">Build</th>
             <th scope="column">Test Run</th>
-            @if (Model.IncludeKindColumn)
+            @if (Model.IncludeTestFullNameColumn)
+            {
+                <th scope="column">Test Name</th>
+            }
+            @if (Model.IncludeBuildColumn)
+            {
+                <th scope="column">Build</th>
+            }
+            @if (Model.IncludeBuildKindColumn)
             {
                 <th scope="column">Kind</th>
             }
@@ -22,9 +29,17 @@
         @foreach (var result in Model.Results)
         {
             <tr>
-                <td><a asp-page="/view/build" asp-route-number="@result.BuildNumber">@result.BuildNumber</a></td>
                 <td>@result.TestRun</td>
-                @if (Model.IncludeKindColumn)
+                @if (Model.IncludeTestFullNameColumn)
+                {
+                    <td>@result.TestFullName</td>
+                }
+                @if (Model.IncludeBuildColumn)
+                {
+                    <td><a asp-page="/view/build" asp-route-number="@result.BuildNumber">@result.BuildNumber</a></td>
+                }
+
+                @if (Model.IncludeBuildKindColumn)
                 {
                     <td>@result.Kind</td>
                 }

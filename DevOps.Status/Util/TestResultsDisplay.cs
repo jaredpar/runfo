@@ -14,9 +14,13 @@ namespace DevOps.Status.Util
 
         public List<TestResultInfo> Results { get; } = new List<TestResultInfo>();
 
-        public bool IncludeHelixColumns { get; set; }
+        public bool IncludeTestFullNameColumn { get; set; }
 
-        public bool IncludeKindColumn { get; set; }
+        public bool IncludeBuildColumn { get; set; }
+
+        public bool IncludeBuildKindColumn { get; set; }
+
+        public bool IncludeHelixColumns { get; set; }
 
         public string? GitHubRepository { get; set; }
 
@@ -39,6 +43,7 @@ namespace DevOps.Status.Util
                     BuildUri = DevOpsUtil.GetBuildUri(modelTestResult.ModelBuild.ModelBuildDefinition.AzureOrganization, modelTestResult.ModelBuild.ModelBuildDefinition.AzureProject, modelTestResult.ModelBuild.BuildNumber),
                     Kind = modelTestResult.ModelBuild.GetModelBuildKind().GetDisplayString(),
                     TestRun = modelTestResult.ModelTestRun.Name,
+                    TestFullName = modelTestResult.TestFullName,
                     HelixConsoleUri = modelTestResult.HelixConsoleUri,
                     HelixRunClientUri = modelTestResult.HelixRunClientUri,
                     HelixCoreDumpUri = modelTestResult.HelixCoreDumpUri,
@@ -56,6 +61,8 @@ namespace DevOps.Status.Util
             public int BuildNumber { get; set; }
 
             public string? TestRun { get; set; }
+
+            public string? TestFullName { get; set; }
 
             public string? Kind { get; set; }
 
