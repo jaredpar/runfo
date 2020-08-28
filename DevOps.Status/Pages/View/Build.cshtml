@@ -52,23 +52,7 @@
 
     <div>
         <h3>Failed Tests</h3>
-        <table class="table table-striped table-bordered">
-            <thead>
-                <tr>
-                    <th class="column">Name</th>
-                    <th class="column">Test Run</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var testData in Model.TestDataList)
-                {
-                    <tr>
-                        <td>@testData.TestFullName</td>
-                        <td>@testData.TestRunName</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <partial name="../Shared/_TestResultsDisplay" model="@Model.TestResultsDisplay" />
     </div>
 }
 

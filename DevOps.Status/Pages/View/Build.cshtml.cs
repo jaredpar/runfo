@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
@@ -19,12 +20,6 @@ namespace DevOps.Status.Pages.View
             public int Attempt { get; set; }
             public string? JobName { get; set;  }
             public string? Line { get; set;  }
-        }
-
-        public sealed class TestData
-        {
-            public string? TestFullName { get; set; }
-            public string? TestRunName { get; set; }
         }
 
         public TriageContextUtil TriageContextUtil { get; }
@@ -46,7 +41,7 @@ namespace DevOps.Status.Pages.View
 
         public List<TimelineData> TimelineDataList { get; } = new List<TimelineData>();
 
-        public List<TestData> TestDataList { get; } = new List<TestData>();
+        public TestResultsDisplay TestResultsDisplay { get; set; } = TestResultsDisplay.Empty;
 
         public BuildModel(TriageContextUtil triageContextUtil)
         {
@@ -124,12 +119,14 @@ namespace DevOps.Status.Pages.View
                         x.ModelBuild.BuildNumber == number &&
                         x.ModelBuild.ModelBuildDefinition.AzureOrganization == organization &&
                         x.ModelBuild.ModelBuildDefinition.AzureProject == project)
-                    .Select(x => new TestData()
-                    {
-                        TestFullName = x.TestFullName,
-                        TestRunName = x.ModelTestRun.Name,
-                    });
-                TestDataList.AddRange(await query.ToListAsync());
+                    .Include(x => x.ModelTestRun)
+                    .Include(x => x.ModelBuild)
+                    .ThenInclude(x => x.ModelBuildDefinition);
+                var modelTestResults = await query.ToListAsync();
+                TestResultsDisplay = new TestResultsDisplay(modelTestResults)
+                {
+                    IncludeKindColumn = false,
+                };
             }
         }
     }

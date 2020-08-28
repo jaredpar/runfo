@@ -26,32 +26,7 @@ namespace DevOps.Status.Pages.Search
 
             public string? CollapseName { get; set; }
 
-            public List<TestResultInfo> Results { get; } = new List<TestResultInfo>();
-
-            public bool IncludeHelixColumns { get; set; }
-
-            public bool IncludeKindColumn { get; set; }
-
-            public string? GitHubRepository { get; set; }
-        }
-
-        public class TestResultInfo
-        {
-            public int BuildNumber { get; set; }
-
-            public string? TestRun { get; set; }
-
-            public string? Kind { get; set; }
-
-            public string? BuildUri { get; set; }
-
-            public string? HelixConsoleUri { get; set; }
-
-            public string? HelixRunClientUri { get; set; }
-
-            public string? HelixCoreDumpUri { get; set; }
-
-            public string? HelixTestResultsUri { get; set; }
+            public TestResultsDisplay TestResultsDisplay { get; set; }
         }
 
         public TriageContextUtil TriageContextUtil { get; }
@@ -101,32 +76,12 @@ namespace DevOps.Status.Pages.Search
                 {
                     TestName = group.Key,
                     CollapseName = $"collapse{count}",
-                    IncludeKindColumn = buildSearchOptions.Kind == ModelBuildKind.All,
+                    TestResultsDisplay = new TestResultsDisplay(group)
+                    {
+                        IncludeKindColumn = buildSearchOptions.Kind == ModelBuildKind.All,
+                    }
                 };
 
-                var anyHelix = false;
-                string? gitHubRepository = null;
-                foreach (var item in group)
-                {
-                    anyHelix = anyHelix || item.IsHelixTestResult;
-                    gitHubRepository ??= item.ModelBuild.GitHubRepository;
-
-                    var testResultInfo = new TestResultInfo()
-                    {
-                        BuildNumber = item.ModelBuild.BuildNumber,
-                        BuildUri = DevOpsUtil.GetBuildUri(item.ModelBuild.ModelBuildDefinition.AzureOrganization, item.ModelBuild.ModelBuildDefinition.AzureProject, item.ModelBuild.BuildNumber),
-                        Kind = item.ModelBuild.GetModelBuildKind().GetDisplayString(),
-                        TestRun = item.ModelTestRun.Name,
-                        HelixConsoleUri = item.HelixConsoleUri,
-                        HelixRunClientUri = item.HelixRunClientUri,
-                        HelixCoreDumpUri = item.HelixCoreDumpUri,
-                        HelixTestResultsUri = item.HelixTestResultsUri,
-                    };
-                    testInfo.Results.Add(testResultInfo);
-                }
-
-                testInfo.IncludeHelixColumns = anyHelix;
-                testInfo.GitHubRepository = gitHubRepository;
                 TestInfos.Add(testInfo);
             }
 
