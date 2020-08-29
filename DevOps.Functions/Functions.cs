@@ -119,9 +119,7 @@ namespace DevOps.Functions
 
             logger.LogInformation($"Triaging build {projectName} {buildCompleteMessage.BuildNumber}");
 
-            // TODO: this should be repo specific
-            var runtimeGitHubClient = await GitHubClientFactory.CreateForAppAsync("dotnet", "runtime");
-            var util = new AutoTriageUtil(Server, Context, runtimeGitHubClient, logger);
+            var util = new AutoTriageUtil(Server, Context, logger);
             await util.TriageBuildAsync(projectName, buildCompleteMessage.BuildNumber);
         }
 
@@ -190,10 +188,7 @@ namespace DevOps.Functions
         { 
             var util = new TriageGitHubUtil(GitHubClientFactory, Context, logger);
             await util.UpdateGithubIssues();
-
-            // TODO: this should be repo specific
-            var runtimeGitHubClient = await GitHubClientFactory.CreateForAppAsync("dotnet", "runtime");
-            await util.UpdateStatusIssue(runtimeGitHubClient);
+            await util.UpdateStatusIssue();
         }
 
         [FunctionName("osx-retry")]
@@ -210,7 +205,7 @@ namespace DevOps.Functions
             }
 
             var projectName = await Server.ConvertProjectIdToNameAsync(projectId);
-            var util = new AutoTriageUtil(Server, Context, GitHubClientFactory.CreateAnonymous(), logger);
+            var util = new AutoTriageUtil(Server, Context, logger);
             await util.RetryOsxDeprovisionAsync(projectName, buildCompleteMessage.BuildNumber);
         }
     }

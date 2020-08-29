@@ -22,10 +22,6 @@ namespace DevOps.Util.Triage
 
         public DotNetQueryUtil QueryUtil { get; }
 
-        // TODO: need to remove this. Not all functions require this and it's hard to feed through from
-        // functions
-        public IGitHubClient GitHubClient { get; }
-
         public TriageContextUtil TriageContextUtil { get; }
 
         private ILogger Logger { get; }
@@ -35,11 +31,9 @@ namespace DevOps.Util.Triage
         public AutoTriageUtil(
             DevOpsServer server,
             TriageContext context,
-            IGitHubClient gitHubClient,
             ILogger logger)
         {
             Server = server;
-            GitHubClient = gitHubClient;
             QueryUtil = new DotNetQueryUtil(server, new AzureUtil(server));
             TriageContextUtil = new TriageContextUtil(context);
             Logger = logger;
@@ -122,7 +116,6 @@ namespace DevOps.Util.Triage
                 modelBuild,
                 Server,
                 TriageContextUtil,
-                GitHubClient,
                 Logger);
             await buildTriageUtil.TriageAsync().ConfigureAwait(false);
         }

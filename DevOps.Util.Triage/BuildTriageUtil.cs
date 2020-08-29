@@ -54,7 +54,6 @@ namespace DevOps.Util.Triage
             ModelBuild modelBuild,
             DevOpsServer server,
             TriageContextUtil triageContextUtil,
-            IGitHubClient gitHubClient,
             ILogger logger)
         {
             Build = build;

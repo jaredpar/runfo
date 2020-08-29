@@ -51,7 +51,7 @@ namespace DevOps.Util.Triage
                 switch (modelTriageIssue.SearchKind)
                 {
                     case SearchKind.SearchTimeline:
-                        await UpdateIssuesForSearchTimeline(modelTriageIssue);
+                        await UpdateIssuesForSearchTimeline(modelTriageIssue).ConfigureAwait(false);
                         break;
                     default:
                         Logger.LogWarning($"Unknown search kind {modelTriageIssue.SearchKind} in {modelTriageIssue.Id}");
@@ -63,7 +63,7 @@ namespace DevOps.Util.Triage
             {
                 foreach (var gitHubIssue in triageIssue.ModelTriageGitHubIssues.ToList())
                 {
-                    await UpdateIssueForSearchTimeline(triageIssue, gitHubIssue);
+                    await UpdateIssueForSearchTimeline(triageIssue, gitHubIssue).ConfigureAwait(false);
                 }
             }
 
@@ -116,7 +116,7 @@ namespace DevOps.Util.Triage
                     includeDefinition: gitHubIssue.IncludeDefinitions,
                     footer.ToString());
 
-                var succeeded = await UpdateGitHubIssueReport(gitHubClient, gitHubIssue.IssueKey, reportBody);
+                var succeeded = await UpdateGitHubIssueReport(gitHubClient, gitHubIssue.IssueKey, reportBody).ConfigureAwait(false);
                 Logger.LogInformation($"Updated {gitHubIssue.IssueKey.IssueUri}");
             }
         }
@@ -126,12 +126,12 @@ namespace DevOps.Util.Triage
             try
             {
                 var issueClient = gitHubClient.Issue;
-                var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Number);
+                var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Number).ConfigureAwait(false);
                 if (TryUpdateIssueText(reportBody, issue.Body, out var newIssueBody))
                 {
                     var issueUpdate = issue.ToUpdate();
                     issueUpdate.Body = newIssueBody;
-                    await issueClient.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, issueUpdate);
+                    await issueClient.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, issueUpdate).ConfigureAwait(false);
                     return true;
                 }
                 else
@@ -194,16 +194,18 @@ namespace DevOps.Util.Triage
 
         }
 
-        public async Task UpdateStatusIssue(GitHubClient gitHubClient)
+        public async Task UpdateStatusIssue()
         {
+            var gitHubClient = await GitHubClientFactory.CreateForAppAsync("dotnet", "runtime").ConfigureAwait(false);
+
             var header = new StringBuilder();
             var body = new StringBuilder();
             var footer = new StringBuilder();
             header.AppendLine("## Overview");
             header.AppendLine("Please use these queries to discover issues");
 
-            await BuildOne("Blocking CI", "blocking-clean-ci", DotNetUtil.GetBuildDefinitionKeyFromFriendlyName("runtime"));
-            await BuildOne("Blocking Official Build", "blocking-official-build", DotNetUtil.GetBuildDefinitionKeyFromFriendlyName("runtime-official"));
+            await BuildOne("Blocking CI", "blocking-clean-ci", DotNetUtil.GetBuildDefinitionKeyFromFriendlyName("runtime")).ConfigureAwait(false);
+            await BuildOne("Blocking Official Build", "blocking-official-build", DotNetUtil.GetBuildDefinitionKeyFromFriendlyName("runtime-official")).ConfigureAwait(false);
             await BuildOne("Blocking CI Optional", "blocking-clean-ci-optional", DotNetUtil.GetBuildDefinitionKeyFromFriendlyName("runtime"));
             await BuildOne("Blocking Outerloop", "blocking-outerloop", null);
 
@@ -211,7 +213,7 @@ namespace DevOps.Util.Triage
             header.AppendLine("");
             BuildFooter();
 
-            await UpdateIssue(gitHubClient);
+            await UpdateIssue().ConfigureAwait(false);
 
             void BuildFooter()
             {
@@ -233,7 +235,7 @@ namespace DevOps.Util.Triage
                 body.AppendLine("|Status|Issue|Build Count|");
                 body.AppendLine("|---|---|---|");
 
-                var query = (await DoSearch(gitHubClient, label))
+                var query = (await DoSearch(gitHubClient, label).ConfigureAwait(false))
                     .Select(x => 
                         {
                             var issueKey = x.GetIssueKey();
@@ -269,15 +271,15 @@ namespace DevOps.Util.Triage
                     Type = IssueTypeQualifier.Issue,
                     Repos = { { "dotnet", "runtime" } },
                 };
-                var result = await gitHubClient.Search.SearchIssues(request);
+                var result = await gitHubClient.Search.SearchIssues(request).ConfigureAwait(false);
                 return result.Items.ToList();
             }
 
-            async Task UpdateIssue(GitHubClient gitHubClient)
+            async Task UpdateIssue()
             {
                 var issueKey = new GitHubIssueKey("dotnet", "runtime", 702);
                 var issueClient = gitHubClient.Issue;
-                var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Number);
+                var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Number).ConfigureAwait(false);
                 var updateIssue = issue.ToUpdate();
                 updateIssue.Body = header.ToString() + body.ToString() + footer.ToString();
                 await gitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, updateIssue).ConfigureAwait(false);
