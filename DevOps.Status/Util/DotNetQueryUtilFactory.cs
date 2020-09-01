@@ -1,5 +1,8 @@
-﻿using DevOps.Util;
+﻿using AspNet.Security.OAuth.VisualStudio;
+using DevOps.Util;
 using DevOps.Util.DotNet;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
 using Octokit;
 using System;
 using System.Collections.Generic;
@@ -10,20 +13,28 @@ namespace DevOps.Status.Util
 {
     public sealed class DotNetQueryUtilFactory
     {
-        public DevOpsServer DevOpsServer { get; }
         public BlobStorageUtil BlobStorageUtil { get; }
-        public IAzureUtil AzureUtil { get; }
-        public StatusGitHubClientFactory GitHubClientFactory { get; }
-        public DotNetQueryUtil DotNetQueryUtil { get; }
+        public IHttpContextAccessor HttpContextAccessor { get; }
 
-        public DotNetQueryUtilFactory(DevOpsServer devOpsServer, BlobStorageUtil blobStorageUtil, StatusGitHubClientFactory gitHubClientFactory)
+        public DotNetQueryUtilFactory(IHttpContextAccessor httpContextAccessor, BlobStorageUtil blobStorageUtil)
         {
-            // TODO: this needs to use the Bearer token from the VSO auth
-            DevOpsServer = devOpsServer;
             BlobStorageUtil = BlobStorageUtil;
-            AzureUtil = new CachingAzureUtil(blobStorageUtil, devOpsServer);
-            GitHubClientFactory = gitHubClientFactory;
-            DotNetQueryUtil = new DotNetQueryUtil(devOpsServer, AzureUtil);
+            HttpContextAccessor = httpContextAccessor;
+        }
+
+        public async Task<DevOpsServer> CreateDevOpsServerForUserAsync()
+        {
+            var accessToken = await HttpContextAccessor.HttpContext.GetTokenAsync(VisualStudioAuthenticationDefaults.AuthenticationScheme, "access_token");
+            var token = new AuthorizationToken(AuthorizationKind.BearerToken, accessToken);
+            return new DevOpsServer(DotNetUtil.AzureOrganization, token);
+        }
+
+        public async Task<DotNetQueryUtil> CreateDotNetQueryUtilForUserAsync()
+        {
+            var server = await CreateDevOpsServerForUserAsync();
+            // TODO: use caching one
+            var azureUtil = new AzureUtil(server);
+            return new DotNetQueryUtil(server, azureUtil);
         }
     }
 }

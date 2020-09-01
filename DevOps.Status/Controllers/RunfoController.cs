@@ -72,7 +72,7 @@ namespace DevOps.Status.Controllers
             }
 
             var builds = await searchBuildsRequest.GetQuery(TriageContextUtil).Include(x => x.ModelBuildDefinition).ToListAsync();
-            var queryUtil = QueryUtilFactory.DotNetQueryUtil;
+            var queryUtil = await QueryUtilFactory.CreateDotNetQueryUtilForUserAsync();
             var timelines = builds
                 .AsParallel()
                 .Select(async x => await queryUtil.Server.GetTimelineAsync(x.ModelBuildDefinition.AzureProject, x.BuildNumber));

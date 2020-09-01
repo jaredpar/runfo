@@ -5,12 +5,15 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml.Schema;
 using Azure.Storage.Blobs;
 using DevOps.Util;
 using DevOps.Util.DotNet;
+using DevOps.Util.Triage;
 using Newtonsoft.Json.Serialization;
 using Octokit;
 using YamlDotNet.Core;
@@ -61,6 +64,25 @@ namespace DevOps.Util.DotNet
         {
             Record = record;
             BuildInfo = buildInfo;
+            Line = line;
+        }
+    }
+
+    public sealed class SearchBuildLogsResult
+    {
+        public BuildInfo BuildInfo { get; }
+
+        public TimelineRecord Record { get; }
+
+        public BuildLogReference BuildLogReference { get; }
+
+        public string Line { get; }
+
+        public SearchBuildLogsResult(BuildInfo buildInfo, TimelineRecord record, BuildLogReference buildLogReference, string line)
+        {
+            BuildInfo = buildInfo;
+            Record = record;
+            BuildLogReference = buildLogReference;
             Line = line;
         }
     }
@@ -194,6 +216,73 @@ namespace DevOps.Util.DotNet
                         line);
                 }
             }
+        }
+
+        public async Task<List<SearchBuildLogsResult>> SearchBuildLogsAsync(
+            IEnumerable<BuildInfo> builds,
+            SearchBuildLogsRequest request,
+            Action<Exception>? onError = null)
+        {
+            if (request.Text is null)
+            {
+                throw new ArgumentException("Need text to search for", nameof(request));
+            }
+
+            var nameRegex = CreateSearchRegex(request.LogName);
+            var textRegex = CreateSearchRegex(request.Text);
+
+            var list = new List<(BuildInfo BuildInfo, TimelineRecord TimelineRecord, BuildLogReference BuildLogReference)>();
+            foreach (var buildInfo in builds)
+            {
+                try
+                {
+                    var timeline = await Server.GetTimelineAsync(buildInfo.Project, buildInfo.Number).ConfigureAwait(false);
+                    if (timeline is object)
+                    {
+                        var records = timeline.Records.Where(r => nameRegex is null || nameRegex.IsMatch(r.Name));
+                        foreach (var record in records)
+                        {
+                            if (record.Log is { } log)
+                            {
+                                list.Add((buildInfo, record, log));
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    onError?.Invoke(ex);
+                }
+            }
+
+            var resultTasks = list
+                .AsParallel()
+                .Select(async x =>
+                {
+                    var match = await SearchFileForFirstMatchAsync(x.BuildLogReference.Url, textRegex, onError).ConfigureAwait(false);
+                    var line = match is object && match.Success
+                        ? match.Value
+                        : null;
+                    return (Query: x, Line: line);
+                });
+            var results = new List<SearchBuildLogsResult>();
+            foreach (var task in resultTasks)
+            {
+                try
+                {
+                    var result = await task.ConfigureAwait(false);
+                    if (result.Line is object)
+                    {
+                        results.Add(new SearchBuildLogsResult(result.Query.BuildInfo, result.Query.TimelineRecord, result.Query.BuildLogReference, result.Line));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    onError?.Invoke(ex);
+                }
+            }
+
+            return results;
         }
 
         public async IAsyncEnumerable<Match> SearchFileAsync(

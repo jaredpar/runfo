@@ -6,3 +6,8 @@
 {
     <p>@identity.Name</p>
 }
+
+@foreach (var result in Model.BuildLogs)
+{
+    <a href="@result.BuildLogReference.Url">@result.Line</a>
+}
