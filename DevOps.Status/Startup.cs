@@ -58,11 +58,6 @@ namespace DevOps.Status
             services.AddHttpContextAccessor();
             services.AddSingleton<StatusGitHubClientFactory>();
             services.AddScoped<DotNetQueryUtilFactory>();
-            services.AddScoped<DevOpsServer>(_ =>
-            {
-                // TODO: this needs to be moved to use the VSO Oauth
-                throw new Exception("Fix this to use VSO OAuth");
-            });
 
             services.AddScoped<BlobStorageUtil>(_ =>
             {

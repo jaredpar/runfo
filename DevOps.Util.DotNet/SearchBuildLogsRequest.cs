@@ -10,8 +10,11 @@ namespace DevOps.Util.Triage
 {
     public class SearchBuildLogsRequest : ISearchRequest
     {
+        public const int DefaultLimit = 100;
+
         public string? LogName { get; set; } 
-        public string? Text { get; set; } 
+        public string? Text { get; set; }
+        public int Limit { get; set; } = DefaultLimit;
 
         public string GetQueryString()
         {
@@ -24,6 +27,11 @@ namespace DevOps.Util.Triage
             if (!string.IsNullOrEmpty(Text))
             {
                 Append($"text:{Text}");
+            }
+
+            if (Limit != DefaultLimit)
+            {
+                Append($"limit:{Limit}");
             }
 
             return builder.ToString();
@@ -50,6 +58,9 @@ namespace DevOps.Util.Triage
                         break;
                     case "text":
                         Text = tuple.Value.Trim('"');
+                        break;
+                    case "limit":
+                        Limit = int.Parse(tuple.Value);
                         break;
                     default:
                         throw new Exception($"Invalid option {tuple.Name}");

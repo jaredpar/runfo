@@ -252,6 +252,12 @@ namespace DevOps.Util.DotNet
                 }
             }
 
+            if (list.Count > request.Limit)
+            {
+                onError?.Invoke(new Exception($"Limiting the {list.Count} logs to first {request.Limit}"));
+                list = list.Take(request.Limit).ToList();
+            }
+
             var resultTasks = list
                 .AsParallel()
                 .Select(async x =>

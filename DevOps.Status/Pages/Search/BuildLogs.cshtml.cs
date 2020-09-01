@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
 using DevOps.Status.Util;
 using DevOps.Util;
@@ -25,6 +26,7 @@ namespace DevOps.Status.Pages.Search
 
         public List<BuildLogData> BuildLogs { get; } = new List<BuildLogData>();
         public int? BuildCount { get; set; }
+        public string? ErrorMessage { get; set; }
 
         [BindProperty(SupportsGet = true, Name = "bq")]
         public string? BuildQuery { get; set; }
@@ -51,17 +53,28 @@ namespace DevOps.Status.Pages.Search
 
             var searchBuildsRequest = new SearchBuildsRequest() { Count = 10 };
             searchBuildsRequest.ParseQueryString(BuildQuery);
+
+            var searchBuildLogsRequest = new SearchBuildLogsRequest();
+            searchBuildLogsRequest.ParseQueryString(LogQuery ?? "");
+
+            if (string.IsNullOrEmpty(searchBuildLogsRequest.Text))
+            {
+                ErrorMessage = @"Must specify text to search for 'text: ""StackOverflowException""'";
+                return;
+            }
+
+            ErrorMessage = null;
+
             var buildInfos = (await searchBuildsRequest
                 .GetQuery(TriageContextUtil)
                 .Include(x => x.ModelBuildDefinition)
                 .ToListAsync()).Select(x => x.GetBuildInfo()).ToList();
             BuildCount = buildInfos.Count;
 
-            var searchBuildLogsRequest = new SearchBuildLogsRequest();
-            searchBuildLogsRequest.ParseQueryString(LogQuery ?? "");
-
             var queryUtil = await DotNetQueryUtilFactory.CreateDotNetQueryUtilForUserAsync();
-            var results = await queryUtil.SearchBuildLogsAsync(buildInfos, searchBuildLogsRequest);
+
+            var errorBuilder = new StringBuilder();
+            var results = await queryUtil.SearchBuildLogsAsync(buildInfos, searchBuildLogsRequest, ex => errorBuilder.AppendLine(ex.Message));
             foreach (var result in results)
             {
                 BuildLogs.Add(new BuildLogData()
@@ -71,6 +84,11 @@ namespace DevOps.Status.Pages.Search
                     JobName = result.JobName,
                     BuildLogUrl = result.BuildLogReference.Url
                 });
+            }
+
+            if (errorBuilder.Length > 0)
+            {
+                ErrorMessage = errorBuilder.ToString();
             }
         }
     }

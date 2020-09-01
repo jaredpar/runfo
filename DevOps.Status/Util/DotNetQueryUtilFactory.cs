@@ -32,7 +32,9 @@ namespace DevOps.Status.Util
         public async Task<DotNetQueryUtil> CreateDotNetQueryUtilForUserAsync()
         {
             var server = await CreateDevOpsServerForUserAsync();
-            // TODO: use caching one
+
+            // https://github.com/jaredpar/devops-util/issues/19
+            // Consider using a cache here
             var azureUtil = new AzureUtil(server);
             return new DotNetQueryUtil(server, azureUtil);
         }
