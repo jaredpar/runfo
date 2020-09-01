@@ -4,6 +4,8 @@ using System.Linq;
 using System.Reflection.Metadata.Ecma335;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using AspNet.Security.OAuth.GitHub;
+using AspNet.Security.OAuth.VisualStudio;
 using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
@@ -40,7 +42,8 @@ namespace DevOps.Status
                 .AddRazorPages()
                 .AddRazorPagesOptions(options =>
                 {
-                    options.Conventions.AuthorizePage("/triage/new", Constants.TriagePolicy);
+                    options.Conventions.AuthorizePage("/Triage/New", Constants.TriagePolicy);
+                    options.Conventions.AuthorizePage("/Search/BuildLogs", Constants.VsoPolicy);
 
                 });
             services.AddControllers();
@@ -81,6 +84,7 @@ namespace DevOps.Status
             services.AddAuthentication(options =>
             {
                 options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultAuthenticateScheme = GitHubAuthenticationDefaults.AuthenticationScheme;
             })
             .AddCookie(options =>
             {
@@ -92,6 +96,7 @@ namespace DevOps.Status
                 options.ClientId = Configuration[DotNetConstants.ConfigurationGitHubClientId];
                 options.ClientSecret = Configuration[DotNetConstants.ConfigurationGitHubClientSecret];
                 options.SaveTokens = true;
+
                 options.ClaimActions.MapJsonKey(Constants.GitHubAvatarUrl, Constants.GitHubAvatarUrl);
                 options.Events.OnCreatingTicket = async context =>
                 {
@@ -100,15 +105,41 @@ namespace DevOps.Status
                     var organizations = await gitHubClient.Organization.GetAllForUser(userName);
                     var microsoftOrg = organizations.FirstOrDefault(x => x.Login.ToLower() == "microsoft");
                     if (microsoftOrg is object)
-                    { 
+                    {
                         context.Identity.AddClaim(new Claim(context.Identity.RoleClaimType, Constants.TriageRole));
                     }
                 };
+            })
+            .AddVisualStudio(options =>
+            {
+                options.ClientId = Configuration[DotNetConstants.ConfigurationVsoClientId];
+                options.ClientSecret = Configuration[DotNetConstants.ConfigurationVsoClientSecret];
+                options.SaveTokens = true;
+
+                options.Events.OnCreatingTicket = context =>
+                {
+                    context.Identity.AddClaim(new Claim(context.Identity.RoleClaimType, Constants.VsoRole));
+                    return Task.CompletedTask;
+                };
+
+                options.Scope.Add("vso.build_execute");
+                options.Scope.Add("vso.identity");
+                options.Scope.Add("vso.test_write");
+                options.Scope.Add("vso.work");
             });
 
             services.AddAuthorization(options =>
             {
-                options.AddPolicy(Constants.TriagePolicy, policy => policy.RequireRole(Constants.TriageRole));
+                options.AddPolicy(
+                    Constants.TriagePolicy,
+                    policy => policy
+                       .RequireRole(Constants.TriageRole)
+                       .AddAuthenticationSchemes(GitHubAuthenticationDefaults.AuthenticationScheme));
+                options.AddPolicy(
+                    Constants.VsoPolicy,
+                    policy => policy
+                       .RequireRole(Constants.VsoRole)
+                       .AddAuthenticationSchemes(VisualStudioAuthenticationDefaults.AuthenticationScheme));
             });
         }
 
