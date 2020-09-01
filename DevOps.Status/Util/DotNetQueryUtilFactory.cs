@@ -18,6 +18,7 @@ namespace DevOps.Status.Util
 
         public DotNetQueryUtilFactory(DevOpsServer devOpsServer, BlobStorageUtil blobStorageUtil, StatusGitHubClientFactory gitHubClientFactory)
         {
+            // TODO: this needs to use the Bearer token from the VSO auth
             DevOpsServer = devOpsServer;
             BlobStorageUtil = BlobStorageUtil;
             AzureUtil = new CachingAzureUtil(blobStorageUtil, devOpsServer);

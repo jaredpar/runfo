@@ -12,19 +12,48 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util
 {
+    public enum AuthorizationKind
+    {
+        None,
+        PersonalAccessToken,
+        BearerToken
+    }
+
+    public readonly struct AuthorizationToken
+    {
+        public static AuthorizationToken None => default;
+
+        public AuthorizationKind AuthorizationKind { get; }
+        public string Token { get; }
+
+        public bool IsNone => AuthorizationKind == AuthorizationKind.None;
+
+        public AuthorizationToken(AuthorizationKind authorizationKind, string token)
+        {
+            if (authorizationKind == AuthorizationKind.None)
+            {
+                throw new ArgumentException("", nameof(authorizationKind));
+            }
+
+            AuthorizationKind = authorizationKind;
+            Token = token;
+        }
+
+        public override string ToString() => $"{AuthorizationKind} {Token}";
+    }
+
     // TODO: rename to Azure Server
     public class DevOpsServer
     {
-        private string? PersonalAccessToken { get; }
-
+        public AuthorizationToken AuthorizationToken { get; }
         public string Organization { get; }
         public HttpClient HttpClient { get;  }
 
-        public DevOpsServer(string organization, string? personalAccessToken = null, HttpClient? httpClient = null)
+        public DevOpsServer(string organization, AuthorizationToken authorizationToken = default, HttpClient? httpClient = null)
         {
             Organization = organization;
             HttpClient = httpClient ?? new HttpClient();
-            PersonalAccessToken = personalAccessToken;
+            AuthorizationToken = authorizationToken;
         }
 
         /// <summary>
@@ -280,7 +309,7 @@ namespace DevOps.Util
             int? skip = null,
             int? top = null)
         {
-            EnsurePersonalAuthorizationTokenForTests();
+            EnsureAuthorizationToken();
             var builder = GetBuilder(project, $"test/runs");
             builder.AppendUri("buildUri", buildUri);
             builder.AppendInt("$skip", top);
@@ -344,7 +373,7 @@ namespace DevOps.Util
             int? skip = null,
             int? top = null)
         {
-            EnsurePersonalAuthorizationTokenForTests();
+            EnsureAuthorizationToken();
 
             // The majority of the AzDO REST APIs use a continuation token to indicate
             // that pagination is needed to get more data from the call. For some reason
@@ -380,7 +409,7 @@ namespace DevOps.Util
             int runId,
             int testCaseResultId)
         {
-            EnsurePersonalAuthorizationTokenForTests();
+            EnsureAuthorizationToken();
             var builder = GetBuilder(project, $"test/Runs/{runId}/Results/{testCaseResultId}/attachments");
             builder.ApiVersion = "5.1-preview.1";
             return GetJsonArrayAsync<TestAttachment>(builder);
@@ -393,7 +422,7 @@ namespace DevOps.Util
             int attachmentId,
             Stream destinationStream)
         {
-            EnsurePersonalAuthorizationTokenForTests();
+            EnsureAuthorizationToken();
             var builder = GetBuilder(project, $"test/Runs/{runId}/Results/{testCaseResultId}/attachments/{attachmentId}");
             builder.ApiVersion = "5.1-preview.1";
             return DownloadZipFileAsync(builder.ToString(), destinationStream);
@@ -519,22 +548,29 @@ namespace DevOps.Util
             } while (true);
         }
 
-        private void EnsurePersonalAuthorizationTokenForTests()
+        private void EnsureAuthorizationToken()
         {
-            if (string.IsNullOrEmpty(PersonalAccessToken))
+            if (AuthorizationToken.IsNone)
             {
-                throw new InvalidOperationException("Must have a personal access token specified to view test information");
+                throw new InvalidOperationException("Must have an authorization token specified to view test information");
             }
         }
 
         private HttpRequestMessage CreateHttpRequestMessage(HttpMethod method, string uri)
         {
             var message = new HttpRequestMessage(method ?? HttpMethod.Get, uri);
-            if (!string.IsNullOrEmpty(PersonalAccessToken))
+            switch (AuthorizationToken.AuthorizationKind)
             {
-                message.Headers.Authorization =  new AuthenticationHeaderValue(
-                    "Basic",
-                    Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes($":{PersonalAccessToken}")));
+                case AuthorizationKind.PersonalAccessToken:
+                    message.Headers.Authorization = new AuthenticationHeaderValue(
+                        "Basic",
+                        Convert.ToBase64String(Encoding.ASCII.GetBytes($":{AuthorizationToken.Token}")));
+                    break;
+                case AuthorizationKind.BearerToken:
+                    message.Headers.Authorization = new AuthenticationHeaderValue(
+                        "Bearer",
+                        AuthorizationToken.Token);
+                    break;
             }
 
             return message;

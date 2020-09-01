@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AspNet.Security.OAuth.GitHub;
+using AspNet.Security.OAuth.VisualStudio;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
@@ -32,8 +33,8 @@ namespace DevOps.Status.Controllers
                 {
                     RedirectUri = "/"
                 },
-                CookieAuthenticationDefaults.AuthenticationScheme
-            );
+                GitHubAuthenticationDefaults.AuthenticationScheme,
+                VisualStudioAuthenticationDefaults.AuthenticationScheme);
         }
     }
 }

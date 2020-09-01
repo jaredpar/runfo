@@ -25,7 +25,10 @@ namespace DevOps.Functions
             var connectionString = config[DotNetConstants.ConfigurationSqlConnectionString];
             var azdoToken = config["RUNFO_AZURE_TOKEN"];
             builder.Services.AddDbContext<TriageContext>(options => options.UseSqlServer(connectionString));
-            builder.Services.AddScoped<DevOpsServer>(_ => new DevOpsServer(DotNetUtil.AzureOrganization, azdoToken));
+            builder.Services.AddScoped<DevOpsServer>(_ =>
+                new DevOpsServer(
+                    DotNetUtil.AzureOrganization,
+                    new AuthorizationToken(AuthorizationKind.PersonalAccessToken, azdoToken)));
             builder.Services.AddScoped<GitHubClientFactory>(_ =>
             {
                 var appId = int.Parse(config[DotNetConstants.ConfigurationGitHubAppId]);

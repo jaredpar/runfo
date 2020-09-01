@@ -31,7 +31,7 @@ namespace Runfo
                     token = await GetPersonalAccessTokenFromFile(DotNetUtil.AzureOrganization);
                 }
 
-                var server = new DevOpsServer(DotNetUtil.AzureOrganization, token);
+                var server = new DevOpsServer(DotNetUtil.AzureOrganization, new AuthorizationToken(AuthorizationKind.PersonalAccessToken, token!));
                 var azureUtil = new CachingAzureUtil(
                     new LocalAzureStorageUtil(DotNetUtil.AzureOrganization, RuntimeInfoUtil.CacheDirectory),
                     new AzureUtil(server));

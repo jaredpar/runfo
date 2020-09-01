@@ -77,7 +77,7 @@ namespace Scratch
         {
             var configuration = CreateConfiguration();
             var azureToken = configuration["RUNFO_AZURE_TOKEN"];
-            DevOpsServer = new DevOpsServer(organization, azureToken);
+            DevOpsServer = new DevOpsServer(organization, new AuthorizationToken(AuthorizationKind.PersonalAccessToken, azureToken));
 
             var builder = new DbContextOptionsBuilder<TriageContext>();
             builder.UseSqlServer(configuration[DotNetConstants.ConfigurationSqlConnectionString]);
@@ -114,6 +114,7 @@ namespace Scratch
 
         internal async Task Scratch()
         {
+            await Task.Delay(1); // stop warning
             // await DumpMachineUsage();
             // await DumpJobFailures();
             // await DumpRoslynTestTimes();
@@ -450,11 +451,11 @@ namespace Scratch
             }
         }
 
-        private static async Task Scratch4()
+        private async Task Scratch4()
         {
             var project = "public";
             var buildId = 633511;
-            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
+            var server = DevOpsServer;
             var build = await server.GetBuildAsync(project, buildId);
             var timeline = await server.GetTimelineAsync(project, buildId);
             var tree = TimelineTree.Create(timeline);
@@ -497,9 +498,9 @@ namespace Scratch
             }
         }
 
-        private static async Task DumpTestTimesCsv()
+        private async Task DumpTestTimesCsv()
         {
-            var server = new DevOpsServer("dnceng", Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN"));
+            var server = DevOpsServer;
             var all = await server.ListTestRunsAsync("public", 585853);
             var debug = all.Where(x => x.Name == "Windows Desktop Debug Test32").First();
             var spanish = all.Where(x => x.Name == "Windows Desktop Spanish").First();
@@ -716,7 +717,7 @@ namespace Scratch
             await stream.CopyToAsync(fileStream);
         }
 
-        private static async Task DumpTimelines(string organization, string project, int buildDefinitionId, int top)
+        private async Task DumpTimelines(string organization, string project, int buildDefinitionId, int top)
         {
             var server = new DevOpsServer(organization);
             foreach (var build in await server.ListBuildsAsync(project, new[] { buildDefinitionId }, top: top))
@@ -733,9 +734,9 @@ namespace Scratch
             }
         }
 
-        private static async Task DumpTimeline(string project, int buildId, string personalAccessToken = null)
+        private async Task DumpTimeline(string project, int buildId, string personalAccessToken = null)
         {
-            var server = new DevOpsServer(DefaultOrganization, personalAccessToken);
+            var server = DevOpsServer;
 
             var timeline = await server.GetTimelineAsync(project, buildId);
             await DumpTimeline("", timeline);

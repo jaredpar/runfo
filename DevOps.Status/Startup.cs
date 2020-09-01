@@ -60,8 +60,8 @@ namespace DevOps.Status
             services.AddScoped<DotNetQueryUtilFactory>();
             services.AddScoped<DevOpsServer>(_ =>
             {
-                var token = Configuration["RUNFO_AZURE_TOKEN"];
-                return new DevOpsServer(DotNetUtil.AzureOrganization, token);
+                // TODO: this needs to be moved to use the VSO Oauth
+                throw new Exception("Fix this to use VSO OAuth");
             });
 
             services.AddScoped<BlobStorageUtil>(_ =>
