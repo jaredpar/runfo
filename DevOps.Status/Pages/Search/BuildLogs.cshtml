@@ -1,13 +1,42 @@
 ﻿@page "/search/build-logs"
 @model BuildLogsModel
 
-<h1>In the build logs</h1>
-@foreach (var identity in User.Identities)
-{
-    <p>@identity.Name</p>
-}
 
-@foreach (var result in Model.BuildLogs)
+<form method="get">
+  <div class="form-group">
+    <label>Build Query</label>
+    <input name="bq" type="text" class="form-control" value="@Model.BuildQuery">
+    <label>Test Query</label>
+    <input name="lq" type="text" class="form-control" value="@Model.LogQuery">
+  </div>
+  <button class="btn btn-primary">Search</button>
+</form>
+
+
+@if (Model.BuildCount is { } count)
 {
-    <a href="@result.BuildLogReference.Url">@result.Line</a>
+    <p>Builds searched: @count</p>
+
+    <h3>Results</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="column">Build</th>
+                <th scope="column">Job</th>
+                <th scope="column">Log File</th>
+                <th scope="column">Line</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var buildLogData in Model.BuildLogs)
+            {
+                <tr>
+                    <td><a asp-page="/view/build" asp-route-number="@buildLogData.BuildNumber">@buildLogData.BuildNumber</a></td>
+                    <td>@buildLogData.JobName</td>
+                    <td><a href="@buildLogData.BuildLogUrl">Build Log</a></td>
+                    <td>@buildLogData.Line</td>
+                </tr>
+            }
+        </tbody>
+    </table>
 }

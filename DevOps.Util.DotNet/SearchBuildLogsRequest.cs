@@ -46,10 +46,10 @@ namespace DevOps.Util.Triage
                 switch (tuple.Name.ToLower())
                 {
                     case "logname":
-                        LogName = tuple.Value;
+                        LogName = tuple.Value.Trim('"');
                         break;
                     case "text":
-                        Text = tuple.Value;
+                        Text = tuple.Value.Trim('"');
                         break;
                     default:
                         throw new Exception($"Invalid option {tuple.Name}");
