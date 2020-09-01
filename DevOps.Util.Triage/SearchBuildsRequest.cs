@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.Triage
 {
-    public class SearchBuildsRequest
+    public class SearchBuildsRequest : ISearchRequest
     {
         public const int DefaultCount = 10;
         public const ModelBuildKind DefaultKind = ModelBuildKind.All;

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.Triage
 {
-    public class SearchTestsRequest
+    public class SearchTestsRequest : ISearchRequest
     {
         public string? Name { get; set; }
 

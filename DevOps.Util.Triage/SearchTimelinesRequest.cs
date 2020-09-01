@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.Triage
 {
-    public class SearchTimelinesRequest
+    public class SearchTimelinesRequest : ISearchRequest
     {
         public string? Text { get; set; }
 
