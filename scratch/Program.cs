@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Octokit;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -81,6 +82,7 @@ namespace Scratch
 
             var builder = new DbContextOptionsBuilder<TriageContext>();
             builder.UseSqlServer(configuration[DotNetConstants.ConfigurationSqlConnectionString]);
+            builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
             TriageContext = new TriageContext(builder.Options);
             TriageContextUtil = new TriageContextUtil(TriageContext);
 
@@ -111,10 +113,39 @@ namespace Scratch
 
         internal static ILogger CreateLogger() => LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Scratch");
 
-
         internal async Task Scratch()
         {
-            await Task.Delay(1); // stop warning
+            await Query(firstTime: true);
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+            await Query(firstTime: false);
+            stopwatch.Stop();
+            Console.WriteLine(stopwatch.Elapsed.ToString(@"mm\:ss"));
+
+            async Task Query(bool firstTime)
+            {
+                var buildQuery = new SearchBuildsRequest();
+                buildQuery.ParseQueryString("count:200");
+                var timelineQuery = new SearchTimelinesRequest()
+                {
+                    Text = "abandoned due to an infrastructure"
+                };
+
+                var results = await timelineQuery.GetResultsAsync(
+                    TriageContextUtil,
+                    buildQuery.GetQuery(TriageContextUtil),
+                    includeBuild: true);
+                if (firstTime)
+                {
+                    return;
+                }
+
+                foreach (var result in results)
+                {
+                    Console.WriteLine($"{result.ModelBuild.GetBuildInfo().BuildUri} {result.Message}");
+                }
+            }
+
             // await DumpMachineUsage();
             // await DumpJobFailures();
             // await DumpRoslynTestTimes();
@@ -123,6 +154,8 @@ namespace Scratch
             //var factory = new GitHubClientFactory(CreateConfiguration());
             //var gitHubClient = await factory.CreateForAppAsync("jaredpar", "devops-util");
             //var comment = await gitHubClient.Issue.Comment.Create("jaredpar", "devops-util", 5, "This is a test comment");
+
+
 
 
             /*

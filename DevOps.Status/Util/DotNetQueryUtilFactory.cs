@@ -13,12 +13,10 @@ namespace DevOps.Status.Util
 {
     public sealed class DotNetQueryUtilFactory
     {
-        public BlobStorageUtil BlobStorageUtil { get; }
         public IHttpContextAccessor HttpContextAccessor { get; }
 
-        public DotNetQueryUtilFactory(IHttpContextAccessor httpContextAccessor, BlobStorageUtil blobStorageUtil)
+        public DotNetQueryUtilFactory(IHttpContextAccessor httpContextAccessor)
         {
-            BlobStorageUtil = BlobStorageUtil;
             HttpContextAccessor = httpContextAccessor;
         }
 

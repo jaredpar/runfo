@@ -63,13 +63,10 @@ namespace DevOps.Status.Pages.Search
             var timelineSearchOptions = new SearchTimelinesRequest();
             timelineSearchOptions.ParseQueryString(TimelineQuery);
 
-            var query = timelineSearchOptions.GetQuery(
+            var results = await timelineSearchOptions.GetResultsAsync(
                 TriageContextUtil,
-                buildSearchOptions.GetQuery(TriageContextUtil))
-                .Include(x => x.ModelBuild)
-                .ThenInclude(x => x.ModelBuildDefinition);
-
-            var results = await query.ToListAsync();
+                buildSearchOptions.GetQuery(TriageContextUtil),
+                includeBuild: true);
             TimelineDataList = results
                 .Select(x => new TimelineData()
                 {

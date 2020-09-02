@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace DevOps.Util.Triage
@@ -15,25 +16,31 @@ namespace DevOps.Util.Triage
     {
         public string? Text { get; set; }
 
-        public IQueryable<ModelTimelineIssue> GetQuery(
+        public async Task<List<ModelTimelineIssue>> GetResultsAsync(
             TriageContextUtil triageContextUtil,
-            IQueryable<ModelBuild> buildQuery)
+            IQueryable<ModelBuild> buildQuery,
+            bool includeBuild)
         {
             IQueryable<ModelTimelineIssue> query = buildQuery
-                .Join(
-                    triageContextUtil.Context.ModelTimelineIssues,
-                    b => b.Id,
-                    t => t.ModelBuildId,
-                    (b, t) => t);
+                .SelectMany(x => x.ModelTimelineIssues);
 
-            if (Text is object)
+            if (includeBuild)
             {
-                var text = Text.Replace('*', '%');
-                text = '%' + text.Trim('%') + '%';
-                query = query.Where(t => EF.Functions.Like(t.Message, text));
+                query = query.Include(x => x.ModelBuild).ThenInclude(x => x.ModelBuildDefinition);
             }
 
-            return query;
+            var list = await query.ToListAsync().ConfigureAwait(false);
+
+            // TODO: Unify with DotNetQueryUtil.CreateSearchRegex 
+            if (Text is object)
+            {
+                var textRegex = new Regex(Text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                list = list
+                    .Where(x => textRegex.IsMatch(x.Message))
+                    .ToList();
+            }
+
+            return list;
         }
 
         public string GetQueryString()
