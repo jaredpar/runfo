@@ -1,7 +1,7 @@
 ﻿@page "/search-doc"
 
 
-<h1>Build Seacrh</h1>
+<h1>Build Search</h1>
 
 <p>These are the various ways in which you can restrict the set of builds that are searched. This is used in both build searches as well as timeline and tests queries</p>
 
@@ -32,7 +32,7 @@
     </tbody>
 </table>
 
-<h1>Build Log Serach</h1>
+<h1>Build Log Search</h1>
 
 <p>These are the various ways in which you can restrict the set of log files</p>
 
@@ -55,6 +55,34 @@
         <tr>
             <td class="font-weight-bold">limit:200</td>
             <td>By default only the first 100 logs will be searched. Can be increased but be mindful of exceeding Azure rate limiting.</td>
+        </tr>
+    </tbody>
+</table>
+
+
+<h1>Helix Log Search</h1>
+
+<p>These are the various ways in which you can restrict the set of log files</p>
+
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th class="column">Qualifier</th>
+            <th class="column">Example</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td class="font-weight-bold">logKind:console</td>
+            <td>Can be console, runclient or testresults. Restricts the log kinds that are searched</td>
+        </tr>
+        <tr>
+            <td class="font-weight-bold">text:.*StackOverflow</td>
+            <td>Filters to the logs where the text matches the regex ".*StackOverflow"</td>
+        </tr>
+        <tr>
+            <td class="font-weight-bold">limit:200</td>
+            <td>By default only the first 100 logs will be searched. Can be increased but be mindful of exceeding Helix rate limiting.</td>
         </tr>
     </tbody>
 </table>

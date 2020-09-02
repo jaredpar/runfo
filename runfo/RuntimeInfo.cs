@@ -16,7 +16,8 @@ using Octokit;
 
 namespace Runfo
 {
-
+    // TODO: Change to use SearchBuildLogsRequest
+    // TODO: Change to use SearchHelixLogsRequest
     internal sealed partial class RuntimeInfo
     {
         internal DevOpsServer Server { get; }

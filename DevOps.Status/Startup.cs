@@ -44,6 +44,7 @@ namespace DevOps.Status
                 {
                     options.Conventions.AuthorizePage("/Triage/New", Constants.TriagePolicy);
                     options.Conventions.AuthorizePage("/Search/BuildLogs", Constants.VsoPolicy);
+                    options.Conventions.AuthorizePage("/Search/HelixLogs", Constants.VsoPolicy);
 
                 });
             services.AddControllers();

@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using DevOps.Status.Util;
-using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
 using Microsoft.AspNetCore.Mvc;
@@ -15,17 +13,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DevOps.Status.Pages.Search
 {
-    public class BuildLogsModel : PageModel
+    public class HelixLogsModel : PageModel
     {
-        public sealed class BuildLogData
+        public sealed class HelixLogData
         {
             public int BuildNumber { get; set; }
             public string? Line { get; set; }
-            public string? JobName { get; set; }
-            public string? BuildLogUri { get; set; }
+            public string? HelixLogKind { get; set; }
+            public string? HelixLogUri { get; set; }
         }
 
-        public List<BuildLogData> BuildLogs { get; } = new List<BuildLogData>();
+        public List<HelixLogData> HelixLogs { get; } = new List<HelixLogData>();
         public int? BuildCount { get; set; }
         public string? ErrorMessage { get; set; }
         public string? AzureDevOpsEmail { get; set; }
@@ -39,7 +37,7 @@ namespace DevOps.Status.Pages.Search
         public TriageContextUtil TriageContextUtil { get; }
         public DotNetQueryUtilFactory DotNetQueryUtilFactory { get; }
 
-        public BuildLogsModel(TriageContextUtil triageContextUtil, DotNetQueryUtilFactory factory)
+        public HelixLogsModel(TriageContextUtil triageContextUtil, DotNetQueryUtilFactory factory)
         {
             TriageContextUtil = triageContextUtil;
             DotNetQueryUtilFactory = factory;
@@ -47,6 +45,7 @@ namespace DevOps.Status.Pages.Search
 
         public async Task OnGet()
         {
+            ErrorMessage = null;
             if (User.GetVsoIdentity() is { } identity)
             {
                 AzureDevOpsEmail = identity.FindFirst(ClaimTypes.Email)?.Value;
@@ -61,35 +60,45 @@ namespace DevOps.Status.Pages.Search
             var searchBuildsRequest = new SearchBuildsRequest() { Count = 10 };
             searchBuildsRequest.ParseQueryString(BuildQuery);
 
-            var searchBuildLogsRequest = new SearchBuildLogsRequest();
-            searchBuildLogsRequest.ParseQueryString(LogQuery ?? "");
-
-            if (string.IsNullOrEmpty(searchBuildLogsRequest.Text))
+            var searchHelixLogsRequest = new SearchHelixLogsRequest()
+            {
+                HelixLogKinds = new List<HelixLogKind>(new[] { HelixLogKind.Console }),
+            };
+            searchHelixLogsRequest.ParseQueryString(LogQuery ?? "");
+            if (string.IsNullOrEmpty(searchHelixLogsRequest.Text))
             {
                 ErrorMessage = @"Must specify text to search for 'text: ""StackOverflowException""'";
                 return;
             }
 
-            ErrorMessage = null;
+            IQueryable<ModelTestResult> query = searchBuildsRequest.GetQuery(TriageContextUtil)
+                .Join(
+                    TriageContextUtil.Context.ModelTestResults.Where(x => x.IsHelixTestResult),
+                    b => b.Id,
+                    t => t.ModelBuildId,
+                    (b, t) => t)
+                .Include(x => x.ModelBuild)
+                .ThenInclude(x => x.ModelBuildDefinition);
 
-            var buildInfos = (await searchBuildsRequest
-                .GetQuery(TriageContextUtil)
-                .Include(x => x.ModelBuildDefinition)
-                .ToListAsync()).Select(x => x.GetBuildInfo()).ToList();
-            BuildCount = buildInfos.Count;
+            var modelResults = await query.ToListAsync();
+            var toQuery = modelResults
+                .Select(x => (x.ModelBuild.GetBuildInfo(), x.GetHelixLogInfo()))
+                .Where(x => x.Item2 is object);
 
             var queryUtil = await DotNetQueryUtilFactory.CreateDotNetQueryUtilForUserAsync();
-
             var errorBuilder = new StringBuilder();
-            var results = await queryUtil.SearchBuildLogsAsync(buildInfos, searchBuildLogsRequest, ex => errorBuilder.AppendLine(ex.Message));
+            var results = await queryUtil.SearchHelixLogsAsync(
+                toQuery!,
+                searchHelixLogsRequest,
+                ex => errorBuilder.AppendLine(ex.Message));
             foreach (var result in results)
             {
-                BuildLogs.Add(new BuildLogData()
+                HelixLogs.Add(new HelixLogData()
                 {
                     BuildNumber = result.BuildInfo.Number,
                     Line = result.Line,
-                    JobName = result.JobName,
-                    BuildLogUri = result.BuildLogReference.Url
+                    HelixLogKind = result.HelixLogKind.GetDisplayFileName(),
+                    HelixLogUri = result.HelixLogUri,
                 });
             }
 

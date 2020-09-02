@@ -244,23 +244,9 @@ namespace DevOps.Util.DotNet
             }
         }
 
-        private static string GetHelixColumnName(HelixLogKind kind) => kind switch 
-        {
-            HelixLogKind.Console => "Console",
-            HelixLogKind.CoreDump => "Core Dump",
-            HelixLogKind.RunClient => "Run Client",
-            HelixLogKind.TestResults => "Test Results",
-            _ => throw new InvalidOperationException($"Invalid kind {kind}")
-        };
+        private static string GetHelixColumnName(HelixLogKind kind) => kind.GetDisplayName();
 
-        private static string GetHelixKindValueName(HelixLogKind kind) => kind switch
-        {
-            HelixLogKind.Console => "console.log",
-            HelixLogKind.CoreDump => "core dump",
-            HelixLogKind.RunClient => "runclient.py",
-            HelixLogKind.TestResults => "test results",
-            _ => throw new InvalidOperationException($"Invalid kind {kind}"),
-        };
+        private static string GetHelixKindValueName(HelixLogKind kind) => kind.GetDisplayFileName();
 
         private static void AppendBuildLink(StringBuilder builder, BuildInfo buildInfo)
         {

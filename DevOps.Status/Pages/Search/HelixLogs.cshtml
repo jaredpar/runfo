@@ -1,12 +1,12 @@
-﻿@page "/search/build-logs"
-@model BuildLogsModel
+﻿@page "/search/helix-logs"
+@model HelixLogsModel
 
 
 <form method="get">
   <div class="form-group">
     <label>Build Query</label>
     <input name="bq" type="text" class="form-control" value="@Model.BuildQuery">
-    <label>Test Query</label>
+    <label>Helix Query</label>
     <input name="lq" type="text" class="form-control" value="@Model.LogQuery">
   </div>
   <button class="btn btn-primary">Search</button>
@@ -23,28 +23,24 @@
     </div>
 }
 
-@if (Model.BuildCount is { } count)
+@if (Model.HelixLogs.Count > 0)
 {
-    <p>Builds searched: @count</p>
-
     <h3>Results</h3>
     <table class="table">
         <thead>
             <tr>
                 <th scope="column">Build</th>
-                <th scope="column">Job</th>
                 <th scope="column">Log File</th>
                 <th scope="column">Line</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var buildLogData in Model.BuildLogs)
+            @foreach (var helixLogData in Model.HelixLogs)
             {
                 <tr>
-                    <td><a asp-page="/view/build" asp-route-number="@buildLogData.BuildNumber">@buildLogData.BuildNumber</a></td>
-                    <td>@buildLogData.JobName</td>
-                    <td><a href="@buildLogData.BuildLogUri">Build Log</a></td>
-                    <td>@buildLogData.Line</td>
+                    <td><a asp-page="/view/build" asp-route-number="@helixLogData.BuildNumber">@helixLogData.BuildNumber</a></td>
+                    <td><a href="@helixLogData.HelixLogUri">@helixLogData.HelixLogKind</a></td>
+                    <td>@helixLogData.Line</td>
                 </tr>
             }
         </tbody>
