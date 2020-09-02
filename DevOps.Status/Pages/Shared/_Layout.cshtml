@@ -1,4 +1,6 @@
-﻿<!DOCTYPE html>
+﻿@using DevOps.Status.Util
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -24,9 +26,10 @@
                                     Search
                                 </button>
                                 <div class="dropdown-menu">
-                                    <a class="dropdown-item" asp-page="/search/tests">Tests</a>
-                                    <a class="dropdown-item" asp-page="/search/timelines">Timelines</a>
-                                    <a class="dropdown-item" asp-page="/search/builds">Builds</a>
+                                    <a class="dropdown-item" asp-page="/Seacrh/Tests">Tests</a>
+                                    <a class="dropdown-item" asp-page="/Seacrh/Timelines">Timelines</a>
+                                    <a class="dropdown-item" asp-page="/Seacrh/Builds">Builds</a>
+                                    <a class="dropdown-item" asp-page="/Seacrh/BuildLogs">Build Logs</a>
                                 </div>
                             </div>
                         </li>
@@ -34,7 +37,7 @@
                 </div>
             </div>
             <div class="nav navbar-nav navbar-right">
-                @if (User?.Identity?.IsAuthenticated ?? false)
+                @if (User.GetGitHubIdentity()?.IsAuthenticated ?? false)
                 {
                     <div class="dropdown">
                         <button class="btn btn-light dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using DevOps.Status.Util;
@@ -27,6 +28,7 @@ namespace DevOps.Status.Pages.Search
         public List<BuildLogData> BuildLogs { get; } = new List<BuildLogData>();
         public int? BuildCount { get; set; }
         public string? ErrorMessage { get; set; }
+        public string? AzureDevOpsEmail { get; set; }
 
         [BindProperty(SupportsGet = true, Name = "bq")]
         public string? BuildQuery { get; set; }
@@ -45,6 +47,11 @@ namespace DevOps.Status.Pages.Search
 
         public async Task OnGet()
         {
+            if (User.GetVsoIdentity() is { } identity)
+            {
+                AzureDevOpsEmail = identity.FindFirst(ClaimTypes.Email)?.Value;
+            }
+
             if (string.IsNullOrEmpty(BuildQuery))
             {
                 BuildQuery = new SearchBuildsRequest() { Definition = "runtime" }.GetQueryString();
