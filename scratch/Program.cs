@@ -117,10 +117,14 @@ namespace Scratch
         {
             await Query(firstTime: true);
             var stopwatch = new Stopwatch();
-            stopwatch.Start();
-            await Query(firstTime: false);
-            stopwatch.Stop();
-            Console.WriteLine(stopwatch.Elapsed.ToString(@"mm\:ss"));
+
+            for (var i = 0; i < 10; i++)
+            {
+                stopwatch.Start();
+                await Query(firstTime: false);
+                stopwatch.Stop();
+                Console.WriteLine(stopwatch.Elapsed.ToString(@"mm\:ss\.ff"));
+            }
 
             async Task Query(bool firstTime)
             {

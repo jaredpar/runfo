@@ -76,6 +76,9 @@ namespace DevOps.Functions
             return new JsonResult((ExpandoObject)status);
         }
 
+        /// <summary>
+        /// This is the web hook for the AzDO instance when a build completes
+        /// </summary>
         [FunctionName("build")]
         public async Task<IActionResult> OnBuild(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,

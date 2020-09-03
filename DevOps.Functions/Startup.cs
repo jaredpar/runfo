@@ -5,10 +5,11 @@ using DevOps.Util.Triage;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.UserSecrets;
 using Microsoft.Extensions.DependencyInjection;
 using Octokit;
 
-[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsId("67c4a872-5dd7-422a-acad-fdbe907ace33")]
+[assembly: UserSecretsId("67c4a872-5dd7-422a-acad-fdbe907ace33")]
 [assembly: FunctionsStartup(typeof(DevOps.Functions.Startup))]
 
 namespace DevOps.Functions

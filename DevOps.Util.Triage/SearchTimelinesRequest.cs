@@ -21,6 +21,20 @@ namespace DevOps.Util.Triage
             IQueryable<ModelBuild> buildQuery,
             bool includeBuild)
         {
+            var list = new List<ModelTimelineIssue>();
+            await foreach (var issue in EnumerateResultsAsync(triageContextUtil, buildQuery, includeBuild).ConfigureAwait(false))
+            {
+                list.Add(issue);
+            }
+
+            return list;
+        }
+
+        public async IAsyncEnumerable<ModelTimelineIssue> EnumerateResultsAsync(
+            TriageContextUtil triageContextUtil,
+            IQueryable<ModelBuild> buildQuery,
+            bool includeBuild)
+        {
             IQueryable<ModelTimelineIssue> query = buildQuery
                 .SelectMany(x => x.ModelTimelineIssues);
 
@@ -29,18 +43,34 @@ namespace DevOps.Util.Triage
                 query = query.Include(x => x.ModelBuild).ThenInclude(x => x.ModelBuildDefinition);
             }
 
-            var list = await query.ToListAsync().ConfigureAwait(false);
-
-            // TODO: Unify with DotNetQueryUtil.CreateSearchRegex 
+            Regex? textRegex = null;
             if (Text is object)
             {
-                var textRegex = new Regex(Text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-                list = list
-                    .Where(x => textRegex.IsMatch(x.Message))
-                    .ToList();
+                textRegex = new Regex(Text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
             }
 
-            return list;
+            var partition = 100;
+            var skip = 0;
+            do
+            {
+                var partitionQuery = query.Skip(skip).Take(partition);
+                skip += partition;
+
+                var partitionList = await partitionQuery.ToListAsync().ConfigureAwait(false);
+                if (partitionList.Count == 0)
+                {
+                    break;
+                }
+
+                foreach (var issue in partitionList)
+                {
+                    if (textRegex is null || textRegex.IsMatch(issue.Message))
+                    {
+                        yield return issue;
+                    }
+                }
+            }
+            while (true);
         }
 
         public string GetQueryString()

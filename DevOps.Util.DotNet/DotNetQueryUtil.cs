@@ -50,8 +50,8 @@ namespace DevOps.Util.DotNet
 
     public sealed class SearchTimelineResult
     {
-        public TimelineRecordItem Record { get; }
         public BuildInfo BuildInfo { get; }
+        public TimelineRecordItem Record { get; }
         public string Line { get; }
 
         public SearchTimelineResult(

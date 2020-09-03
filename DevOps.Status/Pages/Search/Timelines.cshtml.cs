@@ -40,18 +40,9 @@ namespace DevOps.Status.Pages.Search
 
         public async Task<IActionResult> OnGet()
         {
-            if (string.IsNullOrEmpty(BuildQuery) || string.IsNullOrEmpty(TimelineQuery))
+            if (string.IsNullOrEmpty(BuildQuery))
             {
-                if (string.IsNullOrEmpty(BuildQuery))
-                {
-                    BuildQuery = new SearchBuildsRequest() { Definition = "runtime" }.GetQueryString();
-                }
-
-                if (string.IsNullOrEmpty(TimelineQuery))
-                {
-                    TimelineQuery = "error";
-                }
-
+                BuildQuery = new SearchBuildsRequest() { Definition = "runtime" }.GetQueryString();
                 return Page();
             }
 
@@ -61,7 +52,7 @@ namespace DevOps.Status.Pages.Search
             };
             buildSearchOptions.ParseQueryString(BuildQuery);
             var timelineSearchOptions = new SearchTimelinesRequest();
-            timelineSearchOptions.ParseQueryString(TimelineQuery);
+            timelineSearchOptions.ParseQueryString(TimelineQuery ?? "");
 
             var results = await timelineSearchOptions.GetResultsAsync(
                 TriageContextUtil,
