@@ -82,6 +82,15 @@ namespace DevOps.Util.Triage
             modelBuilder.Entity<ModelTestRun>()
                 .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.TestRunId })
                 .IsUnique();
+
+            modelBuilder.Entity<ModelTestRun>()
+                .Property(x => x.Attempt)
+                .HasDefaultValue(1);
+
+            modelBuilder.Entity<ModelTimelineIssue>()
+                .Property(x => x.IssueType)
+                .HasConversion<string>()
+                .HasDefaultValue(IssueType.Warning);
         }
     }
 
@@ -325,6 +334,9 @@ namespace DevOps.Util.Triage
 
         public string Message { get; set; }
 
+        [Column(TypeName = "nvarchar(12)")]
+        public IssueType IssueType { get; set; }
+
         [Column(TypeName = "nvarchar(100)")]
         public string ModelBuildId { get; set; }
 
@@ -344,6 +356,8 @@ namespace DevOps.Util.Triage
         public string AzureProject { get; set; }
 
         public int TestRunId { get; set; }
+
+        public int Attempt { get; set; }
 
         public string Name { get; set; }
 

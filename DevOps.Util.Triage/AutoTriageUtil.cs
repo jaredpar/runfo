@@ -108,8 +108,7 @@ namespace DevOps.Util.Triage
         public async Task TriageBuildAsync(Build build)
         {
             var buildInfo = build.GetBuildInfo();
-            var modelDataUtil = new ModelDataUtil(QueryUtil, TriageContextUtil, Logger);
-            var modelBuild = await modelDataUtil.EnsureModelInfoAsync(build).ConfigureAwait(false);
+            var modelBuild = await TriageContextUtil.EnsureBuildAsync(buildInfo).ConfigureAwait(false);
             var buildTriageUtil = new BuildTriageUtil(
                 build,
                 buildInfo,

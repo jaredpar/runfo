@@ -454,7 +454,17 @@ namespace DevOps.Util
         public string Category { get; set; }
         public object Data { get; set; }
         public string Message { get; set; }
-        public string Type { get; set; }
+        public IssueType Type { get; set; }
+    }
+
+    /// <summary>
+    /// https://docs.microsoft.com/en-us/rest/api/azure/devops/build/timeline/get?view=azure-devops-rest-5.0#issuetype
+    /// </summary>
+    public enum IssueType
+    {
+        Unknown,
+        Error,
+        Warning
     }
 
     /// <summary>

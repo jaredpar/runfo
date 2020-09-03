@@ -69,12 +69,6 @@ namespace DevOps.Util.Triage
         {
             Logger.LogInformation($"Triaging {DevOpsUtil.GetBuildUri(Build)}");
 
-            // TODO: this should not be a part of BuildTriageUtil but rather a separate step in functions. The 
-            // work should be divided into different queues:
-            // 1. Update the model
-            // 2. Do the triage
-            await EnsureModelInfoAsync().ConfigureAwait(false);
-
             var query = 
                 from issue in Context.ModelTriageIssues
                 from complete in Context.ModelTriageIssueResultCompletes
@@ -121,85 +115,6 @@ namespace DevOps.Util.Triage
             if (Timeline is object)
             {
                 DoSearchTimeline(modelTriageIssue, Timeline);
-            }
-        }
-
-        // TODO: this method should likely exist in a completely different type
-        public async Task EnsureModelInfoAsync()
-        {
-            await TriageContextUtil.EnsureResultAsync(ModelBuild, Build).ConfigureAwait(false);
-            await EnsureTimeline().ConfigureAwait(false);
-            await EnsureTestRuns().ConfigureAwait(false);
-
-            async Task EnsureTimeline()
-            {
-                try
-                {
-                    Timeline = await Server.GetTimelineAttemptAsync(BuildInfo.Project, BuildInfo.Number, attempt: 1).ConfigureAwait(false);
-                    if (Timeline is null)
-                    {
-                        Logger.LogWarning("No timeline");
-                    }
-                    else
-                    {
-                        await TriageContextUtil.EnsureBuildAttemptAsync(BuildInfo, Timeline);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogWarning($"Error getting timeline: {ex.Message}");
-                }
-            }
-
-            async Task EnsureTestRuns()
-            {
-                TestRun[] testRuns;
-                try
-                {
-                    testRuns = await Server.ListTestRunsAsync(BuildInfo.Project, BuildInfo.Number).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogWarning($"Error getting test runs: {ex.Message}");
-                    return;
-                }
-
-                foreach (var testRun in testRuns)
-                {
-                    await EnsureTestRun(testRun).ConfigureAwait(false);
-                }
-            }
-
-            async Task EnsureTestRun(TestRun testRun)
-            {
-                try
-                {
-                    var modelTestRun = await TriageContextUtil.FindModelTestRunAsync(ModelBuild, testRun.Id).ConfigureAwait(false);
-                    if (modelTestRun is object)
-                    {
-                        return;
-                    }
-
-                    // TODO: Need to record when the maximum test results are exceeded. The limit here is to 
-                    // protect us from a catastrophic run that has say several million failures (this is a real
-                    // possibility
-                    const int maxTestCaseResultCount = 200;
-                    var dotNetTestRun = await QueryUtil.GetDotNetTestRunAsync(Build, testRun, DotNetUtil.FailedTestOutcomes).ConfigureAwait(false);
-                    if (dotNetTestRun.TestCaseResults.Count > maxTestCaseResultCount)
-                    {
-                        dotNetTestRun = new DotNetTestRun(
-                            dotNetTestRun.TestRunInfo,
-                            dotNetTestRun.TestCaseResults.Take(maxTestCaseResultCount).ToReadOnlyCollection());
-                    }
-
-                    var helixMap = await Server.GetHelixMapAsync(dotNetTestRun).ConfigureAwait(false);
-                    await TriageContextUtil.EnsureTestRunAsync(ModelBuild, dotNetTestRun, helixMap).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogWarning($"Error uploading test run: {ex.Message}");
-                    return;
-                }
             }
         }
 

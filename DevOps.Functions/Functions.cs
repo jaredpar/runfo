@@ -19,15 +19,14 @@ using System.Dynamic;
 using System.Net;
 using System.Net.Http.Formatting;
 using static DevOps.Util.DotNet.DotNetConstants;
+using System.Diagnostics;
 
 namespace DevOps.Functions
 {
-    public class BuildCompleteMessage
+    public class BuildInfoMessage
     {
         public string? ProjectId { get; set; }
-
         public string? ProjectName { get; set; }
-
         public int BuildNumber { get; set; }
     }
 
@@ -41,13 +40,9 @@ namespace DevOps.Functions
     public class Functions
     {
         public TriageContext Context { get; }
-
         public TriageContextUtil TriageContextUtil { get; }
-
         public DevOpsServer Server { get; }
-
         public GitHubClientFactory GitHubClientFactory { get; }
-
         public Functions(DevOpsServer server, TriageContext context, GitHubClientFactory gitHubClientFactory)
         {
             Server = server;
@@ -83,47 +78,94 @@ namespace DevOps.Functions
         public async Task<IActionResult> OnBuild(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
             [Queue("build-complete", Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> completeCollector,
-            [Queue("osx-retry", Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> retryCollector,
             ILogger logger)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync().ConfigureAwait(false);
             logger.LogInformation(requestBody);
 
             dynamic data = JsonConvert.DeserializeObject(requestBody);
-            var message = new BuildCompleteMessage()
+            var message = new BuildInfoMessage()
             {
                 BuildNumber = data.resource.id,
                 ProjectId = data.resourceContainers.project.id
             };
 
             await completeCollector.AddAsync(JsonConvert.SerializeObject(message));
-            await retryCollector.AddAsync(JsonConvert.SerializeObject(message));
             return new OkResult();
         }
 
-        [FunctionName("triage-build")]
-        public async Task TriageBuildAsync(
+        /// <summary>
+        /// This function is called once a build completes. The point of this function is to save the build data 
+        /// into the SQL DB.
+        /// </summary>
+        [FunctionName("build-complete")]
+        public async Task BuildCompleteAsync(
             [QueueTrigger("build-complete", Connection = ConfigurationAzureBlobConnectionString)] string message,
+            [Queue("build-triage", Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> triageCollector,
+            [Queue("osx-retry", Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> retryCollector,
             ILogger logger)
         {
-            var buildCompleteMessage = JsonConvert.DeserializeObject<BuildCompleteMessage>(message);
-            var projectName = buildCompleteMessage.ProjectName;
+            var buildInfoMessage = JsonConvert.DeserializeObject<BuildInfoMessage>(message);
+            var projectName = buildInfoMessage.ProjectName;
             if (projectName is null)
             {
-                var projectId = buildCompleteMessage.ProjectId;
+                var projectId = buildInfoMessage.ProjectId;
                 if (projectId is null)
                 {
                     logger.LogError("Both project name and id are null");
                     return;
                 }
 
-                projectName = await Server.ConvertProjectIdToNameAsync(projectId);
+                buildInfoMessage.ProjectName = await Server.ConvertProjectIdToNameAsync(projectId);
             }
 
-            logger.LogInformation($"Triaging build {projectName} {buildCompleteMessage.BuildNumber}");
+            logger.LogInformation($"Gathering data for build {buildInfoMessage.ProjectName} {buildInfoMessage.BuildNumber}");
+            var build = await Server.GetBuildAsync(buildInfoMessage.ProjectName!, buildInfoMessage.BuildNumber);
+            var queryUtil = new DotNetQueryUtil(Server);
+            var modelDataUtil = new ModelDataUtil(queryUtil, TriageContextUtil, logger);
+            await modelDataUtil.EnsureModelInfoAsync(build);
+
+            await triageCollector.AddAsync(JsonConvert.SerializeObject(buildInfoMessage));
+            await retryCollector.AddAsync(JsonConvert.SerializeObject(buildInfoMessage));
+        }
+
+        /// <summary>
+        /// This function will see if the build matches any active issues that we are tracking. By the time this 
+        /// message is hit the build attempt should be fully saved to our SQL DB
+        /// </summary>
+        [FunctionName("build-triage")]
+        public async Task BuildTriageAsync(
+            [QueueTrigger("build-triage", Connection = ConfigurationAzureBlobConnectionString)] string message,
+            ILogger logger)
+        {
+            var buildInfoMessage = JsonConvert.DeserializeObject<BuildInfoMessage>(message);
+            Debug.Assert(buildInfoMessage.ProjectName is object);
+
+            logger.LogInformation($"Triaging build {buildInfoMessage.ProjectName} {buildInfoMessage.BuildNumber}");
 
             var util = new AutoTriageUtil(Server, Context, logger);
-            await util.TriageBuildAsync(projectName, buildCompleteMessage.BuildNumber);
+            await util.TriageBuildAsync(buildInfoMessage.ProjectName, buildInfoMessage.BuildNumber);
+        }
+
+        [FunctionName("osx-retry")]
+        public async Task RetryMac(
+            [QueueTrigger("osx-retry", Connection = ConfigurationAzureBlobConnectionString)] string message,
+            ILogger logger)
+        {
+            var buildInfoMessage = JsonConvert.DeserializeObject<BuildInfoMessage>(message);
+            Debug.Assert(buildInfoMessage.ProjectName is object);
+            var util = new AutoTriageUtil(Server, Context, logger);
+            await util.RetryOsxDeprovisionAsync(buildInfoMessage.ProjectName, buildInfoMessage.BuildNumber);
+        }
+
+        [FunctionName("issues-update")]
+        public async Task IssuesUpdate(
+            [TimerTrigger("0 */15 15-23 * * 1-5")] TimerInfo timerInfo,
+            ILogger logger)
+        { 
+            var util = new TriageGitHubUtil(GitHubClientFactory, Context, logger);
+            await util.UpdateGithubIssues();
+            await util.UpdateStatusIssue();
         }
 
         [FunctionName("webhook-github")]
@@ -184,32 +226,5 @@ namespace DevOps.Functions
                 DotNetUtil.DefaultAzureProject);
         }
 
-        [FunctionName("issues-update")]
-        public async Task IssuesUpdate(
-            [TimerTrigger("0 */15 15-23 * * 1-5")] TimerInfo timerInfo,
-            ILogger logger)
-        { 
-            var util = new TriageGitHubUtil(GitHubClientFactory, Context, logger);
-            await util.UpdateGithubIssues();
-            await util.UpdateStatusIssue();
-        }
-
-        [FunctionName("osx-retry")]
-        public async Task RetryMac(
-            [QueueTrigger("osx-retry", Connection = ConfigurationAzureBlobConnectionString)] string message,
-            ILogger logger)
-        {
-            var buildCompleteMessage = JsonConvert.DeserializeObject<BuildCompleteMessage>(message);
-            var projectId = buildCompleteMessage.ProjectId ?? buildCompleteMessage.ProjectName;
-            if (projectId is null)
-            {
-                logger.LogError("Both project name and id are null");
-                return;
-            }
-
-            var projectName = await Server.ConvertProjectIdToNameAsync(projectId);
-            var util = new AutoTriageUtil(Server, Context, logger);
-            await util.RetryOsxDeprovisionAsync(projectName, buildCompleteMessage.BuildNumber);
-        }
     }
 }

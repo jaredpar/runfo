@@ -119,15 +119,15 @@ namespace DevOps.Util.DotNet
         public DevOpsServer Server { get; }
         public IAzureUtil AzureUtil { get; }
 
-        public DotNetQueryUtil(DevOpsServer server, IAzureUtil azureUtil)
+        public DotNetQueryUtil(DevOpsServer server, IAzureUtil? azureUtil = null)
         {
-            if (server.Organization != azureUtil.Organization)
+            if (azureUtil is object && server.Organization != azureUtil.Organization)
             {
                 throw new ArgumentException();
             }
 
             Server = server;
-            AzureUtil = azureUtil;
+            AzureUtil = azureUtil ?? new AzureUtil(server);
         }
 
         public Task<List<SearchTimelineResult>> SearchTimelineAsync(

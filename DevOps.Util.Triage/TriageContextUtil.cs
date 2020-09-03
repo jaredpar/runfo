@@ -190,6 +190,7 @@ namespace DevOps.Util.Triage
                         RecordId = record.Id,
                         Message = issue.Message,
                         ModelBuild = modelBuild,
+                        IssueType = issue.Type,
                         ModelBuildAttempt = modelBuildAttempt,
                     };
                     Context.ModelTimelineIssues.Add(timelineIssue);
@@ -215,7 +216,7 @@ namespace DevOps.Util.Triage
             .Where(x => x.ModelBuildId == modelBuild.Id && x.TestRunId == testRunid)
             .FirstOrDefaultAsync();
 
-        public async Task<ModelTestRun> EnsureTestRunAsync(ModelBuild modelBuild, DotNetTestRun testRun, Dictionary<HelixInfo, HelixLogInfo> helixMap)
+        public async Task<ModelTestRun> EnsureTestRunAsync(ModelBuild modelBuild, int attempt, DotNetTestRun testRun, Dictionary<HelixInfo, HelixLogInfo> helixMap)
         {
             var modelTestRun = await FindModelTestRunAsync(modelBuild, testRun.TestRun.Id).ConfigureAwait(false);
             if (modelTestRun is object)
@@ -231,6 +232,7 @@ namespace DevOps.Util.Triage
                 ModelBuild = modelBuild,
                 TestRunId = testRun.TestRun.Id,
                 Name = testRun.TestRun.Name,
+                Attempt = attempt,
             };
             Context.ModelTestRuns.Add(modelTestRun);
 

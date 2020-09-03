@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -31,17 +32,17 @@ namespace DevOps.Util.Triage
             Logger = logger;
         }
 
-        public async Task<ModelBuild> EnsureModelInfoAsync(Build build)
+        public async Task<(ModelBuild ModelBuild, ModelBuildAttempt? ModelBuildAttempt)> EnsureModelInfoAsync(Build build)
         {
             var buildInfo = build.GetBuildInfo();
             var modelBuild = await TriageContextUtil.EnsureBuildAsync(buildInfo).ConfigureAwait(false);
             await TriageContextUtil.EnsureResultAsync(modelBuild, build).ConfigureAwait(false);
-            await EnsureTimeline().ConfigureAwait(false);
+            var modelBuildAttempt = await EnsureTimeline().ConfigureAwait(false);
             await EnsureTestRuns().ConfigureAwait(false);
 
-            return modelBuild;
+            return (modelBuild, modelBuildAttempt);
 
-            async Task EnsureTimeline()
+            async Task<ModelBuildAttempt?> EnsureTimeline()
             {
                 try
                 {
@@ -52,13 +53,15 @@ namespace DevOps.Util.Triage
                     }
                     else
                     {
-                        await TriageContextUtil.EnsureBuildAttemptAsync(buildInfo, timeline);
+                        return await TriageContextUtil.EnsureBuildAttemptAsync(buildInfo, timeline);
                     }
                 }
                 catch (Exception ex)
                 {
                     Logger.LogWarning($"Error getting timeline: {ex.Message}");
                 }
+
+                return null;
             }
 
             async Task EnsureTestRuns()
@@ -74,13 +77,14 @@ namespace DevOps.Util.Triage
                     return;
                 }
 
+                var attempt = modelBuildAttempt?.Attempt ?? 1;
                 foreach (var testRun in testRuns)
                 {
-                    await EnsureTestRun(testRun).ConfigureAwait(false);
+                    await EnsureTestRun(testRun, attempt).ConfigureAwait(false);
                 }
             }
 
-            async Task EnsureTestRun(TestRun testRun)
+            async Task EnsureTestRun(TestRun testRun, int attempt)
             {
                 try
                 {
@@ -90,10 +94,20 @@ namespace DevOps.Util.Triage
                         return;
                     }
 
+                    // TODO: Need to record when the maximum test results are exceeded. The limit here is to 
+                    // protect us from a catastrophic run that has say several million failures (this is a real
+                    // possibility
+                    const int maxTestCaseResultCount = 200;
                     var dotNetTestRun = await QueryUtil.GetDotNetTestRunAsync(build, testRun, DotNetUtil.FailedTestOutcomes).ConfigureAwait(false);
+                    if (dotNetTestRun.TestCaseResults.Count > maxTestCaseResultCount)
+                    {
+                        dotNetTestRun = new DotNetTestRun(
+                            dotNetTestRun.TestRunInfo,
+                            dotNetTestRun.TestCaseResults.Take(maxTestCaseResultCount).ToReadOnlyCollection());
+                    }
                     var helixMap = await Server.GetHelixMapAsync(dotNetTestRun).ConfigureAwait(false);
 
-                    await TriageContextUtil.EnsureTestRunAsync(modelBuild, dotNetTestRun, helixMap).ConfigureAwait(false);
+                    await TriageContextUtil.EnsureTestRunAsync(modelBuild, attempt, dotNetTestRun, helixMap).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
