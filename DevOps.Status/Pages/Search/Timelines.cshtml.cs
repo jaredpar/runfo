@@ -21,6 +21,7 @@ namespace DevOps.Status.Pages.Search
             public string? BuildUri { get; set; }
             public string? JobName { get; set; }
             public string? Line { get; set; }
+            public IssueType IssueType { get; set; }
         }
 
         public TriageContextUtil TriageContextUtil { get; }
@@ -32,6 +33,9 @@ namespace DevOps.Status.Pages.Search
         public string? TimelineQuery { get; set; }
 
         public List<TimelineData> TimelineDataList { get; set; } = new List<TimelineData>();
+
+        public int? BuildCount { get; set; }
+        public bool IncludeIssueTypeColumn { get; set; }
 
         public TimelinesModel(TriageContextUtil triageContextUtil)
         {
@@ -48,7 +52,7 @@ namespace DevOps.Status.Pages.Search
 
             var buildSearchOptions = new SearchBuildsRequest()
             {
-                Count = 50,
+                Count = 10,
             };
             buildSearchOptions.ParseQueryString(BuildQuery);
             var timelineSearchOptions = new SearchTimelinesRequest();
@@ -65,8 +69,11 @@ namespace DevOps.Status.Pages.Search
                     BuildUri = x.ModelBuild.GetBuildInfo().BuildUri,
                     JobName = x.JobName,
                     Line = x.Message,
+                    IssueType = x.IssueType,
                 })
                 .ToList();
+            BuildCount = buildSearchOptions.Count;
+            IncludeIssueTypeColumn = timelineSearchOptions.Type is null;
             return Page();
         }
     }

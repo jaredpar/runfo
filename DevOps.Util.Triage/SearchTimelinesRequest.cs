@@ -15,6 +15,7 @@ namespace DevOps.Util.Triage
     public class SearchTimelinesRequest : ISearchRequest
     {
         public string? Text { get; set; }
+        public IssueType? Type { get; set; }
 
         public async Task<List<ModelTimelineIssue>> GetResultsAsync(
             TriageContextUtil triageContextUtil,
@@ -37,6 +38,11 @@ namespace DevOps.Util.Triage
         {
             IQueryable<ModelTimelineIssue> query = buildQuery
                 .SelectMany(x => x.ModelTimelineIssues);
+
+            if (Type is { } type)
+            {
+                query = query.Where(x => x.IssueType == type);
+            }
 
             if (includeBuild)
             {
@@ -81,6 +87,11 @@ namespace DevOps.Util.Triage
                 Append($"text:\"{Text}\"");
             }
 
+            if (Type is { } type)
+            {
+                Append($"type:{type}");
+            }
+
             return builder.ToString();
 
             void Append(string message)
@@ -108,6 +119,14 @@ namespace DevOps.Util.Triage
                 {
                     case "text":
                         Text = tuple.Value.Trim('"');
+                        break;
+                    case "type":
+                        Type = tuple.Value.ToLower() switch
+                        {
+                            "error" => IssueType.Error,
+                            "warning" => IssueType.Warning,
+                            _ => throw new Exception($"Invalid type {tuple.Value}")
+                        };
                         break;
                     default:
                         throw new Exception($"Invalid option {tuple.Name}");
