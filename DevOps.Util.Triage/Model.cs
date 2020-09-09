@@ -32,11 +32,16 @@ namespace DevOps.Util.Triage
 
         public DbSet<ModelTestResult> ModelTestResults { get; set; }
 
+        public DbSet<ModelTrackingIssue> ModelTrackingIssues { get; set; }
+
+        public DbSet<ModelTrackingIssueResult> ModelTrackingIssueResult { get; set; }
+
         public TriageContext(DbContextOptions<TriageContext> options)
             : base(options)
         {
 
         }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ModelBuild>()
@@ -91,6 +96,14 @@ namespace DevOps.Util.Triage
                 .Property(x => x.IssueType)
                 .HasConversion<string>()
                 .HasDefaultValue(IssueType.Warning);
+
+            modelBuilder.Entity<ModelTrackingIssue>()
+                .Property(x => x.TrackingKind)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<ModelTrackingIssueResult>()
+                .HasIndex(x => new { x.ModelTriageIssueId, x.ModelBuildAttemptId })
+                .IsUnique();
         }
     }
 
@@ -175,6 +188,7 @@ namespace DevOps.Util.Triage
 
     /// <summary>
     /// This is an issue that the tool is attempting to auto-triage as builds complete
+    // TODO: delete this 
     /// </summary>
     public class ModelTriageIssue
     {
@@ -393,5 +407,71 @@ namespace DevOps.Util.Triage
         public string ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
+    }
+
+    public enum TrackingKind
+    {
+        Unknown = 0,
+
+        Test,
+    }
+
+    /// <summary>
+    /// This represents an infrastructure issue that is being tracked by the system
+    /// </summary>
+    public class ModelTrackingIssue
+    {
+        public int Id { get; set; }
+
+        [Column(TypeName = "nvarchar(30)")]
+        public TrackingKind TrackingKind { get; set; }
+
+        public string TestFullName { get; set; }
+
+        public bool IsActive { get; set; }
+
+        /// <summary>
+        /// GitHub organization the tracking issue exists in 
+        /// </summary>
+        [Required]
+        public string GitHubOrganization { get; set; }
+
+        /// <summary>
+        /// GitHub repository the tracking issue exists in
+        /// </summary>
+        [Required]
+        public string GitHubRepository { get; set; }
+
+        /// <summary>
+        /// GitHub issue number for the tracking issue
+        /// </summary>
+        public int GitHubIssueNumber { get; set; }
+
+        [NotMapped]
+        public GitHubIssueKey IssueKey => new GitHubIssueKey(GitHubOrganization, GitHubRepository, GitHubIssueNumber);
+
+        public int? ModelBuildDefinitionId { get; set; }
+
+        /// <summary>
+        /// When defined restrict the test failure tracking to the following build definitions
+        /// </summary>
+        public ModelBuildDefinition ModelBuildDefinition { get; set; }
+    }
+
+    /// <summary>
+    /// Represents when a <see cref="ModelTrackingIssue"/> has been completely evaluated over a specific 
+    /// <see cref="ModelBuildAttempt"/>
+    /// </summary>
+    public class ModelTrackingIssueResult
+    {
+        public int Id { get; set; }
+
+        public int ModelTriageIssueId { get; set; }
+
+        public ModelTriageIssue ModelTriageIssue { get; set; }
+
+        public int ModelBuildAttemptId { get; set; }
+
+        public ModelBuildAttempt ModelBuildAttempt { get; set; }
     }
 }
