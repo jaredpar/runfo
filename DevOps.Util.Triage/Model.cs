@@ -34,7 +34,7 @@ namespace DevOps.Util.Triage
 
         public DbSet<ModelTrackingIssue> ModelTrackingIssues { get; set; }
 
-        public DbSet<ModelTrackingIssueResult> ModelTrackingIssueResult { get; set; }
+        public DbSet<ModelTrackingIssueResult> ModelTrackingIssueResults { get; set; }
 
         public TriageContext(DbContextOptions<TriageContext> options)
             : base(options)
@@ -102,7 +102,7 @@ namespace DevOps.Util.Triage
                 .HasConversion<string>();
 
             modelBuilder.Entity<ModelTrackingIssueResult>()
-                .HasIndex(x => new { x.ModelTriageIssueId, x.ModelBuildAttemptId })
+                .HasIndex(x => new { x.ModelTrackingIssueId, x.ModelBuildAttemptId })
                 .IsUnique();
         }
     }
@@ -466,9 +466,14 @@ namespace DevOps.Util.Triage
     {
         public int Id { get; set; }
 
-        public int ModelTriageIssueId { get; set; }
+        /// <summary>
+        /// Whether or not the linked <see cref="ModelTrackingIssue"/> is present in this <see cref="ModelBuildAttempt"/>
+        /// </summary>
+        public bool IsPresent { get; set; }
 
-        public ModelTriageIssue ModelTriageIssue { get; set; }
+        public int ModelTrackingIssueId { get; set; }
+
+        public ModelTrackingIssue ModelTrackingIssue { get; set; }
 
         public int ModelBuildAttemptId { get; set; }
 

@@ -109,7 +109,7 @@ namespace DevOps.Util.Triage
         {
             var buildInfo = build.GetBuildInfo();
             var modelBuild = await TriageContextUtil.EnsureBuildAsync(buildInfo).ConfigureAwait(false);
-            var buildTriageUtil = new BuildTriageUtil(
+            var buildTriageUtil = new LegacyBuildTriageUtil(
                 build,
                 buildInfo,
                 modelBuild,

@@ -115,40 +115,14 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await Query(firstTime: true);
-            var stopwatch = new Stopwatch();
 
-            for (var i = 0; i < 10; i++)
+            /*
+            var builds = await DotNetQueryUtil.ListBuildsAsync(count: 50, definitions: new[] { 686 });
+            foreach (var build in builds)
             {
-                stopwatch.Start();
-                await Query(firstTime: false);
-                stopwatch.Stop();
-                Console.WriteLine(stopwatch.Elapsed.ToString(@"mm\:ss\.ff"));
+
             }
-
-            async Task Query(bool firstTime)
-            {
-                var buildQuery = new SearchBuildsRequest();
-                buildQuery.ParseQueryString("count:200");
-                var timelineQuery = new SearchTimelinesRequest()
-                {
-                    Text = "abandoned due to an infrastructure"
-                };
-
-                var results = await timelineQuery.GetResultsAsync(
-                    TriageContextUtil,
-                    buildQuery.GetQuery(TriageContextUtil),
-                    includeBuild: true);
-                if (firstTime)
-                {
-                    return;
-                }
-
-                foreach (var result in results)
-                {
-                    Console.WriteLine($"{result.ModelBuild.GetBuildInfo().BuildUri} {result.Message}");
-                }
-            }
+            */
 
             // await DumpMachineUsage();
             // await DumpJobFailures();

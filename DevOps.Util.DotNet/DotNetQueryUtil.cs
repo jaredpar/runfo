@@ -634,6 +634,7 @@ namespace DevOps.Util.DotNet
             return int.TryParse(build, out buildId);
         }
 
+        // TODO: this should really be in a diff type
         [return: NotNullIfNotNull("pattern")]
         public static Regex? CreateSearchRegex(string? pattern) =>
             pattern is null 

@@ -1,5 +1,4 @@
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -18,106 +17,128 @@ using Octokit;
 
 namespace DevOps.Util.Triage
 {
-    // TODO: this should no longer use the DevOPs API for most ops. Grab everything from the DB. It's all there now. 
-    // well except for the build logs
-    internal sealed class BuildTriageUtil
+    internal sealed class TrackingIssueUtil
     {
-        internal DevOpsServer Server { get; }
-
         internal DotNetQueryUtil QueryUtil { get; }
 
         internal TriageContextUtil TriageContextUtil { get; }
 
         private ILogger Logger { get; }
 
-        internal Build Build { get; }
-
-        internal BuildInfo BuildInfo { get; }
-
-        internal ModelBuild ModelBuild { get; }
-
-        internal Timeline? Timeline { get; set; }
-
-        internal List<HelixWorkItem>? HelixWorkItems { get; set; }
-
-        internal List<(HelixWorkItem WorkItem, HelixLogInfo LogInfo)>? HelixLogInfos { get; set; }
-
-        internal List<DotNetTestRun>? DotNetTestRuns { get; set; }
-
-        internal Dictionary<string, HelixTimelineResult>? HelixJobToRecordMap { get; set; }
-
         internal TriageContext Context => TriageContextUtil.Context;
 
-        public BuildTriageUtil(
-            Build build,
-            BuildInfo buildInfo,
-            ModelBuild modelBuild,
-            DevOpsServer server,
+        internal DevOpsServer Server => QueryUtil.Server;
+
+        public TrackingIssueUtil(
+            DotNetQueryUtil queryUtil,
             TriageContextUtil triageContextUtil,
             ILogger logger)
         {
-            Build = build;
-            BuildInfo = buildInfo;
-            ModelBuild = modelBuild;
-            Server = server;
+            QueryUtil = queryUtil;
             TriageContextUtil = triageContextUtil;
-            QueryUtil = new DotNetQueryUtil(server, new AzureUtil(server));
             Logger = logger;
         }
 
-        internal async Task TriageAsync()
+        internal async Task TriageAsync(BuildAttemptKey attemptKey)
         {
-            Logger.LogInformation($"Triaging {DevOpsUtil.GetBuildUri(Build)}");
+            var query = Context
+                .ModelBuildAttempts
+                .Where(x =>
+                    x.Attempt == attemptKey.Attempt &&
+                    x.ModelBuild.BuildNumber == attemptKey.Number &&
+                    x.ModelBuild.ModelBuildDefinition.AzureOrganization == attemptKey.Organization &&
+                    x.ModelBuild.ModelBuildDefinition.AzureProject == attemptKey.Project)
+                .Include(x => x.ModelBuild)
+                .ThenInclude(x => x.ModelBuildDefinition);
+            var modelBuildAttempt = await query.SingleAsync().ConfigureAwait(false);
+            await TriageAsync(modelBuildAttempt).ConfigureAwait(false);
+        }
 
-            var query = 
-                from issue in Context.ModelTriageIssues
-                from complete in Context.ModelTriageIssueResultCompletes
-                    .Where(complete =>
-                        complete.ModelTriageIssueId == issue.Id &&
-                        complete.ModelBuildId == ModelBuild.Id)
-                    .DefaultIfEmpty()
-                select new { issue, complete };
+        internal async Task TriageAsync(ModelBuildAttempt modelBuildAttempt)
+        {
+            Debug.Assert(modelBuildAttempt.ModelBuild is object);
+            Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
 
-            foreach (var data in query.ToList())
+            Logger.LogInformation($"Triaging {modelBuildAttempt.ModelBuild.GetBuildInfo().BuildUri}");
+
+            var trackingIssues = await (Context
+                .ModelTrackingIssues
+                .Where(x => x.IsActive && (x.ModelBuildDefinition == null || x.ModelBuildDefinition.Id == modelBuildAttempt.ModelBuild.ModelBuildDefinition.Id))
+                .ToListAsync()).ConfigureAwait(false);
+
+            foreach (var trackingIssue in trackingIssues)
             {
-                if (data.complete is object)
-                {
-                    continue;
-                }
-
-                var issue = data.issue;
-                switch (issue.SearchKind)
-                {
-                    case SearchKind.SearchTimeline:
-                        DoSearchTimelineAsync(issue);
-                        break;
-                    case SearchKind.SearchHelixRunClient:
-                        await DoSearchHelixAsync(issue, HelixLogKind.RunClient).ConfigureAwait(false);
-                        break;
-                    case SearchKind.SearchHelixConsole:
-                        await DoSearchHelixAsync(issue, HelixLogKind.Console).ConfigureAwait(false);
-                        break;
-                    case SearchKind.SearchHelixTestResults:
-                        await DoSearchHelixAsync(issue, HelixLogKind.TestResults).ConfigureAwait(false);
-                        break;
-                    case SearchKind.SearchTest:
-                        await DoSearchTestAsync(issue).ConfigureAwait(false);
-                        break;
-                    default:
-                        Logger.LogWarning($"Unknown search kind {issue.SearchKind} in {issue.Id}");
-                        break;
-                }
+                await TriageAsync(modelBuildAttempt, trackingIssue).ConfigureAwait(false);
             }
         }
 
-        private void DoSearchTimelineAsync(ModelTriageIssue modelTriageIssue)
+        internal async Task TriageAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue)
         {
-            if (Timeline is object)
+            Debug.Assert(modelBuildAttempt.ModelBuild is object);
+            Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
+            Debug.Assert(modelTrackingIssue.IsActive);
+
+            // Quick spot check to avoid doing extra work if we've already triaged this attempt against this
+            // issue
+            if (await WasTriaged().ConfigureAwait(false))
             {
-                DoSearchTimeline(modelTriageIssue, Timeline);
+                return;
+            }
+
+            bool isPresent;
+            switch (modelTrackingIssue.TrackingKind)
+            {
+                case TrackingKind.Test:
+                    isPresent = await TriageTestAsync(modelBuildAttempt, modelTrackingIssue).ConfigureAwait(false);
+                    break;
+                default:
+                    throw new Exception($"Unknown value {modelTrackingIssue.TrackingKind}");
+            }
+
+            var result = new ModelTrackingIssueResult()
+            {
+                ModelBuildAttempt = modelBuildAttempt,
+                ModelTrackingIssue = modelTrackingIssue,
+                IsPresent = isPresent
+            };
+            Context.ModelTrackingIssueResults.Add(result);
+            await Context.SaveChangesAsync().ConfigureAwait(false);
+
+            async Task<bool> WasTriaged()
+            {
+                var query = Context
+                    .ModelTrackingIssueResults
+                    .Where(x => x.ModelBuildAttemptId == modelBuildAttempt.Id);
+                return await query.AnyAsync().ConfigureAwait(false);
             }
         }
 
+        private async Task<bool> TriageTestAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue)
+        {
+            Debug.Assert(modelBuildAttempt.ModelBuild is object);
+            Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
+            Debug.Assert(modelTrackingIssue.IsActive);
+            Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Test);
+            Debug.Assert(modelTrackingIssue.TestFullName is object);
+
+            var nameRegex = DotNetQueryUtil.CreateSearchRegex(modelTrackingIssue.TestFullName);
+            var testQuery = Context
+                .ModelTestResults
+                .Where(x =>
+                    x.ModelBuildId == modelBuildAttempt.ModelBuild.Id &&
+                    x.ModelTestRun.Attempt == modelBuildAttempt.Attempt);
+            foreach (var testResult in await testQuery.ToListAsync().ConfigureAwait(false))
+            {
+                if (nameRegex.IsMatch(testResult.TestFullName))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /*
         private void DoSearchTimeline(ModelTriageIssue modelTriageIssue, Timeline timeline)
         {
             var searchText = modelTriageIssue.SearchText;
@@ -427,5 +448,6 @@ namespace DevOps.Util.Triage
 
             return DotNetTestRuns;
         }
+        */
     }
 }
