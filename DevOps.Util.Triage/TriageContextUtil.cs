@@ -136,7 +136,7 @@ namespace DevOps.Util.Triage
             var modelBuildAttempt = await Context.ModelBuildAttempts
                 .Where(x => x.ModelBuildId == modelBuild.Id && x.Attempt == attempt)
                 .FirstOrDefaultAsync().ConfigureAwait(false);
-            if (modelBuildAttempt is object)
+            if (modelBuildAttempt is object && !modelBuildAttempt.IsTimelineMissing)
             {
                 return modelBuildAttempt;
             }
@@ -161,15 +161,26 @@ namespace DevOps.Util.Triage
                 ? finishTimeQuery.Max()
                 : modelBuild.FinishTime;
 
-            modelBuildAttempt = new ModelBuildAttempt()
+            if (modelBuildAttempt is object)
             {
-                Attempt = attempt,
-                BuildResult = buildResult,
-                StartTime = startTime,
-                FinishTime = finishTime,
-                ModelBuild = modelBuild,
-            };
-            Context.ModelBuildAttempts.Add(modelBuildAttempt);
+                modelBuildAttempt.BuildResult = buildResult;
+                modelBuildAttempt.StartTime = startTime;
+                modelBuildAttempt.FinishTime = finishTime;
+                modelBuildAttempt.IsTimelineMissing = false;
+            }
+            else
+            {
+                modelBuildAttempt = new ModelBuildAttempt()
+                {
+                    Attempt = attempt,
+                    BuildResult = buildResult,
+                    StartTime = startTime,
+                    FinishTime = finishTime,
+                    ModelBuild = modelBuild,
+                    IsTimelineMissing = false,
+                };
+                Context.ModelBuildAttempts.Add(modelBuildAttempt);
+            }
 
             var timelineTree = TimelineTree.Create(timeline);
             foreach (var record in timeline.Records)
@@ -201,6 +212,39 @@ namespace DevOps.Util.Triage
             return modelBuildAttempt;
         }
 
+        /// <summary>
+        /// There are times when the AzDO API will not provide a Timeline for a Bulid. In those cases we still need to create 
+        /// a <see cref="ModelBuildAttempt"/> entry. The assumption is this is for the first attempt and all of the values will 
+        /// be
+        /// </summary>
+        /// <param name="modelBuild"></param>
+        /// <param name="build"></param>
+        /// <returns></returns>
+        public async Task<ModelBuildAttempt> EnsureBuildAttemptWithoutTimelineAsync(ModelBuild modelBuild, Build build)
+        {
+            const int attempt = 1;
+            var modelBuildAttempt = await Context.ModelBuildAttempts
+                .Where(x => x.ModelBuildId == modelBuild.Id && x.Attempt == attempt)
+                .FirstOrDefaultAsync().ConfigureAwait(false);
+            if (modelBuildAttempt is object)
+            {
+                return modelBuildAttempt;
+            }
+
+            modelBuildAttempt = new ModelBuildAttempt()
+            {
+                Attempt = attempt,
+                BuildResult = build.Result,
+                StartTime = modelBuild.StartTime,
+                FinishTime = modelBuild.FinishTime,
+                ModelBuild = modelBuild,
+                IsTimelineMissing = false,
+            };
+            Context.ModelBuildAttempts.Add(modelBuildAttempt);
+            await Context.SaveChangesAsync().ConfigureAwait(false);
+            return modelBuildAttempt;
+        }
+
         public Task<ModelBuild> FindModelBuildAsync(string organization, string project, int buildNumber) =>
             Context.
             ModelBuilds
@@ -208,6 +252,16 @@ namespace DevOps.Util.Triage
                 x.BuildNumber == buildNumber &&
                 x.ModelBuildDefinition.AzureOrganization == organization &&
                 x.ModelBuildDefinition.AzureProject == project)
+            .FirstOrDefaultAsync();
+
+        public Task<ModelBuildAttempt> FindModelBuildAttemptAsync(string organization, string project, int buildNumber, int attempt) =>
+            Context.
+            ModelBuildAttempts
+            .Where(x =>
+                x.ModelBuild.BuildNumber == buildNumber &&
+                x.ModelBuild.ModelBuildDefinition.AzureOrganization == organization &&
+                x.ModelBuild.ModelBuildDefinition.AzureProject == project &&
+                x.Attempt == attempt)
             .FirstOrDefaultAsync();
 
         public Task<ModelTestRun> FindModelTestRunAsync(ModelBuild modelBuild, int testRunid) =>

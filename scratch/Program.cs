@@ -115,14 +115,18 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-
-            /*
+            var logger = CreateLogger();
+            var trackingUtil = new TrackingIssueUtil(DotNetQueryUtil, TriageContextUtil, logger);
+            var modelDataUtil = new ModelDataUtil(DotNetQueryUtil, TriageContextUtil, logger);
             var builds = await DotNetQueryUtil.ListBuildsAsync(count: 50, definitions: new[] { 686 });
             foreach (var build in builds)
             {
-
+                var uri = build.GetBuildInfo().BuildUri;
+                Console.WriteLine($"Getting data for {uri}");
+                var buildAttemptKey = await modelDataUtil.EnsureModelInfoAsync(build);
+                Console.WriteLine($"Triaging {uri}");
+                await trackingUtil.TriageAsync(buildAttemptKey);
             }
-            */
 
             // await DumpMachineUsage();
             // await DumpJobFailures();

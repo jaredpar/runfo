@@ -70,6 +70,12 @@ namespace DevOps.Util
             Attempt = timeline.GetAttempt();
         }
 
+        public BuildAttemptKey(BuildKey buildKey, int attempt)
+        {
+            BuildKey = buildKey;
+            Attempt = attempt;
+        }
+
         public static bool operator==(BuildAttemptKey left, BuildAttemptKey right) => left.Equals(right); 
 
         public static bool operator!=(BuildAttemptKey left, BuildAttemptKey right) => !left.Equals(right); 

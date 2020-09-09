@@ -32,7 +32,7 @@ namespace DevOps.Util.Triage
             Logger = logger;
         }
 
-        public async Task<(ModelBuild ModelBuild, ModelBuildAttempt? ModelBuildAttempt)> EnsureModelInfoAsync(Build build)
+        public async Task<BuildAttemptKey> EnsureModelInfoAsync(Build build)
         {
             var buildInfo = build.GetBuildInfo();
             var modelBuild = await TriageContextUtil.EnsureBuildAsync(buildInfo).ConfigureAwait(false);
@@ -40,9 +40,9 @@ namespace DevOps.Util.Triage
             var modelBuildAttempt = await EnsureTimeline().ConfigureAwait(false);
             await EnsureTestRuns().ConfigureAwait(false);
 
-            return (modelBuild, modelBuildAttempt);
+            return new BuildAttemptKey(new BuildKey(build), modelBuildAttempt.Attempt);
 
-            async Task<ModelBuildAttempt?> EnsureTimeline()
+            async Task<ModelBuildAttempt> EnsureTimeline()
             {
                 try
                 {
@@ -53,7 +53,7 @@ namespace DevOps.Util.Triage
                     }
                     else
                     {
-                        return await TriageContextUtil.EnsureBuildAttemptAsync(buildInfo, timeline);
+                        return await TriageContextUtil.EnsureBuildAttemptAsync(buildInfo, timeline).ConfigureAwait(false);
                     }
                 }
                 catch (Exception ex)
@@ -61,7 +61,7 @@ namespace DevOps.Util.Triage
                     Logger.LogWarning($"Error getting timeline: {ex.Message}");
                 }
 
-                return null;
+                return await TriageContextUtil.EnsureBuildAttemptWithoutTimelineAsync(modelBuild, build).ConfigureAwait(false);
             }
 
             async Task EnsureTestRuns()

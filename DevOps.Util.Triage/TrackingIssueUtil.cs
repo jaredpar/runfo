@@ -17,7 +17,7 @@ using Octokit;
 
 namespace DevOps.Util.Triage
 {
-    internal sealed class TrackingIssueUtil
+    public sealed class TrackingIssueUtil
     {
         internal DotNetQueryUtil QueryUtil { get; }
 
@@ -39,7 +39,7 @@ namespace DevOps.Util.Triage
             Logger = logger;
         }
 
-        internal async Task TriageAsync(BuildAttemptKey attemptKey)
+        public async Task TriageAsync(BuildAttemptKey attemptKey)
         {
             var query = Context
                 .ModelBuildAttempts
@@ -54,7 +54,7 @@ namespace DevOps.Util.Triage
             await TriageAsync(modelBuildAttempt).ConfigureAwait(false);
         }
 
-        internal async Task TriageAsync(ModelBuildAttempt modelBuildAttempt)
+        public async Task TriageAsync(ModelBuildAttempt modelBuildAttempt)
         {
             Debug.Assert(modelBuildAttempt.ModelBuild is object);
             Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
@@ -91,6 +91,9 @@ namespace DevOps.Util.Triage
                 case TrackingKind.Test:
                     isPresent = await TriageTestAsync(modelBuildAttempt, modelTrackingIssue).ConfigureAwait(false);
                     break;
+                case TrackingKind.Timeline:
+                    isPresent = await TriageTimelineAsync(modelBuildAttempt, modelTrackingIssue).ConfigureAwait(false);
+                    break;
                 default:
                     throw new Exception($"Unknown value {modelTrackingIssue.TrackingKind}");
             }
@@ -119,9 +122,9 @@ namespace DevOps.Util.Triage
             Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
             Debug.Assert(modelTrackingIssue.IsActive);
             Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Test);
-            Debug.Assert(modelTrackingIssue.TestFullName is object);
+            Debug.Assert(modelTrackingIssue.SearchRegexText is object);
 
-            var nameRegex = DotNetQueryUtil.CreateSearchRegex(modelTrackingIssue.TestFullName);
+            var nameRegex = DotNetQueryUtil.CreateSearchRegex(modelTrackingIssue.SearchRegexText);
             var testQuery = Context
                 .ModelTestResults
                 .Where(x =>
@@ -130,6 +133,31 @@ namespace DevOps.Util.Triage
             foreach (var testResult in await testQuery.ToListAsync().ConfigureAwait(false))
             {
                 if (nameRegex.IsMatch(testResult.TestFullName))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private async Task<bool> TriageTimelineAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue)
+        {
+            Debug.Assert(modelBuildAttempt.ModelBuild is object);
+            Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
+            Debug.Assert(modelTrackingIssue.IsActive);
+            Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Timeline);
+            Debug.Assert(modelTrackingIssue.SearchRegexText is object);
+
+            var textRegex = DotNetQueryUtil.CreateSearchRegex(modelTrackingIssue.SearchRegexText);
+            var timelineQuery = Context
+                .ModelTimelineIssues
+                .Where(x =>
+                    x.ModelBuildId == modelBuildAttempt.ModelBuild.Id &&
+                    x.Attempt == modelBuildAttempt.Attempt);
+            foreach (var modelTimelineIssue in await timelineQuery.ToListAsync().ConfigureAwait(false))
+            {
+                if (textRegex.IsMatch(modelTimelineIssue.Message))
                 {
                     return true;
                 }

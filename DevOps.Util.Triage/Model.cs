@@ -320,6 +320,8 @@ namespace DevOps.Util.Triage
 
         public int Attempt { get; set; }
 
+        public bool IsTimelineMissing { get; set; }
+
         [Column(TypeName="smalldatetime")]
         public DateTime? StartTime { get; set; }
 
@@ -414,6 +416,8 @@ namespace DevOps.Util.Triage
         Unknown = 0,
 
         Test,
+
+        Timeline,
     }
 
     /// <summary>
@@ -426,7 +430,8 @@ namespace DevOps.Util.Triage
         [Column(TypeName = "nvarchar(30)")]
         public TrackingKind TrackingKind { get; set; }
 
-        public string TestFullName { get; set; }
+        [Required]
+        public string SearchRegexText { get; set; }
 
         public bool IsActive { get; set; }
 
