@@ -32,13 +32,17 @@ namespace DevOps.Util.Triage
             Logger = logger;
         }
 
-        public async Task<BuildAttemptKey> EnsureModelInfoAsync(Build build)
+        public async Task<BuildAttemptKey> EnsureModelInfoAsync(Build build, bool includeTests = true)
         {
             var buildInfo = build.GetBuildInfo();
             var modelBuild = await TriageContextUtil.EnsureBuildAsync(buildInfo).ConfigureAwait(false);
             await TriageContextUtil.EnsureResultAsync(modelBuild, build).ConfigureAwait(false);
             var modelBuildAttempt = await EnsureTimeline().ConfigureAwait(false);
-            await EnsureTestRuns().ConfigureAwait(false);
+
+            if (includeTests)
+            {
+                await EnsureTestRuns().ConfigureAwait(false);
+            }
 
             return new BuildAttemptKey(new BuildKey(build), modelBuildAttempt.Attempt);
 
@@ -46,6 +50,7 @@ namespace DevOps.Util.Triage
             {
                 try
                 {
+                    // TODO: don't hardcode 1 here, that is wrong, Should be using the latest attempt I believe
                     var timeline = await Server.GetTimelineAttemptAsync(buildInfo.Project, buildInfo.Number, attempt: 1).ConfigureAwait(false);
                     if (timeline is null)
                     {

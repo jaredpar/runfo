@@ -16,6 +16,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 // [assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsId("67c4a872-5dd7-422a-acad-fdbe907ace33")]
@@ -82,7 +83,7 @@ namespace Scratch
 
             var builder = new DbContextOptionsBuilder<TriageContext>();
             builder.UseSqlServer(configuration[DotNetConstants.ConfigurationSqlConnectionString]);
-            builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+            // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
             TriageContext = new TriageContext(builder.Options);
             TriageContextUtil = new TriageContextUtil(TriageContext);
 
@@ -115,17 +116,32 @@ namespace Scratch
 
         internal async Task Scratch()
         {
+            await ExhaustTimelineAsync();
+            var timeline = await DevOpsServer.GetTimelineAttemptAsync("public", 799195, attempt: 1);
+
             var logger = CreateLogger();
             var trackingUtil = new TrackingIssueUtil(DotNetQueryUtil, TriageContextUtil, logger);
+            await trackingUtil.EnsureStandardTrackingIssues();
             var modelDataUtil = new ModelDataUtil(DotNetQueryUtil, TriageContextUtil, logger);
-            var builds = await DotNetQueryUtil.ListBuildsAsync(count: 50, definitions: new[] { 686 });
+            var builds = await DotNetQueryUtil.ListBuildsAsync(count: 200, definitions: new[] { 686 });
             foreach (var build in builds)
             {
-                var uri = build.GetBuildInfo().BuildUri;
-                Console.WriteLine($"Getting data for {uri}");
-                var buildAttemptKey = await modelDataUtil.EnsureModelInfoAsync(build);
-                Console.WriteLine($"Triaging {uri}");
-                await trackingUtil.TriageAsync(buildAttemptKey);
+                try
+                {
+                    var uri = build.GetBuildInfo().BuildUri;
+                    Console.WriteLine($"Getting data for {uri}");
+                    var buildAttemptKey = await modelDataUtil.EnsureModelInfoAsync(build, includeTests: false);
+                    Console.WriteLine($"Triaging {uri}");
+                    await trackingUtil.TriageAsync(buildAttemptKey);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error: {ex.Message}");
+                    if (ex.InnerException is { } ie)
+                    {
+                        Console.WriteLine($"Inner Error: {ie.Message}");
+                    }
+                }
             }
 
             // await DumpMachineUsage();
@@ -173,6 +189,38 @@ namespace Scratch
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error with {buildInfo.Number}: {ex.Message}");
+                    if (ex.InnerException is { } ie)
+                    {
+                        Console.WriteLine($"Inner Error with {buildInfo.Number}: {ie.Message}");
+                    }
+                }
+            }
+        }
+
+        internal async Task ExhaustTimelineAsync()
+        {
+            var builds = await DotNetQueryUtil.ListBuildsAsync(count: 200, definitions: null);
+            foreach (var build in builds)
+            {
+                try
+                {
+                    var buildInfo = build.GetBuildInfo();
+                    Console.WriteLine(buildInfo.BuildUri);
+                    var timeline = await DevOpsServer.GetTimelineAsync(build);
+                    if (timeline?.GetAttempt() is int attempt && attempt > 1)
+                    {
+                        while (attempt > 1)
+                        {
+                            attempt--;
+                            var oldTimeline = await DevOpsServer.GetTimelineAttemptAsync(buildInfo.Project, buildInfo.Number, attempt);
+                            var tree = TimelineTree.Create(oldTimeline!);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+
                 }
             }
         }

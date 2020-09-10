@@ -75,6 +75,25 @@ namespace DevOps.Util.Triage
 
         #endregion
 
+        #region ModelTrackingIssue
+
+        public static GitHubIssueKey? GetGitHubIssueKey(this ModelTrackingIssue modelTrackingIssue)
+        {
+            if (modelTrackingIssue is
+            {
+                GitHubOrganization: { } organization,
+                GitHubRepository: { } repository,
+                GitHubIssueNumber: int number
+            })
+            {
+                return new GitHubIssueKey(organization, repository, number);
+            }
+
+            return null;
+        }
+
+        #endregion
+
         #region Misc
 
         public static string GetDisplayString(this ModelBuildKind kind) => kind switch

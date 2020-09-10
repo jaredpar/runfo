@@ -39,6 +39,71 @@ namespace DevOps.Util.Triage
             Logger = logger;
         }
 
+        // TODO: this method is temporary as a transition to the new model. Should be deleted once the web page for adding items
+        // is fully functional
+        public async Task EnsureStandardTrackingIssues()
+        {
+            await EnsureTrackingIssueAsync(
+                TrackingKind.Timeline,
+                searchText: "HTTP request to.*api.nuget.org.*timed out").ConfigureAwait(false);
+            await EnsureTrackingIssueAsync(
+                TrackingKind.Timeline,
+                searchText: "Failed to install dotnet").ConfigureAwait(false);
+            await EnsureTrackingIssueAsync(
+                TrackingKind.Timeline,
+                searchText: "Notification of assignment to an agent was never received").ConfigureAwait(false);
+            await EnsureTrackingIssueAsync(
+                TrackingKind.Timeline,
+                searchText: "Received request to deprovision: The request was cancelled by the remote provider").ConfigureAwait(false);
+
+            async Task EnsureTrackingIssueAsync(
+                TrackingKind trackingKind, 
+                string searchText,
+                int? buildDefinitionId = null,
+                GitHubIssueKey? issueKey = null)
+            {
+                var query = TriageContextUtil.Context
+                    .ModelTrackingIssues
+                    .Where(x => x.TrackingKind == trackingKind && x.SearchRegexText == searchText);
+                var modelTrackingIssue = await query.FirstOrDefaultAsync().ConfigureAwait(false);
+                if (modelTrackingIssue is object)
+                {
+                    if (issueKey is { } key && modelTrackingIssue.GetGitHubIssueKey() != key)
+                    {
+                        modelTrackingIssue.GitHubOrganization = key.Organization;
+                        modelTrackingIssue.GitHubRepository = key.Repository;
+                        modelTrackingIssue.GitHubIssueNumber = key.Number;
+                        await TriageContextUtil.Context.SaveChangesAsync().ConfigureAwait(false);
+                    }
+
+                    return;
+                }
+
+                ModelBuildDefinition? modelBuildDefinition = null;
+                if (buildDefinitionId is { } definitionId)
+                {
+                    modelBuildDefinition = await Context
+                        .ModelBuildDefinitions
+                        .Where(x => x.DefinitionId == definitionId)
+                        .SingleAsync().ConfigureAwait(false);
+                }
+
+                modelTrackingIssue = new ModelTrackingIssue()
+                {
+                    TrackingKind = trackingKind,
+                    SearchRegexText = searchText,
+                    ModelBuildDefinition = modelBuildDefinition,
+                    IsActive = true,
+                    GitHubOrganization = issueKey?.Organization,
+                    GitHubRepository = issueKey?.Repository,
+                    GitHubIssueNumber = issueKey?.Number
+                };
+
+                Context.ModelTrackingIssues.Add(modelTrackingIssue);
+                await Context.SaveChangesAsync().ConfigureAwait(false);
+            }
+        }
+
         public async Task TriageAsync(BuildAttemptKey attemptKey)
         {
             var query = Context
@@ -93,6 +158,12 @@ namespace DevOps.Util.Triage
                     break;
                 case TrackingKind.Timeline:
                     isPresent = await TriageTimelineAsync(modelBuildAttempt, modelTrackingIssue).ConfigureAwait(false);
+                    break;
+                case TrackingKind.HelixConsole:
+                    isPresent = await TriageHelixAsync(modelBuildAttempt, modelTrackingIssue, HelixLogKind.Console).ConfigureAwait(false);
+                    break;
+                case TrackingKind.HelixRunClient:
+                    isPresent = await TriageHelixAsync(modelBuildAttempt, modelTrackingIssue, HelixLogKind.RunClient).ConfigureAwait(false);
                     break;
                 default:
                     throw new Exception($"Unknown value {modelTrackingIssue.TrackingKind}");
@@ -166,316 +237,37 @@ namespace DevOps.Util.Triage
             return false;
         }
 
-        /*
-        private void DoSearchTimeline(ModelTriageIssue modelTriageIssue, Timeline timeline)
+        private async Task<bool> TriageHelixAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue, HelixLogKind helixLogKind)
         {
-            var searchText = modelTriageIssue.SearchText;
-            Logger.LogInformation($@"Text: ""{searchText}""");
-            if (TriageContextUtil.IsProcessed(modelTriageIssue, ModelBuild))
-            {
-                Logger.LogInformation($@"Skipping");
-                return;
-            }
+            Debug.Assert(modelBuildAttempt.ModelBuild is object);
+            Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
+            Debug.Assert(modelTrackingIssue.IsActive);
+            Debug.Assert(modelTrackingIssue.SearchRegexText is object);
 
-            var count = 0;
-            foreach (var result in QueryUtil.SearchTimeline(Build.GetBuildInfo(), timeline, text: searchText))
+            var textRegex = DotNetQueryUtil.CreateSearchRegex(modelTrackingIssue.SearchRegexText);
+            var query = Context
+                .ModelTestResults
+                .Where(x => x.IsHelixTestResult && x.ModelBuild.Id == modelBuildAttempt.ModelBuild.Id && x.ModelTestRun.Attempt == modelBuildAttempt.Attempt);
+            var testResultList = await query.ToListAsync().ConfigureAwait(false);
+            var buildInfo = modelBuildAttempt.ModelBuild.GetBuildInfo();
+            var helixLogInfos = testResultList
+                .Select(x => x.GetHelixLogInfo())
+                .SelectNotNull()
+                .Select(x => (buildInfo, x));
+            var request = new SearchHelixLogsRequest()
             {
-                count++;
-
-                var modelTriageIssueResult = new ModelTriageIssueResult()
-                {
-                    TimelineRecordName = result.Record.RecordName,
-                    JobName = result.Record.JobName,
-                    JobRecordId = result.Record.JobRecord?.Id,
-                    Line = result.Line,
-                    ModelBuild = ModelBuild,
-                    ModelTriageIssue = modelTriageIssue,
-                    BuildNumber = result.BuildInfo.GetBuildKey().Number,
-                };
-                Context.ModelTriageIssueResults.Add(modelTriageIssueResult);
-            }
-
-            var complete = new ModelTriageIssueResultComplete()
-            {
-                ModelTriageIssue = modelTriageIssue,
-                ModelBuild = ModelBuild,
+                Text = modelTrackingIssue.SearchRegexText,
+                HelixLogKinds = new List<HelixLogKind>(new[] { helixLogKind }),
+                Limit = 100,
             };
-            Context.ModelTriageIssueResultCompletes.Add(complete);
 
-            try
-            {
-                Logger.LogInformation($@"Saving {count} jobs");
-                Context.SaveChanges();
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"Cannot save timeline complete: {ex.Message}");
-            }
+            // TODO: This could be a lot more efficient here. This will look for every single occurence of 
+            // the text. We just need to know if there are any. Should look into refactoring this a bit
+            var result = await QueryUtil.SearchHelixLogsAsync(
+                helixLogInfos,
+                request,
+                onError: x => Logger.LogWarning(x.Message)).ConfigureAwait(false);
+            return result.Count > 0;
         }
-
-        private async Task DoSearchHelixAsync(ModelTriageIssue modelTriageIssue, HelixLogKind kind)
-        {
-            await EnsureHelixLogInfosAsync().ConfigureAwait(false);
-            Debug.Assert(HelixLogInfos is object);
-            await DoSearchHelixAsync(modelTriageIssue, kind, HelixLogInfos);
-        }
-
-        private async Task DoSearchHelixAsync(
-            ModelTriageIssue modelTriageIssue,
-            HelixLogKind kind,
-            List<(HelixWorkItem WorkItem, HelixLogInfo LogInfo)> helixLogInfos)
-        {
-            Logger.LogInformation($@"Helix Search {kind}: ""{modelTriageIssue.SearchText}""");
-
-            // Guarding against a catostrophic PR failure here. When more than this many work items
-            // fail abandon auto-triage
-            //
-            // The number chosen here is 100% arbitrary. Can adjust as more data comes in.
-            if (helixLogInfos.Count > 10)
-            {
-                Logger.LogWarning($@"Too many results, not searching");
-                return;
-            }
-
-            var count = 0;
-            var jobMap = await EnsureHelixJobToRecordMap().ConfigureAwait(false);
-            if (jobMap is null)
-            {
-                return;
-            }
-
-            foreach (var tuple in helixLogInfos)
-            {
-                var workItem = tuple.WorkItem;
-                var helixLogInfo = tuple.LogInfo;
-                var uri = helixLogInfo.GetUri(kind);
-                if (uri is null)
-                {
-                    continue;
-                }
-
-                // TODO: should cache the log download so it can be used in multiple searches
-                Logger.LogInformation($"Downloading helix log {kind} {uri}");
-                var isMatch = await QueryUtil.SearchFileForAnyMatchAsync(
-                    uri,
-                    DotNetQueryUtil.CreateSearchRegex(modelTriageIssue.SearchText),
-                    ex => Logger.LogWarning($"Error searching log: {ex.Message}"));
-                if (isMatch)
-                {
-                    string? recordName = null;
-                    string? jobName = null;
-                    if (jobMap.TryGetValue(workItem.JobId, out var result))
-                    {
-                        recordName = result.Record.RecordName;
-                        jobName = result.Record.JobName;
-                    }
-
-                    var modelTriageIssueResult = new ModelTriageIssueResult()
-                    {
-                        HelixJobId = workItem.JobId,
-                        HelixWorkItem = workItem.WorkItemName,
-                        ModelBuild = ModelBuild,
-                        ModelTriageIssue = modelTriageIssue,
-                        BuildNumber = BuildInfo.Number,
-                        TimelineRecordName = recordName,
-                        JobName = jobName,
-                    };
-                    Context.ModelTriageIssueResults.Add(modelTriageIssueResult);
-                    count++;
-                }
-            }
-
-            var complete = new ModelTriageIssueResultComplete()
-            {
-                ModelTriageIssue = modelTriageIssue,
-                ModelBuild = ModelBuild,
-            };
-            Context.ModelTriageIssueResultCompletes.Add(complete);
-
-            // TODO: should batch all the saves and not do it issue by issue
-            try
-            {
-                Logger.LogInformation($@"Saving {count} helix info");
-                Context.SaveChanges();
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"Cannot save helix complete: {ex.Message}");
-            }
-        }
-
-        private async Task DoSearchTestAsync(ModelTriageIssue modelTriageIssue)
-        {
-            if (modelTriageIssue.SearchText is null)
-            {
-                Logger.LogError($"Search text is null for {modelTriageIssue.Id}");
-                return;
-            }
-
-            var testRuns = await EnsureDotNetTestRuns().ConfigureAwait(false);
-            if (testRuns is null)
-            {
-                return;
-            }
-
-            var jobMap = await EnsureHelixJobToRecordMap().ConfigureAwait(false);
-            if (jobMap is null)
-            {
-                return;
-            }
-
-            var nameRegex = DotNetQueryUtil.CreateSearchRegex(modelTriageIssue.SearchText);
-            var query = testRuns
-                .SelectMany(x => x.TestCaseResults)
-                .Where(x => nameRegex.IsMatch(x.TestCaseTitle));
-            var count = 0;
-            foreach (var testCaseResult in query)
-            {
-                string? recordName = null;
-                string? jobName = null;
-                string? jobId = null;
-                string? workItemName = null;
-                if (testCaseResult.HelixInfo is HelixInfo helixInfo)
-                {
-                    jobId = helixInfo.JobId;
-                    workItemName = helixInfo.WorkItemName;
-                    if (jobMap.TryGetValue(helixInfo.JobId, out var result))
-                    {
-                        recordName = result.Record.RecordName;
-                        jobName = result.Record.JobName;
-                    }
-                }
-
-                var modelTriageIssueResult = new ModelTriageIssueResult()
-                {
-                    HelixJobId = jobId,
-                    HelixWorkItem = workItemName,
-                    ModelBuild = ModelBuild,
-                    ModelTriageIssue = modelTriageIssue,
-                    BuildNumber = BuildInfo.Number,
-                    TimelineRecordName = recordName,
-                    JobName = jobName,
-                };
-                Context.ModelTriageIssueResults.Add(modelTriageIssueResult);
-                count++;
-            }
-
-            var complete = new ModelTriageIssueResultComplete()
-            {
-                ModelTriageIssue = modelTriageIssue,
-                ModelBuild = ModelBuild,
-            };
-            Context.ModelTriageIssueResultCompletes.Add(complete);
-
-            try
-            {
-                Logger.LogInformation($@"Saving {count} test results");
-                Context.SaveChanges();
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"Cannot save helix complete: {ex.Message}");
-            }
-        }
-
-        private async Task EnsureHelixWorkItemsAsync()
-        {
-            if (HelixWorkItems is object)
-            {
-                return;
-            }
-
-            try
-            {
-                HelixWorkItems = await QueryUtil.ListHelixWorkItemsAsync(
-                    Build,
-                    DotNetUtil.FailedTestOutcomes);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning($"Error getting helix work items: {ex.Message}");
-            }
-
-            HelixWorkItems ??= new List<HelixWorkItem>();
-        }
-
-        private async Task EnsureHelixLogInfosAsync()
-        {
-            if (HelixLogInfos is object)
-            {
-                return;
-            }
-
-            await EnsureHelixWorkItemsAsync().ConfigureAwait(false);
-            Debug.Assert(HelixWorkItems is object);
-
-            var list = new List<(HelixWorkItem, HelixLogInfo)>();
-            foreach (var helixWorkItem in HelixWorkItems)
-            {
-                try
-                {
-                    var helixLogInfo = await HelixUtil.GetHelixLogInfoAsync(Server, helixWorkItem).ConfigureAwait(false);
-                    list.Add((helixWorkItem, helixLogInfo));
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogWarning($"Error getting log info for {helixWorkItem.HelixInfo}: {ex.Message}");
-                }
-            }
-
-            HelixLogInfos = list;
-        }
-
-        private async Task<Dictionary<string, HelixTimelineResult>?> EnsureHelixJobToRecordMap()
-        {
-            if (HelixJobToRecordMap is object)
-            {
-                return HelixJobToRecordMap;
-            }
-
-            if (Timeline is null)
-            {
-                return null;
-            }
-
-            var map = new Dictionary<string, HelixTimelineResult>(StringComparer.OrdinalIgnoreCase);
-            try
-            {
-                foreach (var result in await QueryUtil.ListHelixJobsAsync(Timeline).ConfigureAwait(false))
-                {
-                    map[result.HelixJob.JobId] = result;
-                }
-
-                HelixJobToRecordMap = map;
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning($"Error getting helix job to record map: {ex.Message}");
-            }
-
-            return HelixJobToRecordMap;
-        }
-
-        private async Task<List<DotNetTestRun>?> EnsureDotNetTestRuns()
-        {
-            if (DotNetTestRuns is object)
-            {
-                return DotNetTestRuns;
-            }
-
-            try
-            {
-                DotNetTestRuns = await QueryUtil.ListDotNetTestRunsAsync(
-                    Build,
-                    DotNetUtil.FailedTestOutcomes).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning($"Error getting test runs: {ex.Message}");
-            }
-
-            return DotNetTestRuns;
-        }
-        */
     }
 }

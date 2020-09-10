@@ -418,6 +418,10 @@ namespace DevOps.Util.Triage
         Test,
 
         Timeline,
+
+        HelixConsole,
+
+        HelixRunClient,
     }
 
     /// <summary>
@@ -438,22 +442,17 @@ namespace DevOps.Util.Triage
         /// <summary>
         /// GitHub organization the tracking issue exists in 
         /// </summary>
-        [Required]
         public string GitHubOrganization { get; set; }
 
         /// <summary>
         /// GitHub repository the tracking issue exists in
         /// </summary>
-        [Required]
         public string GitHubRepository { get; set; }
 
         /// <summary>
         /// GitHub issue number for the tracking issue
         /// </summary>
-        public int GitHubIssueNumber { get; set; }
-
-        [NotMapped]
-        public GitHubIssueKey IssueKey => new GitHubIssueKey(GitHubOrganization, GitHubRepository, GitHubIssueNumber);
+        public int? GitHubIssueNumber { get; set; }
 
         public int? ModelBuildDefinitionId { get; set; }
 
