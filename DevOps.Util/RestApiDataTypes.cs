@@ -419,7 +419,7 @@ namespace DevOps.Util
         /// <summary>
         /// The <see cref="Id"/> field of the timeline record which is this records parent
         /// </summary>
-        public string ParentId { get; set; }
+        public string? ParentId { get; set; }
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public int PercentComplete { get; set; }
         public TimelineAttempt[]? PreviousAttempts { get; set; }

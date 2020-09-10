@@ -37,6 +37,20 @@ namespace DevOps.Util
                 Children = children;
             }
 
+            public IEnumerable<TimelineNode> GetChildrenRecursive()
+            {
+                var queue = new Queue<TimelineNode>(Children);
+                while (queue.Count > 0)
+                {
+                    var node = queue.Dequeue();
+                    yield return node;
+                    foreach (var child in node.Children)
+                    {
+                        queue.Enqueue(child);
+                    }
+                }
+            }
+
             public override string ToString() => TimelineRecord.ToString();
         }
 

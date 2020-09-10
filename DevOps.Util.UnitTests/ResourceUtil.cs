@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -19,5 +20,12 @@ namespace DevOps.Util.UnitTests
             var reader = new StreamReader(GetJsonFileStream(fileName));
             return reader.ReadToEnd();
         }
+
+        internal static Timeline GetTimeline(string resourceFileName)
+        {
+            var json = GetJsonFile(resourceFileName);
+            return JsonConvert.DeserializeObject<Timeline>(json);
+        }
+
     }
 }

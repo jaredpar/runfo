@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
 namespace DevOps.Util
@@ -117,6 +119,65 @@ namespace DevOps.Util
 
         public static int GetAttempt(this Timeline timeline) => timeline.Records.Max(x => x.Attempt);
 
+
+        public static void DumpRecordTree(this Timeline timeline, string filePath)
+        {
+            using var streamWriter = new StreamWriter(filePath, append: false);
+            DumpRecordTree(timeline, streamWriter);
+        }
+
+        public static void DumpRecordTree(this Timeline timeline, TextWriter textWriter)
+        {
+            var any = false;
+            foreach (var record in timeline.Records.Where(x => string.IsNullOrEmpty(x.ParentId)))
+            {
+                any = true;
+                DumpNode(record, "");
+                DumpLevel(record.Id, "  ");
+            }
+
+            // If this is a patch timeline there won't be any roots
+            if (!any)
+            {
+                foreach (var record in timeline.Records)
+                {
+                    DumpNode(record, "");
+                }
+            }
+
+            void DumpLevel(string id, string indent)
+            {
+                foreach (var record in timeline.Records.Where(x => x.ParentId == id))
+                {
+                    DumpNode(record, indent);
+                    DumpLevel(record.Id, indent + "  ");
+                }
+            }
+
+            void DumpNode(TimelineRecord record, string indent)
+            {
+                var previousAttempt = "";
+                if (record.PreviousAttempts?.Length > 0)
+                {
+                    foreach (var p in record.PreviousAttempts)
+                    {
+                        if (previousAttempt == "")
+                        {
+                            previousAttempt = $" ({p.Attempt}";
+                        }
+                        else
+                        {
+                            previousAttempt += $", {p.Attempt}";
+                        }
+                    }
+
+                    previousAttempt += ")";
+                }
+
+                textWriter.WriteLine($"{indent}{record.Attempt}.{previousAttempt} {record.Type} {record.Name} {record.Id}");
+            } 
+        }
+
         #endregion
 
         #region TimelineRecord
@@ -199,24 +260,78 @@ namespace DevOps.Util
         /// </summary>
         public static async Task<Timeline?> GetTimelineAttemptAsync(this DevOpsServer server, string project, int buildNumber, int attempt)
         {
-            var timeline = await server.GetTimelineAsync(project, buildNumber).ConfigureAwait(false);
-            if (timeline is null)
+            var latestTimeline = await server.GetTimelineAsync(project, buildNumber).ConfigureAwait(false);
+            if (latestTimeline is null)
             {
                 return null;
             }
 
-            if (timeline.Records.All(x => x.Attempt == attempt))
+            // latestTimeline.DumpRecordTree(@"p:\temp\timeline\tree.txt");
+            if (latestTimeline.Records.All(x => x.Attempt == attempt))
             {
-                return timeline;
+                return latestTimeline;
             }
 
-            var attemptTimelineId = timeline
+            // Calculate the set of timeline IDs that we need to query for
+            var previousTimelineIdList = latestTimeline
                 .Records
                 .Select(x => x.PreviousAttempts?.FirstOrDefault(x => x.Attempt == attempt))
                 .Select(x => x?.TimelineId)
                 .SelectNotNull()
-                .FirstOrDefault();
-            return await server.GetTimelineAsync(project, buildNumber, attemptTimelineId).ConfigureAwait(false);
+                .Distinct()
+                .ToList();
+
+            var records = TrimLaterAttempts();
+            foreach (var previousTimelineId in previousTimelineIdList)
+            {
+                var previousTimeline = await server.GetTimelineAsync(project, buildNumber, previousTimelineId).ConfigureAwait(false);
+                if (previousTimeline is null)
+                {
+                    continue;
+                }
+
+                // previousTimeline.DumpRecordTree(@$"p:\temp\timeline\tree-{previousTimelineId}.txt");
+                if (IsFullTimeline(previousTimeline))
+                {
+                    if (previousTimelineIdList.Count == 1)
+                    {
+                        return previousTimeline;
+                    }
+
+                    throw new Exception("Multiple previous timelines with at least one full");
+                }
+
+                records.AddRange(previousTimeline.Records);
+            }
+
+            latestTimeline.Records = records.ToArray();
+            // latestTimeline.DumpRecordTree(@"p:\temp\timeline\tree-final.txt");
+            return latestTimeline;
+
+            // The timelines return by the GetTimelineAttempt method can either be full timelines or patch 
+            // onse. If they are full then they will have root nodes
+            bool IsFullTimeline(Timeline timeline) => timeline.Records.Any(x => x.ParentId is null);
+
+            // This method will trim out the TimelineRecord entries which are greater than the attempt we are searching
+            // for.
+            List<TimelineRecord> TrimLaterAttempts()
+            {
+                var set = latestTimeline.Records.ToHashSet();
+                var tree = TimelineTree.Create(latestTimeline);
+                foreach (var jobNode in tree.JobNodes)
+                {
+                    if (jobNode.TimelineRecord.Attempt > attempt)
+                    {
+                        set.Remove(jobNode.TimelineRecord);
+                        foreach (var child in jobNode.GetChildrenRecursive())
+                        {
+                            set.Remove(child.TimelineRecord);
+                        }
+                    }
+                }
+
+                return set.ToList();
+            }
         }
 
         public static Task<string> GetYamlAsync(this DevOpsServer server, string project, int buildNumber) =>
