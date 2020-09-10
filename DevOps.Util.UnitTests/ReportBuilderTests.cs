@@ -29,7 +29,7 @@ namespace DevOps.Util.UnitTests
         {
             var expected = @"
 <!-- runfo report start -->
-|Build|Definition|Kind|Job Name|
+|Build|Definition|Kind|Run Name|
 |---|---|---|---|
 |[1](https://dev.azure.com/devopsutil/test/_build/results?buildId=1)|[def](https://devopsutil.visualstudio.com/test/_build?definitionId=13)|Rolling|job1|
 |[2](https://dev.azure.com/devopsutil/test/_build/results?buildId=2)|[def](https://devopsutil.visualstudio.com/test/_build?definitionId=13)|Rolling|job2|
