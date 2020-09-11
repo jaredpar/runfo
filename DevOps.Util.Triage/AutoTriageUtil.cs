@@ -107,7 +107,7 @@ namespace DevOps.Util.Triage
         // or maybe just make that a separate operation from triage
         public async Task TriageBuildAsync(Build build)
         {
-            var buildInfo = build.GetBuildInfo();
+            var buildInfo = build.GetBuildResultInfo();
             var modelBuild = await TriageContextUtil.EnsureBuildAsync(buildInfo).ConfigureAwait(false);
             var buildTriageUtil = new LegacyBuildTriageUtil(
                 build,
@@ -142,7 +142,7 @@ namespace DevOps.Util.Triage
             }
 
             var osxCount = QueryUtil.SearchTimeline(
-                build.GetBuildInfo(),
+                build.GetBuildResultInfo(),
                 timeline,
                 text: "Received request to deprovision: The request was cancelled by the remote provider")
                 .Select(x => x.Record.JobRecord)
@@ -164,7 +164,7 @@ namespace DevOps.Util.Triage
             Logger.LogInformation("Retrying");
             await Server.RetryBuildAsync(projectName, buildNumber).ConfigureAwait(false);
 
-            var modelBuild = await TriageContextUtil.EnsureBuildAsync(build.GetBuildInfo()).ConfigureAwait(false);
+            var modelBuild = await TriageContextUtil.EnsureBuildAsync(build.GetBuildResultInfo()).ConfigureAwait(false);
             var model = new ModelOsxDeprovisionRetry()
             {
                 OsxJobFailedCount = osxCount,

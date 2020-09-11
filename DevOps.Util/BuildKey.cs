@@ -91,7 +91,7 @@ namespace DevOps.Util
         public override string ToString() => $"{Organization} {Project} {Number} {Attempt}";
     }
 
-    public readonly struct BuildDefinitionKey : IEquatable<BuildDefinitionKey>
+    public readonly struct DefinitionKey : IEquatable<DefinitionKey>
     {
         public string Organization { get; }
         public string Project { get; }
@@ -99,23 +99,23 @@ namespace DevOps.Util
 
         public string DefinitionUri => DevOpsUtil.GetBuildDefinitionUri(Organization, Project, Id);
 
-        public BuildDefinitionKey(string organization, string project, int id)
+        public DefinitionKey(string organization, string project, int id)
         {
             Organization = organization;
             Project = project;
             Id = id;
         }
 
-        public static bool operator==(BuildDefinitionKey left, BuildDefinitionKey right) => left.Equals(right); 
+        public static bool operator==(DefinitionKey left, DefinitionKey right) => left.Equals(right); 
 
-        public static bool operator!=(BuildDefinitionKey left, BuildDefinitionKey right) => !left.Equals(right); 
+        public static bool operator!=(DefinitionKey left, DefinitionKey right) => !left.Equals(right); 
 
-        public bool Equals(BuildDefinitionKey other) =>
+        public bool Equals(DefinitionKey other) =>
             other.Organization == Organization &&
             other.Project == Project &&
             other.Id == Id;
 
-        public override bool Equals(object? other) => other is BuildDefinitionKey key && Equals(key);
+        public override bool Equals(object? other) => other is DefinitionKey key && Equals(key);
 
         public override int GetHashCode() => HashCode.Combine(Organization, Project, Id);
 

@@ -66,7 +66,7 @@ namespace DevOps.Status.Pages.Search
                 .Select(x => new TimelineData()
                 {
                     BuildNumber = x.ModelBuild.BuildNumber,
-                    BuildUri = x.ModelBuild.GetBuildInfo().BuildUri,
+                    BuildUri = x.ModelBuild.GetBuildResultInfo().BuildUri,
                     JobName = x.JobName,
                     Line = x.Message,
                     IssueType = x.IssueType,

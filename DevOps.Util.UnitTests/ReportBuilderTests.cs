@@ -14,15 +14,11 @@ namespace DevOps.Util.UnitTests
             int definitionId = 13,
             string definitionName = "def",
             string organization = "devopsutil",
-            string project = "test",
-            BuildResult result = BuildResult.Succeeded) =>
+            string project = "test") =>
             new BuildInfo(
-                new BuildKey(organization, project, buildNumber),
-                new BuildDefinitionInfo(organization, project, definitionId, definitionName),
-                gitHubInfo: null,
-                startTime: null,
-                finishTime: null,
-                result);
+                buildNumber,
+                new DefinitionInfo(organization, project, definitionId, definitionName),
+                gitHubBuildInfo: null);
 
         [Fact]
         public void SimpleBuild()

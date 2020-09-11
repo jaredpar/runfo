@@ -62,14 +62,14 @@ namespace DevOps.Status.Pages.Search
             Builds = (await options.GetQuery(TriageContext).ToListAsync())
                 .Select(x =>
                 {
-                    var buildInfo = x.GetBuildInfo();
+                    var buildInfo = x.GetBuildResultInfo();
                     var buildResult = x.BuildResult ?? BuildResult.None;
                     return new BuildData()
                     {
                         BuildResult = buildResult,
                         Result = buildResult.ToString(),
                         BuildNumber = buildInfo.Number,
-                        Kind = buildInfo.PullRequestNumber.HasValue ? "Pull Request" : "Rolling",
+                        Kind = buildInfo.PullRequestKey.HasValue ? "Pull Request" : "Rolling",
                         PullRequestKey = buildInfo.PullRequestKey,
                         BuildUri = buildInfo.BuildUri,
                         Definition = x.ModelBuildDefinition.DefinitionName,

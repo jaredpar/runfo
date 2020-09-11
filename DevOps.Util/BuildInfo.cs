@@ -2,134 +2,105 @@ using System;
 
 namespace DevOps.Util
 {
-    public readonly struct GitHubInfo
+    public readonly struct GitHubBuildInfo
     {
-        public const string TypeName = "GitHub";
-
         public string Organization { get; }
-
         public string Repository { get; }
+        public int? PullRequestNumber { get; }
 
-        public RepositoryInfo RepositoryInfo => new RepositoryInfo(id: $"{Organization}/{Repository}", TypeName);
+        public GitHubPullRequestKey? PullRequestKey => PullRequestNumber is int number
+            ? new GitHubPullRequestKey(Organization, Repository, number)
+            : (GitHubPullRequestKey?)null;
 
-        public GitHubInfo(
+        public GitHubBuildInfo(
             string organization,
-            string repository)
+            string repository,
+            int? pullRequestNumber)
         {
             Organization = organization;
             Repository = repository;
-        }
-
-        public static GitHubInfo? TryCreate(RepositoryInfo repositoryInfo)
-        {
-            if (repositoryInfo.Type == TypeName &&
-                repositoryInfo.Id is object)
-            {
-                var both = repositoryInfo.Id.Split("/");
-                if (both.Length == 2)
-                {
-                    return new GitHubInfo(both[0], both[1]);
-                }
-            }
-
-            return null;
+            PullRequestNumber = pullRequestNumber;
         }
 
         public override string ToString() => $"{Organization} {Repository}";
     }
 
-    public class BuildInfo
+    public sealed class BuildInfo
     {
-        public BuildKey Key { get; }
+        public int Number { get; set; }
+        public DefinitionInfo DefinitionInfo { get; }
+        public GitHubBuildInfo? GitHubBuildInfo { get; }
 
-        public BuildDefinitionInfo DefinitionInfo { get; }
+        public string Organization => DefinitionInfo.Organization;
+        public string Project => DefinitionInfo.Project;
+        public string DefinitionName => DefinitionInfo.Name;
+        public int DefinitionId => DefinitionInfo.Id;
+        public string BuildUri => BuildKey.BuildUri;
+        public BuildKey BuildKey => new BuildKey(Organization, Project, Number);
+        public DefinitionKey DefinitionKey => DefinitionInfo.Key;
+        public GitHubPullRequestKey? PullRequestKey => GitHubBuildInfo?.PullRequestKey;
 
-        public GitHubInfo? GitHubInfo { get; }
+        public BuildInfo(
+            string organization,
+            string project,
+            int buildNumber,
+            int definitionId,
+            string definitionName,
+            GitHubBuildInfo? gitHubBuildInfo)
+        {
+            Number = buildNumber;
+            DefinitionInfo = new DefinitionInfo(organization, project, definitionId, definitionName);
+            GitHubBuildInfo = gitHubBuildInfo;
+        }
 
-        public int? PullRequestNumber { get;}
+        public BuildInfo(
+            int buildNumber,
+            DefinitionInfo buildDefinitionInfo,
+            GitHubBuildInfo? gitHubBuildInfo)
+        {
+            Number = buildNumber;
+            DefinitionInfo = buildDefinitionInfo;
+            GitHubBuildInfo = gitHubBuildInfo;
+        }
 
+        public override string ToString() => $"{DefinitionName} {Number}";
+    }
+
+    public sealed class BuildResultInfo
+    {
+        public BuildInfo BuildInfo { get; }
         public DateTime? StartTime { get; }
-
         public DateTime? FinishTime { get; }
-
         public BuildResult BuildResult { get; }
 
-        public GitHubPullRequestKey? PullRequestKey => PullRequestNumber.HasValue && GitHubInfo.HasValue
-            ? (GitHubPullRequestKey?)new GitHubPullRequestKey(GitHubInfo.Value.Organization, GitHubInfo.Value.Repository, PullRequestNumber.Value)
-            : null;
+        public DefinitionInfo DefinitionInfo => BuildInfo.DefinitionInfo;
+        public GitHubBuildInfo? GitHubBuildInfo => BuildInfo.GitHubBuildInfo;
+        public GitHubPullRequestKey? PullRequestKey => BuildInfo.PullRequestKey;
+        public string Organization => BuildInfo.Organization;
+        public string Project => BuildInfo.Project;
+        public int Number => BuildInfo.Number;
+        public string DefinitionName => BuildInfo.DefinitionName;
+        public BuildKey BuildKey => BuildInfo.BuildKey;
+        public string BuildUri => BuildInfo.BuildUri;
 
-        public string Organization => Key.Organization;
-
-        public string Project => Key.Project;
-
-        public int Number => Key.Number;
-
-        public string DefinitionName => DefinitionInfo.Name;
-
-        public string BuildUri => Key.BuildUri;
-
-        public BuildInfo(
-            BuildKey buildKey,
-            BuildDefinitionInfo buildDefinitionInfo,
-            GitHubPullRequestKey pullRequestKey,
+        public BuildResultInfo(
+            BuildInfo buildInfo,
             DateTime? startTime,
             DateTime? finishTime,
             BuildResult buildResult)
         {
-            Key = buildKey;
-            DefinitionInfo = buildDefinitionInfo;
-            GitHubInfo = new GitHubInfo(pullRequestKey.Organization, pullRequestKey.Repository);
-            PullRequestNumber = pullRequestKey.Number;
+            BuildInfo = buildInfo;
             StartTime = startTime;
             FinishTime = finishTime;
             BuildResult = buildResult;
-        }
-
-        public BuildInfo(
-            BuildKey buildKey,
-            BuildDefinitionInfo buildDefinitionInfo,
-            GitHubInfo? gitHubInfo,
-            DateTime? startTime,
-            DateTime? finishTime,
-            BuildResult buildResult)
-        {
-            Key = buildKey;
-            DefinitionInfo = buildDefinitionInfo;
-            GitHubInfo = gitHubInfo;
-            PullRequestNumber = null;
-            StartTime = startTime;
-            FinishTime = finishTime;
-            BuildResult = buildResult;
-        }
-
-        public BuildInfo(
-            BuildKey buildKey,
-            BuildDefinitionInfo buildDefinitionInfo,
-            string? gitHubOrganization,
-            string? gitHubRepository,
-            int? pullRequestNumber,
-            DateTime? startTime,
-            DateTime? finishTime,
-            BuildResult buildResult)
-        {
-            Key = buildKey;
-            DefinitionInfo = buildDefinitionInfo;
-            if (gitHubOrganization is object && gitHubRepository is object)
-            {
-                GitHubInfo = new GitHubInfo(gitHubOrganization, gitHubRepository);
-                PullRequestNumber = pullRequestNumber;
-            }
-
-            StartTime = startTime;
-            FinishTime = finishTime;
         }
 
         public override string ToString() => $"{Organization} {Project} {Number}";
     }
 
-    public sealed class BuildDefinitionInfo
+    public sealed class DefinitionInfo
     {
-        public BuildDefinitionKey Key { get; }
+        public DefinitionKey Key { get; }
         public string Name { get; }
 
         public string Organization => Key.Organization;
@@ -137,14 +108,14 @@ namespace DevOps.Util
         public int Id => Key.Id;
         public string DefinitionUri => Key.DefinitionUri;
 
-        public BuildDefinitionInfo(BuildDefinitionKey key, string name)
+        public DefinitionInfo(DefinitionKey key, string name)
         {
             Key = key;
             Name = name;
         }
 
-        public BuildDefinitionInfo(string organization, string project, int id, string name) 
-            : this(new BuildDefinitionKey(organization, project, id), name)
+        public DefinitionInfo(string organization, string project, int id, string name) 
+            : this(new DefinitionKey(organization, project, id), name)
         {
         }
 

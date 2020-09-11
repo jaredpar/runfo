@@ -75,7 +75,7 @@ namespace DevOps.Status.Pages.Search
             var buildInfos = (await searchBuildsRequest
                 .GetQuery(TriageContextUtil)
                 .Include(x => x.ModelBuildDefinition)
-                .ToListAsync()).Select(x => x.GetBuildInfo()).ToList();
+                .ToListAsync()).Select(x => x.GetBuildResultInfo()).ToList();
             BuildCount = buildInfos.Count;
 
             var queryUtil = await DotNetQueryUtilFactory.CreateDotNetQueryUtilForUserAsync();

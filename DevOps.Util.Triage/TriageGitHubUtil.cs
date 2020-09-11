@@ -227,7 +227,7 @@ namespace DevOps.Util.Triage
 
             }
 
-            async Task BuildOne(string title, string label, BuildDefinitionKey? definitionKey)
+            async Task BuildOne(string title, string label, DefinitionKey? definitionKey)
             {
                 header.AppendLine($"- [{title}](https://github.com/dotnet/runtime/issues?q=is%3Aopen+is%3Aissue+label%3A{label})");
 
@@ -285,7 +285,7 @@ namespace DevOps.Util.Triage
                 await gitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, updateIssue).ConfigureAwait(false);
             }
 
-            int? GetImpactedBuildsCount(GitHubIssueKey issueKey, BuildDefinitionKey definitionKey)
+            int? GetImpactedBuildsCount(GitHubIssueKey issueKey, DefinitionKey definitionKey)
             {
                 if (!TriageContextUtil.TryGetTriageIssue(issueKey, out var triageIssue))
                 {

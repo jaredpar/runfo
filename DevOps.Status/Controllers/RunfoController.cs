@@ -39,7 +39,7 @@ namespace DevOps.Status.Controllers
                 var list = builds
                     .Select(x =>
                     {
-                        var buildInfo = x.GetBuildInfo();
+                        var buildInfo = x.GetBuildResultInfo();
                         return new BuildStatusRestInfo()
                         {
                             Result = (x.BuildResult ?? BuildResult.None).ToString(),

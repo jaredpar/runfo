@@ -128,7 +128,7 @@ namespace Scratch
             {
                 try
                 {
-                    var uri = build.GetBuildInfo().BuildUri;
+                    var uri = build.GetBuildResultInfo().BuildUri;
                     Console.WriteLine($"Getting data for {uri}");
                     var buildAttemptKey = await modelDataUtil.EnsureModelInfoAsync(build, includeTests: false);
                     Console.WriteLine($"Triaging {uri}");
@@ -176,7 +176,7 @@ namespace Scratch
             var triageContextUtil = new TriageContextUtil(TriageContext);
             foreach (var build in await DotNetQueryUtil.ListBuildsAsync(definition: "runtime", includePullRequests: true))
             {
-                var buildInfo = build.GetBuildInfo();
+                var buildInfo = build.GetBuildResultInfo();
                 try
                 {
                     Console.WriteLine($"Populating {buildInfo.BuildUri}");
@@ -204,7 +204,7 @@ namespace Scratch
             {
                 try
                 {
-                    var buildInfo = build.GetBuildInfo();
+                    var buildInfo = build.GetBuildResultInfo();
                     Console.WriteLine(buildInfo.BuildUri);
                     var timeline = await DevOpsServer.GetTimelineAsync(build);
                     if (timeline?.GetAttempt() is int attempt && attempt > 1)
@@ -276,7 +276,7 @@ namespace Scratch
 
             foreach (var build in await queryUtil.ListBuildsAsync(definition: "roslyn", count: 100, branch: "master", before: "2020/4/22"))
             {
-                var buildInfo = build.GetBuildInfo();
+                var buildInfo = build.GetBuildResultInfo();
                 try
                 {
                     await DumpTestTimeAsync(buildInfo);
@@ -289,7 +289,7 @@ namespace Scratch
 
             ;
 
-            async Task DumpTestTimeAsync(BuildInfo buildInfo)
+            async Task DumpTestTimeAsync(BuildResultInfo buildInfo)
             {
                 var timeline = await server.GetTimelineAsync(buildInfo.Project, buildInfo.Number);
                 if (timeline is null)
@@ -456,7 +456,7 @@ namespace Scratch
                         node.TimelineRecord.GetStartTime() is DateTimeOffset start &&
                         node.TimelineRecord.GetFinishTime() is DateTimeOffset finish)
                     {
-                        var buildInfo = build.GetBuildInfo();
+                        var buildInfo = build.GetBuildResultInfo();
                         var isPr = buildInfo.PullRequestKey.HasValue;
                         Console.WriteLine(buildInfo.BuildUri + $",{isPr}," + ((int)((finish - start).TotalMinutes)).ToString());
                     }
@@ -670,7 +670,7 @@ namespace Scratch
                     {
                         Console.WriteLine($"Checking {build.Repository.Id} {build.SourceVersion}");
                         // Build is complete for at  least five minutes. Results should be available 
-                        if (build.GetBuildInfo().PullRequestKey is { } prKey)
+                        if (build.GetBuildResultInfo().PullRequestKey is { } prKey)
                         {
                             var repository = await gitHub.Repository.Get(prKey.Organization, prKey.Repository);
 

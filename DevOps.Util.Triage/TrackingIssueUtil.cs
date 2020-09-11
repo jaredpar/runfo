@@ -124,7 +124,7 @@ namespace DevOps.Util.Triage
             Debug.Assert(modelBuildAttempt.ModelBuild is object);
             Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
 
-            Logger.LogInformation($"Triaging {modelBuildAttempt.ModelBuild.GetBuildInfo().BuildUri}");
+            Logger.LogInformation($"Triaging {modelBuildAttempt.ModelBuild.GetBuildResultInfo().BuildUri}");
 
             var trackingIssues = await (Context
                 .ModelTrackingIssues
@@ -249,7 +249,7 @@ namespace DevOps.Util.Triage
                 .ModelTestResults
                 .Where(x => x.IsHelixTestResult && x.ModelBuild.Id == modelBuildAttempt.ModelBuild.Id && x.ModelTestRun.Attempt == modelBuildAttempt.Attempt);
             var testResultList = await query.ToListAsync().ConfigureAwait(false);
-            var buildInfo = modelBuildAttempt.ModelBuild.GetBuildInfo();
+            var buildInfo = modelBuildAttempt.ModelBuild.GetBuildResultInfo();
             var helixLogInfos = testResultList
                 .Select(x => x.GetHelixLogInfo())
                 .SelectNotNull()

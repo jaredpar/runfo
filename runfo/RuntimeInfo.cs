@@ -217,7 +217,7 @@ namespace Runfo
                 foreach (var timeline in await ListTimelinesAsync(build, attempt))
                 {
                     found.AddRange(QueryUtil.SearchTimeline(
-                        build.GetBuildInfo(),
+                        build.GetBuildResultInfo(),
                         timeline,
                         text,
                         name,
@@ -225,7 +225,7 @@ namespace Runfo
                 }
             }
             Console.WriteLine(ReportBuilder.BuildSearchTimeline(
-                found.Select(x => (x.BuildInfo, x.Record.JobName)),
+                found.Select(x => (x.BuildResultInfo.BuildInfo, x.Record.JobName)),
                 markdown: markdown,
                 includeDefinition: !hadDefinition));
 
@@ -430,7 +430,7 @@ namespace Runfo
 
             foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
             {
-                Console.WriteLine(build.GetBuildInfo().BuildUri);
+                Console.WriteLine(build.GetBuildResultInfo().BuildUri);
                 var jobs = await QueryUtil.ListHelixJobsAsync(build.Project.Name, build.Id);
                 foreach (var group in jobs.GroupBy(x => x.Record.JobName ?? "<unknown>"))
                 {
@@ -663,7 +663,7 @@ namespace Runfo
 
             foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
             {
-                var buildInfo = build.GetBuildInfo();
+                var buildInfo = build.GetBuildResultInfo();
                 var timeline = await AzureUtil.GetTimelineAttemptAsync(build.Project.Name, build.Id, attempt);
                 if (timeline is null)
                 {
@@ -777,7 +777,7 @@ namespace Runfo
 
             foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
             {
-                Console.WriteLine(build.GetBuildInfo().BuildUri);
+                Console.WriteLine(build.GetBuildResultInfo().BuildUri);
                 Console.WriteLine();
                 var list = await QueryUtil.ListBuildMachineInfoAsync(build.Project.Name, build.Id, attempt, azure ?? false, helix ?? false);
                 foreach (var item in list.GroupBy(x => x.FriendlyName, StringComparer.OrdinalIgnoreCase).OrderBy(x => x.Key))
@@ -1150,7 +1150,7 @@ namespace Runfo
 
         private async Task<IEnumerable<Timeline>> ListTimelinesAsync(Build build, int? attempt)
         {
-            var buildInfo = build.GetBuildInfo();
+            var buildInfo = build.GetBuildResultInfo();
             switch (attempt)
             {
                 case -1:

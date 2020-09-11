@@ -48,12 +48,12 @@ namespace DevOps.Util.DotNet
                 ("winforms", "public", 267),
             };
 
-        public static BuildDefinitionKey? GetBuildDefinitionKeyFromFriendlyName(string name)
+        public static DefinitionKey? GetBuildDefinitionKeyFromFriendlyName(string name)
         {
             var item = BuildDefinitions.FirstOrDefault(x => x.BuildName == name);
             if (item.Project is object)
             {
-                return new BuildDefinitionKey(AzureOrganization, item.Project, item.DefinitionId);
+                return new DefinitionKey(AzureOrganization, item.Project, item.DefinitionId);
             }
 
             return null;

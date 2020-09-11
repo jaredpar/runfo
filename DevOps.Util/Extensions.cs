@@ -91,7 +91,9 @@ namespace DevOps.Util
 
         public static BuildInfo GetBuildInfo(this Build build) => DevOpsUtil.GetBuildInfo(build);
 
-        public static BuildDefinitionInfo GetBuildDefinitionInfo(this Build build) => DevOpsUtil.GetBuildDefinitionInfo(build);
+        public static DefinitionInfo GetBuildDefinitionInfo(this Build build) => DevOpsUtil.GetBuildDefinitionInfo(build);
+
+        public static BuildResultInfo GetBuildResultInfo(this Build build) => DevOpsUtil.GetBuildResultInfo(build);
 
         public static DateTimeOffset? GetStartTime(this Build build) => DevOpsUtil.ConvertFromRestTime(build.StartTime);
 
@@ -103,7 +105,7 @@ namespace DevOps.Util
 
         #region BuildInfo
 
-        public static BuildKey GetBuildKey(this BuildInfo buildInfo) => DevOpsUtil.GetBuildKey(buildInfo);
+        public static BuildKey GetBuildKey(this BuildResultInfo buildInfo) => DevOpsUtil.GetBuildKey(buildInfo);
 
         #endregion
 
@@ -352,7 +354,7 @@ namespace DevOps.Util
             int[]? definitions = null)
         {
             var branchName = $"refs/pull/{prKey.Number}/merge";
-            var repositoryInfo = prKey.GitHubInfo.RepositoryInfo;
+            var repositoryInfo = new RepositoryInfo(prKey.GitHubInfo);
             return server.ListBuildsAsync(
                 project,
                 definitions: definitions,

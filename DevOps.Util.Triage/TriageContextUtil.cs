@@ -42,7 +42,7 @@ namespace DevOps.Util.Triage
                 ? (GitHubPullRequestKey?)new GitHubPullRequestKey(build.GitHubOrganization, build.GitHubRepository, build.PullRequestNumber.Value)
                 : null;
 
-        public async Task<ModelBuildDefinition> EnsureBuildDefinitionAsync(BuildDefinitionInfo definitionInfo)
+        public async Task<ModelBuildDefinition> EnsureBuildDefinitionAsync(DefinitionInfo definitionInfo)
         {
             var buildDefinition = Context.ModelBuildDefinitions
                 .Where(x =>
@@ -74,9 +74,9 @@ namespace DevOps.Util.Triage
             return buildDefinition;
         }
 
-        public async Task<ModelBuild> EnsureBuildAsync(BuildInfo buildInfo)
+        public async Task<ModelBuild> EnsureBuildAsync(BuildResultInfo buildInfo)
         {
-            var modelBuildId = GetModelBuildId(buildInfo.Key);
+            var modelBuildId = GetModelBuildId(buildInfo.BuildKey);
             var modelBuild = Context.ModelBuilds
                 .Where(x => x.Id == modelBuildId)
                 .FirstOrDefault();
@@ -99,8 +99,8 @@ namespace DevOps.Util.Triage
             {
                 Id = modelBuildId,
                 ModelBuildDefinitionId = modelBuildDefinition.Id,
-                GitHubOrganization = buildInfo.GitHubInfo?.Organization ?? null,
-                GitHubRepository = buildInfo.GitHubInfo?.Repository ?? null,
+                GitHubOrganization = buildInfo.GitHubBuildInfo?.Organization ?? null,
+                GitHubRepository = buildInfo.GitHubBuildInfo?.Repository ?? null,
                 PullRequestNumber = prKey?.Number,
                 StartTime = buildInfo.StartTime,
                 FinishTime = buildInfo.FinishTime,
@@ -116,7 +116,7 @@ namespace DevOps.Util.Triage
         {
             if (modelBuild.BuildResult != build.Result)
             {
-                var buildInfo = build.GetBuildInfo();
+                var buildInfo = build.GetBuildResultInfo();
                 modelBuild.BuildResult = build.Result;
                 modelBuild.StartTime = buildInfo.StartTime;
                 modelBuild.FinishTime = buildInfo.FinishTime;
@@ -124,7 +124,7 @@ namespace DevOps.Util.Triage
             }
         }
 
-        public async Task<ModelBuildAttempt> EnsureBuildAttemptAsync(BuildInfo buildInfo, Timeline timeline)
+        public async Task<ModelBuildAttempt> EnsureBuildAttemptAsync(BuildResultInfo buildInfo, Timeline timeline)
         {
             var modelBuild = await EnsureBuildAsync(buildInfo).ConfigureAwait(false);
             return await EnsureBuildAttemptAsync(modelBuild, buildInfo.BuildResult, timeline).ConfigureAwait(false);
@@ -278,7 +278,7 @@ namespace DevOps.Util.Triage
                 return modelTestRun;
             }
 
-            var buildInfo = testRun.Build.GetBuildInfo();
+            var buildInfo = testRun.Build.GetBuildResultInfo();
             modelTestRun = new ModelTestRun()
             {
                 AzureOrganization = buildInfo.Organization,

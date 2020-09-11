@@ -29,7 +29,7 @@ namespace DevOps.Util.Triage
                     .FirstOrDefault();
                 if (mergedBuild is object)
                 {
-                    var modelBuild = await triageContextUtil.EnsureBuildAsync(mergedBuild.GetBuildInfo()).ConfigureAwait(false);
+                    var modelBuild = await triageContextUtil.EnsureBuildAsync(mergedBuild.GetBuildResultInfo()).ConfigureAwait(false);
                     modelBuild.IsMergedPullRequest = true;
                     await triageContextUtil.Context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 }

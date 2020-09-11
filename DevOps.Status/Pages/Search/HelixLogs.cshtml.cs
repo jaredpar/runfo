@@ -82,7 +82,7 @@ namespace DevOps.Status.Pages.Search
 
             var modelResults = await query.ToListAsync();
             var toQuery = modelResults
-                .Select(x => (x.ModelBuild.GetBuildInfo(), x.GetHelixLogInfo()))
+                .Select(x => (x.ModelBuild.GetBuildResultInfo(), x.GetHelixLogInfo()))
                 .Where(x => x.Item2 is object);
 
             var queryUtil = await DotNetQueryUtilFactory.CreateDotNetQueryUtilForUserAsync();

@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -18,32 +20,38 @@ namespace DevOps.Util
             return new BuildKey(organization, build.Project.Name, build.Id);
         }
 
-        public static BuildKey GetBuildKey(BuildInfo buildInfo) =>
+        public static BuildKey GetBuildKey(BuildResultInfo buildInfo) =>
             new BuildKey(buildInfo.Organization, buildInfo.Project, buildInfo.Number);
 
-        public static BuildDefinitionInfo GetBuildDefinitionInfo(Build build)
+        public static DefinitionInfo GetBuildDefinitionInfo(Build build)
         {
             var organization = GetOrganization(build);
-            return new BuildDefinitionInfo(
+            return new DefinitionInfo(
                 organization,
                 build.Definition.Project.Name,
                 build.Definition.Id,
                 build.Definition.Name);
         }
 
-        public static BuildInfo GetBuildInfo(Build build)
+        public static BuildResultInfo GetBuildResultInfo(Build build)
         {
-            var key = GetBuildKey(build);
-            var definitionInfo = GetBuildDefinitionInfo(build);
+            var buildInfo = GetBuildInfo(build);
             var startTime = build.GetStartTime()?.UtcDateTime;
             var finishTime = build.GetFinishTime()?.UtcDateTime;
-            if (TryGetPullRequestKey(build, out var pullRequestKey))
-            {
-                return new BuildInfo(key, definitionInfo, pullRequestKey, startTime, finishTime, build.Result);
-            }
+            var gitHubBuildInfo = GetGitHubBuildInfo(build);
+            return new BuildResultInfo(buildInfo, startTime, finishTime, build.Result);
+        }
 
-            var gitHubInfo = GetGitHubInfo(build);
-            return new BuildInfo(key, definitionInfo, gitHubInfo, startTime, finishTime, build.Result);
+        public static BuildInfo GetBuildInfo(Build build)
+        {
+            var buildKey = GetBuildKey(build);
+            return new BuildInfo(
+                buildKey.Organization,
+                buildKey.Project,
+                buildKey.Number,
+                build.Definition.Id,
+                build.Definition.Name,
+                GetGitHubBuildInfo(build));
         }
 
         public static bool TryParseBuildKey(Uri uri, out BuildKey buildKey)
@@ -97,11 +105,6 @@ namespace DevOps.Util
         public static string GetBuildUri(string organization, string project, int buildId) =>
             $"https://dev.azure.com/{organization}/{project}/_build/results?buildId={buildId}";
 
-        public static GitHubInfo? GetGitHubInfo(Build build) =>
-            GetRepositoryInfo(build) is { } repositoryInfo
-            ? GitHubInfo.TryCreate(repositoryInfo)
-            : null;
-
         public static RepositoryInfo? GetRepositoryInfo(Build build)
         {
             var repo = build.Repository;
@@ -115,47 +118,40 @@ namespace DevOps.Util
             return null;
         }
 
-        public static GitHubPullRequestKey? GetPullRequestKey(Build build) =>
-            TryGetPullRequestKey(build, out var pullRequestKey)
-                ? (GitHubPullRequestKey?)pullRequestKey
-                : null;
+        public static GitHubBuildInfo? GetGitHubBuildInfo(Build build)
+        {
+            if (GetRepositoryInfo(build) is { } repositoryInfo &&
+                repositoryInfo.TryGetGitHubInfo(out var organization, out var repository))
+            {
+                int? prNumber = null;
+                if (build.Reason == BuildReason.PullRequest &&
+                    build.SourceBranch is object)
+                {
+                    var items = build.SourceBranch.Split('/');
+                    if (items.Length > 2 && int.TryParse(items[2], out int number))
+                    {
+                        prNumber = number;
+                    }
+                }
+
+                return new GitHubBuildInfo(organization, repository, prNumber);
+            }
+
+            return null;
+        }
+
+        public static GitHubPullRequestKey? GetPullRequestKey(Build build) => GetGitHubBuildInfo(build)?.PullRequestKey;
 
         public static bool TryGetPullRequestKey(Build build, out GitHubPullRequestKey prKey)
         {
-            prKey = default;
-            if (build.Reason != BuildReason.PullRequest)
+            if (GetPullRequestKey(build) is { } k)
             {
-                return false;
-            }
-
-            try
-            {
-                var items = build.SourceBranch.Split('/');
-                if (int.TryParse(items[2], out int number) &&
-                    GetGitHubInfo(build) is GitHubInfo gitHubInfo)
-                {
-                    prKey = new GitHubPullRequestKey(gitHubInfo.Organization, gitHubInfo.Repository, number);
-                    return true;
-                }
-            }
-            catch
-            {
-
-            }
-
-            return false;
-        }
-
-        public static bool TryGetPullRequestNumber(Build build, out int number)
-        {
-            if (TryGetPullRequestKey(build, out var pullRequestKey))
-            {
-                number = pullRequestKey.Number;
+                prKey = k;
                 return true;
             }
             else
             {
-                number = 0;
+                prKey = default;
                 return false;
             }
         }

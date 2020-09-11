@@ -34,7 +34,7 @@ namespace DevOps.Util.Triage
 
         public async Task<BuildAttemptKey> EnsureModelInfoAsync(Build build, bool includeTests = true)
         {
-            var buildInfo = build.GetBuildInfo();
+            var buildInfo = build.GetBuildResultInfo();
             var modelBuild = await TriageContextUtil.EnsureBuildAsync(buildInfo).ConfigureAwait(false);
             await TriageContextUtil.EnsureResultAsync(modelBuild, build).ConfigureAwait(false);
             var modelBuildAttempt = await EnsureTimeline().ConfigureAwait(false);

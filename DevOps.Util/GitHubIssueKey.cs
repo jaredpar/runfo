@@ -43,7 +43,7 @@ namespace DevOps.Util
 
         public int Number { get; }
 
-        public GitHubInfo GitHubInfo => new GitHubInfo(Organization, Repository);
+        public GitHubBuildInfo GitHubInfo => new GitHubBuildInfo(Organization, Repository, Number);
 
         public string PullRequestUri => GetPullRequestUri(Organization, Repository, Number);
 

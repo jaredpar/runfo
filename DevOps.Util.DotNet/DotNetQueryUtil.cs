@@ -50,30 +50,30 @@ namespace DevOps.Util.DotNet
 
     public sealed class SearchTimelineResult
     {
-        public BuildInfo BuildInfo { get; }
+        public BuildResultInfo BuildResultInfo { get; }
         public TimelineRecordItem Record { get; }
         public string Line { get; }
 
         public SearchTimelineResult(
             TimelineRecordItem record,
-            BuildInfo buildInfo,
+            BuildResultInfo buildInfo,
             string line)
         {
             Record = record;
-            BuildInfo = buildInfo;
+            BuildResultInfo = buildInfo;
             Line = line;
         }
     }
 
     public sealed class SearchBuildLogsResult
     {
-        public BuildInfo BuildInfo { get; }
+        public BuildResultInfo BuildInfo { get; }
         public string JobName { get; }
         public TimelineRecord Record { get; }
         public BuildLogReference BuildLogReference { get; }
         public string Line { get; }
 
-        public SearchBuildLogsResult(BuildInfo buildInfo, string jobName, TimelineRecord record, BuildLogReference buildLogReference, string line)
+        public SearchBuildLogsResult(BuildResultInfo buildInfo, string jobName, TimelineRecord record, BuildLogReference buildLogReference, string line)
         {
             BuildInfo = buildInfo;
             JobName = jobName;
@@ -85,12 +85,12 @@ namespace DevOps.Util.DotNet
 
     public sealed class SearchHelixLogsResult
     {
-        public BuildInfo BuildInfo { get; }
+        public BuildResultInfo BuildInfo { get; }
         public HelixLogKind HelixLogKind { get;  }
         public string HelixLogUri { get; }
         public string Line { get; }
 
-        public SearchHelixLogsResult(BuildInfo buildInfo, HelixLogKind helixLogKind, string helixLogUri, string line)
+        public SearchHelixLogsResult(BuildResultInfo buildInfo, HelixLogKind helixLogKind, string helixLogUri, string line)
         {
             BuildInfo = buildInfo;
             HelixLogKind = helixLogKind;
@@ -131,7 +131,7 @@ namespace DevOps.Util.DotNet
         }
 
         public Task<List<SearchTimelineResult>> SearchTimelineAsync(
-            IEnumerable<BuildInfo> buildInfos,
+            IEnumerable<BuildResultInfo> buildInfos,
             string text,
             string? name = null,
             string? task = null,
@@ -145,7 +145,7 @@ namespace DevOps.Util.DotNet
         }
 
         public async Task<List<SearchTimelineResult>> SearchTimelineAsync(
-            IEnumerable<BuildInfo> buildInfos,
+            IEnumerable<BuildResultInfo> buildInfos,
             Regex text,
             Regex? name = null,
             Regex? task = null,
@@ -178,7 +178,7 @@ namespace DevOps.Util.DotNet
         }
 
         public IEnumerable<SearchTimelineResult> SearchTimeline(
-            BuildInfo buildInfo,
+            BuildResultInfo buildInfo,
             Timeline timeline,
             string text,
             string? name = null,
@@ -192,7 +192,7 @@ namespace DevOps.Util.DotNet
         }
 
         public IEnumerable<SearchTimelineResult> SearchTimeline(
-            BuildInfo buildInfo,
+            BuildResultInfo buildInfo,
             Timeline timeline,
             Regex text,
             Regex? name = null,
@@ -231,7 +231,7 @@ namespace DevOps.Util.DotNet
         }
 
         public async Task<List<SearchBuildLogsResult>> SearchBuildLogsAsync(
-            IEnumerable<BuildInfo> builds,
+            IEnumerable<BuildResultInfo> builds,
             SearchBuildLogsRequest request,
             Action<Exception>? onError = null)
         {
@@ -243,7 +243,7 @@ namespace DevOps.Util.DotNet
             var nameRegex = CreateSearchRegex(request.LogName);
             var textRegex = CreateSearchRegex(request.Text);
 
-            var list = new List<(BuildInfo BuildInfo, TimelineTree Tree, TimelineRecord TimelineRecord, BuildLogReference BuildLogReference)>();
+            var list = new List<(BuildResultInfo BuildInfo, TimelineTree Tree, TimelineRecord TimelineRecord, BuildLogReference BuildLogReference)>();
             foreach (var buildInfo in builds)
             {
                 try
@@ -312,7 +312,7 @@ namespace DevOps.Util.DotNet
         // TODO: Should this method be here? It doesn't actually use AzDO at all. Perhaps we need to move this to a 
         // different type
         public async Task<List<SearchHelixLogsResult>> SearchHelixLogsAsync(
-            IEnumerable<(BuildInfo BuildInfo, HelixLogInfo HelixLogInfo)> builds,
+            IEnumerable<(BuildResultInfo BuildInfo, HelixLogInfo HelixLogInfo)> builds,
             SearchHelixLogsRequest request,
             Action<Exception>? onError = null)
         {
@@ -666,7 +666,7 @@ namespace DevOps.Util.DotNet
 
         public async Task<DotNetTestRun> GetDotNetTestRunAsync(Build build, TestRun testRun, TestOutcome[] outcomes)
         {
-            var buildInfo = build.GetBuildInfo();
+            var buildInfo = build.GetBuildResultInfo();
             var all = await AzureUtil.ListTestResultsAsync(buildInfo.Project, testRun.Id, outcomes: outcomes).ConfigureAwait(false);
             var info = new DotNetTestRunInfo(build, testRun);
             var list = ToDotNetTestCaseResult(info, all.ToList());

@@ -79,7 +79,7 @@ namespace DevOps.Util.DotNet
 
         public async IAsyncEnumerable<(PullRequest PullReuqest, Build Build)> EnumerateMergedPullRequestBuilds(
             DevOpsServer server,
-            GitHubInfo gitHubInfo,
+            GitHubBuildInfo gitHubInfo,
             string project,
             int[]? definitions)
         {

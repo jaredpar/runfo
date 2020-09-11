@@ -32,7 +32,7 @@ namespace DevOps.Util.Triage
 
         internal Build Build { get; }
 
-        internal BuildInfo BuildInfo { get; }
+        internal BuildResultInfo BuildInfo { get; }
 
         internal ModelBuild ModelBuild { get; }
 
@@ -50,7 +50,7 @@ namespace DevOps.Util.Triage
 
         public LegacyBuildTriageUtil(
             Build build,
-            BuildInfo buildInfo,
+            BuildResultInfo buildInfo,
             ModelBuild modelBuild,
             DevOpsServer server,
             TriageContextUtil triageContextUtil,
@@ -129,7 +129,7 @@ namespace DevOps.Util.Triage
             }
 
             var count = 0;
-            foreach (var result in QueryUtil.SearchTimeline(Build.GetBuildInfo(), timeline, text: searchText))
+            foreach (var result in QueryUtil.SearchTimeline(Build.GetBuildResultInfo(), timeline, text: searchText))
             {
                 count++;
 
@@ -141,7 +141,7 @@ namespace DevOps.Util.Triage
                     Line = result.Line,
                     ModelBuild = ModelBuild,
                     ModelTriageIssue = modelTriageIssue,
-                    BuildNumber = result.BuildInfo.GetBuildKey().Number,
+                    BuildNumber = result.BuildResultInfo.GetBuildKey().Number,
                 };
                 Context.ModelTriageIssueResults.Add(modelTriageIssueResult);
             }
