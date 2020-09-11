@@ -10,7 +10,12 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet
 {
-    public sealed class GitHubClientFactory
+    public interface IGitHubClientFactory
+    {
+        Task<IGitHubClient> CreateForAppAsync(string owner, string repository);
+    }
+
+    public sealed class GitHubClientFactory : IGitHubClientFactory
     {
         public const string GitHubProductName = "runfo.azurewebsites.net";
 
@@ -66,6 +71,13 @@ namespace DevOps.Util.DotNet
             };
             return client;
         }
+
+        #region IGitHubClientFactory
+
+        async Task<IGitHubClient> IGitHubClientFactory.CreateForAppAsync(string owner, string repository) =>
+            await CreateForAppAsync(owner, repository).ConfigureAwait(false);
+
+        #endregion
 
         private sealed class PlainStringPrivateKeySource : IPrivateKeySource
         {

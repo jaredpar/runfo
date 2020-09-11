@@ -463,8 +463,6 @@ namespace DevOps.Util.Triage
         /// When defined restrict the test failure tracking to the following build definitions
         /// </summary>
         public ModelBuildDefinition ModelBuildDefinition { get; set; }
-
-        public List<ModelTrackingIssueMatch> ModelTrackingIssueMatches { get; set; }
     }
 
     /// <summary>

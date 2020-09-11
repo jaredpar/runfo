@@ -199,7 +199,7 @@ namespace DevOps.Util.Triage
             var testQuery = Context
                 .ModelTestResults
                 .Where(x =>
-                    x.ModelBuildId == modelBuildAttempt.ModelBuild.Id &&
+                    x.ModelBuildId == modelBuildAttempt.ModelBuildId &&
                     x.ModelTestRun.Attempt == modelBuildAttempt.Attempt);
             var any = false;
             foreach (var testResult in await testQuery.ToListAsync().ConfigureAwait(false))
@@ -213,7 +213,6 @@ namespace DevOps.Util.Triage
                         ModelTestResult = testResult,
                     };
 
-                    modelTrackingIssue.ModelTrackingIssueMatches.Add(modelMatch);
                     Context.ModelTrackingIssueMatches.Add(modelMatch);
                     any = true;
                 }

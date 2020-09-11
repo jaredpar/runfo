@@ -143,7 +143,7 @@ namespace DevOps.Functions
 
             logger.LogInformation($"Triaging build {buildInfoMessage.ProjectName} {buildInfoMessage.BuildNumber}");
 
-            var util = new AutoTriageUtil(Server, Context, logger);
+            var util = new LegacyAutoTriageUtil(Server, Context, logger);
             await util.TriageBuildAsync(buildInfoMessage.ProjectName, buildInfoMessage.BuildNumber);
         }
 
@@ -154,7 +154,7 @@ namespace DevOps.Functions
         {
             var buildInfoMessage = JsonConvert.DeserializeObject<BuildInfoMessage>(message);
             Debug.Assert(buildInfoMessage.ProjectName is object);
-            var util = new AutoTriageUtil(Server, Context, logger);
+            var util = new LegacyAutoTriageUtil(Server, Context, logger);
             await util.RetryOsxDeprovisionAsync(buildInfoMessage.ProjectName, buildInfoMessage.BuildNumber);
         }
 
@@ -163,7 +163,7 @@ namespace DevOps.Functions
             [TimerTrigger("0 */15 15-23 * * 1-5")] TimerInfo timerInfo,
             ILogger logger)
         { 
-            var util = new TriageGitHubUtil(GitHubClientFactory, Context, logger);
+            var util = new LegacyTriageGitHubUtil(GitHubClientFactory, Context, logger);
             await util.UpdateGithubIssues();
             await util.UpdateStatusIssue();
         }

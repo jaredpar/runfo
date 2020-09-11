@@ -5,7 +5,7 @@ using System.Text;
 
 namespace DevOps.Util.UnitTests
 {
-    internal sealed class TestableLogger : ILogger
+    public sealed class TestableLogger : ILogger
     {
         public IDisposable BeginScope<TState>(TState state)
         {

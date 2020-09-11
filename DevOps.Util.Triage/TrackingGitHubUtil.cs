@@ -22,7 +22,7 @@ namespace DevOps.Util.Triage
     /// </summary>
     public sealed class TrackingGitHubUtil
     {
-        public GitHubClientFactory GitHubClientFactory { get; }
+        public IGitHubClientFactory GitHubClientFactory { get; }
 
         public TriageContextUtil TriageContextUtil { get; }
 
@@ -33,7 +33,7 @@ namespace DevOps.Util.Triage
         public TriageContext Context => TriageContextUtil.Context;
 
         public TrackingGitHubUtil(
-            GitHubClientFactory gitHubClientFactory,
+            IGitHubClientFactory gitHubClientFactory,
             TriageContext context,
             ILogger logger)
         {
@@ -117,7 +117,7 @@ namespace DevOps.Util.Triage
             */
         }
 
-        internal Task<string> GetReportAsync(ModelTrackingIssue modelTrackingIssue)
+        public Task<string> GetReportAsync(ModelTrackingIssue modelTrackingIssue)
         {
             switch (modelTrackingIssue.TrackingKind)
             {
@@ -234,7 +234,7 @@ namespace DevOps.Util.Triage
 
         private async Task<bool> UpdateGitHubIssueAsync(GitHubIssueKey issueKey, string reportBody)
         {
-            GitHubClient gitHubClient;
+            IGitHubClient gitHubClient;
             try
             {
                 gitHubClient = await GitHubClientFactory.CreateForAppAsync(
@@ -250,7 +250,7 @@ namespace DevOps.Util.Triage
             return await UpdateGitHubIssueAsync(gitHubClient, issueKey, reportBody).ConfigureAwait(false);
         }
 
-        private async Task<bool> UpdateGitHubIssueAsync(GitHubClient gitHubClient, GitHubIssueKey issueKey, string reportBody)
+        private async Task<bool> UpdateGitHubIssueAsync(IGitHubClient gitHubClient, GitHubIssueKey issueKey, string reportBody)
         {
             try
             {

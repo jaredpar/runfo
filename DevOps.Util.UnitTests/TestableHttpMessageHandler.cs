@@ -9,7 +9,7 @@ using Xunit;
 
 namespace DevOps.Util.UnitTests
 {
-    internal sealed class TestableHttpMessageHandler : HttpMessageHandler
+    public sealed class TestableHttpMessageHandler : HttpMessageHandler
     {
         public Dictionary<Uri, HttpResponseMessage> MessageMap { get; } = new Dictionary<Uri, HttpResponseMessage>();
 
