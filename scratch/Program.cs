@@ -116,21 +116,23 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await ExhaustTimelineAsync();
-            var timeline = await DevOpsServer.GetTimelineAttemptAsync("public", 799195, attempt: 1);
+            // await ExhaustTimelineAsync();
+            await PopulateDb();
+        }
 
+        internal async Task PopulateDb()
+        {
             var logger = CreateLogger();
             var trackingUtil = new TrackingIssueUtil(DotNetQueryUtil, TriageContextUtil, logger);
-            await trackingUtil.EnsureStandardTrackingIssues();
-            var modelDataUtil = new ModelDataUtil(DotNetQueryUtil, TriageContextUtil, logger);
-            var builds = await DotNetQueryUtil.ListBuildsAsync(count: 200, definitions: new[] { 686 });
+            var builds = await DotNetQueryUtil.ListBuildsAsync(count: 20, definitions: new[] { 15 });
             foreach (var build in builds)
             {
                 try
                 {
                     var uri = build.GetBuildResultInfo().BuildUri;
                     Console.WriteLine($"Getting data for {uri}");
-                    var buildAttemptKey = await modelDataUtil.EnsureModelInfoAsync(build, includeTests: false);
+                    var modelDataUtil = new ModelDataUtil(DotNetQueryUtil, TriageContextUtil, logger);
+                    var buildAttemptKey = await modelDataUtil.EnsureModelInfoAsync(build, includeTests: true);
                     Console.WriteLine($"Triaging {uri}");
                     await trackingUtil.TriageAsync(buildAttemptKey);
                 }

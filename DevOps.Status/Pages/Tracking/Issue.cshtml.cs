@@ -36,7 +36,9 @@ namespace DevOps.Status.Pages.Tracking
 
         public TriageContext Context { get; }
 
-        public string SearchText { get; set; } = "";
+        public string? SearchText { get; set; }
+
+        public string? TrackingKind { get; set; }
 
         public List<Result> Results { get; set; } = new List<Result>();
 
@@ -51,6 +53,7 @@ namespace DevOps.Status.Pages.Tracking
                 .Where(x => x.Id == id)
                 .SingleAsync();
             SearchText = issue.SearchRegexText;
+            TrackingKind = issue.TrackingKind.ToString();
 
             Results = await Context.ModelTrackingIssueMatches
                 .Where(x => x.ModelTrackingIssueId == issue.Id)

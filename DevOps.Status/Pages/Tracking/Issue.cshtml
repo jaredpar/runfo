@@ -6,9 +6,20 @@
     ViewData["Title"] = "Issue Tracking";
 }
 
-<div>
-    @Model.SearchText
-</div>
+<form method="post">
+    <div class="form-group">
+        <label for="searchKind">Search Text</label>
+        <input class="form-control" placeholder="@Model.SearchText" readonly />
+    </div>
+
+    <div class="form-group">
+        <label for="searchKind">Tracking Kind</label>
+        <input class="form-control" placeholder="@Model.TrackingKind" readonly />
+    </div>
+
+    <!--<button type="submit" class="btn btn-primary">Create</button> -->
+</form>
+
 <table class="table">
     <thead>
         <tr>
@@ -32,3 +43,4 @@
         }
     </tbody>
 </table>
+

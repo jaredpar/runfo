@@ -9,6 +9,7 @@ namespace DevOps.Util.DotNet
 {
     public sealed class ReportBuilder
     {
+        // TODO: the header / fotter should be in the GitHub issue layer, not the raw report layer
         public static readonly string MarkdownReportStart = "<!-- runfo report start -->";
         public static readonly Regex MarkdownReportStartRegex = new Regex(@"<!--\s*runfo report start\s*-->", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         public static readonly string MarkdownReportEnd = "<!-- runfo report end -->";

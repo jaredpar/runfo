@@ -245,7 +245,7 @@ namespace DevOps.Util.Triage
             return modelBuildAttempt;
         }
 
-        public Task<ModelBuild> FindModelBuildAsync(string organization, string project, int buildNumber) =>
+        public Task<ModelBuild?> FindModelBuildAsync(string organization, string project, int buildNumber) =>
             Context.
             ModelBuilds
             .Where(x =>
@@ -254,7 +254,7 @@ namespace DevOps.Util.Triage
                 x.ModelBuildDefinition.AzureProject == project)
             .FirstOrDefaultAsync();
 
-        public Task<ModelBuildAttempt> FindModelBuildAttemptAsync(string organization, string project, int buildNumber, int attempt) =>
+        public Task<ModelBuildAttempt?> FindModelBuildAttemptAsync(string organization, string project, int buildNumber, int attempt) =>
             Context.
             ModelBuildAttempts
             .Where(x =>
@@ -264,11 +264,40 @@ namespace DevOps.Util.Triage
                 x.Attempt == attempt)
             .FirstOrDefaultAsync();
 
-        public Task<ModelTestRun> FindModelTestRunAsync(ModelBuild modelBuild, int testRunid) =>
+        public Task<ModelTestRun?> FindModelTestRunAsync(ModelBuild modelBuild, int testRunid) =>
             Context
             .ModelTestRuns
             .Where(x => x.ModelBuildId == modelBuild.Id && x.TestRunId == testRunid)
             .FirstOrDefaultAsync();
+
+        public async Task<ModelBuildDefinition?> FindModelBuildDefinitionAsync(string nameOrId)
+        {
+            if (int.TryParse(nameOrId, out var id))
+            {
+                return await Context
+                    .ModelBuildDefinitions
+                    .Where(x => x.DefinitionId == id)
+                    .FirstOrDefaultAsync()
+                    .ConfigureAwait(false);
+            }
+
+            var modelBuildDefinition = await Context
+                .ModelBuildDefinitions
+                .Where(x => x.DefinitionName == nameOrId)
+                .FirstOrDefaultAsync()
+                .ConfigureAwait(false);
+
+            if (modelBuildDefinition is object)
+            {
+                return modelBuildDefinition;
+            }
+
+            return await Context
+                .ModelBuildDefinitions
+                .Where(x => EF.Functions.Like(x.DefinitionName, nameOrId))
+                .FirstOrDefaultAsync()
+                .ConfigureAwait(false);
+        }
 
         public async Task<ModelTestRun> EnsureTestRunAsync(ModelBuild modelBuild, int attempt, DotNetTestRun testRun, Dictionary<HelixInfo, HelixLogInfo> helixMap)
         {

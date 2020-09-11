@@ -42,7 +42,7 @@ namespace DevOps.Status
                 .AddRazorPages()
                 .AddRazorPagesOptions(options =>
                 {
-                    options.Conventions.AuthorizePage("/Triage/New", Constants.TriagePolicy);
+                    options.Conventions.AuthorizeFolder("/Tracking", Constants.TriagePolicy);
                     options.Conventions.AuthorizePage("/Search/BuildLogs", Constants.VsoPolicy);
                     options.Conventions.AuthorizePage("/Search/HelixLogs", Constants.VsoPolicy);
 
