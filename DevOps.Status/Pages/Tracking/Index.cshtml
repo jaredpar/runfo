@@ -1,7 +1,7 @@
 @page
-@model TriageIndexModel
+@model TrackingIndexModel
 @{
-    ViewData["Title"] = "Build Search";
+    ViewData["Title"] = "Tracking Issues";
 }
 
 <table class="table">
@@ -18,7 +18,7 @@
         {
             <tr>
                 <td><a asp-page="issue" asp-route-id=@issueData.Id>@issueData.SearchText</a></td>
-                <td>@issueData.SearchKind</td>
+                <td>@issueData.Kind</td>
                 <td>@issueData.WeekCount</td>
                 <td>@issueData.TotalCount</td>
             </tr>

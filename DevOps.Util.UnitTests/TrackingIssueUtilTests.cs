@@ -40,6 +40,20 @@ namespace DevOps.Util.UnitTests
             Assert.True(result.IsPresent);
         }
 
+        [Fact]
+        public async Task TimelineSavesJobName()
+        {
+            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
+            var timeline = AddTimelineIssue("windows|dog", attempt);
+            var tracking = AddTrackingIssue("Timeline|dog");
+            await Context.SaveChangesAsync();
+
+            await TrackingIssueUtil.TriageAsync(attempt);
+            var match = await Context.ModelTrackingIssueMatches.SingleAsync();
+            Assert.Equal("windows", match.JobName);
+        }
+
         [Theory]
         [InlineData("Test1", 1)]
         [InlineData("Test2", 1)]

@@ -12,9 +12,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Octokit;
 
-namespace DevOps.Status.Pages.Triage
+namespace DevOps.Status.Pages.Tracking
 {
-    public class TriageIndexModel : PageModel
+    public class TrackingIndexModel : PageModel
     {
         public class IssueData
         {
@@ -22,7 +22,7 @@ namespace DevOps.Status.Pages.Triage
 
             public string? SearchText { get; set; }
 
-            public string? SearchKind { get; set; }
+            public string? Kind { get; set; }
 
             public int WeekCount { get; set; }
 
@@ -33,7 +33,7 @@ namespace DevOps.Status.Pages.Triage
 
         public List<IssueData> Issues { get; set; } = new List<IssueData>();
 
-        public TriageIndexModel(TriageContext context)
+        public TrackingIndexModel(TriageContext context)
         {
             Context = context;
         }
@@ -41,14 +41,15 @@ namespace DevOps.Status.Pages.Triage
         public async Task OnGetAsync()
         {
             var week = DateTime.UtcNow - TimeSpan.FromDays(7);
-            Issues = await Context.ModelTriageIssues
+            Issues = await Context.ModelTrackingIssues
+                .Where(x => x.IsActive)
                 .Select(issue => new IssueData()
                 {
                     Id = issue.Id,
-                    SearchText = issue.SearchText,
-                    SearchKind = issue.SearchKind.ToString(),
-                    TotalCount = issue.ModelTriageIssueResults.Count(),
-                    WeekCount = issue.ModelTriageIssueResults.Where(x => x.ModelBuild.StartTime >= week).Count()
+                    SearchText = issue.SearchRegexText,
+                    Kind = issue.TrackingKind.ToString(),
+                    TotalCount = issue.ModelTrackingIssueMatches.Count(),
+                    WeekCount = issue.ModelTrackingIssueMatches.Where(x => x.ModelBuildAttempt.ModelBuild.StartTime >= week).Count()
                 })
                 .OrderByDescending(x => x.WeekCount)
                 .ToListAsync();

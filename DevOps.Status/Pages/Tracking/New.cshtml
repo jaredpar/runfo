@@ -1,0 +1,22 @@
+@page
+@model NewTrackingIssueModel
+@{
+    ViewData["Title"] = "Create Triage Issue";
+}
+
+<form method="post">
+    <div class="form-group">
+        <label for="searchKind">Search Kind</label>
+        <select id="searchKind" class="form-control" asp-for="TrackingKind" asp-items="Html.GetEnumSelectList<DevOps.Util.Triage.TrackingKind>()">
+            <option value="">Select a kind</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="text">Text</label>
+        <input id="text" class="form-control" asp-for="Text">
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+</form>
+

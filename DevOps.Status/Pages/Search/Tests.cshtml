@@ -38,7 +38,7 @@
                     <div class="m-2">
                         <form method="post">
                             <input type="hidden" name="testFullName" value="@testInfo.TestName" />
-                            <input type="hidden" name="gitHubRepository" value="@testInfo.TestResultsDisplay.GitHubRepository" />
+                            <input type="hidden" name="gitHubRepository" value="@testInfo.TestResultsDisplay?.GitHubRepository" />
                             <button class="btn btn-primary">Create Issue</button>
                         </form>
                     </div>
