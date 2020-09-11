@@ -18,12 +18,11 @@ namespace DevOps.Util.Triage
         public IssueType? Type { get; set; }
 
         public async Task<List<ModelTimelineIssue>> GetResultsAsync(
-            TriageContextUtil triageContextUtil,
             IQueryable<ModelBuild> buildQuery,
             bool includeBuild)
         {
             var list = new List<ModelTimelineIssue>();
-            await foreach (var issue in EnumerateResultsAsync(triageContextUtil, buildQuery, includeBuild).ConfigureAwait(false))
+            await foreach (var issue in EnumerateResultsAsync(buildQuery, includeBuild).ConfigureAwait(false))
             {
                 list.Add(issue);
             }
@@ -32,7 +31,6 @@ namespace DevOps.Util.Triage
         }
 
         public async IAsyncEnumerable<ModelTimelineIssue> EnumerateResultsAsync(
-            TriageContextUtil triageContextUtil,
             IQueryable<ModelBuild> buildQuery,
             bool includeBuild)
         {

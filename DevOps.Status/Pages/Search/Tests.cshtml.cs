@@ -62,14 +62,10 @@ namespace DevOps.Status.Pages.Search
                 var testSearchOptions = new SearchTestsRequest();
                 testSearchOptions.ParseQueryString(TestsQuery ?? "");
 
-                var query = testSearchOptions.GetQuery(
-                    TriageContextUtil,
-                    buildSearchOptions.GetQuery(TriageContextUtil))
-                    .Include(x => x.ModelTestRun)
-                    .Include(x => x.ModelBuild)
-                    .ThenInclude(x => x.ModelBuildDefinition);
-
-                var results = await query.ToListAsync();
+                var results = await testSearchOptions.GetResultsAsync(
+                    buildSearchOptions.GetQuery(TriageContextUtil),
+                    includeBuild: true,
+                    includeTestRun: true);
                 var count = 0;
                 foreach (var group in results.GroupBy(x => x.TestFullName).OrderByDescending(x => x.Count()))
                 {
@@ -121,16 +117,13 @@ namespace DevOps.Status.Pages.Search
                 {
                     Name = testFullName,
                 };
-                var query = testSearchOptions.GetQuery(
-                    TriageContextUtil,
-                    buildSearchOptions.GetQuery(TriageContextUtil))
-                    .Include(x => x.ModelBuild)
-                    .ThenInclude(x => x.ModelBuildDefinition)
-                    .Include(x => x.ModelTestRun);
-
+                var testResults = await testSearchOptions.GetResultsAsync(
+                    buildSearchOptions.GetQuery(TriageContextUtil),
+                    includeBuild: true,
+                    includeTestRun: true);
                 var results = new List<(BuildInfo BuildInfo, string? TestRunName, HelixLogInfo? LogInfo)>();
                 var includeHelix = false;
-                foreach (var item in await query.ToListAsync())
+                foreach (var item in testResults)
                 {
                     var buildInfo = item.ModelBuild.GetBuildInfo();
                     var helixLogInfo = item.GetHelixLogInfo();

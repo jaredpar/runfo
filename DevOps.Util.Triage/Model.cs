@@ -153,6 +153,8 @@ namespace DevOps.Util.Triage
 
         public ModelBuildDefinition ModelBuildDefinition { get; set; }
 
+        public List<ModelTestResult> ModelTestResults { get; set; }
+
         public List<ModelTimelineIssue> ModelTimelineIssues { get; set; }
     }
 

@@ -62,7 +62,6 @@ namespace DevOps.Status.Pages.Search
                 timelineSearchOptions.ParseQueryString(TimelineQuery ?? "");
 
                 var results = await timelineSearchOptions.GetResultsAsync(
-                    TriageContextUtil,
                     buildSearchOptions.GetQuery(TriageContextUtil),
                     includeBuild: true);
                 TimelineDataList = results
