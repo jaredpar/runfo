@@ -3,25 +3,25 @@
 <table class="table table-striped table-bordered">
     <thead>
         <tr>
-            <th scope="column">Test Run</th>
+            <th scope="col">Test Run</th>
             @if (Model.IncludeTestFullNameColumn)
             {
-                <th scope="column">Test Name</th>
+                <th scope="col">Test Name</th>
             }
             @if (Model.IncludeBuildColumn)
             {
-                <th scope="column">Build</th>
+                <th scope="col">Build</th>
             }
             @if (Model.IncludeBuildKindColumn)
             {
-                <th scope="column">Kind</th>
+                <th scope="col">Kind</th>
             }
             @if (Model.IncludeHelixColumns)
             {
-                <th scope="column">Helix Console</th>
-                <th scope="column">Helix Run Client</th>
-                <th scope="column">Helix Core Dump</th>
-                <th scope="column">Helix Test Results</th>
+                <th scope="col">Helix Console</th>
+                <th scope="col">Helix Run Client</th>
+                <th scope="col">Helix Core Dump</th>
+                <th scope="col">Helix Test Results</th>
             }
         </tr>
     </thead>

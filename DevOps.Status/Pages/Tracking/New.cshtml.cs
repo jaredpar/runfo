@@ -1,9 +1,14 @@
-﻿using DevOps.Util.Triage;
+﻿using DevOps.Status.Util;
+using DevOps.Util.DotNet;
+using DevOps.Util.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Octokit;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -12,7 +17,6 @@ namespace DevOps.Status.Pages.Tracking
     public class NewTrackingIssueModel : PageModel
     {
         public TriageContext TriageContext { get; }
-
         public TriageContextUtil TriageContextUtil { get; }
 
         [BindProperty]
@@ -66,6 +70,7 @@ namespace DevOps.Status.Pages.Tracking
             };
             TriageContext.ModelTrackingIssues.Add(modelTrackingIssue);
             await TriageContext.SaveChangesAsync();
+
             return RedirectToPage(
                 "./Issue",
                 new { id = modelTrackingIssue.Id });

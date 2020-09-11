@@ -121,8 +121,11 @@ namespace DevOps.Util.Triage
 
         public async Task TriageAsync(ModelBuildAttempt modelBuildAttempt)
         {
-            Debug.Assert(modelBuildAttempt.ModelBuild is object);
-            Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
+            if (modelBuildAttempt.ModelBuild is null ||
+                modelBuildAttempt.ModelBuild.ModelBuildDefinition is null)
+            {
+                throw new Exception("The attempt must include the build and definition");
+            }
 
             Logger.LogInformation($"Triaging {modelBuildAttempt.ModelBuild.GetBuildResultInfo().BuildUri}");
 
@@ -137,11 +140,13 @@ namespace DevOps.Util.Triage
             }
         }
 
-        internal async Task TriageAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue)
+        public async Task TriageAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue)
         {
-            Debug.Assert(modelBuildAttempt.ModelBuild is object);
-            Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
-            Debug.Assert(modelTrackingIssue.IsActive);
+            if (modelBuildAttempt.ModelBuild is null ||
+                modelBuildAttempt.ModelBuild.ModelBuildDefinition is null)
+            {
+                throw new Exception("The attempt must include the build and definition");
+            }
 
             // Quick spot check to avoid doing extra work if we've already triaged this attempt against this
             // issue
@@ -182,7 +187,7 @@ namespace DevOps.Util.Triage
             {
                 var query = Context
                     .ModelTrackingIssueResults
-                    .Where(x => x.ModelBuildAttemptId == modelBuildAttempt.Id);
+                    .Where(x => x.ModelBuildAttemptId == modelBuildAttempt.Id && x.ModelTrackingIssueId == modelTrackingIssue.Id);
                 return await query.AnyAsync().ConfigureAwait(false);
             }
         }
