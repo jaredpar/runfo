@@ -50,8 +50,7 @@ namespace DevOps.Util.Triage
             {
                 try
                 {
-                    // TODO: don't hardcode 1 here, that is wrong, Should be using the latest attempt I believe
-                    var timeline = await Server.GetTimelineAttemptAsync(buildInfo.Project, buildInfo.Number, attempt: 1).ConfigureAwait(false);
+                    var timeline = await Server.GetTimelineAsync(buildInfo.Project, buildInfo.Number).ConfigureAwait(false);
                     if (timeline is null)
                     {
                         Logger.LogWarning("No timeline");

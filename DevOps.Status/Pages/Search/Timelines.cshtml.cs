@@ -36,6 +36,7 @@ namespace DevOps.Status.Pages.Search
 
         public int? BuildCount { get; set; }
         public bool IncludeIssueTypeColumn { get; set; }
+        public string? ErrorMessage { get; set; }
 
         public TimelinesModel(TriageContextUtil triageContextUtil)
         {
@@ -50,31 +51,39 @@ namespace DevOps.Status.Pages.Search
                 return Page();
             }
 
-            var buildSearchOptions = new SearchBuildsRequest()
+            try
             {
-                Count = 10,
-            };
-            buildSearchOptions.ParseQueryString(BuildQuery);
-            var timelineSearchOptions = new SearchTimelinesRequest();
-            timelineSearchOptions.ParseQueryString(TimelineQuery ?? "");
-
-            var results = await timelineSearchOptions.GetResultsAsync(
-                TriageContextUtil,
-                buildSearchOptions.GetQuery(TriageContextUtil),
-                includeBuild: true);
-            TimelineDataList = results
-                .Select(x => new TimelineData()
+                var buildSearchOptions = new SearchBuildsRequest()
                 {
-                    BuildNumber = x.ModelBuild.BuildNumber,
-                    BuildUri = x.ModelBuild.GetBuildResultInfo().BuildUri,
-                    JobName = x.JobName,
-                    Line = x.Message,
-                    IssueType = x.IssueType,
-                })
-                .ToList();
-            BuildCount = buildSearchOptions.Count;
-            IncludeIssueTypeColumn = timelineSearchOptions.Type is null;
-            return Page();
+                    Count = 10,
+                };
+                buildSearchOptions.ParseQueryString(BuildQuery);
+                var timelineSearchOptions = new SearchTimelinesRequest();
+                timelineSearchOptions.ParseQueryString(TimelineQuery ?? "");
+
+                var results = await timelineSearchOptions.GetResultsAsync(
+                    TriageContextUtil,
+                    buildSearchOptions.GetQuery(TriageContextUtil),
+                    includeBuild: true);
+                TimelineDataList = results
+                    .Select(x => new TimelineData()
+                    {
+                        BuildNumber = x.ModelBuild.BuildNumber,
+                        BuildUri = x.ModelBuild.GetBuildResultInfo().BuildUri,
+                        JobName = x.JobName,
+                        Line = x.Message,
+                        IssueType = x.IssueType,
+                    })
+                    .ToList();
+                BuildCount = buildSearchOptions.Count;
+                IncludeIssueTypeColumn = timelineSearchOptions.Type is null;
+                return Page();
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+                return Page();
+            }
         }
     }
 }

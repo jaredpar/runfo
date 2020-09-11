@@ -16,6 +16,13 @@
   <button class="btn btn-primary">Search</button>
 </form>
 
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+      @Model.ErrorMessage
+    </div>
+}
+
 <div id="accordion">
     @foreach(var testInfo in @Model.TestInfos)
     {

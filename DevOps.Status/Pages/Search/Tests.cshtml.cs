@@ -31,6 +31,7 @@ namespace DevOps.Status.Pages.Search
 
         public TriageContextUtil TriageContextUtil { get; }
         public StatusGitHubClientFactory GitHubClientFactory { get; }
+        public string? ErrorMessage { get; set; }
 
         [BindProperty(SupportsGet = true, Name = "bq")]
         public string? BuildQuery { get; set; }
@@ -55,38 +56,46 @@ namespace DevOps.Status.Pages.Search
                 return Page();
             }
 
-            var buildSearchOptions = GetBuildSearchOptions();
-            var testSearchOptions = new SearchTestsRequest();
-            testSearchOptions.ParseQueryString(TestsQuery ?? "");
-
-            var query = testSearchOptions.GetQuery(
-                TriageContextUtil,
-                buildSearchOptions.GetQuery(TriageContextUtil))
-                .Include(x => x.ModelTestRun)
-                .Include(x => x.ModelBuild)
-                .ThenInclude(x => x.ModelBuildDefinition);
-
-            var results = await query.ToListAsync();
-            var count = 0;
-            foreach (var group in results.GroupBy(x => x.TestFullName).OrderByDescending(x => x.Count()))
+            try
             {
-                count++;
+                var buildSearchOptions = GetBuildSearchOptions();
+                var testSearchOptions = new SearchTestsRequest();
+                testSearchOptions.ParseQueryString(TestsQuery ?? "");
 
-                var testInfo = new TestInfo()
+                var query = testSearchOptions.GetQuery(
+                    TriageContextUtil,
+                    buildSearchOptions.GetQuery(TriageContextUtil))
+                    .Include(x => x.ModelTestRun)
+                    .Include(x => x.ModelBuild)
+                    .ThenInclude(x => x.ModelBuildDefinition);
+
+                var results = await query.ToListAsync();
+                var count = 0;
+                foreach (var group in results.GroupBy(x => x.TestFullName).OrderByDescending(x => x.Count()))
                 {
-                    TestName = group.Key,
-                    CollapseName = $"collapse{count}",
-                    TestResultsDisplay = new TestResultsDisplay(group)
+                    count++;
+
+                    var testInfo = new TestInfo()
                     {
-                        IncludeBuildColumn = true,
-                        IncludeBuildKindColumn = buildSearchOptions.Kind == ModelBuildKind.All,
-                    }
-                };
+                        TestName = group.Key,
+                        CollapseName = $"collapse{count}",
+                        TestResultsDisplay = new TestResultsDisplay(group)
+                        {
+                            IncludeBuildColumn = true,
+                            IncludeBuildKindColumn = buildSearchOptions.Kind == ModelBuildKind.All,
+                        }
+                    };
 
-                TestInfos.Add(testInfo);
+                    TestInfos.Add(testInfo);
+                }
+
+                return Page();
             }
-
-            return Page();
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+                return Page();
+            }
         }
 
         public async Task<IActionResult> OnPost(string testFullName, string gitHubRepository)

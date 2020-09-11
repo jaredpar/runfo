@@ -14,6 +14,13 @@
   <button class="btn btn-primary">Search</button>
 </form>
 
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+      @Model.ErrorMessage
+    </div>
+}
+
 @if (Model.BuildCount is { } count)
 {
     <p>Build Count: @count</p>
