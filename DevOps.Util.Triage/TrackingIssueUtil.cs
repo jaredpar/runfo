@@ -201,15 +201,25 @@ namespace DevOps.Util.Triage
                 .Where(x =>
                     x.ModelBuildId == modelBuildAttempt.ModelBuild.Id &&
                     x.ModelTestRun.Attempt == modelBuildAttempt.Attempt);
+            var any = false;
             foreach (var testResult in await testQuery.ToListAsync().ConfigureAwait(false))
             {
                 if (nameRegex.IsMatch(testResult.TestFullName))
                 {
-                    return true;
+                    var modelMatch = new ModelTrackingIssueMatch()
+                    {
+                        ModelTrackingIssue = modelTrackingIssue,
+                        ModelBuildAttempt = modelBuildAttempt,
+                        ModelTestResult = testResult,
+                    };
+
+                    modelTrackingIssue.ModelTrackingIssueMatches.Add(modelMatch);
+                    Context.ModelTrackingIssueMatches.Add(modelMatch);
+                    any = true;
                 }
             }
 
-            return false;
+            return any;
         }
 
         private async Task<bool> TriageTimelineAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue)
@@ -226,15 +236,23 @@ namespace DevOps.Util.Triage
                 .Where(x =>
                     x.ModelBuildId == modelBuildAttempt.ModelBuild.Id &&
                     x.Attempt == modelBuildAttempt.Attempt);
+            var any = false;
             foreach (var modelTimelineIssue in await timelineQuery.ToListAsync().ConfigureAwait(false))
             {
                 if (textRegex.IsMatch(modelTimelineIssue.Message))
                 {
-                    return true;
+                    var modelMatch = new ModelTrackingIssueMatch()
+                    {
+                        ModelTrackingIssue = modelTrackingIssue,
+                        ModelBuildAttempt = modelBuildAttempt,
+                        ModelTimelineIssue = modelTimelineIssue,
+                    };
+                    Context.ModelTrackingIssueMatches.Add(modelMatch);
+                    any = true;
                 }
             }
 
-            return false;
+            return any;
         }
 
         private async Task<bool> TriageHelixAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue, HelixLogKind helixLogKind)
@@ -261,13 +279,23 @@ namespace DevOps.Util.Triage
                 Limit = 100,
             };
 
-            // TODO: This could be a lot more efficient here. This will look for every single occurence of 
-            // the text. We just need to know if there are any. Should look into refactoring this a bit
-            var result = await QueryUtil.SearchHelixLogsAsync(
+            var results = await QueryUtil.SearchHelixLogsAsync(
                 helixLogInfos,
                 request,
                 onError: x => Logger.LogWarning(x.Message)).ConfigureAwait(false);
-            return result.Count > 0;
+            var any = false;
+            foreach (var result in results)
+            {
+                any = true;
+                var modelMatch = new ModelTrackingIssueMatch()
+                {
+                    ModelBuildAttempt = modelBuildAttempt,
+                    ModelTrackingIssue = modelTrackingIssue,
+                    HelixLogUri = result.HelixLogUri,
+                };
+                Context.ModelTrackingIssueMatches.Add(modelMatch);
+            }
+            return any;
         }
     }
 }

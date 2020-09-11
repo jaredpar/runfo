@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using DevOps.Util.DotNet;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevOps.Util.Triage
@@ -33,6 +34,8 @@ namespace DevOps.Util.Triage
         public DbSet<ModelTestResult> ModelTestResults { get; set; }
 
         public DbSet<ModelTrackingIssue> ModelTrackingIssues { get; set; }
+
+        public DbSet<ModelTrackingIssueMatch> ModelTrackingIssueMatches { get; set; }
 
         public DbSet<ModelTrackingIssueResult> ModelTrackingIssueResults { get; set; }
 
@@ -460,6 +463,35 @@ namespace DevOps.Util.Triage
         /// When defined restrict the test failure tracking to the following build definitions
         /// </summary>
         public ModelBuildDefinition ModelBuildDefinition { get; set; }
+
+        public List<ModelTrackingIssueMatch> ModelTrackingIssueMatches { get; set; }
+    }
+
+    /// <summary>
+    /// Represents a match of a <see cref="ModelTrackingIssue"/> for a given <see cref="ModelBuildAttempt"/>.
+    /// There can be many matches for a single build
+    /// </summary>
+    public class ModelTrackingIssueMatch
+    {
+        public int Id { get; set; }
+
+        public int ModelTrackingIssueId { get; set; }
+
+        public ModelTrackingIssue ModelTrackingIssue { get; set; }
+
+        public int ModelBuildAttemptId { get; set; }
+
+        public ModelBuildAttempt ModelBuildAttempt { get; set; }
+
+        public int? ModelTestResultId { get; set; }
+
+        public ModelTestResult ModelTestResult { get; set; }
+
+        public int? ModelTimelineIssueId { get; set; }
+
+        public ModelTimelineIssue ModelTimelineIssue { get; set; }
+
+        public string HelixLogUri { get; set; }
     }
 
     /// <summary>
@@ -471,7 +503,7 @@ namespace DevOps.Util.Triage
         public int Id { get; set; }
 
         /// <summary>
-        /// Whether or not the linked <see cref="ModelTrackingIssue"/> is present in this <see cref="ModelBuildAttempt"/>
+        /// Whether or not the linked <see cref="ModelTrackingIssue"/> had a match in this <see cref="ModelBuildAttempt"/>
         /// </summary>
         public bool IsPresent { get; set; }
 

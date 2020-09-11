@@ -16,7 +16,7 @@ using Octokit;
 
 namespace DevOps.Util.Triage
 {
-    public sealed class AutoTriageUtil
+    public sealed class LegacyAutoTriageUtil
     {
         public DevOpsServer Server { get; }
 
@@ -28,7 +28,7 @@ namespace DevOps.Util.Triage
 
         public TriageContext Context => TriageContextUtil.Context;
 
-        public AutoTriageUtil(
+        public LegacyAutoTriageUtil(
             DevOpsServer server,
             TriageContext context,
             ILogger logger)

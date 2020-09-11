@@ -17,12 +17,11 @@ using Octokit;
 
 namespace DevOps.Util.Triage
 {
-
     /// <summary>
     /// This class is responsible for making the updates to GitHub based on the stored state 
     /// of the model
     /// </summary>
-    public sealed class TriageGitHubUtil
+    public sealed class LegacyTriageGitHubUtil
     {
         public GitHubClientFactory GitHubClientFactory { get; }
 
@@ -34,7 +33,7 @@ namespace DevOps.Util.Triage
 
         public TriageContext Context => TriageContextUtil.Context;
 
-        public TriageGitHubUtil(
+        public LegacyTriageGitHubUtil(
             GitHubClientFactory gitHubClientFactory,
             TriageContext context,
             ILogger logger)

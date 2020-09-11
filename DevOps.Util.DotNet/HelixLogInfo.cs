@@ -38,6 +38,29 @@ namespace DevOps.Util.DotNet
             TestResultsUri = testResultsUri;
         }
 
+        public HelixLogInfo(
+            HelixLogKind kind,
+            string uri)
+        {
+            switch (kind)
+            {
+                case HelixLogKind.RunClient:
+                    RunClientUri = uri;
+                    break;
+                case HelixLogKind.Console:
+                    ConsoleUri = uri;
+                    break;
+                case HelixLogKind.CoreDump:
+                    CoreDumpUri = uri;
+                    break;
+                case HelixLogKind.TestResults:
+                    TestResultsUri = uri;
+                    break;
+                default:
+                    throw new Exception($"Invalid value {kind}");
+            }
+        }
+
         public IEnumerable<(HelixLogKind kind, string Uri)> GetUris()
         {
             foreach (object? value in Enum.GetValues(typeof(HelixLogKind)))

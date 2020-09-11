@@ -114,7 +114,6 @@ namespace DevOps.Util.DotNet
                 }
 
                 builder.AppendLine("|Build|Kind|Job Name|");
-
                 if (includeDefinition)
                 {
                     builder.Append("|---");
