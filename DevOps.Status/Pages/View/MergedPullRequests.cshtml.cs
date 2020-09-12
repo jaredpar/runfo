@@ -46,15 +46,18 @@ namespace DevOps.Status.Pages.View
         {
             if (string.IsNullOrEmpty(Query))
             {
-                Query = new SearchBuildsRequest() { Repository = "runtime", Count = 10 }.GetQueryString();
+                Query = new SearchBuildsRequest() { Repository = "runtime" }.GetQueryString();
                 return Page();
             }
 
             var options = new SearchBuildsRequest();
             options.ParseQueryString(Query);
-            var query = options.LegacyGetQuery(
-                TriageContextUtil,
-                beforeCountFunc: q => q.Where(x => x.PullRequestNumber != null && x.IsMergedPullRequest));
+            IQueryable<ModelBuild> query = TriageContextUtil.Context.ModelBuilds;
+            query = options.FilterBuilds(query)
+                .Where(x => x.PullRequestNumber != null && x.IsMergedPullRequest)
+                .OrderByDescending(x => x.BuildNumber)
+                .Take(options.GetLimit(100));
+
             var builds = (await query.ToListAsync())
                 .Select(b =>
                 {

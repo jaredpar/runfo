@@ -17,26 +17,41 @@ namespace DevOps.Util.Triage
         public string? Name { get; set; }
 
         public async Task<List<ModelTestResult>> GetResultsAsync(
-            IQueryable<ModelBuild> buildQuery,
+            TriageContext context,
+            SearchBuildsRequest searchBuildsRequest,
             bool includeBuild,
-            bool includeTestRun)
+            bool includeTestRun,
+            int buildLimit)
         {
+            var lastBuildId = "";
+            var buildCount = 0;
             var list = new List<ModelTestResult>();
-            await foreach (var testResult in EnumerateResultsAsync(buildQuery, includeBuild, includeTestRun).ConfigureAwait(false))
+            await foreach (var testResult in EnumerateResultsAsync(context, searchBuildsRequest, includeBuild, includeTestRun).ConfigureAwait(false))
             {
                 list.Add(testResult);
+                if (lastBuildId != testResult.ModelBuildId)
+                {
+                    lastBuildId = testResult.ModelBuildId;
+                    buildCount++;
+                    if (buildCount >= buildLimit)
+                    {
+                        break;
+                    }
+                }
             }
 
             return list;
         }
 
-        public async IAsyncEnumerable<ModelTestResult> EnumerateResultsAsync(
-            IQueryable<ModelBuild> buildQuery,
+        private async IAsyncEnumerable<ModelTestResult> EnumerateResultsAsync(
+            TriageContext context,
+            SearchBuildsRequest searchBuildsRequest,
             bool includeBuild,
             bool includeTestRun)
         {
-            IQueryable<ModelTestResult> query = buildQuery
-                .SelectMany(x => x.ModelTestResults);
+            IQueryable<ModelTestResult> query = context.ModelTestResults;
+            query = searchBuildsRequest.FilterBuilds(query);
+            query = query.OrderByDescending(x => x.ModelBuild.BuildNumber);
 
             if (includeBuild)
             {

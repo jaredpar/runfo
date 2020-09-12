@@ -58,7 +58,7 @@ namespace DevOps.Status.Pages.Search
             IncludeDefinitionColumn = !options.HasDefinition;
 
             var results = await options
-                .GetQuery(TriageContext)
+                .FilterBuilds(TriageContext.ModelBuilds)
                 .OrderByDescending(x => x.BuildNumber)
                 .Include(x => x.ModelBuildDefinition)
                 .Take(options.Limit)

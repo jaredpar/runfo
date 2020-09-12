@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Octokit;
+using YamlDotNet.Serialization.NodeTypeResolvers;
 
 namespace DevOps.Status.Pages.Search
 {
@@ -28,6 +29,8 @@ namespace DevOps.Status.Pages.Search
 
             public TestResultsDisplay? TestResultsDisplay { get; set; }
         }
+        
+        public const int MaxBuildLimit = 100;
 
         public TriageContextUtil TriageContextUtil { get; }
         public StatusGitHubClientFactory GitHubClientFactory { get; }
@@ -58,14 +61,16 @@ namespace DevOps.Status.Pages.Search
 
             try
             {
-                var buildSearchOptions = GetBuildSearchOptions();
+                var searchBuildsRequest = GetSearchBuildsRquest();
                 var testSearchOptions = new SearchTestsRequest();
                 testSearchOptions.ParseQueryString(TestsQuery ?? "");
 
                 var results = await testSearchOptions.GetResultsAsync(
-                    buildSearchOptions.LegacyGetQuery(TriageContextUtil),
+                    TriageContextUtil.Context,
+                    searchBuildsRequest,
                     includeBuild: true,
-                    includeTestRun: true);
+                    includeTestRun: true,
+                    searchBuildsRequest.GetLimit(MaxBuildLimit));
                 var count = 0;
                 foreach (var group in results.GroupBy(x => x.TestFullName).OrderByDescending(x => x.Count()))
                 {
@@ -78,7 +83,7 @@ namespace DevOps.Status.Pages.Search
                         TestResultsDisplay = new TestResultsDisplay(group)
                         {
                             IncludeBuildColumn = true,
-                            IncludeBuildKindColumn = buildSearchOptions.Kind == ModelBuildKind.All,
+                            IncludeBuildKindColumn = searchBuildsRequest.Kind == ModelBuildKind.All,
                         }
                     };
 
@@ -112,15 +117,17 @@ namespace DevOps.Status.Pages.Search
 
             async Task<string> GetReportText()
             {
-                var buildSearchOptions = GetBuildSearchOptions();
+                var searchBuildsRequest = GetSearchBuildsRquest();
                 var testSearchOptions = new SearchTestsRequest()
                 {
                     Name = testFullName,
                 };
                 var testResults = await testSearchOptions.GetResultsAsync(
-                    buildSearchOptions.LegacyGetQuery(TriageContextUtil),
+                    TriageContextUtil.Context,
+                    searchBuildsRequest,
                     includeBuild: true,
-                    includeTestRun: true);
+                    includeTestRun: true,
+                    searchBuildsRequest.GetLimit(MaxBuildLimit));
                 var results = new List<(BuildInfo BuildInfo, string? TestRunName, HelixLogInfo? LogInfo)>();
                 var includeHelix = false;
                 foreach (var item in testResults)
@@ -134,17 +141,17 @@ namespace DevOps.Status.Pages.Search
                 var builder = new ReportBuilder();
                 return builder.BuildSearchTests(
                     results,
-                    includeDefinition: !buildSearchOptions.HasDefinition,
+                    includeDefinition: !searchBuildsRequest.HasDefinition,
                     includeHelix: includeHelix);
             }
         }
 
-        private SearchBuildsRequest GetBuildSearchOptions()
+        private SearchBuildsRequest GetSearchBuildsRquest()
         {
             Debug.Assert(!string.IsNullOrEmpty(BuildQuery));
             var buildSearchOptions = new SearchBuildsRequest()
             {
-                Count = 50,
+                Limit = 50,
             };
             buildSearchOptions.ParseQueryString(BuildQuery);
             return buildSearchOptions;

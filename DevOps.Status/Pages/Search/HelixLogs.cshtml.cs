@@ -57,7 +57,7 @@ namespace DevOps.Status.Pages.Search
                 return;
             }
 
-            var searchBuildsRequest = new SearchBuildsRequest() { Count = 10 };
+            var searchBuildsRequest = new SearchBuildsRequest();
             searchBuildsRequest.ParseQueryString(BuildQuery);
 
             var searchHelixLogsRequest = new SearchHelixLogsRequest()
@@ -65,18 +65,17 @@ namespace DevOps.Status.Pages.Search
                 HelixLogKinds = new List<HelixLogKind>(new[] { HelixLogKind.Console }),
             };
             searchHelixLogsRequest.ParseQueryString(LogQuery ?? "");
+
             if (string.IsNullOrEmpty(searchHelixLogsRequest.Text))
             {
                 ErrorMessage = @"Must specify text to search for 'text: ""StackOverflowException""'";
                 return;
             }
 
-            IQueryable<ModelTestResult> query = searchBuildsRequest.LegacyGetQuery(TriageContextUtil)
-                .Join(
-                    TriageContextUtil.Context.ModelTestResults.Where(x => x.IsHelixTestResult),
-                    b => b.Id,
-                    t => t.ModelBuildId,
-                    (b, t) => t)
+            IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults.Where(x => x.IsHelixTestResult);
+            query = searchBuildsRequest.FilterBuilds(query);
+            query = query
+                .Take(100)
                 .Include(x => x.ModelBuild)
                 .ThenInclude(x => x.ModelBuildDefinition);
 

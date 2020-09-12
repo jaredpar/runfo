@@ -84,13 +84,17 @@ namespace DevOps.Util.Triage
             return query.Take(Count);
         }
 
-        public IQueryable<ModelBuild> GetQuery(TriageContext context) =>
-            FilterBuilds(context.ModelBuilds);
+        public int GetLimit(int maxLimit) => Limit <= maxLimit ? Limit : maxLimit;
 
         public IQueryable<ModelTimelineIssue> FilterBuilds(IQueryable<ModelTimelineIssue> query) =>
             FilterBuilds(
                 query,
                 x => PredicateRewriter.ComposeContainerProperty<ModelTimelineIssue, ModelBuild>(x, nameof(ModelTimelineIssue.ModelBuild)));
+
+        public IQueryable<ModelTestResult> FilterBuilds(IQueryable<ModelTestResult> query) =>
+            FilterBuilds(
+                query,
+                x => PredicateRewriter.ComposeContainerProperty<ModelTestResult, ModelBuild>(x, nameof(ModelTestResult.ModelBuild)));
 
         public IQueryable<ModelBuild> FilterBuilds(IQueryable<ModelBuild> query) =>
             FilterBuilds(query, x => x);
@@ -217,11 +221,6 @@ namespace DevOps.Util.Triage
                 Append($"limit:100");
             }
 
-            if (Count != DefaultCount)
-            {
-                Append($"count:{Count}");
-            }
-
             return builder.ToString();
 
             void Append(string message)
@@ -255,9 +254,6 @@ namespace DevOps.Util.Triage
                         break;
                     case "limit":
                         Limit = int.Parse(tuple.Value);
-                        break;
-                    case "count":
-                        Count = int.Parse(tuple.Value);
                         break;
                     case "kind":
                         Kind = tuple.Value.ToLower() switch
