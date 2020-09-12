@@ -12,13 +12,15 @@ namespace DevOps.Util.Triage
 {
     public class SearchBuildsRequest : ISearchRequest
     {
+        public const int DefaultLimit = 100;
         public const ModelBuildKind DefaultKind = ModelBuildKind.All;
 
         public string? Definition { get; set; }
         public ModelBuildKind Kind { get; set; } = DefaultKind;
         public string? Repository { get; set; }
-        public DateRequest? StartTime { get; set; }
-        public DateRequest? FinishTime { get; set; }
+        public DateRequest? Started { get; set; }
+        public DateRequest? Finished { get; set; }
+        public int Limit { get; set; } = DefaultLimit;
 
         public bool HasDefinition => !string.IsNullOrEmpty(Definition);
 
@@ -132,22 +134,22 @@ namespace DevOps.Util.Triage
                 query = query.Where(convertPredicateFunc(x => x.GitHubRepository == gitHubRepository));
             }
 
-            if (StartTime is { } startTime)
+            if (Started is { } started)
             {
-                query = startTime.Kind switch
+                query = started.Kind switch
                 {
-                    DateRequestKind.GreaterThan => query.Where(convertPredicateFunc(x => x.StartTime >= startTime.DateTime)),
-                    DateRequestKind.LessThan => query.Where(convertPredicateFunc(x => x.StartTime <= startTime.DateTime)),
+                    DateRequestKind.GreaterThan => query.Where(convertPredicateFunc(x => x.StartTime >= started.DateTime)),
+                    DateRequestKind.LessThan => query.Where(convertPredicateFunc(x => x.StartTime <= started.DateTime)),
                     _ => query
                 };
             }
 
-            if (FinishTime is { } finishTime)
+            if (Finished is { } finished)
             {
-                query = finishTime.Kind switch
+                query = finished.Kind switch
                 {
-                    DateRequestKind.GreaterThan => query.Where(convertPredicateFunc(x => x.FinishTime >= finishTime.DateTime)),
-                    DateRequestKind.LessThan => query.Where(convertPredicateFunc(x => x.FinishTime <= finishTime.DateTime)),
+                    DateRequestKind.GreaterThan => query.Where(convertPredicateFunc(x => x.FinishTime >= finished.DateTime)),
+                    DateRequestKind.LessThan => query.Where(convertPredicateFunc(x => x.FinishTime <= finished.DateTime)),
                     _ => query
                 };
             }
@@ -200,14 +202,19 @@ namespace DevOps.Util.Triage
                 Append($"kind:{kind}");
             }
 
-            if (StartTime is { } startTime)
+            if (Started is { } startTime)
             {
-                Append($"startTime:{startTime.GetQueryValue()}");
+                Append($"started:{startTime.GetQueryValue()}");
             }
 
-            if (FinishTime is { } finishTime)
+            if (Finished is { } finishTime)
             {
-                Append($"finishTime:{finishTime.GetQueryValue()}");
+                Append($"finished:{finishTime.GetQueryValue()}");
+            }
+
+            if (Limit != DefaultLimit)
+            {
+                Append($"limit:100");
             }
 
             if (Count != DefaultCount)
@@ -240,11 +247,14 @@ namespace DevOps.Util.Triage
                     case "repository":
                         Repository = tuple.Value;
                         break;
-                    case "starttime":
-                        StartTime = DateRequest.Parse(tuple.Value.Trim('"'), DateRequestKind.GreaterThan);
+                    case "started":
+                        Started = DateRequest.Parse(tuple.Value.Trim('"'), DateRequestKind.GreaterThan);
                         break;
-                    case "finishtime":
-                        FinishTime = DateRequest.Parse(tuple.Value.Trim('"'), DateRequestKind.GreaterThan);
+                    case "finished":
+                        Finished = DateRequest.Parse(tuple.Value.Trim('"'), DateRequestKind.GreaterThan);
+                        break;
+                    case "limit":
+                        Limit = int.Parse(tuple.Value);
                         break;
                     case "count":
                         Count = int.Parse(tuple.Value);

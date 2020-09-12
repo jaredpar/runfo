@@ -34,11 +34,9 @@ namespace DevOps.Status.Pages.Search
 
         [BindProperty(SupportsGet = true, Name = "q")]
         public string? Query { get; set; }
-
         public string? PassRate { get; set; }
-
+        public string? WarningMessage { get; set; }
         public bool IncludeDefinitionColumn { get; set; }
-
         public List<BuildData> Builds { get; set; } = new List<BuildData>();
 
         public BuildsModel(TriageContext triageContext)
@@ -61,9 +59,15 @@ namespace DevOps.Status.Pages.Search
 
             var results = await options
                 .GetQuery(TriageContext)
+                .OrderByDescending(x => x.BuildNumber)
                 .Include(x => x.ModelBuildDefinition)
-                .Take(100)
+                .Take(options.Limit)
                 .ToListAsync();
+
+            if (results.Count == options.Limit)
+            {
+                WarningMessage = $"Builds limited to first {options.Limit}";
+            }
 
             Builds = results
                 .Select(x =>

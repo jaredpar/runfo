@@ -13,6 +13,13 @@
   <button class="btn btn-primary">Search</button>
 </form>
 
+@if (!string.IsNullOrEmpty(Model.WarningMessage))
+{
+    <div class="alert alert-warning" role="alert">
+      @Model.WarningMessage
+    </div>
+}
+
 @if (Model.Builds.Count > 0)
 {
     <p>Pass Rate: @Model.PassRate</p>
