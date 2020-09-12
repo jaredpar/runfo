@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -25,7 +26,6 @@ namespace Scratch
 {
     public class Program
     {
-
         public static async Task Main(string[] args)
         {
             var scratchUtil = new ScratchUtil();
@@ -83,7 +83,7 @@ namespace Scratch
 
             var builder = new DbContextOptionsBuilder<TriageContext>();
             builder.UseSqlServer(configuration[DotNetConstants.ConfigurationSqlConnectionString]);
-            // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+            builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
             TriageContext = new TriageContext(builder.Options);
             TriageContextUtil = new TriageContextUtil(TriageContext);
 
@@ -116,8 +116,9 @@ namespace Scratch
 
         internal async Task Scratch()
         {
+            await QueryProfile();
             // await ExhaustTimelineAsync();
-            await PopulateDb();
+            // await PopulateDb();
         }
 
         internal async Task PopulateDb()
@@ -171,6 +172,29 @@ namespace Scratch
             }
     
             */
+        }
+
+        class ParameterCombine : ExpressionVisitor
+        {
+            public Expression ReplaceExpression;
+
+            protected override Expression VisitParameter(ParameterExpression node) => ReplaceExpression;
+        }
+
+        internal async Task QueryProfile()
+        {
+            var searchBuildsRequest = new SearchBuildsRequest()
+            {
+                Definition = "15",
+            };
+
+            var results = await searchBuildsRequest
+                .FilterBuilds(TriageContext.ModelTimelineIssues)
+                .OrderByDescending(x => x.ModelBuild.BuildNumber)
+                .Take(50)
+                .ToListAsync();
+
+            Console.WriteLine(results.Count);
         }
 
         internal async Task PopulateTimelines()

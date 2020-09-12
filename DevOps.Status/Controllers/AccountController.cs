@@ -33,8 +33,7 @@ namespace DevOps.Status.Controllers
                 {
                     RedirectUri = "/"
                 },
-                GitHubAuthenticationDefaults.AuthenticationScheme,
-                VisualStudioAuthenticationDefaults.AuthenticationScheme);
+                CookieAuthenticationDefaults.AuthenticationScheme);
         }
     }
 }

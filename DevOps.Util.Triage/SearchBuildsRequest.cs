@@ -1,8 +1,10 @@
 ﻿using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
+using Org.BouncyCastle.Math.EC.Rfc7748;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -14,6 +16,8 @@ namespace DevOps.Util.Triage
         public const ModelBuildKind DefaultKind = ModelBuildKind.All;
 
         public string? Definition { get; set; }
+
+        [Obsolete("Can't use this anymore")]
         public int Count { get; set; } = DefaultCount;
         public ModelBuildKind Kind { get; set; } = DefaultKind;
         public string? Repository { get; set; }
@@ -73,6 +77,75 @@ namespace DevOps.Util.Triage
 
             return query.Take(Count);
         }
+
+        public IQueryable<ModelTimelineIssue> FilterBuilds(IQueryable<ModelTimelineIssue> query) =>
+            FilterBuilds(
+                query,
+                x => PredicateRewriter.ComposeContainerProperty<ModelTimelineIssue, ModelBuild>(x, nameof(ModelTimelineIssue.ModelBuild)));
+
+        public IQueryable<ModelBuild> FilterBuilds(IQueryable<ModelBuild> query) =>
+            FilterBuilds(query, x => x);
+
+        private IQueryable<T> FilterBuilds<T>(
+            IQueryable<T> query,
+            Func<Expression<Func<ModelBuild, bool>>, Expression<Func<T, bool>>> convertPredicateFunc)
+        {
+            var definitionId = DefinitionId;
+            string? definitionName = definitionId is null
+                ? Definition
+                : null;
+            string? gitHubRepository = string.IsNullOrEmpty(Repository)
+                ? null
+                : Repository.ToLower();
+            string? gitHubOrganization = gitHubRepository is null
+                ? null
+                : DotNetUtil.GitHubOrganization;
+
+            if (definitionId is object && definitionName is object)
+            {
+                throw new Exception($"Cannot specify {nameof(definitionId)} and {nameof(definitionName)}");
+            }
+
+            if (definitionId is { } d)
+            {
+                query = query.Where(convertPredicateFunc(x => x.ModelBuildDefinition.DefinitionId == definitionId));
+            }
+            else if (definitionName is object)
+            {
+                query = query.Where(convertPredicateFunc(x => x.ModelBuildDefinition.DefinitionName == definitionName));
+            }
+
+            if (gitHubOrganization is object)
+            {
+                query = query.Where(convertPredicateFunc(x => x.GitHubOrganization == gitHubOrganization));
+            }
+
+            if (gitHubRepository is object)
+            {
+                query = query.Where(convertPredicateFunc(x => x.GitHubRepository == gitHubRepository));
+            }
+
+            switch (Kind)
+            {
+                case ModelBuildKind.All:
+                    // Nothing to filter
+                    break;
+                case ModelBuildKind.MergedPullRequest:
+                    query = query.Where(convertPredicateFunc(x => x.IsMergedPullRequest));
+                    break;
+                case ModelBuildKind.PullRequest:
+                    query = query.Where(convertPredicateFunc(x => x.PullRequestNumber.HasValue));
+                    break;
+                case ModelBuildKind.Rolling:
+                    query = query.Where(convertPredicateFunc(x => x.PullRequestNumber == null));
+                    break;
+                default:
+                    throw new InvalidOperationException($"Invalid kind {Kind}");
+            }
+
+            return query;
+        }
+
 
         public string GetQueryString()
         {
