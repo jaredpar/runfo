@@ -50,7 +50,7 @@ namespace DevOps.Status.Pages.Search
         {
             if (string.IsNullOrEmpty(Query))
             {
-                Query = new SearchBuildsRequest() { Definition = "runtime", Count = 10 }.GetQueryString();
+                Query = new SearchBuildsRequest() { Definition = "roslyn-ci" }.GetQueryString();
                 return;
             }
 
@@ -59,7 +59,13 @@ namespace DevOps.Status.Pages.Search
 
             IncludeDefinitionColumn = !options.HasDefinition;
 
-            Builds = (await options.GetQuery(TriageContext).ToListAsync())
+            var results = await options
+                .GetQuery(TriageContext)
+                .Include(x => x.ModelBuildDefinition)
+                .Take(100)
+                .ToListAsync();
+
+            Builds = results
                 .Select(x =>
                 {
                     var buildInfo = x.GetBuildResultInfo();

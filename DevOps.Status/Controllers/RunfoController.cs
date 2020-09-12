@@ -35,7 +35,7 @@ namespace DevOps.Status.Controllers
             {
                 var searchBuildsRequest = new SearchBuildsRequest() { Count = 50 };
                 searchBuildsRequest.ParseQueryString(query);
-                var builds = await searchBuildsRequest.GetQuery(TriageContextUtil).Include(x => x.ModelBuildDefinition).ToListAsync();
+                var builds = await searchBuildsRequest.LegacyGetQuery(TriageContextUtil).Include(x => x.ModelBuildDefinition).ToListAsync();
                 var list = builds
                     .Select(x =>
                     {
@@ -71,7 +71,7 @@ namespace DevOps.Status.Controllers
                 searchBuildsRequest.ParseQueryString(query);
             }
 
-            var builds = await searchBuildsRequest.GetQuery(TriageContextUtil).Include(x => x.ModelBuildDefinition).ToListAsync();
+            var builds = await searchBuildsRequest.LegacyGetQuery(TriageContextUtil).Include(x => x.ModelBuildDefinition).ToListAsync();
             var queryUtil = await QueryUtilFactory.CreateDotNetQueryUtilForUserAsync();
             var timelines = builds
                 .AsParallel()

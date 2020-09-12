@@ -53,16 +53,14 @@ namespace DevOps.Status.Pages.Search
 
             try
             {
-                var buildSearchOptions = new SearchBuildsRequest()
-                {
-                    Count = 10,
-                };
+                var buildSearchOptions = new SearchBuildsRequest();
                 buildSearchOptions.ParseQueryString(BuildQuery);
                 var timelineSearchOptions = new SearchTimelinesRequest();
                 timelineSearchOptions.ParseQueryString(TimelineQuery ?? "");
 
                 var results = await timelineSearchOptions.GetResultsAsync(
-                    buildSearchOptions.GetQuery(TriageContextUtil),
+                    TriageContextUtil.Context,
+                    buildSearchOptions,
                     includeBuild: true);
                 TimelineDataList = results
                     .Select(x => new TimelineData()
@@ -74,7 +72,7 @@ namespace DevOps.Status.Pages.Search
                         IssueType = x.IssueType,
                     })
                     .ToList();
-                BuildCount = buildSearchOptions.Count;
+                BuildCount = results.GroupBy(x => x.ModelBuild.BuildNumber).Count();
                 IncludeIssueTypeColumn = timelineSearchOptions.Type is null;
                 return Page();
             }

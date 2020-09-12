@@ -52,7 +52,7 @@ namespace DevOps.Status.Pages.View
 
             var options = new SearchBuildsRequest();
             options.ParseQueryString(Query);
-            var query = options.GetQuery(
+            var query = options.LegacyGetQuery(
                 TriageContextUtil,
                 beforeCountFunc: q => q.Where(x => x.PullRequestNumber != null && x.IsMergedPullRequest));
             var builds = (await query.ToListAsync())

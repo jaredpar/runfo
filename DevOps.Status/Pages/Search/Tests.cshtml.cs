@@ -63,7 +63,7 @@ namespace DevOps.Status.Pages.Search
                 testSearchOptions.ParseQueryString(TestsQuery ?? "");
 
                 var results = await testSearchOptions.GetResultsAsync(
-                    buildSearchOptions.GetQuery(TriageContextUtil),
+                    buildSearchOptions.LegacyGetQuery(TriageContextUtil),
                     includeBuild: true,
                     includeTestRun: true);
                 var count = 0;
@@ -118,7 +118,7 @@ namespace DevOps.Status.Pages.Search
                     Name = testFullName,
                 };
                 var testResults = await testSearchOptions.GetResultsAsync(
-                    buildSearchOptions.GetQuery(TriageContextUtil),
+                    buildSearchOptions.LegacyGetQuery(TriageContextUtil),
                     includeBuild: true,
                     includeTestRun: true);
                 var results = new List<(BuildInfo BuildInfo, string? TestRunName, HelixLogInfo? LogInfo)>();

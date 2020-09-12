@@ -143,9 +143,15 @@ namespace DevOps.Util.Triage
         /// </summary>
         public BuildResult? BuildResult { get; set; }
 
+        /// <summary>
+        /// The start time of the build stored in UTC
+        /// </summary>
         [Column(TypeName="smalldatetime")]
         public DateTime? StartTime { get; set; }
 
+        /// <summary>
+        /// The start time of the build stored in UTC
+        /// </summary>
         [Column(TypeName="smalldatetime")]
         public DateTime? FinishTime { get; set; }
 

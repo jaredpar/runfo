@@ -12,15 +12,13 @@ namespace DevOps.Util.Triage
 {
     public class SearchBuildsRequest : ISearchRequest
     {
-        public const int DefaultCount = 10;
         public const ModelBuildKind DefaultKind = ModelBuildKind.All;
 
         public string? Definition { get; set; }
-
-        [Obsolete("Can't use this anymore")]
-        public int Count { get; set; } = DefaultCount;
         public ModelBuildKind Kind { get; set; } = DefaultKind;
         public string? Repository { get; set; }
+        public DateRequest? StartTime { get; set; }
+        public DateRequest? FinishTime { get; set; }
 
         public bool HasDefinition => !string.IsNullOrEmpty(Definition);
 
@@ -45,10 +43,16 @@ namespace DevOps.Util.Triage
             }
         }
 
-        public IQueryable<ModelBuild> GetQuery(TriageContext triageContext) =>
-            GetQuery(new TriageContextUtil(triageContext));
+        [Obsolete("Can't use this anymore")]
+        public int Count { get; set; } = DefaultCount;
+        public const int DefaultCount = 10;
 
-        public IQueryable<ModelBuild> GetQuery(
+        [Obsolete("Do not use")]
+        public IQueryable<ModelBuild> LegacyGetQuery(TriageContext triageContext) =>
+            LegacyGetQuery(new TriageContextUtil(triageContext));
+
+        [Obsolete("Do not use")]
+        public IQueryable<ModelBuild> LegacyGetQuery(
             TriageContextUtil triageContextUtil,
             Func<IQueryable<ModelBuild>, IQueryable<ModelBuild>>? beforeCountFunc = null)
         {
@@ -77,6 +81,9 @@ namespace DevOps.Util.Triage
 
             return query.Take(Count);
         }
+
+        public IQueryable<ModelBuild> GetQuery(TriageContext context) =>
+            FilterBuilds(context.ModelBuilds);
 
         public IQueryable<ModelTimelineIssue> FilterBuilds(IQueryable<ModelTimelineIssue> query) =>
             FilterBuilds(
@@ -123,6 +130,26 @@ namespace DevOps.Util.Triage
             if (gitHubRepository is object)
             {
                 query = query.Where(convertPredicateFunc(x => x.GitHubRepository == gitHubRepository));
+            }
+
+            if (StartTime is { } startTime)
+            {
+                query = startTime.Kind switch
+                {
+                    DateRequestKind.GreaterThan => query.Where(convertPredicateFunc(x => x.StartTime >= startTime.DateTime)),
+                    DateRequestKind.LessThan => query.Where(convertPredicateFunc(x => x.StartTime <= startTime.DateTime)),
+                    _ => query
+                };
+            }
+
+            if (FinishTime is { } finishTime)
+            {
+                query = finishTime.Kind switch
+                {
+                    DateRequestKind.GreaterThan => query.Where(convertPredicateFunc(x => x.FinishTime >= finishTime.DateTime)),
+                    DateRequestKind.LessThan => query.Where(convertPredicateFunc(x => x.FinishTime <= finishTime.DateTime)),
+                    _ => query
+                };
             }
 
             switch (Kind)
@@ -173,6 +200,16 @@ namespace DevOps.Util.Triage
                 Append($"kind:{kind}");
             }
 
+            if (StartTime is { } startTime)
+            {
+                Append($"startTime:{startTime.GetQueryValue()}");
+            }
+
+            if (FinishTime is { } finishTime)
+            {
+                Append($"finishTime:{finishTime.GetQueryValue()}");
+            }
+
             if (Count != DefaultCount)
             {
                 Append($"count:{Count}");
@@ -202,6 +239,12 @@ namespace DevOps.Util.Triage
                         break;
                     case "repository":
                         Repository = tuple.Value;
+                        break;
+                    case "starttime":
+                        StartTime = DateRequest.Parse(tuple.Value.Trim('"'), DateRequestKind.GreaterThan);
+                        break;
+                    case "finishtime":
+                        FinishTime = DateRequest.Parse(tuple.Value.Trim('"'), DateRequestKind.GreaterThan);
                         break;
                     case "count":
                         Count = int.Parse(tuple.Value);

@@ -73,7 +73,7 @@ namespace DevOps.Status.Pages.Search
             ErrorMessage = null;
 
             var buildInfos = (await searchBuildsRequest
-                .GetQuery(TriageContextUtil)
+                .LegacyGetQuery(TriageContextUtil)
                 .Include(x => x.ModelBuildDefinition)
                 .ToListAsync()).Select(x => x.GetBuildResultInfo()).ToList();
             BuildCount = buildInfos.Count;

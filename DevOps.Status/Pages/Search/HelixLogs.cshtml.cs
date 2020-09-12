@@ -71,7 +71,7 @@ namespace DevOps.Status.Pages.Search
                 return;
             }
 
-            IQueryable<ModelTestResult> query = searchBuildsRequest.GetQuery(TriageContextUtil)
+            IQueryable<ModelTestResult> query = searchBuildsRequest.LegacyGetQuery(TriageContextUtil)
                 .Join(
                     TriageContextUtil.Context.ModelTestResults.Where(x => x.IsHelixTestResult),
                     b => b.Id,

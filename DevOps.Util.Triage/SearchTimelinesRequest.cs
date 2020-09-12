@@ -14,33 +14,45 @@ namespace DevOps.Util.Triage
 {
     public class SearchTimelinesRequest : ISearchRequest
     {
+        public const int DefaultLimit = 50;
+
         public string? Text { get; set; }
         public IssueType? Type { get; set; }
+        public int? Limit { get; set; }
 
         public async Task<List<ModelTimelineIssue>> GetResultsAsync(
-            IQueryable<ModelBuild> buildQuery,
+            TriageContext triageContext,
+            SearchBuildsRequest searchBuildsRequest,
             bool includeBuild)
         {
+            var limit = Limit ?? DefaultLimit;
             var list = new List<ModelTimelineIssue>();
-            await foreach (var issue in EnumerateResultsAsync(buildQuery, includeBuild).ConfigureAwait(false))
+            await foreach (var issue in EnumerateResultsAsync(triageContext, searchBuildsRequest, includeBuild).ConfigureAwait(false))
             {
                 list.Add(issue);
+                if (list.Count >= limit)
+                {
+                    break;
+                }
             }
 
             return list;
         }
 
         public async IAsyncEnumerable<ModelTimelineIssue> EnumerateResultsAsync(
-            IQueryable<ModelBuild> buildQuery,
+            TriageContext triageContext,
+            SearchBuildsRequest searchBuildsRequest,
             bool includeBuild)
         {
-            IQueryable<ModelTimelineIssue> query = buildQuery
-                .SelectMany(x => x.ModelTimelineIssues);
+            IQueryable<ModelTimelineIssue> query = triageContext.ModelTimelineIssues;
+            query = searchBuildsRequest.FilterBuilds(query);
 
             if (Type is { } type)
             {
                 query = query.Where(x => x.IssueType == type);
             }
+
+            query = query.OrderByDescending(x => x.ModelBuild.BuildNumber);
 
             if (includeBuild)
             {
