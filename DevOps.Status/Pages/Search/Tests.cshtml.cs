@@ -30,7 +30,7 @@ namespace DevOps.Status.Pages.Search
             public TestResultsDisplay? TestResultsDisplay { get; set; }
         }
 
-        public const int PageSize = 50;
+        public const int PageSize = 100;
         
         public TriageContextUtil TriageContextUtil { get; }
         public StatusGitHubClientFactory GitHubClientFactory { get; }
@@ -76,7 +76,7 @@ namespace DevOps.Status.Pages.Search
                 var results = await query
                     .OrderByDescending(x => x.ModelBuild.BuildNumber)
                     .Skip(PageNumber * PageSize)
-                    .Take(PageSize)
+                    .Take(PageSize + 1)
                     .ToListAsync();
 
                 var count = 0;
@@ -100,7 +100,7 @@ namespace DevOps.Status.Pages.Search
 
                 BuildCount = results.GroupBy(x => x.ModelBuild.BuildNumber).Count();
                 PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
-                NextPageNumber = PageNumber + 1;
+                NextPageNumber = results.Count > PageSize ? PageNumber + 1 : (int?)null;
                 return Page();
             }
             catch (Exception ex)

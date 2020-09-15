@@ -26,7 +26,11 @@
 @if (Model.TestInfos.Count > 0)
 {
     <div>
-        <p>Build Count: @Model.BuildCount</p>
+        <p>Included Build Count: @Model.BuildCount</p>
+        @if (Model.NextPageNumber is { })
+        {
+            <p>Displaying first @TestsModel.PageSize failures</p>
+        }
     </div>
     <div id="accordion">
         @foreach (var testInfo in @Model.TestInfos)
