@@ -34,12 +34,11 @@ namespace DevOps.Status.Pages.Search
 
         [BindProperty(SupportsGet = true, Name = "q")]
         public string? Query { get; set; }
-        [BindProperty(SupportsGet = true, Name = "page")]
+        [BindProperty(SupportsGet = true, Name = "pageNumber")]
         public int PageNumber { get; set; }
         public int? NextPageNumber { get; set; }
         public int? PreviousPageNumber { get; set; }
         public string? PassRate { get; set; }
-        public string? WarningMessage { get; set; }
         public bool IncludeDefinitionColumn { get; set; }
         public List<BuildData> Builds { get; set; } = new List<BuildData>();
 
@@ -67,11 +66,6 @@ namespace DevOps.Status.Pages.Search
                 .Skip(PageNumber * PageSize) 
                 .Take(PageSize)
                 .ToListAsync();
-
-            if (results.Count == options.Limit)
-            {
-                WarningMessage = $"Builds limited to first {options.Limit}";
-            }
 
             Builds = results
                 .Select(x =>

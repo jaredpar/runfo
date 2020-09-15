@@ -16,6 +16,7 @@ namespace DevOps.Util.Triage
     {
         public string? Name { get; set; }
 
+        [Obsolete("don't use this")]
         public async Task<List<ModelTestResult>> GetResultsAsync(
             TriageContext context,
             SearchBuildsRequest searchBuildsRequest,
@@ -43,6 +44,7 @@ namespace DevOps.Util.Triage
             return list;
         }
 
+        [Obsolete("don't use this")]
         private async IAsyncEnumerable<ModelTestResult> EnumerateResultsAsync(
             TriageContext context,
             SearchBuildsRequest searchBuildsRequest,
@@ -92,6 +94,16 @@ namespace DevOps.Util.Triage
                 }
             }
             while (true);
+        }
+
+        public IQueryable<ModelTestResult> FilterTestResults(IQueryable<ModelTestResult> query)
+        {
+            if (!string.IsNullOrEmpty(Name))
+            {
+                query = query.Where(x => x.TestFullName.Contains(Name));
+            }
+
+            return query;
         }
 
         public string GetQueryString()

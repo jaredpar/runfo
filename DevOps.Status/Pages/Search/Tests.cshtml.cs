@@ -29,19 +29,21 @@ namespace DevOps.Status.Pages.Search
 
             public TestResultsDisplay? TestResultsDisplay { get; set; }
         }
-        
-        public const int MaxBuildLimit = 100;
 
+        public const int PageSize = 50;
+        
         public TriageContextUtil TriageContextUtil { get; }
         public StatusGitHubClientFactory GitHubClientFactory { get; }
         public string? ErrorMessage { get; set; }
-
         [BindProperty(SupportsGet = true, Name = "bq")]
         public string? BuildQuery { get; set; }
-
         [BindProperty(SupportsGet = true, Name = "tq")]
         public string? TestsQuery { get; set; }
-
+        [BindProperty(SupportsGet = true, Name = "pageNumber")]
+        public int PageNumber { get; set; }
+        public int? NextPageNumber { get; set; }
+        public int? PreviousPageNumber { get; set; }
+        public int BuildCount { get; set; }
         public List<TestInfo> TestInfos { get; set; } = new List<TestInfo>();
 
         public TestsModel(TriageContextUtil triageContextUtil, StatusGitHubClientFactory gitHubClientFactory)
@@ -65,12 +67,18 @@ namespace DevOps.Status.Pages.Search
                 var testSearchOptions = new SearchTestsRequest();
                 testSearchOptions.ParseQueryString(TestsQuery ?? "");
 
-                var results = await testSearchOptions.GetResultsAsync(
-                    TriageContextUtil.Context,
-                    searchBuildsRequest,
-                    includeBuild: true,
-                    includeTestRun: true,
-                    searchBuildsRequest.GetLimit(MaxBuildLimit));
+                IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults
+                    .Include(x => x.ModelTestRun)
+                    .Include(x => x.ModelBuild)
+                    .ThenInclude(x => x.ModelBuildDefinition);
+                query = searchBuildsRequest.FilterBuilds(query);
+                query = testSearchOptions.FilterTestResults(query);
+                var results = await query
+                    .OrderByDescending(x => x.ModelBuild.BuildNumber)
+                    .Skip(PageNumber * PageSize)
+                    .Take(PageSize)
+                    .ToListAsync();
+
                 var count = 0;
                 foreach (var group in results.GroupBy(x => x.TestFullName).OrderByDescending(x => x.Count()))
                 {
@@ -90,6 +98,9 @@ namespace DevOps.Status.Pages.Search
                     TestInfos.Add(testInfo);
                 }
 
+                BuildCount = results.GroupBy(x => x.ModelBuild.BuildNumber).Count();
+                PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
+                NextPageNumber = PageNumber + 1;
                 return Page();
             }
             catch (Exception ex)
@@ -122,12 +133,17 @@ namespace DevOps.Status.Pages.Search
                 {
                     Name = testFullName,
                 };
-                var testResults = await testSearchOptions.GetResultsAsync(
-                    TriageContextUtil.Context,
-                    searchBuildsRequest,
-                    includeBuild: true,
-                    includeTestRun: true,
-                    searchBuildsRequest.GetLimit(MaxBuildLimit));
+
+                IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults;
+                query = searchBuildsRequest.FilterBuilds(query);
+                query = testSearchOptions.FilterTestResults(query);
+                var testResults = await query
+                    .OrderByDescending(x => x.ModelBuild.BuildNumber)
+                    .Include(x => x.ModelBuild)
+                    .Include(x => x.ModelBuild.ModelBuildDefinition)
+                    .Include(x => x.ModelTestRun)
+                    .Take(100)
+                    .ToListAsync();
                 var results = new List<(BuildInfo BuildInfo, string? TestRunName, HelixLogInfo? LogInfo)>();
                 var includeHelix = false;
                 foreach (var item in testResults)
@@ -149,10 +165,7 @@ namespace DevOps.Status.Pages.Search
         private SearchBuildsRequest GetSearchBuildsRquest()
         {
             Debug.Assert(!string.IsNullOrEmpty(BuildQuery));
-            var buildSearchOptions = new SearchBuildsRequest()
-            {
-                Limit = 50,
-            };
+            var buildSearchOptions = new SearchBuildsRequest();
             buildSearchOptions.ParseQueryString(BuildQuery);
             return buildSearchOptions;
         }

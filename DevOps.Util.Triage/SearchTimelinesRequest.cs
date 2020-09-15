@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -18,75 +19,20 @@ namespace DevOps.Util.Triage
 
         public string? Text { get; set; }
         public IssueType? Type { get; set; }
-        public int? Limit { get; set; }
 
-        public async Task<List<ModelTimelineIssue>> GetResultsAsync(
-            TriageContext triageContext,
-            SearchBuildsRequest searchBuildsRequest,
-            bool includeBuild)
+        public IQueryable<ModelTimelineIssue> FilterTimelines(IQueryable<ModelTimelineIssue> query)
         {
-            var limit = Limit ?? DefaultLimit;
-            var list = new List<ModelTimelineIssue>();
-            await foreach (var issue in EnumerateResultsAsync(triageContext, searchBuildsRequest, includeBuild).ConfigureAwait(false))
-            {
-                list.Add(issue);
-                if (list.Count >= limit)
-                {
-                    break;
-                }
-            }
-
-            return list;
-        }
-
-        public async IAsyncEnumerable<ModelTimelineIssue> EnumerateResultsAsync(
-            TriageContext triageContext,
-            SearchBuildsRequest searchBuildsRequest,
-            bool includeBuild)
-        {
-            IQueryable<ModelTimelineIssue> query = triageContext.ModelTimelineIssues;
-            query = searchBuildsRequest.FilterBuilds(query);
-
             if (Type is { } type)
             {
                 query = query.Where(x => x.IssueType == type);
             }
 
-            query = query.OrderByDescending(x => x.ModelBuild.BuildNumber);
-
-            if (includeBuild)
+            if (!string.IsNullOrEmpty(Text))
             {
-                query = query.Include(x => x.ModelBuild).ThenInclude(x => x.ModelBuildDefinition);
+                query = query.Where(x => x.Message.Contains(Text));
             }
 
-            Regex? textRegex = null;
-            if (Text is object)
-            {
-                textRegex = new Regex(Text, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-            }
-
-            var partition = 100;
-            var skip = 0;
-            do
-            {
-                var partitionQuery = query.Skip(skip).Take(partition);
-                skip += partition;
-
-                var partitionList = await partitionQuery.ToListAsync().ConfigureAwait(false);
-                if (partitionList.Count == 0)
-                {
-                    break;
-                }
-
-                foreach (var issue in partitionList)
-                {
-                    if (textRegex is null || textRegex.IsMatch(issue.Message))
-                    {
-                        yield return issue;
-                    }
-                }
-            }
-            while (true);
+            return query;
         }
 
         public string GetQueryString()

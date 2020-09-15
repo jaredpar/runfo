@@ -174,13 +174,6 @@ namespace Scratch
             */
         }
 
-        class ParameterCombine : ExpressionVisitor
-        {
-            public Expression? ReplaceExpression;
-
-            protected override Expression VisitParameter(ParameterExpression node) => ReplaceExpression!;
-        }
-
         internal async Task QueryProfile()
         {
             var searchBuildsRequest = new SearchBuildsRequest()

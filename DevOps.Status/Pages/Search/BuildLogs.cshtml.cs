@@ -58,7 +58,7 @@ namespace DevOps.Status.Pages.Search
                 return;
             }
 
-            var searchBuildsRequest = new SearchBuildsRequest() { Limit = 10 };
+            var searchBuildsRequest = new SearchBuildsRequest();
             searchBuildsRequest.ParseQueryString(BuildQuery);
 
             var searchBuildLogsRequest = new SearchBuildLogsRequest();
@@ -75,7 +75,6 @@ namespace DevOps.Status.Pages.Search
             var buildInfos = (await searchBuildsRequest
                 .FilterBuilds(TriageContextUtil.Context.ModelBuilds)
                 .OrderByDescending(x => x.BuildNumber)
-                .Take(searchBuildsRequest.Limit)
                 .Include(x => x.ModelBuildDefinition)
                 .ToListAsync()).Select(x => x.GetBuildResultInfo()).ToList();
             BuildCount = buildInfos.Count;

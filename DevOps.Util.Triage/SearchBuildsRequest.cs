@@ -12,7 +12,6 @@ namespace DevOps.Util.Triage
 {
     public class SearchBuildsRequest : ISearchRequest
     {
-        public const int DefaultLimit = 100;
         public const ModelBuildKind DefaultKind = ModelBuildKind.All;
 
         public string? Definition { get; set; }
@@ -20,7 +19,6 @@ namespace DevOps.Util.Triage
         public string? Repository { get; set; }
         public DateRequest? Started { get; set; }
         public DateRequest? Finished { get; set; }
-        public int Limit { get; set; } = DefaultLimit;
 
         public bool HasDefinition => !string.IsNullOrEmpty(Definition);
 
@@ -44,47 +42,6 @@ namespace DevOps.Util.Triage
                 return null;
             }
         }
-
-        [Obsolete("Can't use this anymore")]
-        public int Count { get; set; } = DefaultCount;
-        public const int DefaultCount = 10;
-
-        [Obsolete("Do not use")]
-        public IQueryable<ModelBuild> LegacyGetQuery(TriageContext triageContext) =>
-            LegacyGetQuery(new TriageContextUtil(triageContext));
-
-        [Obsolete("Do not use")]
-        public IQueryable<ModelBuild> LegacyGetQuery(
-            TriageContextUtil triageContextUtil,
-            Func<IQueryable<ModelBuild>, IQueryable<ModelBuild>>? beforeCountFunc = null)
-        {
-            var definitionId = DefinitionId;
-            string? definitionName = definitionId is null
-                ? Definition
-                : null;
-            string? gitHubRepository = string.IsNullOrEmpty(Repository)
-                ? null
-                : Repository.ToLower();
-            string? gitHubOrganization = gitHubRepository is null
-                ? null
-                : DotNetUtil.GitHubOrganization;
-            var query = triageContextUtil.GetModelBuildsQuery(
-                definitionId: definitionId,
-                definitionName: definitionName,
-                gitHubOrganization: gitHubOrganization,
-                gitHubRepository: gitHubRepository,
-                count: null,
-                kind: Kind);
-
-            if (beforeCountFunc is object)
-            {
-                query = beforeCountFunc(query);
-            }
-
-            return query.Take(Count);
-        }
-
-        public int GetLimit(int maxLimit) => Limit <= maxLimit ? Limit : maxLimit;
 
         public IQueryable<ModelTimelineIssue> FilterBuilds(IQueryable<ModelTimelineIssue> query) =>
             FilterBuilds(
@@ -179,7 +136,6 @@ namespace DevOps.Util.Triage
             return query;
         }
 
-
         public string GetQueryString()
         {
             var builder = new StringBuilder();
@@ -216,11 +172,6 @@ namespace DevOps.Util.Triage
                 Append($"finished:{finishTime.GetQueryValue()}");
             }
 
-            if (Limit != DefaultLimit)
-            {
-                Append($"limit:100");
-            }
-
             return builder.ToString();
 
             void Append(string message)
@@ -251,9 +202,6 @@ namespace DevOps.Util.Triage
                         break;
                     case "finished":
                         Finished = DateRequest.Parse(tuple.Value.Trim('"'), DateRequestKind.GreaterThan);
-                        break;
-                    case "limit":
-                        Limit = int.Parse(tuple.Value);
                         break;
                     case "kind":
                         Kind = tuple.Value.ToLower() switch

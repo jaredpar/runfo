@@ -23,34 +23,81 @@
     </div>
 }
 
-<div id="accordion">
-    @foreach(var testInfo in @Model.TestInfos)
-    {
-        string filterTestQuery = $@"name:""{testInfo.TestName}""";
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <button class="btn btn-link" data-toggle="collapse" data-target="#@testInfo.CollapseName">
-                    @testInfo.TestName (@testInfo.TestResultsDisplay?.Results.Count)
-                    </button>
-                </h5>
-            </div>
+@if (Model.TestInfos.Count > 0)
+{
+    <div>
+        <p>Build Count: @Model.BuildCount</p>
+    </div>
+    <div id="accordion">
+        @foreach (var testInfo in @Model.TestInfos)
+        {
+            string filterTestQuery = $@"name:""{testInfo.TestName}""";
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <button class="btn btn-link" data-toggle="collapse" data-target="#@testInfo.CollapseName">
+                        @testInfo.TestName (@testInfo.TestResultsDisplay?.Results.Count)
+                        </button>
+                    </h5>
+                </div>
 
-            <div id="@testInfo.CollapseName" class="collapse" data-parent="#accordion">
-                <partial name="../Shared/_TestResultsDisplay" model="@testInfo.TestResultsDisplay" />
-                <div class="row">
-                    <div class="m-2">
-                        <a class="btn btn-primary" asp-route-bq=@Model.BuildQuery asp-route-tq=@filterTestQuery>Filter to test</a>
-                    </div>
-                    <div class="m-2">
-                        <form method="post">
-                            <input type="hidden" name="testFullName" value="@testInfo.TestName" />
-                            <input type="hidden" name="gitHubRepository" value="@testInfo.TestResultsDisplay?.GitHubRepository" />
-                            <button class="btn btn-primary">Create Issue</button>
-                        </form>
+                <div id="@testInfo.CollapseName" class="collapse" data-parent="#accordion">
+                    <partial name="../Shared/_TestResultsDisplay" model="@testInfo.TestResultsDisplay" />
+                    <div class="row">
+                        <div class="m-2">
+                            <a class="btn btn-primary" asp-route-bq=@Model.BuildQuery asp-route-tq=@filterTestQuery>Filter to test</a>
+                        </div>
+                        <div class="m-2">
+                            <form method="post">
+                                <input type="hidden" name="testFullName" value="@testInfo.TestName" />
+                                <input type="hidden" name="gitHubRepository" value="@testInfo.TestResultsDisplay?.GitHubRepository" />
+                                <button class="btn btn-primary">Create Issue</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    }
-</div>
+        }
+    </div>
+
+    <nav>
+        <ul class="pagination">
+            @if (Model.PreviousPageNumber is { } previousPageNumber)
+            {
+                <li class="page-item">
+                    <a 
+                       class="page-link"
+                       asp-page="/Search/Tests"
+                       asp-route-bq="@Model.BuildQuery"
+                       asp-route-tq="@Model.TestsQuery"
+                       asp-route-pageNumber="@previousPageNumber">Previous
+                    </a>
+                </li>
+            }
+            else
+            {
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1">Previous</a>
+                </li>
+            }
+            @if (Model.NextPageNumber is { } nextPageNumber)
+            {
+                <li class="page-item">
+                    <a 
+                       class="page-link"
+                       asp-page="/Search/Tests"
+                       asp-route-bq="@Model.BuildQuery"
+                       asp-route-tq="@Model.TestsQuery"
+                       asp-route-pageNumber="@nextPageNumber">Next
+                    </a>
+                </li>
+            }
+            else
+            {
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1">Next</a>
+                </li>
+            }
+      </ul>
+    </nav>
+}

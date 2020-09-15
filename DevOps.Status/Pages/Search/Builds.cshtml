@@ -13,13 +13,6 @@
   <button class="btn btn-primary">Search</button>
 </form>
 
-@if (!string.IsNullOrEmpty(Model.WarningMessage))
-{
-    <div class="alert alert-warning" role="alert">
-      @Model.WarningMessage
-    </div>
-}
-
 @if (Model.Builds.Count > 0)
 {
     <p>Pass Rate: @Model.PassRate</p>
@@ -61,7 +54,7 @@
         </tbody>
     </table>
 
-    <nav aria-label="Page navigation example">
+    <nav>
         <ul class="pagination">
             @if (Model.PreviousPageNumber is { } previousPageNumber)
             {
@@ -70,7 +63,7 @@
                        class="page-link"
                        asp-page="/Search/Builds"
                        asp-route-q="@Model.Query"
-                       asp-route-page="@Model.PreviousPageNumber">Previous
+                       asp-route-pageNumber="@previousPageNumber">Previous
                     </a>
                 </li>
             }
@@ -87,7 +80,7 @@
                        class="page-link"
                        asp-page="/Search/Builds"
                        asp-route-q="@Model.Query"
-                       asp-route-page="@Model.NextPageNumber">Next
+                       asp-route-pageNumber="@nextPageNumber">Next
                     </a>
                 </li>
             }

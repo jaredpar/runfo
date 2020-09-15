@@ -32,9 +32,11 @@ namespace DevOps.Status.Pages.View
 
         [BindProperty(SupportsGet = true, Name = "q")]
         public string? Query { get; set; }
-
+        [BindProperty(SupportsGet = true, Name = "page")]
+        public int PageNumber { get; set; }
+        public int? NextPageNumber { get; set; }
+        public int? PreviousPageNumber { get; set; }
         public List<MergedBuildInfo> MergedPullRequestBuilds { get; set; } = new List<MergedBuildInfo>();
-
         public string? PassRate { get; set; }
 
         public MergedPullRequestsModel(TriageContextUtil triageContextUtil)
@@ -50,15 +52,18 @@ namespace DevOps.Status.Pages.View
                 return Page();
             }
 
+            const int pageSize = 50;
             var options = new SearchBuildsRequest();
             options.ParseQueryString(Query);
             IQueryable<ModelBuild> query = TriageContextUtil.Context.ModelBuilds;
-            query = options.FilterBuilds(query)
+            var results = await options.FilterBuilds(query)
                 .Where(x => x.PullRequestNumber != null && x.IsMergedPullRequest)
                 .OrderByDescending(x => x.BuildNumber)
-                .Take(options.GetLimit(100));
+                .Skip(PageNumber * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
 
-            var builds = (await query.ToListAsync())
+            var builds = results
                 .Select(b =>
                 {
                     var prNumber = b.PullRequestNumber!.Value;
@@ -79,6 +84,8 @@ namespace DevOps.Status.Pages.View
 
             var rate = builds.Count(x => x.Result == BuildResult.Succeeded || x.Result == BuildResult.PartiallySucceeded) / (double)builds.Count;
             PassRate = (100 * rate).ToString("F");
+            PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
+            NextPageNumber = PageNumber + 1;
             return Page();
         }
     }

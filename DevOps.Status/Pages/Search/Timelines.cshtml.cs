@@ -28,12 +28,13 @@ namespace DevOps.Status.Pages.Search
 
         [BindProperty(SupportsGet = true, Name = "bq")]
         public string? BuildQuery { get; set; }
-
         [BindProperty(SupportsGet = true, Name = "tq")]
         public string? TimelineQuery { get; set; }
-
+        [BindProperty(SupportsGet = true, Name = "page")]
+        public int PageNumber { get; set; }
+        public int? NextPageNumber { get; set; }
+        public int? PreviousPageNumber { get; set; }
         public List<TimelineData> TimelineDataList { get; set; } = new List<TimelineData>();
-
         public int? BuildCount { get; set; }
         public bool IncludeIssueTypeColumn { get; set; }
         public string? ErrorMessage { get; set; }
@@ -45,6 +46,7 @@ namespace DevOps.Status.Pages.Search
 
         public async Task<IActionResult> OnGet()
         {
+            const int PageSize = 25;
             if (string.IsNullOrEmpty(BuildQuery))
             {
                 BuildQuery = new SearchBuildsRequest() { Definition = "runtime" }.GetQueryString();
@@ -58,22 +60,38 @@ namespace DevOps.Status.Pages.Search
                 var timelineSearchOptions = new SearchTimelinesRequest();
                 timelineSearchOptions.ParseQueryString(TimelineQuery ?? "");
 
-                var results = await timelineSearchOptions.GetResultsAsync(
-                    TriageContextUtil.Context,
-                    buildSearchOptions,
-                    includeBuild: true);
+                IQueryable<ModelTimelineIssue> query = TriageContextUtil.Context.ModelTimelineIssues;
+                query = buildSearchOptions.FilterBuilds(query);
+                query = timelineSearchOptions.FilterTimelines(query);
+                var results = await query
+                    .OrderByDescending(x => x.ModelBuild.BuildNumber)
+                    .Select(x => new
+                    {
+                        x.ModelBuild.BuildNumber,
+                        x.ModelBuild.ModelBuildDefinition.AzureOrganization,
+                        x.ModelBuild.ModelBuildDefinition.AzureProject,
+                        x.JobName,
+                        x.Message,
+                        x.IssueType
+                    })
+                    .Skip(PageNumber * PageSize)
+                    .Take(PageSize)
+                    .ToListAsync();
+
                 TimelineDataList = results
                     .Select(x => new TimelineData()
                     {
-                        BuildNumber = x.ModelBuild.BuildNumber,
-                        BuildUri = x.ModelBuild.GetBuildResultInfo().BuildUri,
+                        BuildNumber = x.BuildNumber,
+                        BuildUri = DevOpsUtil.GetBuildUri(x.AzureOrganization, x.AzureProject, x.BuildNumber),
                         JobName = x.JobName,
                         Line = x.Message,
                         IssueType = x.IssueType,
                     })
                     .ToList();
-                BuildCount = results.GroupBy(x => x.ModelBuild.BuildNumber).Count();
+                BuildCount = results.GroupBy(x => x.BuildNumber).Count();
                 IncludeIssueTypeColumn = timelineSearchOptions.Type is null;
+                PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
+                NextPageNumber = PageNumber + 1;
                 return Page();
             }
             catch (Exception ex)
