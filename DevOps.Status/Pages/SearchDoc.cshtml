@@ -26,8 +26,12 @@
             <td>Filter to rolling builds only. Valid options are rolling, pullrequest and mergedpullrequest</td>
         </tr>
         <tr>
-            <td class="font-weight-bold">count:50</td>
-            <td>Filter the result to 50 builds. Most pages default to 10</td>
+            <td class="font-weight-bold">started:2020-09-15</td>
+            <td>Filter to builds starting after the specified date</td>
+        </tr>
+        <tr>
+            <td class="font-weight-bold">started:2020-09-15</td>
+            <td>Filter to builds finished after the specified date</td>
         </tr>
     </tbody>
 </table>
@@ -114,5 +118,35 @@
     </tbody>
 </table>
 
+<h1>Date Queries</h1>
+
+<p>All date queries such as started and finished can be configured in the following ways</p>
+
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th class="column">Syntax</th>
+            <th class="column">Example</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td class="font-weight-bold">started:YYYY-MM-DD</td>
+            <td>Filter to builds after the specified date</td>
+        </tr>
+        <tr>
+            <td class="font-weight-bold">started:>YYYY-MM-DD</td>
+            <td>Filter to builds after the specified date</td>
+        </tr>
+        <tr>
+            <td class="font-weight-bold">started:&lt;YYYY-MM-DD</td>
+            <td>Filter to builds before the specified date</td>
+        </tr>
+        <tr>
+            <td class="font-weight-bold">started:~1</td>
+            <td>Filter to builds after 1 day ago. Any numeric value can appear after the ~</td>
+        </tr>
+    </tbody>
+</table>
 
 
