@@ -44,7 +44,7 @@ namespace DevOps.Util.Triage
 
             if (DayQuery is { } days)
             {
-                return $"{prefix}@{days}";
+                return $"{prefix}${days}";
             }
 
             return $"{prefix}{DateTime.ToLocalTime().ToString("yyyy-MM-dd")}";
@@ -75,7 +75,7 @@ namespace DevOps.Util.Triage
                 throw GetException();
             }
 
-            if (data[0] == '@')
+            if (data[0] == '$')
             {
                 var days = int.Parse(data.Substring(1));
                 return new DateRequest(DateTimeOffset.UtcNow - TimeSpan.FromDays(days), kind, days);

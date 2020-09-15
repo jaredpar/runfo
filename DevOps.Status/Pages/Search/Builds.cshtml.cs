@@ -34,6 +34,10 @@ namespace DevOps.Status.Pages.Search
 
         [BindProperty(SupportsGet = true, Name = "q")]
         public string? Query { get; set; }
+        [BindProperty(SupportsGet = true, Name = "page")]
+        public int PageNumber { get; set; }
+        public int? NextPageNumber { get; set; }
+        public int? PreviousPageNumber { get; set; }
         public string? PassRate { get; set; }
         public string? WarningMessage { get; set; }
         public bool IncludeDefinitionColumn { get; set; }
@@ -46,6 +50,7 @@ namespace DevOps.Status.Pages.Search
 
         public async Task OnGet()
         {
+            const int PageSize = 50;
             if (string.IsNullOrEmpty(Query))
             {
                 Query = new SearchBuildsRequest() { Definition = "roslyn-ci" }.GetQueryString();
@@ -55,13 +60,12 @@ namespace DevOps.Status.Pages.Search
             var options = new SearchBuildsRequest();
             options.ParseQueryString(Query);
 
-            IncludeDefinitionColumn = !options.HasDefinition;
-
             var results = await options
                 .FilterBuilds(TriageContext.ModelBuilds)
                 .OrderByDescending(x => x.BuildNumber)
                 .Include(x => x.ModelBuildDefinition)
-                .Take(options.Limit)
+                .Skip(PageNumber * PageSize) 
+                .Take(PageSize)
                 .ToListAsync();
 
             if (results.Count == options.Limit)
@@ -90,6 +94,9 @@ namespace DevOps.Status.Pages.Search
             var passRate = (double)Builds.Count(x => x.BuildResult == BuildResult.Succeeded || x.BuildResult == BuildResult.PartiallySucceeded) / Builds.Count;
             passRate *= 100;
             PassRate = $"{passRate:N2}%";
+            PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
+            NextPageNumber = PageNumber + 1;
+            IncludeDefinitionColumn = !options.HasDefinition;
         }
     }
 }

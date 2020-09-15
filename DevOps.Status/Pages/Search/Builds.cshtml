@@ -26,7 +26,7 @@
     <p>Build Count: @Model.Builds.Count</p>
 
     <h3>Results</h3>
-    <table class="table">
+    <table class="table table-bordered">
         <thead>
             <tr>
                 <th scope="col">Build</th>
@@ -60,4 +60,43 @@
             }
         </tbody>
     </table>
+
+    <nav aria-label="Page navigation example">
+        <ul class="pagination">
+            @if (Model.PreviousPageNumber is { } previousPageNumber)
+            {
+                <li class="page-item">
+                    <a 
+                       class="page-link"
+                       asp-page="/Search/Builds"
+                       asp-route-q="@Model.Query"
+                       asp-route-page="@Model.PreviousPageNumber">Previous
+                    </a>
+                </li>
+            }
+            else
+            {
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1">Previous</a>
+                </li>
+            }
+            @if (Model.NextPageNumber is { } nextPageNumber)
+            {
+                <li class="page-item">
+                    <a 
+                       class="page-link"
+                       asp-page="/Search/Builds"
+                       asp-route-q="@Model.Query"
+                       asp-route-page="@Model.NextPageNumber">Next
+                    </a>
+                </li>
+            }
+            else
+            {
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1">Next</a>
+                </li>
+            }
+      </ul>
+    </nav>
 }
