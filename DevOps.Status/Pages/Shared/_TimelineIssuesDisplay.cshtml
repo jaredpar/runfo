@@ -1,0 +1,44 @@
+﻿@model DevOps.Status.Util.TimelineIssuesDisplay
+
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            @if (Model.IncludeBuildColumn)
+            {
+                <th class="column">Build</th>
+            }
+            <th class="column">Job</th>
+            @if (Model.IncludeAttemptColumn)
+            {
+                <th class="column">Attempt</th>
+            }
+            @if (Model.IncludeIssueTypeColumn)
+            {
+                <th class="column">Type</th>
+            }
+            <th class="column">Text</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var timelineData in Model.Issues)
+        {
+            <tr>
+                @if (Model.IncludeBuildColumn)
+                {
+                    <td><a asp-page="/View/Build" asp-route-number="@timelineData.BuildNumber">@timelineData.BuildNumber</a></td>
+                }
+                <td>@timelineData.JobName</td>
+                @if (Model.IncludeAttemptColumn)
+                {
+                    <td>@timelineData.Attempt</td>
+                }
+                @if (Model.IncludeIssueTypeColumn)
+                {
+                    <td>@timelineData.IssueType</td>
+                }
+                <td>@timelineData.Message</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
