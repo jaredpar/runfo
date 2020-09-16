@@ -18,6 +18,7 @@ namespace DevOps.Util.Triage
         public const int DefaultLimit = 50;
 
         public string? Text { get; set; }
+        public string? JobName { get; set; }
         public IssueType? Type { get; set; }
 
         public IQueryable<ModelTimelineIssue> FilterTimelines(IQueryable<ModelTimelineIssue> query)
@@ -25,6 +26,11 @@ namespace DevOps.Util.Triage
             if (Type is { } type)
             {
                 query = query.Where(x => x.IssueType == type);
+            }
+
+            if (!string.IsNullOrEmpty(JobName))
+            {
+                query = query.Where(x => x.JobName.Contains(JobName));
             }
 
             if (!string.IsNullOrEmpty(Text))
@@ -41,6 +47,11 @@ namespace DevOps.Util.Triage
             if (!string.IsNullOrEmpty(Text))
             {
                 Append($"text:\"{Text}\"");
+            }
+
+            if (!string.IsNullOrEmpty(JobName))
+            {
+                Append($"jobName:\"{JobName}\"");
             }
 
             if (Type is { } type)
@@ -75,6 +86,9 @@ namespace DevOps.Util.Triage
                 {
                     case "text":
                         Text = tuple.Value.Trim('"');
+                        break;
+                    case "jobname":
+                        JobName = tuple.Value.Trim('"');
                         break;
                     case "type":
                         Type = tuple.Value.ToLower() switch
