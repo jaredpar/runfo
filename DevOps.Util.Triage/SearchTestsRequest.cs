@@ -15,89 +15,15 @@ namespace DevOps.Util.Triage
     public class SearchTestsRequest : ISearchRequest
     {
         public string? Name { get; set; }
-
-        [Obsolete("don't use this")]
-        public async Task<List<ModelTestResult>> GetResultsAsync(
-            TriageContext context,
-            SearchBuildsRequest searchBuildsRequest,
-            bool includeBuild,
-            bool includeTestRun,
-            int buildLimit)
-        {
-            var lastBuildId = "";
-            var buildCount = 0;
-            var list = new List<ModelTestResult>();
-            await foreach (var testResult in EnumerateResultsAsync(context, searchBuildsRequest, includeBuild, includeTestRun).ConfigureAwait(false))
-            {
-                list.Add(testResult);
-                if (lastBuildId != testResult.ModelBuildId)
-                {
-                    lastBuildId = testResult.ModelBuildId;
-                    buildCount++;
-                    if (buildCount >= buildLimit)
-                    {
-                        break;
-                    }
-                }
-            }
-
-            return list;
-        }
-
-        [Obsolete("don't use this")]
-        private async IAsyncEnumerable<ModelTestResult> EnumerateResultsAsync(
-            TriageContext context,
-            SearchBuildsRequest searchBuildsRequest,
-            bool includeBuild,
-            bool includeTestRun)
-        {
-            IQueryable<ModelTestResult> query = context.ModelTestResults;
-            query = searchBuildsRequest.FilterBuilds(query);
-            query = query.OrderByDescending(x => x.ModelBuild.BuildNumber);
-
-            if (includeBuild)
-            {
-                query = query.Include(x => x.ModelBuild).ThenInclude(x => x.ModelBuildDefinition);
-            }
-
-            if (includeTestRun)
-            {
-                query = query.Include(x => x.ModelTestRun);
-            }
-
-            // TODO: use standard search function
-            Regex? nameRegex = null;
-            if (Name is object)
-            {
-                nameRegex = new Regex(Name, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-            }
-
-            var partition = 100;
-            var skip = 0;
-            do
-            {
-                var partitionQuery = query.Skip(skip).Take(partition);
-                skip += partition;
-
-                var partitionList = await partitionQuery.ToListAsync().ConfigureAwait(false);
-                if (partitionList.Count == 0)
-                {
-                    break;
-                }
-
-                foreach (var result in partitionList)
-                {
-                    if (nameRegex is null || nameRegex.IsMatch(result.TestFullName))
-                    {
-                        yield return result;
-                    }
-                }
-            }
-            while (true);
-        }
+        public string? JobName { get; set; }
 
         public IQueryable<ModelTestResult> FilterTestResults(IQueryable<ModelTestResult> query)
         {
+            if (!string.IsNullOrEmpty(JobName))
+            {
+                query = query.Where(x => x.ModelTestRun.Name.Contains(JobName));
+            }
+
             if (!string.IsNullOrEmpty(Name))
             {
                 query = query.Where(x => x.TestFullName.Contains(Name));
@@ -112,6 +38,11 @@ namespace DevOps.Util.Triage
             if (!string.IsNullOrEmpty(Name))
             {
                 Append($"name:\"{Name}\"");
+            }
+
+            if (!string.IsNullOrEmpty(JobName))
+            {
+                Append($"jobName:\"{JobName}\"");
             }
 
             return builder.ToString();
@@ -141,6 +72,9 @@ namespace DevOps.Util.Triage
                 {
                     case "name":
                         Name = tuple.Value.Trim('"');
+                        break;
+                    case "jobname":
+                        JobName = tuple.Value.Trim('"');
                         break;
                     default:
                         throw new Exception($"Invalid option {tuple.Name}");
