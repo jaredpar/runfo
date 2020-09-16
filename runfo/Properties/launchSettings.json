@@ -2,7 +2,7 @@
   "profiles": {
     "runfo": {
       "commandName": "Project",
-      "commandLineArgs": "search-tests -d roslyn -c 5"
+      "commandLineArgs": "get-helix-payload -j 1c65f076-850c-44e1-8581-5a350f553976 -o C:\\payload -w System.Drawing.Common.Tests"
     }
   }
 }

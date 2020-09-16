@@ -43,17 +43,14 @@ namespace DevOps.Util
     }
 
     // TODO: rename to Azure Server
-    public class DevOpsServer
+    public class DevOpsServer : BaseServer
     {
-        public AuthorizationToken AuthorizationToken { get; }
         public string Organization { get; }
-        public HttpClient HttpClient { get;  }
 
         public DevOpsServer(string organization, AuthorizationToken authorizationToken = default, HttpClient? httpClient = null)
+            : base(authorizationToken, httpClient)
         {
             Organization = organization;
-            HttpClient = httpClient ?? new HttpClient();
-            AuthorizationToken = authorizationToken;
         }
 
         /// <summary>
@@ -459,46 +456,6 @@ namespace DevOps.Util
             return AzureJsonUtil.GetArray<T>(json);
         }
 
-        public async Task DownloadFileAsync(string uri, Stream destinationStream)
-        {
-            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
-            using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            await response.Content.CopyToAsync(destinationStream).ConfigureAwait(false);
-        }
-
-        public Task<MemoryStream> DownloadFileAsync(string uri) =>
-            WithMemoryStream(s => DownloadFileAsync(uri, s));
-
-        public async Task DownloadZipFileAsync(string uri, Stream destinationStream)
-        {
-            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
-            message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/zip"));
-            using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            await response.Content.CopyToAsync(destinationStream).ConfigureAwait(false);
-        }
-
-        public Task DownloadZipFileAsync(string uri, string destinationFilePath) =>
-            WithFileStream(destinationFilePath, fileStream => DownloadZipFileAsync(uri, fileStream));
-
-        public Task<MemoryStream> DownloadZipFileAsync(string uri) =>
-            WithMemoryStream(s => DownloadFileAsync(uri, s));
-
-        private async Task<MemoryStream> WithMemoryStream(Func<MemoryStream, Task> func)
-        {
-            var stream = new MemoryStream();
-            await func(stream).ConfigureAwait(false);
-            stream.Position = 0;
-            return stream;
-        }
-
-        private async Task WithFileStream(string destinationFilePath, Func<FileStream, Task> func)
-        {
-            using var fileStream = new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write);
-            await func(fileStream).ConfigureAwait(false);
-        }
-
         /// <summary>
         /// https://docs.microsoft.com/en-us/rest/api/azure/devops/build/builds/list?view=azure-devops-rest-5.0
         /// </summary>
@@ -554,26 +511,6 @@ namespace DevOps.Util
             {
                 throw new InvalidOperationException("Must have an authorization token specified to view test information");
             }
-        }
-
-        private HttpRequestMessage CreateHttpRequestMessage(HttpMethod method, string uri)
-        {
-            var message = new HttpRequestMessage(method ?? HttpMethod.Get, uri);
-            switch (AuthorizationToken.AuthorizationKind)
-            {
-                case AuthorizationKind.PersonalAccessToken:
-                    message.Headers.Authorization = new AuthenticationHeaderValue(
-                        "Basic",
-                        Convert.ToBase64String(Encoding.ASCII.GetBytes($":{AuthorizationToken.Token}")));
-                    break;
-                case AuthorizationKind.BearerToken:
-                    message.Headers.Authorization = new AuthenticationHeaderValue(
-                        "Bearer",
-                        AuthorizationToken.Token);
-                    break;
-            }
-
-            return message;
         }
 
         private async Task<string> GetTextAsync(string uri)

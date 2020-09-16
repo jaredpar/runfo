@@ -31,12 +31,12 @@ namespace Runfo
                     token = await GetPersonalAccessTokenFromFile(DotNetUtil.AzureOrganization);
                 }
 
-                var server = new DevOpsServer(DotNetUtil.AzureOrganization, new AuthorizationToken(AuthorizationKind.PersonalAccessToken, token!));
+                var devopsServer = new DevOpsServer(DotNetUtil.AzureOrganization, new AuthorizationToken(AuthorizationKind.PersonalAccessToken, token!));
                 var azureUtil = new CachingAzureUtil(
                     new LocalAzureStorageUtil(DotNetUtil.AzureOrganization, RuntimeInfoUtil.CacheDirectory),
-                    new AzureUtil(server));
+                    new AzureUtil(devopsServer));
 
-                var runtimeInfo = new RuntimeInfo(server, azureUtil);
+                var runtimeInfo = new RuntimeInfo(devopsServer, new HelixServer(), azureUtil);
 
                 // Kick off a collection of the file system cache
                 var collectTask = runtimeInfo.CollectCache();
@@ -87,6 +87,8 @@ namespace Runfo
                         return await runtimeInfo.PrintHelix(commandArgs);
                     case "helix-jobs":
                         return await runtimeInfo.PrintHelixJobs(commandArgs);
+                    case "get-helix-payload":
+                        return await runtimeInfo.GetHelixPayload(commandArgs);
                     case "timeline":
                         return await runtimeInfo.PrintTimeline(commandArgs);
                     case "search-timeline":
@@ -114,20 +116,21 @@ namespace Runfo
             {
                 Console.WriteLine("runfo");
                 Console.WriteLine("=== Commands ===");
-                Console.WriteLine("  status            Print build definition status");
-                Console.WriteLine("  definitions       Print build definition info");
-                Console.WriteLine("  artifacts         Print artifact info for a given build");
-                Console.WriteLine("  builds            Print builds");
-                Console.WriteLine("  pr-builds         Print builds for a given pull request");
-                Console.WriteLine("  tests             Print build test failures");
-                Console.WriteLine("  helix             Print helix logs for build");
-                Console.WriteLine("  helix-jobs        Print helix jobs for builds");
-                Console.WriteLine("  search-timeline   Search timeline info");
-                Console.WriteLine("  search-helix      Search helix logs");
-                Console.WriteLine("  search-buildlog   Search build logs");
-                Console.WriteLine("  timeline          Dump the timeline");
-                Console.WriteLine("  yaml              Dump the YML for a build");
-                Console.WriteLine("  clear-cache       Clear out the cache");
+                Console.WriteLine("  status             Print build definition status");
+                Console.WriteLine("  definitions        Print build definition info");
+                Console.WriteLine("  artifacts          Print artifact info for a given build");
+                Console.WriteLine("  builds             Print builds");
+                Console.WriteLine("  get-helix-payload  Download helix payload for a given job and workitems");
+                Console.WriteLine("  pr-builds          Print builds for a given pull request");
+                Console.WriteLine("  tests              Print build test failures");
+                Console.WriteLine("  helix              Print helix logs for build");
+                Console.WriteLine("  helix-jobs         Print helix jobs for builds");
+                Console.WriteLine("  search-timeline    Search timeline info");
+                Console.WriteLine("  search-helix       Search helix logs");
+                Console.WriteLine("  search-buildlog    Search build logs");
+                Console.WriteLine("  timeline           Dump the timeline");
+                Console.WriteLine("  yaml               Dump the YML for a build");
+                Console.WriteLine("  clear-cache        Clear out the cache");
                 Console.WriteLine();
                 Console.WriteLine("=== Global Options ===");
                 optionSet.WriteOptionDescriptions(Console.Out);

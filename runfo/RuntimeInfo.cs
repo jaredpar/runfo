@@ -20,7 +20,9 @@ namespace Runfo
     // TODO: Change to use SearchHelixLogsRequest
     internal sealed partial class RuntimeInfo
     {
-        internal DevOpsServer Server { get; }
+        internal DevOpsServer DevOpsServer { get; }
+        
+        internal HelixServer HelixServer { get; }
 
         internal IAzureUtil AzureUtil { get; }
 
@@ -29,12 +31,14 @@ namespace Runfo
         private ReportBuilder ReportBuilder { get; } = new ReportBuilder();
 
         internal RuntimeInfo(
-            DevOpsServer server,
+            DevOpsServer devopsServer,
+            HelixServer helixServer,
             IAzureUtil azureUtil)
         {
-            Server = server;
+            DevOpsServer = devopsServer;
+            HelixServer = helixServer;
             AzureUtil = azureUtil;
-            QueryUtil = new DotNetQueryUtil(Server, azureUtil);
+            QueryUtil = new DotNetQueryUtil(DevOpsServer, azureUtil);
         }
 
         internal async Task PrintBuildResults(IEnumerable<string> args)
@@ -132,7 +136,7 @@ namespace Runfo
             var collection = await QueryUtil.ListBuildsAsync(optionSet);
             var foundRaw = collection
                 .AsParallel()
-                .Select(async b => await SearchBuild(Server, QueryUtil, textRegex, b));
+                .Select(async b => await SearchBuild(DevOpsServer, QueryUtil, textRegex, b));
             var found = await RuntimeInfoUtil.ToListAsync(foundRaw);
             var badLogBuilder = new StringBuilder();
             found.ForEach(x => x.BadLogs.ForEach(l => badLogBuilder.AppendLine(l)));
@@ -269,7 +273,7 @@ namespace Runfo
                 Console.WriteLine("|---|---|---|");
             }
 
-            var (found, recordCount) = await SearchBuildLogs(Server, builds, nameRegex, textRegex, trace);
+            var (found, recordCount) = await SearchBuildLogs(DevOpsServer, builds, nameRegex, textRegex, trace);
             foreach (var tuple in found)
             {
                 var build = tuple.Build;
@@ -508,7 +512,7 @@ namespace Runfo
                     string? consoleText = null;
                     if (includeConsoleText && helixLogInfo.ConsoleUri is object)
                     {
-                        consoleText = await HelixUtil.GetHelixConsoleText(Server, helixLogInfo.ConsoleUri);
+                        consoleText = await HelixUtil.GetHelixConsoleText(DevOpsServer, helixLogInfo.ConsoleUri);
                     }
                     return (helixLogInfo, consoleText);
                 });
@@ -520,7 +524,7 @@ namespace Runfo
         {
             foreach (var (name, project, definitionId) in DotNetUtil.BuildDefinitions)
             {
-                var uri = DevOpsUtil.GetBuildDefinitionUri(Server.Organization, project, definitionId);
+                var uri = DevOpsUtil.GetBuildDefinitionUri(DevOpsServer.Organization, project, definitionId);
                 Console.WriteLine($"{name,-20}{uri}");
             }
         }
@@ -575,7 +579,7 @@ namespace Runfo
                 var list = new List<(Build Build, List<BuildArtifact> artifacts)>();
                 foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
                 {
-                    var artifacts = await Server.ListArtifactsAsync(build.Project.Name, build.Id);
+                    var artifacts = await DevOpsServer.ListArtifactsAsync(build.Project.Name, build.Id);
                     list.Add((build, artifacts));
                 }
 
@@ -681,7 +685,7 @@ namespace Runfo
                 }
                 else
                 {
-                    DumpTimeline(Server, timeline, depth, issues, failed, verbose);
+                    DumpTimeline(DevOpsServer, timeline, depth, issues, failed, verbose);
                 }
             }
 
@@ -813,7 +817,7 @@ namespace Runfo
 
             foreach (var build in await QueryUtil.ListBuildsAsync(optionSet))
             {
-                var log = await Server.GetYamlAsync(build.Project.Name, build.Id);
+                var log = await DevOpsServer.GetYamlAsync(build.Project.Name, build.Id);
                 Console.WriteLine(log);
             }
 
@@ -858,7 +862,7 @@ namespace Runfo
                 return ExitFailure;
             }
 
-            IEnumerable<Build> builds = await Server.ListBuildsAsync(
+            IEnumerable<Build> builds = await DevOpsServer.ListBuildsAsync(
                 project,
                 definitions: definitions,
                 repositoryId: repository,
@@ -1103,6 +1107,33 @@ namespace Runfo
             }
         }
 
+        internal async Task<int> GetHelixPayload(IEnumerable<string> args)
+        {
+            var optionSet = new GetFromHelixOptionSet();
+            ParseAll(optionSet, args);
+
+            if (string.IsNullOrEmpty(optionSet.JobId))
+            {
+                return ReturnWithFailureMessage("JobId should not be empty");
+            }
+
+            if (string.IsNullOrEmpty(optionSet.DownloadDir))
+            {
+                return ReturnWithFailureMessage("Output directory should not be empty");
+            }
+
+            await HelixServer.GetHelixPayloads(optionSet.JobId, optionSet.WorkItems, optionSet.DownloadDir).ConfigureAwait(false);
+
+            int ReturnWithFailureMessage(string message)
+            {
+                Console.WriteLine(message);
+                optionSet.WriteOptionDescriptions(Console.Out);
+                return ExitFailure;
+            }
+
+            return ExitSuccess;
+        }
+
         private static void PrintFailedTests(BuildTestInfo buildTestInfo)
         {
             var build = buildTestInfo.Build;
@@ -1144,7 +1175,7 @@ namespace Runfo
 
         // The logs for the failure always exist on the associated work item, not on the 
         // individual test result
-        private async Task<HelixLogInfo> GetHelixLogInfoAsync(HelixWorkItem workItem) => await HelixUtil.GetHelixLogInfoAsync(Server, workItem);
+        private async Task<HelixLogInfo> GetHelixLogInfoAsync(HelixWorkItem workItem) => await HelixUtil.GetHelixLogInfoAsync(DevOpsServer, workItem);
 
         private static string GetIndent(int level) => level == 0 ? string.Empty : new string(' ', level * 2);
 

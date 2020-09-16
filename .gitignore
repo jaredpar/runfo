@@ -40,6 +40,9 @@ Binaries/
 # Visual Studio 2017 auto generated files
 Generated\ Files/
 
+# VS debug support files
+launchSettings.json
+
 # MSTest test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
