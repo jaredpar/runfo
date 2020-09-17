@@ -23,11 +23,16 @@
         <thead>
             <tr>
                 <th scope="col">Build</th>
+                <th scope="col">Queued</th>
                 <th scope="col">Kind</th>
                 <th scope="col">Result</th>
                 @if (Model.IncludeDefinitionColumn)
                 {
                     <th scope="col">Definition</th>
+                }
+                @if (Model.IncludeTargetBranchColumn)
+                {
+                    <th scope="col">Target Branch</th>
                 }
             </tr>
         </thead>
@@ -36,6 +41,7 @@
             {
                 <tr>
                     <td><a asp-page="/view/build" asp-route-number="@build.BuildNumber">@build.BuildNumber</a></td>
+                    <td>@build.Queued</td>
                     @if (build.PullRequestKey is { } prKey)
                     {
                         <td><a asp-page="/view/pullrequest" asp-route-repository="@prKey.Repository" asp-route-number="@prKey.Number">@build.Kind</a></td>
@@ -48,6 +54,10 @@
                     @if (Model.IncludeDefinitionColumn)
                     {
                         <td><a href="@build.DefinitionUri">@build.Definition</a></td>
+                    }
+                    @if (Model.IncludeTargetBranchColumn)
+                    {
+                        <td>@build.TargetBranch</td>
                     }
                 </tr>
             }

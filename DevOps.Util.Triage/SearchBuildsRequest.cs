@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -19,6 +20,7 @@ namespace DevOps.Util.Triage
         public string? Repository { get; set; }
         public DateRequest? Started { get; set; }
         public DateRequest? Finished { get; set; }
+        public StringRequest? TargetBranch { get; set; }
 
         public bool HasDefinition => !string.IsNullOrEmpty(Definition);
 
@@ -115,6 +117,16 @@ namespace DevOps.Util.Triage
                 };
             }
 
+            if (TargetBranch is { } targetBranch)
+            {
+                query = targetBranch.Kind switch
+                {
+                    StringRequestKind.Contains => query.Where(convertPredicateFunc(x => x.GitHubTargetBranch.Contains(targetBranch.Text))),
+                    StringRequestKind.Equals => query.Where(convertPredicateFunc(x => x.GitHubTargetBranch == targetBranch.Text)),
+                    _ => query,
+                };
+            }
+
             switch (Kind)
             {
                 case ModelBuildKind.All:
@@ -172,6 +184,11 @@ namespace DevOps.Util.Triage
                 Append($"finished:{finishTime.GetQueryValue()}");
             }
 
+            if (TargetBranch is { } targetBranch)
+            {
+                Append($"targetBranch:{targetBranch.GetQueryValue()}");
+            }
+
             return builder.ToString();
 
             void Append(string message)
@@ -202,6 +219,9 @@ namespace DevOps.Util.Triage
                         break;
                     case "finished":
                         Finished = DateRequest.Parse(tuple.Value.Trim('"'), DateRequestKind.GreaterThan);
+                        break;
+                    case "targetbranch":
+                        TargetBranch = StringRequest.Parse(tuple.Value, StringRequestKind.Contains);
                         break;
                     case "kind":
                         Kind = tuple.Value.ToLower() switch

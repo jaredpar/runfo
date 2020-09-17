@@ -90,7 +90,7 @@ namespace DevOps.Status.Pages.Search
                     BuildNumber = result.BuildInfo.Number,
                     Line = result.Line,
                     JobName = result.JobName,
-                    BuildLogUri = result.BuildLogReference.Url
+                    BuildLogUri = result.BuildLogReference.Url,
                 });
             }
 

@@ -28,6 +28,8 @@ namespace DevOps.Status.Pages.Search
             public string? Definition { get; set; }
             public string? DefinitionUri { get; set; }
             public GitHubPullRequestKey? PullRequestKey { get; set; }
+            public string? TargetBranch { get; set; }
+            public string? Queued { get; set; }
         }
 
         public TriageContext TriageContext { get; }
@@ -40,6 +42,7 @@ namespace DevOps.Status.Pages.Search
         public int? PreviousPageNumber { get; set; }
         public string? PassRate { get; set; }
         public bool IncludeDefinitionColumn { get; set; }
+        public bool IncludeTargetBranchColumn { get; set; }
         public List<BuildData> Builds { get; set; } = new List<BuildData>();
 
         public BuildsModel(TriageContext triageContext)
@@ -82,6 +85,8 @@ namespace DevOps.Status.Pages.Search
                         BuildUri = buildInfo.BuildUri,
                         Definition = x.ModelBuildDefinition.DefinitionName,
                         DefinitionUri = buildInfo.DefinitionInfo.DefinitionUri,
+                        TargetBranch = buildInfo.GitHubBuildInfo?.TargetBranch,
+                        Queued = buildInfo.QueueTime?.ToLocalTime().ToString("yyyy-MM-dd hh:mm tt"),
                     };
                 })
                 .ToList();
@@ -91,6 +96,7 @@ namespace DevOps.Status.Pages.Search
             PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
             NextPageNumber = PageNumber + 1;
             IncludeDefinitionColumn = !options.HasDefinition;
+            IncludeTargetBranchColumn = !options.TargetBranch.HasValue;
         }
     }
 }

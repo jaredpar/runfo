@@ -186,14 +186,12 @@ namespace Scratch
                 try
                 {
                     var cts = new CancellationTokenSource();
-                    var messageTask = poisonClient.ReceiveMessagesAsync(cts.Token);
-                    var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
-                    if (timeoutTask == await Task.WhenAny(messageTask, timeoutTask))
+                    var response = await poisonClient.ReceiveMessagesAsync(cts.Token);
+                    if (response.Value.Length == 0)
                     {
                         break;
                     }
 
-                    var response = await messageTask;
                     foreach (var message in response.Value)
                     {
                         Console.WriteLine($"Processing {message.MessageText}");
@@ -207,8 +205,6 @@ namespace Scratch
                 }
             }
             while (true) ;
-
-
         }
 
         internal async Task QueryProfile()
