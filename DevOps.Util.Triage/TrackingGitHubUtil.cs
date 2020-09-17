@@ -188,6 +188,7 @@ namespace DevOps.Util.Triage
                     GitHubOrganization = x.ModelBuildAttempt.ModelBuild.GitHubOrganization,
                     GitHubRepository = x.ModelBuildAttempt.ModelBuild.GitHubRepository,
                     GitHubPullRequestNumber = x.ModelBuildAttempt.ModelBuild.PullRequestNumber,
+                    GitHubTargetBranch = x.ModelBuildAttempt.ModelBuild.GitHubTargetBranch,
                     BuildNumber = x.ModelBuildAttempt.ModelBuild.BuildNumber,
                     TestRunName = x.ModelTestResult.ModelTestRun.Name,
                     TestResult = x.ModelTestResult,
@@ -197,10 +198,13 @@ namespace DevOps.Util.Triage
             var reportBuilder = new ReportBuilder();
             return reportBuilder.BuildSearchTests(
                 matches.Select(x => (
-                    new BuildInfo(
+                    new BuildAndDefinitionInfo(
+                        x.AzureOrganization,
+                        x.AzureProject,
                         x.BuildNumber,
-                        new DefinitionInfo(x.AzureOrganization, x.AzureProject, x.DefinitionId, x.DefinitionName),
-                        new GitHubBuildInfo(x.GitHubOrganization, x.GitHubRepository, x.GitHubPullRequestNumber)),
+                        x.DefinitionId,
+                        x.DefinitionName,
+                        new GitHubBuildInfo(x.GitHubOrganization, x.GitHubRepository, x.GitHubPullRequestNumber, x.GitHubTargetBranch)),
                     (string?)x.TestRunName,
                     x.TestResult.GetHelixLogInfo())),
                 includeDefinition: true,
@@ -224,6 +228,7 @@ namespace DevOps.Util.Triage
                     GitHubOrganization = x.ModelBuildAttempt.ModelBuild.GitHubOrganization,
                     GitHubRepository = x.ModelBuildAttempt.ModelBuild.GitHubRepository,
                     GitHubPullRequestNumber = x.ModelBuildAttempt.ModelBuild.PullRequestNumber,
+                    GitHubTargetBranch = x.ModelBuildAttempt.ModelBuild.GitHubTargetBranch,
                     BuildNumber = x.ModelBuildAttempt.ModelBuild.BuildNumber,
                     TimelineIssue = x.ModelTimelineIssue
                 })
@@ -232,10 +237,13 @@ namespace DevOps.Util.Triage
             var reportBuilder = new ReportBuilder();
             return reportBuilder.BuildSearchTimeline(
                 matches.Select(x => (
-                    new BuildInfo(
+                    new BuildAndDefinitionInfo(
+                        x.AzureOrganization,
+                        x.AzureProject,
                         x.BuildNumber,
-                        new DefinitionInfo(x.AzureOrganization, x.AzureProject, x.DefinitionId, x.DefinitionName),
-                        new GitHubBuildInfo(x.GitHubOrganization, x.GitHubRepository, x.GitHubPullRequestNumber)),
+                        x.DefinitionId,
+                        x.DefinitionName,
+                        new GitHubBuildInfo(x.GitHubOrganization, x.GitHubRepository, x.GitHubPullRequestNumber, x.GitHubTargetBranch)),
                     x.TimelineIssue?.JobName)),
                 markdown: true,
                 includeDefinition: true);
@@ -258,6 +266,7 @@ namespace DevOps.Util.Triage
                     GitHubOrganization = x.ModelBuildAttempt.ModelBuild.GitHubOrganization,
                     GitHubRepository = x.ModelBuildAttempt.ModelBuild.GitHubRepository,
                     GitHubPullRequestNumber = x.ModelBuildAttempt.ModelBuild.PullRequestNumber,
+                    GitHubTargetBranch = x.ModelBuildAttempt.ModelBuild.GitHubTargetBranch,
                     BuildNumber = x.ModelBuildAttempt.ModelBuild.BuildNumber,
                     HelixLogUri = x.HelixLogUri,
                 })
@@ -267,9 +276,10 @@ namespace DevOps.Util.Triage
             return reportBuilder.BuildSearchHelix(
                 matches.Select(x => (
                     new BuildInfo(
+                        x.AzureOrganization,
+                        x.AzureProject,
                         x.BuildNumber,
-                        new DefinitionInfo(x.AzureOrganization, x.AzureProject, x.DefinitionId, x.DefinitionName),
-                        new GitHubBuildInfo(x.GitHubOrganization, x.GitHubRepository, x.GitHubPullRequestNumber)),
+                        new GitHubBuildInfo(x.GitHubOrganization, x.GitHubRepository, x.GitHubPullRequestNumber, x.GitHubTargetBranch)),
                     (HelixLogInfo?)(new HelixLogInfo(helixLogKind, x.HelixLogUri)))),
                 new[] { helixLogKind },
                 markdown: true);

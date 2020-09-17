@@ -225,7 +225,7 @@ namespace Runfo
                 }
             }
             Console.WriteLine(ReportBuilder.BuildSearchTimeline(
-                found.Select(x => (x.BuildResultInfo.BuildInfo, x.Record.JobName)),
+                found.Select(x => (x.BuildResultInfo.BuildAndDefinitionInfo, x.Record.JobName)),
                 markdown: markdown,
                 includeDefinition: !hadDefinition));
 

@@ -358,7 +358,7 @@ namespace DevOps.Util
             int[]? definitions = null)
         {
             var branchName = $"refs/pull/{prKey.Number}/merge";
-            var repositoryInfo = new RepositoryInfo(prKey.GitHubInfo);
+            var repositoryInfo = new RepositoryInfo(prKey);
             return server.ListBuildsAsync(
                 project,
                 definitions: definitions,

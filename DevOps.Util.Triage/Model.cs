@@ -130,13 +130,32 @@ namespace DevOps.Util.Triage
 
         public int BuildNumber { get; set; }
 
+        public string AzureOrganization { get; set; }
+
+        public string AzureProject { get; set; }
+
         public string GitHubOrganization { get; set; }
 
         public string GitHubRepository { get; set; }
 
         public int? PullRequestNumber { get; set; }
 
+        /// <summary>
+        /// This represents the target branch of the Build. For most builds this is the branch that was being built, 
+        /// for pull requests this is the branch the code will be merged into. 
+        /// 
+        /// It is possible for this to be null. There are some types of builds for which there is not a logical target
+        /// branch
+        /// </summary>
+        public string GitHubTargetBranch { get; set; }
+
         public bool IsMergedPullRequest { get; set; }
+
+        /// <summary>
+        /// The queue time of the build stored in UTC
+        /// </summary>
+        [Column(TypeName="smalldatetime")]
+        public DateTime? QueueTime { get; set; }
 
         /// <summary>
         /// The result of the most recent build attempt
@@ -150,7 +169,7 @@ namespace DevOps.Util.Triage
         public DateTime? StartTime { get; set; }
 
         /// <summary>
-        /// The start time of the build stored in UTC
+        /// The finish time of the build stored in UTC
         /// </summary>
         [Column(TypeName="smalldatetime")]
         public DateTime? FinishTime { get; set; }

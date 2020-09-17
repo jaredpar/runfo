@@ -35,6 +35,7 @@ namespace DevOps.Util.Triage
         public static BuildResultInfo GetBuildResultInfo(this ModelBuild modelBuild) =>
             new BuildResultInfo(
                 GetBuildAndDefinitionInfo(modelBuild),
+                modelBuild.QueueTime,
                 modelBuild.StartTime,
                 modelBuild.FinishTime,
                 modelBuild.BuildResult ?? BuildResult.None);
@@ -43,7 +44,8 @@ namespace DevOps.Util.Triage
             new GitHubBuildInfo(
                 modelBuild.GitHubOrganization,
                 modelBuild.GitHubRepository,
-                modelBuild.PullRequestNumber);
+                modelBuild.PullRequestNumber,
+                modelBuild.GitHubTargetBranch);
 
 
         public static ModelBuildKind GetModelBuildKind(this ModelBuild modelBuild)

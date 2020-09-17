@@ -108,7 +108,7 @@ namespace DevOps.Util.Triage
                 // item specifies a different organization. Need to replace Server with 
                 // a map from org -> DevOpsServer
                 var searchResults = results
-                    .Select(x => (x.ModelBuild.GetBuildInfo(), (string?)x.JobName));
+                    .Select(x => (x.ModelBuild.GetBuildAndDefinitionInfo(), (string?)x.JobName));
                 var reportBody = ReportBuilder.BuildSearchTimeline(
                     searchResults,
                     markdown: true,

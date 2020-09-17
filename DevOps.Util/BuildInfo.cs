@@ -7,6 +7,7 @@ namespace DevOps.Util
         public string Organization { get; }
         public string Repository { get; }
         public int? PullRequestNumber { get; }
+        public string? TargetBranch { get; }
 
         public GitHubPullRequestKey? PullRequestKey => PullRequestNumber is int number
             ? new GitHubPullRequestKey(Organization, Repository, number)
@@ -15,11 +16,13 @@ namespace DevOps.Util
         public GitHubBuildInfo(
             string organization,
             string repository,
-            int? pullRequestNumber)
+            int? pullRequestNumber,
+            string? targetBranch)
         {
             Organization = organization;
             Repository = repository;
             PullRequestNumber = pullRequestNumber;
+            TargetBranch = targetBranch;
         }
 
         public override string ToString() => $"{Organization} {Repository}";
@@ -109,6 +112,7 @@ namespace DevOps.Util
         public BuildAndDefinitionInfo BuildAndDefinitionInfo { get; }
         public DateTime? StartTime { get; }
         public DateTime? FinishTime { get; }
+        public DateTime? QueueTime { get; }
         public BuildResult BuildResult { get; }
 
         public BuildInfo BuildInfo => BuildAndDefinitionInfo.BuildInfo;
@@ -124,11 +128,13 @@ namespace DevOps.Util
 
         public BuildResultInfo(
             BuildAndDefinitionInfo buildAndDefinitionInfo,
+            DateTime? queueTime,
             DateTime? startTime,
             DateTime? finishTime,
             BuildResult buildResult)
         {
             BuildAndDefinitionInfo = BuildAndDefinitionInfo;
+            QueueTime = queueTime;
             StartTime = startTime;
             FinishTime = finishTime;
             BuildResult = buildResult;

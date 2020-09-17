@@ -82,6 +82,10 @@ namespace DevOps.Util.Triage
                 .FirstOrDefault();
             if (modelBuild is object)
             {
+                // This code accounts for the fact that we will see multiple attempts of a build and that will
+                // change the result. When those happens we should update all of the following values. It may
+                // seem strange to update start and finish time here but that is how the AzDO APIs work and it's
+                // best to model them in that way.
                 if (modelBuild.BuildResult != buildInfo.BuildResult)
                 {
                     modelBuild.StartTime = buildInfo.StartTime;
@@ -99,11 +103,15 @@ namespace DevOps.Util.Triage
             {
                 Id = modelBuildId,
                 ModelBuildDefinitionId = modelBuildDefinition.Id,
-                GitHubOrganization = buildInfo.GitHubBuildInfo?.Organization ?? null,
-                GitHubRepository = buildInfo.GitHubBuildInfo?.Repository ?? null,
+                AzureOrganization = modelBuildDefinition.AzureOrganization,
+                AzureProject = modelBuildDefinition.AzureProject,
+                GitHubOrganization = buildInfo.GitHubBuildInfo?.Organization,
+                GitHubRepository = buildInfo.GitHubBuildInfo?.Repository,
+                GitHubTargetBranch = buildInfo.GitHubBuildInfo?.TargetBranch,
                 PullRequestNumber = prKey?.Number,
                 StartTime = buildInfo.StartTime,
                 FinishTime = buildInfo.FinishTime,
+                QueueTime = buildInfo.QueueTime,
                 BuildNumber = buildInfo.Number,
                 BuildResult = buildInfo.BuildResult,
             };

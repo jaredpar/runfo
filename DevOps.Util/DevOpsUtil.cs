@@ -37,10 +37,11 @@ namespace DevOps.Util
         public static BuildResultInfo GetBuildResultInfo(Build build)
         {
             var buildAndDefinitionInfo = GetBuildAndDefinitionInfo(build);
+            var queueTime = build.GetQueueTime()?.UtcDateTime;
             var startTime = build.GetStartTime()?.UtcDateTime;
             var finishTime = build.GetFinishTime()?.UtcDateTime;
             var gitHubBuildInfo = GetGitHubBuildInfo(build);
-            return new BuildResultInfo(buildAndDefinitionInfo, startTime, finishTime, build.Result);
+            return new BuildResultInfo(buildAndDefinitionInfo, queueTime, startTime, finishTime, build.Result);
         }
 
         public static BuildInfo GetBuildInfo(Build build)
@@ -178,7 +179,8 @@ namespace DevOps.Util
                     }
                 }
 
-                return new GitHubBuildInfo(organization, repository, prNumber);
+                var targetBranch = GetTargetBranch(build);
+                return new GitHubBuildInfo(organization, repository, prNumber, targetBranch);
             }
 
             return null;
