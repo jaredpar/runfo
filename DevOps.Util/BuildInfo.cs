@@ -133,7 +133,7 @@ namespace DevOps.Util
             DateTime? finishTime,
             BuildResult buildResult)
         {
-            BuildAndDefinitionInfo = BuildAndDefinitionInfo;
+            BuildAndDefinitionInfo = buildAndDefinitionInfo;
             QueueTime = queueTime;
             StartTime = startTime;
             FinishTime = finishTime;

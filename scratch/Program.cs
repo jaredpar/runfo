@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Octokit;
 using System;
 using System.Collections.Generic;
@@ -83,7 +84,7 @@ namespace Scratch
 
             var builder = new DbContextOptionsBuilder<TriageContext>();
             builder.UseSqlServer(configuration[DotNetConstants.ConfigurationSqlConnectionString]);
-            builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+            // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
             TriageContext = new TriageContext(builder.Options);
             TriageContextUtil = new TriageContextUtil(TriageContext);
 
@@ -114,34 +115,22 @@ namespace Scratch
 
         internal static ILogger CreateLogger() => LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Scratch");
 
+
+        public class BuildInfoMessage
+        {
+            public string? ProjectId { get; set; }
+            public string? ProjectName { get; set; }
+            public int BuildNumber { get; set; }
+        }
+
         internal async Task Scratch()
         {
-            var ids = new int[]
-            {
-                818538, // IndividualCI
-                818474, // PullRequest
-                818436, // PullRequest
-                818471, // PullRequest
-                818398, // IndividualCI
-                818403, // IndividualCI
-            };
-
-            int count = 0;
-            await foreach (var build in DevOpsServer.EnumerateBuildsAsync("public"))
-            {
-                var targetBranch = DevOpsUtil.GetTargetBranch(build);
-                if (targetBranch is null)
-                {
-                    Console.WriteLine($"Can't get target branch for {build.Id}");
-                }
-
-                count++;
-                if (count == 300)
-                {
-                    break;
-                }
-
-            }
+            var text = @"{""ProjectId"":""9ee6d478-d288-47f7-aacc-f6e6d082ae6d"",""ProjectName"":null,""BuildNumber"":819311}";
+            var buildInfoMessage = JsonConvert.DeserializeObject<BuildInfoMessage>(text);
+            var build = await DevOpsServer.GetBuildAsync(buildInfoMessage.ProjectId!, buildInfoMessage.BuildNumber);
+            var queryUtil = new DotNetQueryUtil(DevOpsServer);
+            var modelDataUtil = new ModelDataUtil(queryUtil, TriageContextUtil, CreateLogger());
+            await modelDataUtil.EnsureModelInfoAsync(build);
         }
 
         internal async Task PopulateDb()
