@@ -69,7 +69,7 @@ namespace DevOps.Status.Pages.View
                     BuildUri = b.GetBuildResultInfo().BuildUri,
                     BuildNumber = b.BuildNumber,
                     Result = b.BuildResult ?? BuildResult.None,
-                    DefinitionUri = b.ModelBuildDefinition.GetBuildDefinitionInfo().DefinitionUri,
+                    DefinitionUri = b.ModelBuildDefinition.GetDefinitionInfo().DefinitionUri,
                     DefinitionName = b.ModelBuildDefinition.DefinitionName,
                 })
                 .ToList();

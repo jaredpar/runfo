@@ -9,15 +9,18 @@ namespace DevOps.Util.UnitTests
 {
     public sealed class ReportBuilderTests
     {
-        private static BuildInfo CreateBuildInfo(
+        private static BuildAndDefinitionInfo CreateBuildInfo(
             int buildNumber = 42,
             int definitionId = 13,
             string definitionName = "def",
             string organization = "devopsutil",
             string project = "test") =>
-            new BuildInfo(
+            new BuildAndDefinitionInfo(
+                organization,
+                project,
                 buildNumber,
-                new DefinitionInfo(organization, project, definitionId, definitionName),
+                definitionId,
+                definitionName,
                 gitHubBuildInfo: null);
 
         [Fact]
@@ -33,7 +36,7 @@ namespace DevOps.Util.UnitTests
 <!-- runfo report end -->
 ";
 
-            var results = new (BuildInfo, string?, HelixLogInfo?)[]
+            var results = new (BuildAndDefinitionInfo, string?, HelixLogInfo?)[]
             {
                 (CreateBuildInfo(buildNumber: 1), "job1", null),
                 (CreateBuildInfo(buildNumber: 2), "job2", null)

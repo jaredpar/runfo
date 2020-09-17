@@ -91,7 +91,9 @@ namespace DevOps.Util
 
         public static BuildInfo GetBuildInfo(this Build build) => DevOpsUtil.GetBuildInfo(build);
 
-        public static DefinitionInfo GetBuildDefinitionInfo(this Build build) => DevOpsUtil.GetBuildDefinitionInfo(build);
+        public static BuildAndDefinitionInfo GetBuildAndDefinitionInfo(this Build build) => DevOpsUtil.GetBuildAndDefinitionInfo(build);
+
+        public static DefinitionInfo GetDefinitionInfo(this Build build) => DevOpsUtil.GetDefinitionInfo(build);
 
         public static BuildResultInfo GetBuildResultInfo(this Build build) => DevOpsUtil.GetBuildResultInfo(build);
 

@@ -48,7 +48,7 @@ namespace DevOps.Util.DotNet
                 ("winforms", "public", 267),
             };
 
-        public static DefinitionKey? GetBuildDefinitionKeyFromFriendlyName(string name)
+        public static DefinitionKey? GetDefinitionKeyFromFriendlyName(string name)
         {
             var item = BuildDefinitions.FirstOrDefault(x => x.BuildName == name);
             if (item.Project is object)

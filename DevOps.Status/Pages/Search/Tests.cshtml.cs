@@ -144,14 +144,14 @@ namespace DevOps.Status.Pages.Search
                     .Include(x => x.ModelTestRun)
                     .Take(100)
                     .ToListAsync();
-                var results = new List<(BuildInfo BuildInfo, string? TestRunName, HelixLogInfo? LogInfo)>();
+                var results = new List<(BuildAndDefinitionInfo BuildAndDefinitionInfo, string? TestRunName, HelixLogInfo? LogInfo)>();
                 var includeHelix = false;
                 foreach (var item in testResults)
                 {
-                    var buildInfo = item.ModelBuild.GetBuildInfo();
+                    var buildAndDefinitionInfo = item.ModelBuild.GetBuildAndDefinitionInfo();
                     var helixLogInfo = item.GetHelixLogInfo();
                     includeHelix = includeHelix || helixLogInfo is object;
-                    results.Add((buildInfo, item.ModelTestRun.Name, helixLogInfo));
+                    results.Add((buildAndDefinitionInfo, item.ModelTestRun.Name, helixLogInfo));
                 }
 
                 var builder = new ReportBuilder();

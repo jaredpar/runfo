@@ -75,7 +75,7 @@ namespace DevOps.Status.Pages.View
                         PullRequestNumber = prNumber,
                         BuildUri = b.GetBuildResultInfo().BuildUri,
                         BuildNumber = b.BuildNumber,
-                        DefinitionUri = b.ModelBuildDefinition.GetBuildDefinitionKey().DefinitionUri,
+                        DefinitionUri = b.ModelBuildDefinition.GetDefinitionKey().DefinitionUri,
                         DefinitionName = b.ModelBuildDefinition.DefinitionName,
                         Result = b.BuildResult!.Value,
                     };

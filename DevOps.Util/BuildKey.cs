@@ -5,9 +5,7 @@ namespace DevOps.Util
     public readonly struct BuildKey : IEquatable<BuildKey>
     {
         public string Organization { get; }
-
         public string Project { get; }
-
         public int Number { get; }
 
         public string BuildUri => DevOpsUtil.GetBuildUri(Organization, Project, Number);
@@ -97,7 +95,7 @@ namespace DevOps.Util
         public string Project { get; }
         public int Id { get; }
 
-        public string DefinitionUri => DevOpsUtil.GetBuildDefinitionUri(Organization, Project, Id);
+        public string DefinitionUri => DevOpsUtil.GetDefinitionUri(Organization, Project, Id);
 
         public DefinitionKey(string organization, string project, int id)
         {

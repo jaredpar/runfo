@@ -27,72 +27,23 @@ namespace DevOps.Util
 
     public sealed class BuildInfo
     {
-        public int Number { get; set; }
-        public DefinitionInfo DefinitionInfo { get; }
+        public BuildKey BuildKey { get; }
         public GitHubBuildInfo? GitHubBuildInfo { get; }
 
-        public string Organization => DefinitionInfo.Organization;
-        public string Project => DefinitionInfo.Project;
-        public string DefinitionName => DefinitionInfo.Name;
-        public int DefinitionId => DefinitionInfo.Id;
+        public string Organization => BuildKey.Organization;
+        public string Project => BuildKey.Project;
+        public int Number => BuildKey.Number;
         public string BuildUri => BuildKey.BuildUri;
-        public BuildKey BuildKey => new BuildKey(Organization, Project, Number);
-        public DefinitionKey DefinitionKey => DefinitionInfo.Key;
         public GitHubPullRequestKey? PullRequestKey => GitHubBuildInfo?.PullRequestKey;
 
         public BuildInfo(
             string organization,
             string project,
             int buildNumber,
-            int definitionId,
-            string definitionName,
             GitHubBuildInfo? gitHubBuildInfo)
         {
-            Number = buildNumber;
-            DefinitionInfo = new DefinitionInfo(organization, project, definitionId, definitionName);
+            BuildKey = new BuildKey(organization, project, buildNumber);
             GitHubBuildInfo = gitHubBuildInfo;
-        }
-
-        public BuildInfo(
-            int buildNumber,
-            DefinitionInfo buildDefinitionInfo,
-            GitHubBuildInfo? gitHubBuildInfo)
-        {
-            Number = buildNumber;
-            DefinitionInfo = buildDefinitionInfo;
-            GitHubBuildInfo = gitHubBuildInfo;
-        }
-
-        public override string ToString() => $"{DefinitionName} {Number}";
-    }
-
-    public sealed class BuildResultInfo
-    {
-        public BuildInfo BuildInfo { get; }
-        public DateTime? StartTime { get; }
-        public DateTime? FinishTime { get; }
-        public BuildResult BuildResult { get; }
-
-        public DefinitionInfo DefinitionInfo => BuildInfo.DefinitionInfo;
-        public GitHubBuildInfo? GitHubBuildInfo => BuildInfo.GitHubBuildInfo;
-        public GitHubPullRequestKey? PullRequestKey => BuildInfo.PullRequestKey;
-        public string Organization => BuildInfo.Organization;
-        public string Project => BuildInfo.Project;
-        public int Number => BuildInfo.Number;
-        public string DefinitionName => BuildInfo.DefinitionName;
-        public BuildKey BuildKey => BuildInfo.BuildKey;
-        public string BuildUri => BuildInfo.BuildUri;
-
-        public BuildResultInfo(
-            BuildInfo buildInfo,
-            DateTime? startTime,
-            DateTime? finishTime,
-            BuildResult buildResult)
-        {
-            BuildInfo = buildInfo;
-            StartTime = startTime;
-            FinishTime = finishTime;
-            BuildResult = buildResult;
         }
 
         public override string ToString() => $"{Organization} {Project} {Number}";
@@ -100,17 +51,17 @@ namespace DevOps.Util
 
     public sealed class DefinitionInfo
     {
-        public DefinitionKey Key { get; }
+        public DefinitionKey DefinitionKey { get; }
         public string Name { get; }
 
-        public string Organization => Key.Organization;
-        public string Project => Key.Project;
-        public int Id => Key.Id;
-        public string DefinitionUri => Key.DefinitionUri;
+        public string Organization => DefinitionKey.Organization;
+        public string Project => DefinitionKey.Project;
+        public int Id => DefinitionKey.Id;
+        public string DefinitionUri => DefinitionKey.DefinitionUri;
 
         public DefinitionInfo(DefinitionKey key, string name)
         {
-            Key = key;
+            DefinitionKey = key;
             Name = name;
         }
 
@@ -120,5 +71,69 @@ namespace DevOps.Util
         }
 
         public override string ToString() => $"{Project} {Name} {Id}";
+    }
+
+    public sealed class BuildAndDefinitionInfo
+    {
+        public BuildInfo BuildInfo { get; }
+        public DefinitionInfo DefinitionInfo { get; }
+
+        public string Organization => DefinitionInfo.Organization;
+        public string Project => DefinitionInfo.Project;
+        public int BuildNumber => BuildInfo.Number;
+        public GitHubBuildInfo? GitHubBuildInfo => BuildInfo.GitHubBuildInfo;
+        public string DefinitionName => DefinitionInfo.Name;
+        public int DefinitionId => DefinitionInfo.Id;
+        public string BuildUri => BuildKey.BuildUri;
+        public BuildKey BuildKey => BuildInfo.BuildKey;
+        public DefinitionKey DefinitionKey => DefinitionInfo.DefinitionKey;
+        public GitHubPullRequestKey? PullRequestKey => GitHubBuildInfo?.PullRequestKey;
+
+        public BuildAndDefinitionInfo(
+            string organization,
+            string project,
+            int buildNumber,
+            int definitionId,
+            string definitionName,
+            GitHubBuildInfo? gitHubBuildInfo)
+        {
+            BuildInfo = new BuildInfo(organization, project, buildNumber, gitHubBuildInfo);
+            DefinitionInfo = new DefinitionInfo(organization, project, definitionId, definitionName);
+        }
+
+        public override string ToString() => $"{DefinitionName} {BuildNumber}";
+    }
+
+    public sealed class BuildResultInfo
+    {
+        public BuildAndDefinitionInfo BuildAndDefinitionInfo { get; }
+        public DateTime? StartTime { get; }
+        public DateTime? FinishTime { get; }
+        public BuildResult BuildResult { get; }
+
+        public BuildInfo BuildInfo => BuildAndDefinitionInfo.BuildInfo;
+        public DefinitionInfo DefinitionInfo => BuildAndDefinitionInfo.DefinitionInfo;
+        public GitHubBuildInfo? GitHubBuildInfo => BuildAndDefinitionInfo.GitHubBuildInfo;
+        public GitHubPullRequestKey? PullRequestKey => BuildInfo.PullRequestKey;
+        public string Organization => BuildInfo.Organization;
+        public string Project => BuildInfo.Project;
+        public int Number => BuildInfo.Number;
+        public string DefinitionName => DefinitionInfo.Name;
+        public BuildKey BuildKey => BuildInfo.BuildKey;
+        public string BuildUri => BuildInfo.BuildUri;
+
+        public BuildResultInfo(
+            BuildAndDefinitionInfo buildAndDefinitionInfo,
+            DateTime? startTime,
+            DateTime? finishTime,
+            BuildResult buildResult)
+        {
+            BuildAndDefinitionInfo = BuildAndDefinitionInfo;
+            StartTime = startTime;
+            FinishTime = finishTime;
+            BuildResult = buildResult;
+        }
+
+        public override string ToString() => $"{Organization} {Project} {Number}";
     }
 }

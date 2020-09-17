@@ -24,7 +24,7 @@ namespace DevOps.Util
         public static BuildKey GetBuildKey(BuildResultInfo buildInfo) =>
             new BuildKey(buildInfo.Organization, buildInfo.Project, buildInfo.Number);
 
-        public static DefinitionInfo GetBuildDefinitionInfo(Build build)
+        public static DefinitionInfo GetDefinitionInfo(Build build)
         {
             var organization = GetOrganization(build);
             return new DefinitionInfo(
@@ -36,17 +36,27 @@ namespace DevOps.Util
 
         public static BuildResultInfo GetBuildResultInfo(Build build)
         {
-            var buildInfo = GetBuildInfo(build);
+            var buildAndDefinitionInfo = GetBuildAndDefinitionInfo(build);
             var startTime = build.GetStartTime()?.UtcDateTime;
             var finishTime = build.GetFinishTime()?.UtcDateTime;
             var gitHubBuildInfo = GetGitHubBuildInfo(build);
-            return new BuildResultInfo(buildInfo, startTime, finishTime, build.Result);
+            return new BuildResultInfo(buildAndDefinitionInfo, startTime, finishTime, build.Result);
         }
 
         public static BuildInfo GetBuildInfo(Build build)
         {
             var buildKey = GetBuildKey(build);
             return new BuildInfo(
+                buildKey.Organization,
+                buildKey.Project,
+                buildKey.Number,
+                GetGitHubBuildInfo(build));
+        }
+
+        public static BuildAndDefinitionInfo GetBuildAndDefinitionInfo(Build build)
+        {
+            var buildKey = GetBuildKey(build);
+            return new BuildAndDefinitionInfo(
                 buildKey.Organization,
                 buildKey.Project,
                 buildKey.Number,
@@ -69,11 +79,11 @@ namespace DevOps.Util
             return false;
         }
 
-        public static string GetBuildDefinitionUri(string organization, string project, int definitionId) =>
+        public static string GetDefinitionUri(string organization, string project, int definitionId) =>
              $"https://{organization}.visualstudio.com/{project}/_build?definitionId={definitionId}";
 
-        public static string GetBuildDefinitionUri(Build build) =>
-            GetBuildDefinitionUri(
+        public static string GetDefinitionUri(Build build) =>
+            GetDefinitionUri(
                 GetOrganization(build),
                 build.Project.Name,
                 build.Definition.Id);

@@ -520,7 +520,7 @@ namespace Runfo
         {
             foreach (var (name, project, definitionId) in DotNetUtil.BuildDefinitions)
             {
-                var uri = DevOpsUtil.GetBuildDefinitionUri(Server.Organization, project, definitionId);
+                var uri = DevOpsUtil.GetDefinitionUri(Server.Organization, project, definitionId);
                 Console.WriteLine($"{name,-20}{uri}");
             }
         }

@@ -18,13 +18,23 @@ namespace DevOps.Util.Triage
 
         public static BuildInfo GetBuildInfo(this ModelBuild modelBuild) =>
             new BuildInfo(
+                modelBuild.ModelBuildDefinition.AzureOrganization,
+                modelBuild.ModelBuildDefinition.AzureProject,
                 modelBuild.BuildNumber,
-                GetBuildDefinitionInfo(modelBuild.ModelBuildDefinition),
+                GetGitHubBuildInfo(modelBuild));
+
+        public static BuildAndDefinitionInfo GetBuildAndDefinitionInfo(this ModelBuild modelBuild) =>
+            new BuildAndDefinitionInfo(
+                modelBuild.ModelBuildDefinition.AzureOrganization,
+                modelBuild.ModelBuildDefinition.AzureProject,
+                modelBuild.BuildNumber,
+                modelBuild.ModelBuildDefinition.DefinitionId,
+                modelBuild.ModelBuildDefinition.DefinitionName,
                 GetGitHubBuildInfo(modelBuild));
 
         public static BuildResultInfo GetBuildResultInfo(this ModelBuild modelBuild) =>
             new BuildResultInfo(
-                GetBuildInfo(modelBuild),
+                GetBuildAndDefinitionInfo(modelBuild),
                 modelBuild.StartTime,
                 modelBuild.FinishTime,
                 modelBuild.BuildResult ?? BuildResult.None);
@@ -55,14 +65,14 @@ namespace DevOps.Util.Triage
 
         #region ModelBuildDefinition
 
-        public static DefinitionKey GetBuildDefinitionKey(this ModelBuildDefinition modelBuildDefinition) =>
+        public static DefinitionKey GetDefinitionKey(this ModelBuildDefinition modelBuildDefinition) =>
             new DefinitionKey(
                 modelBuildDefinition.AzureOrganization,
                 modelBuildDefinition.AzureProject,
                 modelBuildDefinition.DefinitionId);
 
-        public static DefinitionInfo GetBuildDefinitionInfo(this ModelBuildDefinition modelBuildDefinition) =>
-            new DefinitionInfo(GetBuildDefinitionKey(modelBuildDefinition), modelBuildDefinition.DefinitionName);
+        public static DefinitionInfo GetDefinitionInfo(this ModelBuildDefinition modelBuildDefinition) =>
+            new DefinitionInfo(GetDefinitionKey(modelBuildDefinition), modelBuildDefinition.DefinitionName);
 
         #endregion
 
