@@ -1,4 +1,5 @@
-﻿using DevOps.Util;
+﻿using Azure.Storage.Queues;
+using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.Triage;
 using Microsoft.EntityFrameworkCore;
@@ -116,21 +117,10 @@ namespace Scratch
         internal static ILogger CreateLogger() => LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Scratch");
 
 
-        public class BuildInfoMessage
-        {
-            public string? ProjectId { get; set; }
-            public string? ProjectName { get; set; }
-            public int BuildNumber { get; set; }
-        }
 
         internal async Task Scratch()
         {
-            var text = @"{""ProjectId"":""9ee6d478-d288-47f7-aacc-f6e6d082ae6d"",""ProjectName"":null,""BuildNumber"":819311}";
-            var buildInfoMessage = JsonConvert.DeserializeObject<BuildInfoMessage>(text);
-            var build = await DevOpsServer.GetBuildAsync(buildInfoMessage.ProjectId!, buildInfoMessage.BuildNumber);
-            var queryUtil = new DotNetQueryUtil(DevOpsServer);
-            var modelDataUtil = new ModelDataUtil(queryUtil, TriageContextUtil, CreateLogger());
-            await modelDataUtil.EnsureModelInfoAsync(build);
+            await ReprocessPoison("build-complete");
         }
 
         internal async Task PopulateDb()
@@ -184,6 +174,41 @@ namespace Scratch
             }
     
             */
+        }
+
+        internal async Task ReprocessPoison(string queueName)
+        {
+            var connectionString = CreateConfiguration()["AzureWebJobsStorage"];
+            var client = new QueueClient(connectionString, queueName);
+            var poisonClient = new QueueClient(connectionString, $"{queueName}-poison");
+            do
+            {
+                try
+                {
+                    var cts = new CancellationTokenSource();
+                    var messageTask = poisonClient.ReceiveMessagesAsync(cts.Token);
+                    var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+                    if (timeoutTask == await Task.WhenAny(messageTask, timeoutTask))
+                    {
+                        break;
+                    }
+
+                    var response = await messageTask;
+                    foreach (var message in response.Value)
+                    {
+                        Console.WriteLine($"Processing {message.MessageText}");
+                        await client.SendMessageAsync(message.MessageText);
+                        await poisonClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error: {ex.Message}");
+                }
+            }
+            while (true) ;
+
+
         }
 
         internal async Task QueryProfile()
