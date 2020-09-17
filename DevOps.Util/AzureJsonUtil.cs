@@ -14,15 +14,15 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util
 {
-    internal static class AzureJsonUtil
+    public static class AzureJsonUtil
     {
-        internal static T[] GetArray<T>(string json)
+        public static T[] GetArray<T>(string json)
         {
             var root = JObject.Parse(json);
             var array = (JArray)root["value"];
             return array.ToObject<T[]>();
         }
 
-        internal static T GetObject<T>(string json) => JsonConvert.DeserializeObject<T>(json);
+        public static T GetObject<T>(string json) => JsonConvert.DeserializeObject<T>(json);
     }
 }

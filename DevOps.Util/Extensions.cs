@@ -101,6 +101,8 @@ namespace DevOps.Util
 
         public static DateTimeOffset? GetFinishTime(this Build build) => DevOpsUtil.ConvertFromRestTime(build.FinishTime);
 
+        public static string? GetTargetBranch(this Build build) => DevOpsUtil.GetTargetBranch(build);
+
         #endregion
 
         #region BuildInfo

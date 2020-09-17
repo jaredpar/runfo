@@ -116,9 +116,32 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await QueryProfile();
-            // await ExhaustTimelineAsync();
-            // await PopulateDb();
+            var ids = new int[]
+            {
+                818538, // IndividualCI
+                818474, // PullRequest
+                818436, // PullRequest
+                818471, // PullRequest
+                818398, // IndividualCI
+                818403, // IndividualCI
+            };
+
+            int count = 0;
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync("public"))
+            {
+                var targetBranch = DevOpsUtil.GetTargetBranch(build);
+                if (targetBranch is null)
+                {
+                    Console.WriteLine($"Can't get target branch for {build.Id}");
+                }
+
+                count++;
+                if (count == 300)
+                {
+                    break;
+                }
+
+            }
         }
 
         internal async Task PopulateDb()
