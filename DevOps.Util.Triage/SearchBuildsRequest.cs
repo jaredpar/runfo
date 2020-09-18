@@ -20,6 +20,7 @@ namespace DevOps.Util.Triage
         public string? Repository { get; set; }
         public DateRequest? Started { get; set; }
         public DateRequest? Finished { get; set; }
+        public DateRequest? Queued { get; set; }
         public StringRequest? TargetBranch { get; set; }
 
         public bool HasDefinition => !string.IsNullOrEmpty(Definition);
@@ -95,6 +96,16 @@ namespace DevOps.Util.Triage
             if (gitHubRepository is object)
             {
                 query = query.Where(convertPredicateFunc(x => x.GitHubRepository == gitHubRepository));
+            }
+
+            if (Queued is { } queued)
+            {
+                query = queued.Kind switch
+                {
+                    DateRequestKind.GreaterThan => query.Where(convertPredicateFunc(x => x.QueueTime >= queued.DateTime)),
+                    DateRequestKind.LessThan => query.Where(convertPredicateFunc(x => x.QueueTime <= queued.DateTime)),
+                    _ => query
+                };
             }
 
             if (Started is { } started)
@@ -176,12 +187,17 @@ namespace DevOps.Util.Triage
 
             if (Started is { } startTime)
             {
-                Append($"started:{startTime.GetQueryValue()}");
+                Append($"started:{startTime.GetQueryValue(DateRequestKind.GreaterThan)}");
             }
 
             if (Finished is { } finishTime)
             {
-                Append($"finished:{finishTime.GetQueryValue()}");
+                Append($"finished:{finishTime.GetQueryValue(DateRequestKind.GreaterThan)}");
+            }
+
+            if (Queued is { } queued)
+            {
+                Append($"queued:{queued.GetQueryValue(DateRequestKind.GreaterThan)}");
             }
 
             if (TargetBranch is { } targetBranch)
@@ -219,6 +235,9 @@ namespace DevOps.Util.Triage
                         break;
                     case "finished":
                         Finished = DateRequest.Parse(tuple.Value.Trim('"'), DateRequestKind.GreaterThan);
+                        break;
+                    case "queued":
+                        Queued = DateRequest.Parse(tuple.Value.Trim('"'), DateRequestKind.GreaterThan);
                         break;
                     case "targetbranch":
                         TargetBranch = StringRequest.Parse(tuple.Value, StringRequestKind.Contains);

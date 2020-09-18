@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 using Octokit;
 using System;
@@ -120,7 +121,55 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await ReprocessPoison("build-complete");
+            // await ReprocessPoison("build-complete");
+
+            var pageSize = 100;
+            var count = 0;
+            var limit = DateTime.UtcNow - TimeSpan.FromDays(28);
+
+            var baseQuery = TriageContextUtil.Context.ModelBuilds
+                .Where(x => x.QueueTime == null && x.StartTime >= limit)
+                .OrderByDescending(x => x.BuildNumber);
+            var total = await baseQuery.CountAsync();
+            Console.WriteLine($"Total {total}");
+
+            do
+            {
+                Console.WriteLine($"Processed {count}, Remaining {total - count}");
+                var query = baseQuery.Take(pageSize);
+                var results = await query.ToListAsync();
+                if (results.Count == 0)
+                {
+                    break;
+                }
+
+                var ids = results.Select(x => x.BuildNumber).ToArray();
+                var builds = await DevOpsServer.ListBuildsAsync("public", buildIds: ids);
+                foreach (var modelBuild in results)
+                {
+                    var build = builds.SingleOrDefault(x => x.Id == modelBuild.BuildNumber);
+                    if (build is null)
+                    {
+                        Console.WriteLine($"Can't get bulid for {modelBuild.BuildNumber}, re-use StartTime");
+                        modelBuild.QueueTime = modelBuild.StartTime;
+                        continue;
+                    }
+
+                    if (build.Status == BuildStatus.InProgress)
+                    {
+                        continue;
+                    }
+
+                    var resultInfo = build.GetBuildResultInfo();
+                    modelBuild.QueueTime = resultInfo.QueueTime;
+                    modelBuild.AzureOrganization = resultInfo.Organization;
+                    modelBuild.AzureProject = resultInfo.Project;
+                    modelBuild.GitHubTargetBranch = resultInfo.GitHubBuildInfo?.TargetBranch;
+                }
+
+                await TriageContextUtil.Context.SaveChangesAsync();
+                count += results.Count;
+            } while (true);
         }
 
         internal async Task PopulateDb()

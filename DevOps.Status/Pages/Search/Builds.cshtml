@@ -15,9 +15,6 @@
 
 @if (Model.Builds.Count > 0)
 {
-    <p>Pass Rate: @Model.PassRate</p>
-    <p>Build Count: @Model.Builds.Count</p>
-
     <h3>Results</h3>
     <table class="table table-bordered">
         <thead>
@@ -102,4 +99,8 @@
             }
       </ul>
     </nav>
+
+    <div>
+        <p>Dates displayed in @Model.DateTimeUtil.TimeZoneInfo.Id</p>
+    </div>
 }

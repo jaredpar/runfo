@@ -26,21 +26,25 @@ namespace DevOps.Util.Triage
             DayQuery = null;
         }
 
-        private DateRequest(DateTimeOffset dateTime, DateRequestKind kind, int dayQuery)
+        public DateRequest(int dayQuery, DateRequestKind kind = DateRequestKind.GreaterThan)
         {
-            DateTime = dateTime;
+            DateTime = System.DateTimeOffset.UtcNow - TimeSpan.FromDays(dayQuery);
             Kind = kind;
             DayQuery = dayQuery;
         }
 
-        public string GetQueryValue()
+        public string GetQueryValue(DateRequestKind? defaultKind = null)
         {
-            var prefix = Kind switch
+            var prefix = "";
+            if (defaultKind != Kind)
             {
-                DateRequestKind.LessThan => '<',
-                DateRequestKind.GreaterThan => '>',
-                _ => throw new InvalidOperationException($"{Kind}")
-            };
+                prefix = Kind switch
+                {
+                    DateRequestKind.LessThan => "<",
+                    DateRequestKind.GreaterThan => ">",
+                    _ => throw new InvalidOperationException($"{Kind}")
+                };
+            }
 
             if (DayQuery is { } days)
             {
@@ -78,7 +82,7 @@ namespace DevOps.Util.Triage
             if (data[0] == '~')
             {
                 var days = int.Parse(data.Substring(1));
-                return new DateRequest(DateTimeOffset.UtcNow - TimeSpan.FromDays(days), kind, days);
+                return new DateRequest(days, kind);
             }
 
             var dt = System.DateTime.ParseExact(data, "yyyy-MM-dd", CultureInfo.InvariantCulture);

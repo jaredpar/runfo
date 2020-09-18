@@ -16,4 +16,5 @@
   <ItemGroup>
     <Folder Include="wwwroot\js\view\" />
   </ItemGroup>
+
 </Project>
