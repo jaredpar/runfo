@@ -96,11 +96,10 @@ namespace DevOps.Status.Pages.View
                     .ModelTestResults
                     .Where(x =>
                         x.ModelBuild.BuildNumber == number &&
-                        x.ModelBuild.ModelBuildDefinition.AzureOrganization == organization &&
-                        x.ModelBuild.ModelBuildDefinition.AzureProject == project)
+                        x.ModelBuild.AzureOrganization == organization &&
+                        x.ModelBuild.AzureProject == project)
                     .Include(x => x.ModelTestRun)
-                    .Include(x => x.ModelBuild)
-                    .ThenInclude(x => x.ModelBuildDefinition);
+                    .Include(x => x.ModelBuild);
                 var modelTestResults = await query.ToListAsync();
                 TestResultsDisplay = new TestResultsDisplay(modelTestResults)
                 {
