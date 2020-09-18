@@ -42,6 +42,22 @@ namespace DevOps.Util.Triage
                 ? (GitHubPullRequestKey?)new GitHubPullRequestKey(build.GitHubOrganization, build.GitHubRepository, build.PullRequestNumber.Value)
                 : null;
 
+        public static ModelBuildKind GetModelBuildKind(bool isMergedPullRequest, int? pullRequestNumber)
+        {
+            if (isMergedPullRequest)
+            {
+                return ModelBuildKind.MergedPullRequest;
+            }
+
+            if (pullRequestNumber.HasValue)
+            {
+                return ModelBuildKind.PullRequest;
+            }
+
+            return ModelBuildKind.Rolling;
+        }
+
+
         public async Task<ModelBuildDefinition> EnsureBuildDefinitionAsync(DefinitionInfo definitionInfo)
         {
             var buildDefinition = Context.ModelBuildDefinitions

@@ -48,20 +48,8 @@ namespace DevOps.Util.Triage
                 modelBuild.GitHubTargetBranch);
 
 
-        public static ModelBuildKind GetModelBuildKind(this ModelBuild modelBuild)
-        {
-            if (modelBuild.IsMergedPullRequest)
-            {
-                return ModelBuildKind.MergedPullRequest;
-            }
-
-            if (modelBuild.PullRequestNumber.HasValue)
-            {
-                return ModelBuildKind.PullRequest;
-            }
-
-            return ModelBuildKind.Rolling;
-        }
+        public static ModelBuildKind GetModelBuildKind(this ModelBuild modelBuild) =>
+            TriageContextUtil.GetModelBuildKind(modelBuild.IsMergedPullRequest, modelBuild.PullRequestNumber);
 
         #endregion
 
