@@ -91,7 +91,7 @@ namespace DevOps.Status.Pages.Search
                         TestResultsDisplay = new TestResultsDisplay(group)
                         {
                             IncludeBuildColumn = true,
-                            IncludeBuildKindColumn = searchBuildsRequest.Kind == ModelBuildKind.All,
+                            IncludeBuildKindColumn = searchBuildsRequest.BuildType is { BuildType: ModelBuildKind.All },
                         }
                     };
 

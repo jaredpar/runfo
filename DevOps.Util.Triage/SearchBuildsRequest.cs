@@ -13,10 +13,8 @@ namespace DevOps.Util.Triage
 {
     public class SearchBuildsRequest : ISearchRequest
     {
-        public const ModelBuildKind DefaultKind = ModelBuildKind.All;
-
         public string? Definition { get; set; }
-        public ModelBuildKind Kind { get; set; } = DefaultKind;
+        public BuildTypeRequest? BuildType { get; set; }
         public string? Repository { get; set; }
         public DateRequest? Started { get; set; }
         public DateRequest? Finished { get; set; }
@@ -138,22 +136,19 @@ namespace DevOps.Util.Triage
                 };
             }
 
-            switch (Kind)
+            if (BuildType is { } buildType)
             {
-                case ModelBuildKind.All:
-                    // Nothing to filter
-                    break;
-                case ModelBuildKind.MergedPullRequest:
-                    query = query.Where(convertPredicateFunc(x => x.IsMergedPullRequest));
-                    break;
-                case ModelBuildKind.PullRequest:
-                    query = query.Where(convertPredicateFunc(x => x.PullRequestNumber.HasValue));
-                    break;
-                case ModelBuildKind.Rolling:
-                    query = query.Where(convertPredicateFunc(x => x.PullRequestNumber == null));
-                    break;
-                default:
-                    throw new InvalidOperationException($"Invalid kind {Kind}");
+                query = (buildType.BuildType, buildType.Kind) switch
+                {
+                    (ModelBuildKind.MergedPullRequest, BuildTypeRequestKind.Equals) => query.Where(convertPredicateFunc(x => x.IsMergedPullRequest)),
+                    (ModelBuildKind.MergedPullRequest, BuildTypeRequestKind.NotEquals) => query.Where(convertPredicateFunc(x => !x.IsMergedPullRequest)),
+                    (ModelBuildKind.PullRequest, BuildTypeRequestKind.Equals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber.HasValue)),
+                    (ModelBuildKind.PullRequest, BuildTypeRequestKind.NotEquals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber == null || x.IsMergedPullRequest)),
+                    (ModelBuildKind.Rolling, BuildTypeRequestKind.Equals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber == null)),
+                    (ModelBuildKind.Rolling, BuildTypeRequestKind.NotEquals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber != null)),
+                    (ModelBuildKind.All, _) => query,
+                    _ => query,
+                };
             }
 
             return query;
@@ -172,17 +167,9 @@ namespace DevOps.Util.Triage
                 Append($"repository:{Repository}");
             }
 
-            if (Kind != DefaultKind)
+            if (BuildType is { } buildType)
             {
-                var kind = Kind switch
-                {
-                    ModelBuildKind.All => "all",
-                    ModelBuildKind.MergedPullRequest => "mpr",
-                    ModelBuildKind.PullRequest => "pr",
-                    ModelBuildKind.Rolling => "rolling",
-                    _ => throw new InvalidOperationException($"Invalid kind {Kind}"),
-                };
-                Append($"kind:{kind}");
+                Append($"kind:{buildType.GetQueryValue(BuildTypeRequestKind.Equals)}");
             }
 
             if (Started is { } startTime)
@@ -243,16 +230,7 @@ namespace DevOps.Util.Triage
                         TargetBranch = StringRequest.Parse(tuple.Value, StringRequestKind.Contains);
                         break;
                     case "kind":
-                        Kind = tuple.Value.ToLower() switch
-                        {
-                            "all" => ModelBuildKind.All,
-                            "rolling" => ModelBuildKind.Rolling,
-                            "pullrequest" => ModelBuildKind.PullRequest,
-                            "pr" => ModelBuildKind.PullRequest,
-                            "mergedpullrequest" => ModelBuildKind.MergedPullRequest,
-                            "mpr" => ModelBuildKind.MergedPullRequest,
-                            _ => throw new Exception($"Invalid build kind {tuple.Value}")
-                        };
+                        BuildType = BuildTypeRequest.Parse(tuple.Value, BuildTypeRequestKind.Equals);
                         break;
                     default:
                         throw new Exception($"Invalid option {tuple.Name}");
