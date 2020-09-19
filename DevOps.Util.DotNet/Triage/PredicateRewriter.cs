@@ -4,7 +4,7 @@ using System.Data;
 using System.Linq.Expressions;
 using System.Text;
 
-namespace DevOps.Util.Triage
+namespace DevOps.Util.DotNet.Triage
 {
     internal sealed class PredicateRewriter : ExpressionVisitor
     {

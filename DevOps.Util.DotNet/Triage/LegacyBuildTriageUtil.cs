@@ -16,7 +16,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Octokit;
 
-namespace DevOps.Util.Triage
+namespace DevOps.Util.DotNet.Triage
 {
     // TODO: this should no longer use the DevOPs API for most ops. Grab everything from the DB. It's all there now. 
     // well except for the build logs

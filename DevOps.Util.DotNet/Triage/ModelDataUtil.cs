@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DevOps.Util.Triage
+namespace DevOps.Util.DotNet.Triage
 {
     /// <summary>
     /// Responsible for ensuring Azure data is uploaded into our DB

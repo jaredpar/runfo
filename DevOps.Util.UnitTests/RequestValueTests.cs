@@ -1,4 +1,4 @@
-﻿using DevOps.Util.Triage;
+﻿using DevOps.Util.DotNet.Triage;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Octokit;
 
-namespace DevOps.Util.Triage
+namespace DevOps.Util.DotNet.Triage
 {
     public sealed class LegacyAutoTriageUtil
     {

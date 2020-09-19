@@ -4,7 +4,7 @@ using DevOps.Util;
 using DevOps.Util.DotNet;
 using Octokit;
 
-namespace DevOps.Util.Triage
+namespace DevOps.Util.DotNet.Triage
 {
     public static class Extensions
     {

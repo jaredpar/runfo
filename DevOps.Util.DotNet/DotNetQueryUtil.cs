@@ -13,7 +13,7 @@ using System.Xml.Schema;
 using Azure.Storage.Blobs;
 using DevOps.Util;
 using DevOps.Util.DotNet;
-using DevOps.Util.Triage;
+using DevOps.Util.DotNet.Triage;
 using Newtonsoft.Json.Serialization;
 using Octokit;
 using YamlDotNet.Core;

@@ -1,5 +1,5 @@
 ﻿using DevOps.Util;
-using DevOps.Util.Triage;
+using DevOps.Util.DotNet.Triage;
 using Octokit;
 using System;
 using System.Collections.Generic;

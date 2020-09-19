@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace DevOps.Util.Triage.Migrations
+namespace DevOps.Util.DotNet.Triage.Migrations
 {
     public partial class GeneralizeTriage : Migration
     {

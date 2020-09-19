@@ -7,7 +7,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using DevOps.Util.DotNet;
 using Microsoft.EntityFrameworkCore;
 
-namespace DevOps.Util.Triage
+namespace DevOps.Util.DotNet.Triage
 {
     public class TriageContext : DbContext
     {
