@@ -50,7 +50,8 @@ namespace DevOps.Status.Pages.View
             {
                 Query = new SearchBuildsRequest()
                 {
-                    Started = new DateRequestValue(dayQuery: 5)
+                    Started = new DateRequestValue(dayQuery: 5),
+                    BuildType = new BuildTypeRequestValue(ModelBuildKind.PullRequest, EqualsKind.NotEquals, "pr"),
                 }.GetQueryString();
             }
 

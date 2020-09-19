@@ -8,7 +8,7 @@ namespace DevOps.Util.DotNet
     {
         public const string ConfigurationSqlConnectionString = "RUNFO_CONNECTION_STRING";
 #if DEBUG
-        //public const string ConfigurationSqlConnectionString = "RUNFO_CONNECTION_STRING_DEV";
+        // public const string ConfigurationSqlConnectionString = "RUNFO_CONNECTION_STRING_DEV";
 #endif
         public const string ConfigurationGitHubAppId = "GitHubAppId";
         public const string ConfigurationGitHubAppPrivateKey = "GitHubAppPrivateKey";

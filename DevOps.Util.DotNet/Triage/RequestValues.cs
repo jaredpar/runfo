@@ -111,7 +111,7 @@ namespace DevOps.Util.DotNet.Triage
     {
         public DateTimeOffset DateTime { get; }
         public RelationalKind Kind { get; }
-        private int? DayQuery { get; }
+        public int? DayQuery { get; }
 
         public DateRequestValue(DateTimeOffset dateTime, RelationalKind kind)
         {
@@ -129,7 +129,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public string GetQueryValue(RelationalKind? defaultKind = null)
         {
-            var prefix = Kind == default ? (char?)null : RequestValueUtil.GetPrefix(Kind);
+            var prefix = Kind == defaultKind ? (char?)null : RequestValueUtil.GetPrefix(Kind);
             if (DayQuery is { } days)
             {
                 return $"{prefix}~{days}";
@@ -154,7 +154,7 @@ namespace DevOps.Util.DotNet.Triage
                 return new DateRequestValue(days, kind);
             }
 
-            var dt = System.DateTime.ParseExact(data, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var dt = System.DateTime.ParseExact(data, "yyyy-M-d", CultureInfo.InvariantCulture);
             dt = System.DateTime.SpecifyKind(dt, DateTimeKind.Local);
             return new DateRequestValue(new DateTimeOffset(dt.ToUniversalTime()), kind);
         }
