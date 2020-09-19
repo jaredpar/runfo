@@ -59,7 +59,7 @@ namespace DevOps.Status.Pages.Search
                 Query = new SearchBuildsRequest()
                 {
                     Definition = "roslyn-ci",
-                    Started = new DateRequest(dayQuery: 5),
+                    Started = new DateRequestValue(dayQuery: 5),
                 }.GetQueryString();
                 return;
             }

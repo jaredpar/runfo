@@ -50,7 +50,7 @@ namespace DevOps.Status.Pages.View
             {
                 Query = new SearchBuildsRequest()
                 {
-                    Started = new DateRequest(dayQuery: 5)
+                    Started = new DateRequestValue(dayQuery: 5)
                 }.GetQueryString();
             }
 

@@ -14,12 +14,12 @@ namespace DevOps.Util.Triage
     public class SearchBuildsRequest : ISearchRequest
     {
         public string? Definition { get; set; }
-        public BuildTypeRequest? BuildType { get; set; }
+        public BuildTypeRequestValue? BuildType { get; set; }
         public string? Repository { get; set; }
-        public DateRequest? Started { get; set; }
-        public DateRequest? Finished { get; set; }
-        public DateRequest? Queued { get; set; }
-        public StringRequest? TargetBranch { get; set; }
+        public DateRequestValue? Started { get; set; }
+        public DateRequestValue? Finished { get; set; }
+        public DateRequestValue? Queued { get; set; }
+        public StringRequestValue? TargetBranch { get; set; }
 
         public bool HasDefinition => !string.IsNullOrEmpty(Definition);
 
@@ -100,8 +100,8 @@ namespace DevOps.Util.Triage
             {
                 query = queued.Kind switch
                 {
-                    DateRequestKind.GreaterThan => query.Where(convertPredicateFunc(x => x.QueueTime >= queued.DateTime)),
-                    DateRequestKind.LessThan => query.Where(convertPredicateFunc(x => x.QueueTime <= queued.DateTime)),
+                    RelationalKind.GreaterThan => query.Where(convertPredicateFunc(x => x.QueueTime >= queued.DateTime)),
+                    RelationalKind.LessThan => query.Where(convertPredicateFunc(x => x.QueueTime <= queued.DateTime)),
                     _ => query
                 };
             }
@@ -110,8 +110,8 @@ namespace DevOps.Util.Triage
             {
                 query = started.Kind switch
                 {
-                    DateRequestKind.GreaterThan => query.Where(convertPredicateFunc(x => x.StartTime >= started.DateTime)),
-                    DateRequestKind.LessThan => query.Where(convertPredicateFunc(x => x.StartTime <= started.DateTime)),
+                    RelationalKind.GreaterThan => query.Where(convertPredicateFunc(x => x.StartTime >= started.DateTime)),
+                    RelationalKind.LessThan => query.Where(convertPredicateFunc(x => x.StartTime <= started.DateTime)),
                     _ => query
                 };
             }
@@ -120,8 +120,8 @@ namespace DevOps.Util.Triage
             {
                 query = finished.Kind switch
                 {
-                    DateRequestKind.GreaterThan => query.Where(convertPredicateFunc(x => x.FinishTime >= finished.DateTime)),
-                    DateRequestKind.LessThan => query.Where(convertPredicateFunc(x => x.FinishTime <= finished.DateTime)),
+                    RelationalKind.GreaterThan => query.Where(convertPredicateFunc(x => x.FinishTime >= finished.DateTime)),
+                    RelationalKind.LessThan => query.Where(convertPredicateFunc(x => x.FinishTime <= finished.DateTime)),
                     _ => query
                 };
             }
@@ -130,8 +130,9 @@ namespace DevOps.Util.Triage
             {
                 query = targetBranch.Kind switch
                 {
-                    StringRequestKind.Contains => query.Where(convertPredicateFunc(x => x.GitHubTargetBranch.Contains(targetBranch.Text))),
-                    StringRequestKind.Equals => query.Where(convertPredicateFunc(x => x.GitHubTargetBranch == targetBranch.Text)),
+                    StringRelationalKind.Contains => query.Where(convertPredicateFunc(x => x.GitHubTargetBranch.Contains(targetBranch.Text))),
+                    StringRelationalKind.Equals => query.Where(convertPredicateFunc(x => x.GitHubTargetBranch == targetBranch.Text)),
+                    StringRelationalKind.NotEquals => query.Where(convertPredicateFunc(x => x.GitHubTargetBranch != targetBranch.Text)),
                     _ => query,
                 };
             }
@@ -140,12 +141,12 @@ namespace DevOps.Util.Triage
             {
                 query = (buildType.BuildType, buildType.Kind) switch
                 {
-                    (ModelBuildKind.MergedPullRequest, BuildTypeRequestKind.Equals) => query.Where(convertPredicateFunc(x => x.IsMergedPullRequest)),
-                    (ModelBuildKind.MergedPullRequest, BuildTypeRequestKind.NotEquals) => query.Where(convertPredicateFunc(x => !x.IsMergedPullRequest)),
-                    (ModelBuildKind.PullRequest, BuildTypeRequestKind.Equals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber.HasValue)),
-                    (ModelBuildKind.PullRequest, BuildTypeRequestKind.NotEquals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber == null || x.IsMergedPullRequest)),
-                    (ModelBuildKind.Rolling, BuildTypeRequestKind.Equals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber == null)),
-                    (ModelBuildKind.Rolling, BuildTypeRequestKind.NotEquals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber != null)),
+                    (ModelBuildKind.MergedPullRequest, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.IsMergedPullRequest)),
+                    (ModelBuildKind.MergedPullRequest, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => !x.IsMergedPullRequest)),
+                    (ModelBuildKind.PullRequest, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber.HasValue)),
+                    (ModelBuildKind.PullRequest, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber == null || x.IsMergedPullRequest)),
+                    (ModelBuildKind.Rolling, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber == null)),
+                    (ModelBuildKind.Rolling, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber != null)),
                     (ModelBuildKind.All, _) => query,
                     _ => query,
                 };
@@ -169,27 +170,27 @@ namespace DevOps.Util.Triage
 
             if (BuildType is { } buildType)
             {
-                Append($"kind:{buildType.GetQueryValue(BuildTypeRequestKind.Equals)}");
+                Append($"kind:{buildType.GetQueryValue(EqualsKind.Equals)}");
             }
 
             if (Started is { } startTime)
             {
-                Append($"started:{startTime.GetQueryValue(DateRequestKind.GreaterThan)}");
+                Append($"started:{startTime.GetQueryValue(RelationalKind.GreaterThan)}");
             }
 
             if (Finished is { } finishTime)
             {
-                Append($"finished:{finishTime.GetQueryValue(DateRequestKind.GreaterThan)}");
+                Append($"finished:{finishTime.GetQueryValue(RelationalKind.GreaterThan)}");
             }
 
             if (Queued is { } queued)
             {
-                Append($"queued:{queued.GetQueryValue(DateRequestKind.GreaterThan)}");
+                Append($"queued:{queued.GetQueryValue(RelationalKind.GreaterThan)}");
             }
 
             if (TargetBranch is { } targetBranch)
             {
-                Append($"targetBranch:{targetBranch.GetQueryValue()}");
+                Append($"targetBranch:{targetBranch.GetQueryValue(StringRelationalKind.Contains)}");
             }
 
             return builder.ToString();
@@ -218,19 +219,19 @@ namespace DevOps.Util.Triage
                         Repository = tuple.Value;
                         break;
                     case "started":
-                        Started = DateRequest.Parse(tuple.Value.Trim('"'), DateRequestKind.GreaterThan);
+                        Started = DateRequestValue.Parse(tuple.Value.Trim('"'), RelationalKind.GreaterThan);
                         break;
                     case "finished":
-                        Finished = DateRequest.Parse(tuple.Value.Trim('"'), DateRequestKind.GreaterThan);
+                        Finished = DateRequestValue.Parse(tuple.Value.Trim('"'), RelationalKind.GreaterThan);
                         break;
                     case "queued":
-                        Queued = DateRequest.Parse(tuple.Value.Trim('"'), DateRequestKind.GreaterThan);
+                        Queued = DateRequestValue.Parse(tuple.Value.Trim('"'), RelationalKind.GreaterThan);
                         break;
                     case "targetbranch":
-                        TargetBranch = StringRequest.Parse(tuple.Value, StringRequestKind.Contains);
+                        TargetBranch = StringRequestValue.Parse(tuple.Value, StringRelationalKind.Contains);
                         break;
                     case "kind":
-                        BuildType = BuildTypeRequest.Parse(tuple.Value, BuildTypeRequestKind.Equals);
+                        BuildType = BuildTypeRequestValue.Parse(tuple.Value, EqualsKind.Equals);
                         break;
                     default:
                         throw new Exception($"Invalid option {tuple.Name}");
