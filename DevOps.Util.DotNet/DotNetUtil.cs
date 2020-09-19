@@ -1,6 +1,4 @@
 ﻿using DevOps.Util;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 using System;
 using System.Linq;
 using System.Collections.Generic;
