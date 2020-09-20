@@ -20,13 +20,10 @@ namespace DevOps.Util.DotNet.Triage
     public sealed class TrackingIssueUtil
     {
         internal DotNetQueryUtil QueryUtil { get; }
-
         internal TriageContextUtil TriageContextUtil { get; }
-
         private ILogger Logger { get; }
 
         internal TriageContext Context => TriageContextUtil.Context;
-
         internal DevOpsServer Server => QueryUtil.Server;
 
         public TrackingIssueUtil(
@@ -234,6 +231,7 @@ namespace DevOps.Util.DotNet.Triage
             Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Timeline);
             Debug.Assert(modelTrackingIssue.SearchRegexText is object);
 
+            // TODO: stop using a regex here, use an actual timeline search request data
             var textRegex = DotNetQueryUtil.CreateSearchRegex(modelTrackingIssue.SearchRegexText);
             var timelineQuery = Context
                 .ModelTimelineIssues

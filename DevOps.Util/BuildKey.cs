@@ -45,15 +45,11 @@ namespace DevOps.Util
     public readonly struct BuildAttemptKey : IEquatable<BuildAttemptKey>
     {
         public BuildKey BuildKey { get; }
-
         public int Attempt { get; }
 
         public string Organization => BuildKey.Organization;
-
         public string Project => BuildKey.Project;
-
         public int Number => BuildKey.Number;
-
         public string BuildUri => BuildKey.BuildUri;
 
         public BuildAttemptKey(string organization, string project, int number, int attempt)

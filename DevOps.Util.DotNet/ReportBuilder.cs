@@ -98,7 +98,7 @@ namespace DevOps.Util.DotNet
             }
         }
 
-
+        // TODO: remove definition or structure it so that it's an optional parameter here
         public string BuildSearchTimeline(
             IEnumerable<(BuildAndDefinitionInfo BuildAndDefinitionInfo, string? JobName)> results,
             bool markdown,

@@ -3,6 +3,7 @@ using DevOps.Util;
 using DevOps.Util.DotNet;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Octokit;
 using System;
 using System.Collections.Generic;
@@ -13,10 +14,12 @@ namespace DevOps.Status.Util
 {
     public sealed class DotNetQueryUtilFactory
     {
+        public IConfiguration Configuration { get; }
         public IHttpContextAccessor HttpContextAccessor { get; }
 
-        public DotNetQueryUtilFactory(IHttpContextAccessor httpContextAccessor)
+        public DotNetQueryUtilFactory(IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
         {
+            Configuration = configuration;
             HttpContextAccessor = httpContextAccessor;
         }
 
@@ -27,9 +30,26 @@ namespace DevOps.Status.Util
             return new DevOpsServer(DotNetUtil.AzureOrganization, token);
         }
 
+        public DevOpsServer CreateDevOpsServerForApp()
+        {
+            var azdoToken = Configuration[DotNetConstants.ConfigurationAppAzureToken];
+            var token = new AuthorizationToken(AuthorizationKind.PersonalAccessToken, azdoToken);
+            return new DevOpsServer(DotNetUtil.AzureOrganization, token);
+        }
+
         public async Task<DotNetQueryUtil> CreateDotNetQueryUtilForUserAsync()
         {
             var server = await CreateDevOpsServerForUserAsync();
+
+            // https://github.com/jaredpar/devops-util/issues/19
+            // Consider using a cache here
+            var azureUtil = new AzureUtil(server);
+            return new DotNetQueryUtil(server, azureUtil);
+        }
+
+        public DotNetQueryUtil CreateDotNetQueryUtilForApp()
+        {
+            var server = CreateDevOpsServerForApp();
 
             // https://github.com/jaredpar/devops-util/issues/19
             // Consider using a cache here

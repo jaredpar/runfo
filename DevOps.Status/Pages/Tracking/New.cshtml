@@ -5,24 +5,43 @@
 }
 
 <form method="post">
-    <div class="form-group">
-        <label for="searchKind">Search Kind</label>
-        <select id="searchKind" class="form-control" asp-for="TrackingKind" asp-items="Html.GetEnumSelectList<DevOps.Util.DotNet.Triage.TrackingKind>()">
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label">Definition</label>
+        <input class="col-sm-10 form-control" type="text" asp-for="Definition" />
+    </div>
+
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label"for="searchKind">Search Text</label>
+        <input class="col-sm-10 form-control" type="text" asp-for="SearchText" />
+    </div>
+
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label"for="searchKind">Search Kind</label>
+        <select class="col-sm-10 form-control" asp-for="TrackingKind" asp-items="Html.GetEnumSelectList<DevOps.Util.DotNet.Triage.TrackingKind>()">
             <option value="">Select a kind</option>
         </select>
     </div>
 
-    <div class="form-group">
-        <label for="text">Text</label>
-        <input id="text" class="form-control" asp-for="Text">
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label"for="searchKind">GitHub Organization</label>
+        <input class="col-sm-10 form-control" type="text" asp-for="GitHubOrganization" />
     </div>
 
-    <div class="form-group">
-        <label for="text">Definition</label>
-        <input id="text" class="form-control" asp-for="Definition">
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label"for="searchKind">GitHub Repository</label>
+        <input class="col-sm-10 form-control" type="text" asp-for="GitHubRepository" />
     </div>
 
-    <button type="submit" class="btn btn-primary">Create</button>
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label">Preview Build Query</label>
+        <input class="col-sm-10 form-control" type="text" asp-for="ReportBuildsQuery" />
+    </div>
+
+    <div class="form-group d-flex flex-row-reverse">
+        <button type="submit" class="btn btn-primary mr-2" name="command" value="create">Create</button>
+        <button type="submit" class="btn btn-primary mr-2" name="command" value="preview">Preview</button>
+    </div>
+
 </form>
 
 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
@@ -31,4 +50,33 @@
       @Model.ErrorMessage
     </div>
 }
+
+<h3>Preview Issue Markdown</h3>
+<div>
+     <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link" id="preview-tab" data-toggle="tab" href="#preview" role="tab">Preview</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" id="markdown-tab" data-toggle="tab" href="#markdown" role="tab">Markdown</a>
+        </li>
+    </ul>
+    <div class="tab-content" id="myTabContent">
+        <div class="tab-pane fade show active" id="preview" role="tabpanel">
+            @if (Model.ReportPreviewAvailable)
+            {
+                @Westwind.AspNetCore.Markdown.Markdown.ParseHtmlString(Model.ReportText)
+            }
+            else
+            {
+                <p>Preview Unavailable</p>
+            }
+        </div>
+      <div class="tab-pane fade" id="markdown" role="tabpanel">
+          <div class="row">
+            <textarea class="col-sm" rows="20" readonly>@Model.ReportText</textarea>
+          </div>
+      </div>
+    </div>
+</div>
 

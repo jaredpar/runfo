@@ -464,8 +464,22 @@ namespace DevOps.Util.DotNet.Triage
         [Column(TypeName = "nvarchar(30)")]
         public TrackingKind TrackingKind { get; set; }
 
+        /// <summary>
+        /// This is a terrible property name, it's not a regex. Need to rename this to 
+        /// <see cref="SearchQuery"/>
+        /// </summary>
         [Required]
+        [Obsolete("Use SearchQuery instead")]
         public string SearchRegexText { get; set; }
+
+#pragma warning disable 618
+        [NotMapped]
+        public string SearchQuery
+        {
+            get => SearchRegexText;
+            set => SearchRegexText = value; 
+        }
+#pragma warning restore 618
 
         public bool IsActive { get; set; }
 
