@@ -39,9 +39,11 @@ namespace DevOps.Status.Pages.Tracking
 
         public TriageContext Context { get; }
         public DotNetQueryUtilFactory QueryUtilFactory { get; }
-        public string? SearchText { get; set; }
+        public string? IssueTitle { get; set; }
+        public string? SearchQuery { get; set; }
         public string? TrackingKind { get; set; }
         public string? Definition { get; set; }
+        public string? GitHubIssueUri { get; set; }
         public List<Result> Results { get; set; } = new List<Result>();
         [BindProperty]
         public int PopulateCount { get; set; }
@@ -62,8 +64,10 @@ namespace DevOps.Status.Pages.Tracking
                 .Include(x => x.ModelBuildDefinition)
                 .SingleAsync();
             ModelTrackingIssueId = id;
-            SearchText = issue.SearchRegexText;
+            IssueTitle = issue.IssueTitle;
+            SearchQuery = issue.SearchQuery;
             TrackingKind = issue.TrackingKind.ToString();
+            GitHubIssueUri = issue.GetGitHubIssueKey()?.IssueUri;
             IsActive = issue.IsActive;
             Definition = issue.ModelBuildDefinition?.DefinitionName;
 

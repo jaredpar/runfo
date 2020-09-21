@@ -8,20 +8,33 @@
 
 <h3>Tracking Issue</h3>
 <form method="post">
-    <div class="form-group">
-        <label for="searchKind">Search Text</label>
-        <input class="form-control" placeholder="@Model.SearchText" readonly />
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label">Title</label>
+        <input class="col-sm-10 form-control" placeholder="@Model.IssueTitle" readonly />
     </div>
 
-    <div class="form-group">
-        <label for="searchKind">Tracking Kind</label>
-        <input class="form-control" placeholder="@Model.TrackingKind" readonly />
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label">Query</label>
+        <input class="col-sm-10 form-control" placeholder="@Model.Definition" readonly />
     </div>
 
-    <div class="form-group">
-        <label for="searchKind">Build Definition Name</label>
-        <input class="form-control" placeholder="@Model.Definition" readonly />
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label">Query</label>
+        <input class="col-sm-10 form-control" placeholder="@Model.SearchQuery" readonly />
     </div>
+
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label">TrackingKind</label>
+        <input class="col-sm-10 form-control" placeholder="@Model.TrackingKind" readonly />
+    </div>
+
+    @if (!string.IsNullOrEmpty(@Model.GitHubIssueUri))
+    {
+        <div class="form-group row">
+            <label class="col-sm-2 col-form-label">GitHub Issue</label>
+            <a href="@Model.GitHubIssueUri">@Model.GitHubIssueUri</a>
+        </div>
+    }
 
     <!--<button type="submit" class="btn btn-primary">Create</button> -->
 </form>

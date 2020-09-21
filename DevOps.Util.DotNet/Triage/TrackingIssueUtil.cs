@@ -197,6 +197,7 @@ namespace DevOps.Util.DotNet.Triage
             Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Test);
             Debug.Assert(modelTrackingIssue.SearchRegexText is object);
 
+            // TODO: stop using a regex here, use an actual test search regex
             var nameRegex = DotNetQueryUtil.CreateSearchRegex(modelTrackingIssue.SearchRegexText);
             var testQuery = Context
                 .ModelTestResults

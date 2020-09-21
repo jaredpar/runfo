@@ -26,6 +26,8 @@ namespace DevOps.Status.Pages.Tracking
         public ILogger Logger { get; }
 
         [BindProperty(SupportsGet = true)]
+        public string? IssueTitle { get; set; }
+        [BindProperty(SupportsGet = true)]
         public TrackingKind TrackingKind { get; set; }
         [BindProperty(SupportsGet = true)]
         public string? SearchText { get; set; }
@@ -35,10 +37,6 @@ namespace DevOps.Status.Pages.Tracking
         public string? GitHubOrganization { get; set; }
         [BindProperty(SupportsGet = true)]
         public string? GitHubRepository { get; set; }
-        [BindProperty(SupportsGet = true)]
-        public string? ReportBuildsQuery { get; set; }
-        public string? ReportText { get; set; }
-        public bool ReportPreviewAvailable { get; set; }
 
         public string? ErrorMessage { get; set; }
 
@@ -51,50 +49,40 @@ namespace DevOps.Status.Pages.Tracking
             Logger = logger;
         }
 
-        public async Task<IActionResult> OnGet()
+        public void OnGet()
         {
-            var generateReport = true;
-
             if (string.IsNullOrEmpty(Definition))
             {
                 Definition = "roslyn-ci";
-                generateReport = false;
             }
 
             if (TrackingKind == TrackingKind.Unknown)
             {
                 TrackingKind = TrackingKind.Timeline;
-                generateReport = false;
+            }
+
+            if (string.IsNullOrEmpty(IssueTitle))
+            {
+                IssueTitle = $"Tracking issue in {Definition}";
             }
 
             if (string.IsNullOrEmpty(SearchText))
             {
                 SearchText = "Error";
-                generateReport = false;
             }
-
-            if (string.IsNullOrEmpty(ReportBuildsQuery))
-            {
-                ReportBuildsQuery = new SearchBuildsRequest()
-                {
-                    Started = new DateRequestValue(dayQuery: 5),
-                }.GetQueryString();
-            }
-
-            if (generateReport)
-            {
-                await PreviewResultsAsync();
-            }
-
-            return Page();
         }
 
-        public async Task<IActionResult> OnPost(string command)
+        public async Task<IActionResult> OnPost()
         {
-            var isCreate = command != "preview";
             if (TrackingKind == TrackingKind.Unknown)
             {
                 ErrorMessage = "Invalid Tracking Kind";
+                return Page();
+            }
+
+            if (string.IsNullOrEmpty(IssueTitle))
+            {
+                ErrorMessage = "Need an issue title";
                 return Page();
             }
 
@@ -115,51 +103,48 @@ namespace DevOps.Status.Pages.Tracking
                 }
             }
 
-            if (isCreate && (string.IsNullOrEmpty(GitHubRepository) || string.IsNullOrEmpty(GitHubOrganization)))
+            if (string.IsNullOrEmpty(GitHubRepository) || string.IsNullOrEmpty(GitHubOrganization))
             {
                 ErrorMessage = "Must provide GitHub organization and repository";
                 return Page();
             }
 
-            if (isCreate)
+            IGitHubClient? gitHubClient = null;
+            try
             {
-                /*
-                IGitHubClient? gitHubClient = null;
-                try
-                {
-                    gitHubClient = await GitHubClientFactory.CreateForAppAsync(GitHubOrganization, GitHubRepository);
-                }
-                catch (Exception ex)
-                {
-                    ErrorMessage = $"Cannot create GitHub client for that repository: {ex.Message}";
-                    return Page();
-                }
-                */
-
-                var modelTrackingIssue = await CreateTrackingIssue(null);
-                return RedirectToPage(
-                    "./Issue",
-                    new { id = modelTrackingIssue.Id });
+                gitHubClient = await GitHubClientFactory.CreateForAppAsync(GitHubOrganization, GitHubRepository);
             }
-            else
+            catch (Exception ex)
             {
-                await PreviewResultsAsync();
+                ErrorMessage = $"Cannot create GitHub client for that repository: {ex.Message}";
                 return Page();
             }
 
+            var modelTrackingIssue = await CreateTrackingIssue(gitHubClient);
+            return RedirectToPage(
+                "./Issue",
+                new { id = modelTrackingIssue.Id });
+
             async Task<ModelTrackingIssue> CreateTrackingIssue(IGitHubClient gitHubClient)
             {
+                var issueKey = await CreateGitHubIssueAsync(gitHubClient);
+
                 var modelTrackingIssue = new ModelTrackingIssue()
                 {
                     IsActive = true,
+                    IssueTitle = IssueTitle,
                     TrackingKind = TrackingKind,
                     SearchQuery = SearchText,
                     ModelBuildDefinition = modelBuildDefinition,
+                    GitHubOrganization = issueKey.Organization,
+                    GitHubRepository = issueKey.Repository,
+                    GitHubIssueNumber = issueKey.Number,
                 };
+
                 TriageContext.ModelTrackingIssues.Add(modelTrackingIssue);
                 await TriageContext.SaveChangesAsync();
-
                 await InitialTriageAsync(modelTrackingIssue);
+                await UpdateGitHubIssueAsync(gitHubClient, modelTrackingIssue, issueKey);
 
                 return modelTrackingIssue;
             }
@@ -184,7 +169,7 @@ namespace DevOps.Status.Pages.Tracking
                         .Include(x => x.ModelBuild)
                         .ThenInclude(x => x.ModelBuildDefinition)
                         .ToListAsync();
-                    var queryUtil = QueryUtilFactory.CreateDotNetQueryUtilForApp();
+                    var queryUtil = QueryUtilFactory.CreateDotNetQueryUtilForAnonymous();
                     foreach (var attempt in attempts)
                     {
                         var util = new TrackingIssueUtil(queryUtil, TriageContextUtil, Logger);
@@ -201,51 +186,29 @@ namespace DevOps.Status.Pages.Tracking
                     Logger.LogError($"Error triaging new issues {ex.Message}");
                 }
             }
-        }
 
-        private async Task PreviewResultsAsync()
-        {
-            Debug.Assert(ReportBuildsQuery is object);
-            ReportText = await GetReportText();
-            ReportPreviewAvailable = true;
-        }
-
-        private async Task<string> GetReportText()
-        {
-            Debug.Assert(ReportBuildsQuery is object);
-            var searchBuildsRequests = new SearchBuildsRequest();
-            searchBuildsRequests.ParseQueryString(ReportBuildsQuery);
-
-            var reportBuilder = new ReportBuilder();
-
-            switch (TrackingKind)
+            async Task<GitHubIssueKey> CreateGitHubIssueAsync(IGitHubClient gitHubClient)
             {
-                case TrackingKind.Timeline:
-                    return await GetTimelineReportText();
-                default:
-                    return "Preview not supported";
-            }
-
-            async Task<string> GetTimelineReportText()
-            {
-                var searchTimelinesRequest = new SearchTimelinesRequest()
+                var newIssue = new NewIssue("Temporary title")
                 {
-                    Text = SearchText,
+                    Body = "Runfo Creating Tracking Issue"
                 };
 
-                IQueryable<ModelTimelineIssue> query = TriageContext.ModelTimelineIssues;
-                query = searchBuildsRequests.FilterBuilds(query);
-                query = searchTimelinesRequest.FilterTimelines(query);
-                query = query
-                    .Include(x => x.ModelBuild.ModelBuildDefinition)
-                    .OrderByDescending(x => x.ModelBuild.BuildNumber)
-                    .Take(100);
-                var results = await query.ToListAsync();
-                var items = results.Select(x => (x.ModelBuild.GetBuildAndDefinitionInfo(), (string?)x.JobName));
-                return reportBuilder.BuildSearchTimeline(
-                    items,
-                    markdown: true,
-                    includeDefinition: true);
+                var issue = await gitHubClient.Issue.Create(GitHubOrganization, GitHubRepository, newIssue);
+
+                return issue.GetIssueKey();
+            }
+
+            async Task UpdateGitHubIssueAsync(IGitHubClient gitHubClient, ModelTrackingIssue modelTrackingIssue, GitHubIssueKey issueKey)
+            {
+                var util = new TrackingGitHubUtil(GitHubClientFactory.GitHubClientFactory, TriageContext, Logger);
+                var reportText = await util.GetReportAsync(modelTrackingIssue);
+                var issueUpdate = new IssueUpdate()
+                {
+                    Body = reportText,
+                };
+
+                await gitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, issueUpdate);
             }
         }
     }

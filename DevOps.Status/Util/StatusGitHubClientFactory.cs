@@ -17,6 +17,8 @@ namespace DevOps.Status.Util
         private readonly GitHubClientFactory _gitHubClientFactory;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
+        public GitHubClientFactory GitHubClientFactory => _gitHubClientFactory;
+
         public StatusGitHubClientFactory(IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
         {
             _configuration = configuration;

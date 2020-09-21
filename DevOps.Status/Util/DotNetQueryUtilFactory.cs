@@ -37,20 +37,16 @@ namespace DevOps.Status.Util
             return new DevOpsServer(DotNetUtil.AzureOrganization, token);
         }
 
-        public async Task<DotNetQueryUtil> CreateDotNetQueryUtilForUserAsync()
+        public DevOpsServer CreateDevOpsServerForAnonymous() => new DevOpsServer(DotNetUtil.AzureOrganization);
+
+        public async Task<DotNetQueryUtil> CreateDotNetQueryUtilForUserAsync() => CreateForServer(await CreateDevOpsServerForUserAsync());
+
+        public DotNetQueryUtil CreateDotNetQueryUtilForApp() => CreateForServer(CreateDevOpsServerForApp());
+
+        public DotNetQueryUtil CreateDotNetQueryUtilForAnonymous() => CreateForServer(CreateDevOpsServerForAnonymous());
+
+        private DotNetQueryUtil CreateForServer(DevOpsServer server)
         {
-            var server = await CreateDevOpsServerForUserAsync();
-
-            // https://github.com/jaredpar/devops-util/issues/19
-            // Consider using a cache here
-            var azureUtil = new AzureUtil(server);
-            return new DotNetQueryUtil(server, azureUtil);
-        }
-
-        public DotNetQueryUtil CreateDotNetQueryUtilForApp()
-        {
-            var server = CreateDevOpsServerForApp();
-
             // https://github.com/jaredpar/devops-util/issues/19
             // Consider using a cache here
             var azureUtil = new AzureUtil(server);

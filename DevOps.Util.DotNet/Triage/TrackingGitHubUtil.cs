@@ -25,9 +25,7 @@ namespace DevOps.Util.DotNet.Triage
         public const int DefaultReportLimit = 100;
 
         public IGitHubClientFactory GitHubClientFactory { get; }
-
         public TriageContextUtil TriageContextUtil { get; }
-
         public ReportBuilder ReportBuilder { get; } = new ReportBuilder();
 
         private ILogger Logger { get; }

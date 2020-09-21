@@ -481,6 +481,9 @@ namespace DevOps.Util.DotNet.Triage
         }
 #pragma warning restore 618
 
+        [Column(TypeName = "nvarchar(100)")]
+        public string IssueTitle { get; set; }
+
         public bool IsActive { get; set; }
 
         /// <summary>
