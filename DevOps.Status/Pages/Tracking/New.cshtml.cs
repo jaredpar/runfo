@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DevOps.Status.Pages.Tracking
@@ -151,39 +152,20 @@ namespace DevOps.Status.Pages.Tracking
 
             async Task InitialTriageAsync(ModelTrackingIssue modelTrackingIssue)
             {
-                IQueryable<ModelBuildAttempt> buildAttemptQuery = TriageContext.ModelBuildAttempts;
-                int days = 1;
-                if (modelBuildDefinition is object)
-                {
-                    days = 3;
-                    buildAttemptQuery = buildAttemptQuery.Where(x => x.ModelBuild.ModelBuildDefinitionId == modelBuildDefinition.Id);
-                }
-
-                var date = DateTime.UtcNow - TimeSpan.FromDays(days);
-                buildAttemptQuery = buildAttemptQuery.Where(x => x.ModelBuild.StartTime >= date);
-
-                var started = DateTime.UtcNow;
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
                 try
                 {
-                    var attempts = await buildAttemptQuery
-                        .Include(x => x.ModelBuild)
-                        .ThenInclude(x => x.ModelBuildDefinition)
-                        .ToListAsync();
+                    // Picking how many days to triage here. If there is no definition then there will be 
+                    // a _lot_ more builds in the first day alone so just triage that far.
+                    var days = modelBuildDefinition is object ? 3 : 1;
+                    var request = new SearchBuildsRequest() { Queued = new DateRequestValue(days) };
                     var queryUtil = QueryUtilFactory.CreateDotNetQueryUtilForAnonymous();
-                    foreach (var attempt in attempts)
-                    {
-                        var util = new TrackingIssueUtil(queryUtil, TriageContextUtil, Logger);
-                        await util.TriageAsync(attempt, modelTrackingIssue);
-
-                        if (DateTime.UtcNow - started > TimeSpan.FromSeconds(20))
-                        {
-                            break;
-                        }
-                    }
+                    var util = new TrackingIssueUtil(queryUtil, TriageContextUtil, Logger);
+                    await util.TriageBuildsAsync(modelTrackingIssue, request, cts.Token);
                 }
-                catch (Exception ex)
+                catch (OperationCanceledException)
                 {
-                    Logger.LogError($"Error triaging new issues {ex.Message}");
+                    Logger.LogInformation("Couldn't fully triage issue in time alotted");
                 }
             }
 

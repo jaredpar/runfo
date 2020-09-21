@@ -1,7 +1,11 @@
 using System;
+using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
+using Microsoft.EntityFrameworkCore;
 using Octokit;
 
 namespace DevOps.Util.DotNet.Triage
@@ -99,6 +103,32 @@ namespace DevOps.Util.DotNet.Triage
             }
 
             return null;
+        }
+
+        #endregion
+
+        #region TrackingIssueUtil
+
+        public static async Task TriageBuildsAsync(this TrackingIssueUtil trackingIssueUtil, ModelTrackingIssue modelTrackingIssue, SearchBuildsRequest request, CancellationToken cancellationToken = default)
+        {
+            IQueryable<ModelBuildAttempt> buildAttemptQuery = trackingIssueUtil.Context.ModelBuildAttempts;
+            if (modelTrackingIssue.ModelBuildDefinitionId is { } id)
+            {
+                buildAttemptQuery = buildAttemptQuery.Where(x => x.ModelBuild.ModelBuildDefinitionId == id);
+                request.Definition = null;
+            }
+
+            buildAttemptQuery = request.FilterBuilds(buildAttemptQuery);
+
+            var attempts = await buildAttemptQuery
+                .Include(x => x.ModelBuild)
+                .ThenInclude(x => x.ModelBuildDefinition)
+                .ToListAsync();
+            foreach (var attempt in attempts)
+            {
+                await trackingIssueUtil.TriageAsync(attempt, modelTrackingIssue);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
         }
 
         #endregion

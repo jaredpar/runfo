@@ -2,7 +2,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading;
 using System.Threading.Tasks;
 using DevOps.Status.Util;
 using DevOps.Util;
@@ -39,17 +41,18 @@ namespace DevOps.Status.Pages.Tracking
 
         public TriageContext Context { get; }
         public DotNetQueryUtilFactory QueryUtilFactory { get; }
+        [BindProperty]
         public string? IssueTitle { get; set; }
         public string? SearchQuery { get; set; }
         public string? TrackingKind { get; set; }
         public string? Definition { get; set; }
         public string? GitHubIssueUri { get; set; }
+        public string? PopulateBuildsQuery { get; set; }
         public List<Result> Results { get; set; } = new List<Result>();
-        [BindProperty]
-        public int PopulateCount { get; set; }
         public int ModelTrackingIssueId { get; set; }
         public string? ErrorMessage { get; set; }
         public bool IsActive { get; set; }
+        public PaginationDisplay? PaginationDisplay { get; set; }
 
         public TrackingIssueModel(TriageContext context, DotNetQueryUtilFactory queryUtilFactory)
         {
@@ -57,7 +60,7 @@ namespace DevOps.Status.Pages.Tracking
             QueryUtilFactory = queryUtilFactory;
         }
 
-        public async Task OnGetAsync(int id)
+        public async Task OnGetAsync(int id, int pageNumber = 0)
         {
             var issue = await Context.ModelTrackingIssues
                 .Where(x => x.Id == id)
@@ -71,13 +74,27 @@ namespace DevOps.Status.Pages.Tracking
             IsActive = issue.IsActive;
             Definition = issue.ModelBuildDefinition?.DefinitionName;
 
+            const int pageSize = 20;
+            var totalPages = await Context.ModelTrackingIssueMatches
+                .Where(x => x.ModelTrackingIssueId == issue.Id)
+                .CountAsync() / pageSize;
+            PaginationDisplay = new PaginationDisplay(
+                "/Tracking/Issue",
+                new Dictionary<string, string>()
+                {
+                    { nameof(id), id.ToString() }
+                },
+                pageNumber,
+                totalPages);
+
             Results = await Context.ModelTrackingIssueMatches
                 .Where(x => x.ModelTrackingIssueId == issue.Id)
                 .Include(x => x.ModelBuildAttempt)
                 .ThenInclude(x => x.ModelBuild)
                 .ThenInclude(x => x.ModelBuildDefinition)
                 .OrderByDescending(x => x.ModelBuildAttempt.ModelBuild.BuildNumber)
-                .Take(20)
+                .Skip(pageNumber * pageSize)
+                .Take(pageSize)
                 .Select(x => new Result()
                 {
                     BuildNumber = x.ModelBuildAttempt.ModelBuild.BuildNumber,
@@ -90,47 +107,57 @@ namespace DevOps.Status.Pages.Tracking
                         ? $"https://github.com/{x.ModelBuildAttempt.ModelBuild.GitHubOrganization}/{x.ModelBuildAttempt.ModelBuild.GitHubRepository}"
                         : ""
                 })
+                .AsNoTracking()
                 .ToListAsync();
         }
 
-        public async Task<IActionResult> OnPostAsync(int id, bool close)
+        public async Task<IActionResult> OnPostAsync(int id, string formAction)
         {
             var modelTrackingIssue = await Context
                 .ModelTrackingIssues
                 .Where(x => x.Id == id)
                 .SingleAsync()
                 .ConfigureAwait(false);
-            if (close)
+            return formAction switch
+            {
+                "close" => await CloseAsync(),
+                "update" => await UpdateAsync(),
+                "populate" => await PopulateAsync(),
+                _ => throw new Exception($"Invalid action {formAction}"),
+            };
+
+            async Task<IActionResult> CloseAsync()
             {
                 modelTrackingIssue.IsActive = false;
                 await Context.SaveChangesAsync();
                 return RedirectToPage("./Index");
             }
-            else
+
+            async Task<IActionResult> PopulateAsync()
             {
                 try
                 {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
                     var queryUtil = await QueryUtilFactory.CreateDotNetQueryUtilForUserAsync();
                     var triageContextUtil = new TriageContextUtil(Context);
                     var trackingIssueUtil = new TrackingIssueUtil(queryUtil, triageContextUtil, NullLogger.Instance);
-                    var query = modelTrackingIssue.ModelBuildDefinition is object
-                        ? Context.ModelBuildAttempts.Where(x => x.ModelBuild.ModelBuildDefinitionId == modelTrackingIssue.ModelBuildDefinitionId)
-                        : Context.ModelBuildAttempts;
-                    query = query
-                        .OrderByDescending(x => x.ModelBuild.BuildNumber)
-                        .Take(PopulateCount)
-                        .Include(x => x.ModelBuild)
-                        .ThenInclude(x => x.ModelBuildDefinition);
-                    var attempts = await query.ToListAsync();
-                    foreach (var attempt in attempts)
-                    {
-                        await trackingIssueUtil.TriageAsync(attempt, modelTrackingIssue);
-                    }
+                    var request = new SearchBuildsRequest();
+                    request.ParseQueryString(PopulateBuildsQuery ?? "");
+
+                    await trackingIssueUtil.TriageBuildsAsync(modelTrackingIssue, request, cts.Token);
                 }
                 catch (Exception ex)
                 {
                     ErrorMessage = ex.Message;
                 }
+                await OnGetAsync(id);
+                return Page();
+            }
+
+            async Task<IActionResult> UpdateAsync()
+            {
+                modelTrackingIssue.IssueTitle = IssueTitle;
+                await Context.SaveChangesAsync();
                 await OnGetAsync(id);
                 return Page();
             }

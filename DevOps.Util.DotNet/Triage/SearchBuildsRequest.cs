@@ -54,6 +54,11 @@ namespace DevOps.Util.DotNet.Triage
                 query,
                 x => PredicateRewriter.ComposeContainerProperty<ModelTestResult, ModelBuild>(x, nameof(ModelTestResult.ModelBuild)));
 
+        public IQueryable<ModelBuildAttempt> FilterBuilds(IQueryable<ModelBuildAttempt> query) =>
+            FilterBuilds(
+                query,
+                x => PredicateRewriter.ComposeContainerProperty<ModelBuildAttempt, ModelBuild>(x, nameof(ModelBuildAttempt.ModelBuild)));
+
         public IQueryable<ModelBuild> FilterBuilds(IQueryable<ModelBuild> query) =>
             FilterBuilds(query, x => x);
 
