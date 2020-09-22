@@ -203,62 +203,6 @@ namespace DevOps.Util
 
         #endregion
 
-        #region HttpClient
-
-        public static async Task<string?> GetJsonAsync(this HttpClient httpClient, string uri, Action<Exception>? onError = null)
-        {
-            var message = new HttpRequestMessage(HttpMethod.Get, uri);
-            message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            try
-            {
-                var response = await httpClient.SendAsync(message).ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                onError?.Invoke(ex);
-                return null;
-            }
-        }
-
-        public static async Task<string?> DownloadFileTextAsync(this HttpClient httpClient, string uri, Action<Exception>? onError = null)
-        {
-            var message = new HttpRequestMessage(HttpMethod.Get, uri);
-            try
-            {
-                var response = await httpClient.SendAsync(message).ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                onError?.Invoke(ex);
-                return null;
-            }
-        }
-
-        public static async Task<MemoryStream?> DownloadFileStreamAsync(this HttpClient httpClient, string uri, Action<Exception>? onError = null)
-        {
-            var message = new HttpRequestMessage(HttpMethod.Get, uri);
-            try
-            {
-                var response = await httpClient.SendAsync(message).ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
-                var stream = new MemoryStream();
-                await response.Content.CopyToAsync(stream).ConfigureAwait(false);
-                stream.Position = 0;
-                return stream;
-            }
-            catch (Exception ex)
-            {
-                onError?.Invoke(ex);
-                return null;
-            }
-        }
-
-        #endregion
-
         #region DevOpsServer
 
         /// <summary>

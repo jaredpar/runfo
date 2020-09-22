@@ -370,7 +370,7 @@ namespace DevOps.Util.DotNet
             Regex regex,
             Action<Exception>? onError = null)
         {
-            using var stream = await Server.HttpClient.DownloadFileStreamAsync(
+            using var stream = await Server.DownloadFileStreamAsync(
                 uri,
                 onError).ConfigureAwait(false);
             if (stream is null)
@@ -766,7 +766,7 @@ namespace DevOps.Util.DotNet
                     continue;
                 }
  
-                using var stream = await Server.HttpClient.DownloadFileStreamAsync(
+                using var stream = await Server.DownloadFileStreamAsync(
                     record.Log.Url,
                     onError).ConfigureAwait(false);
                 if (stream is null)

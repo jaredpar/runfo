@@ -12,48 +12,17 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util
 {
-    public enum AuthorizationKind
-    {
-        None,
-        PersonalAccessToken,
-        BearerToken
-    }
-
-    public readonly struct AuthorizationToken
-    {
-        public static AuthorizationToken None => default;
-
-        public AuthorizationKind AuthorizationKind { get; }
-        public string Token { get; }
-
-        public bool IsNone => AuthorizationKind == AuthorizationKind.None;
-
-        public AuthorizationToken(AuthorizationKind authorizationKind, string token)
-        {
-            if (authorizationKind == AuthorizationKind.None)
-            {
-                throw new ArgumentException("", nameof(authorizationKind));
-            }
-
-            AuthorizationKind = authorizationKind;
-            Token = token;
-        }
-
-        public override string ToString() => $"{AuthorizationKind} {Token}";
-    }
-
     // TODO: rename to Azure Server
     public class DevOpsServer
     {
-        public AuthorizationToken AuthorizationToken { get; }
         public string Organization { get; }
-        public HttpClient HttpClient { get;  }
+
+        private readonly DevOpsHttpClient _client;
 
         public DevOpsServer(string organization, AuthorizationToken authorizationToken = default, HttpClient? httpClient = null)
         {
             Organization = organization;
-            HttpClient = httpClient ?? new HttpClient();
-            AuthorizationToken = authorizationToken;
+            _client = new DevOpsHttpClient(authorizationToken, httpClient);
         }
 
         /// <summary>
@@ -163,19 +132,18 @@ namespace DevOps.Util
         {
             var builder = GetBuilder(project, $"build/builds/{buildId}");
             builder.AppendBool("retry", true);
-            var request = CreateHttpRequestMessage(HttpMethod.Patch, builder.ToString());
-            var response = await HttpClient.SendAsync(request).ConfigureAwait(false);
+            var response = await _client.SendAsync(HttpMethod.Patch, builder.ToString()).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
         }
 
         public Task DownloadBuildLogsAsync(string project, int buildId, Stream stream)
         {
             var builder = GetBuilder(project, $"build/builds/{buildId}/logs");
-            return DownloadZipFileAsync(builder.ToString(), stream);
+            return _client.DownloadZipFileAsync(builder.ToString(), stream);
         }
 
         public Task<MemoryStream> DownloadBuildLogsAsync(string project, int buildId) =>
-            WithMemoryStream(s => DownloadBuildLogsAsync(project, buildId));
+            _client.WithMemoryStream(s => DownloadBuildLogsAsync(project, buildId));
 
         private RequestBuilder GetBuildLogRequestBuilder(string project, int buildId, int logId) =>
             GetBuilder(project, $"build/builds/{buildId}/logs/{logId}");
@@ -189,17 +157,17 @@ namespace DevOps.Util
         }
 
         public Task DownloadBuildLogAsync(string project, int buildId, int logId, Stream destinationStream) =>
-            DownloadFileAsync(
+            _client.DownloadFileAsync(
                 GetBuildLogRequestBuilder(project, buildId, logId).ToString(),
                 destinationStream);
 
         public Task DownloadBuildLogAsync(string project, int buildId, int logId, string destinationFilePath) =>
-            WithFileStream(
+            _client.WithFileStream(
                 destinationFilePath,
                 stream => DownloadBuildLogAsync(project, buildId, logId, stream));
 
         public Task<MemoryStream> DownloadBuildLogAsync(string project, int buildId, int logId) =>
-            WithMemoryStream(stream => DownloadBuildLogAsync(project, buildId, logId, stream));
+            _client.WithMemoryStream(stream => DownloadBuildLogAsync(project, buildId, logId, stream));
 
         public Task<Timeline?> GetTimelineAsync(string project, int buildId)
         {
@@ -264,12 +232,12 @@ namespace DevOps.Util
         }
 
         public Task<MemoryStream> DownloadArtifactAsync(string project, int buildId, string artifactName) =>
-            WithMemoryStream(s => DownloadArtifactAsync(project, buildId, artifactName, s));
+            _client.WithMemoryStream(s => DownloadArtifactAsync(project, buildId, artifactName, s));
 
         public Task DownloadArtifactAsync(string project, int buildId, string artifactName, Stream stream)
         {
             var uri = GetArtifactUri(project, buildId, artifactName);
-            return DownloadZipFileAsync(uri, stream);
+            return _client.DownloadZipFileAsync(uri, stream);
         }
 
         public Task<List<TeamProjectReference>> ListProjectsAsync(ProjectState? stateFilter = null, int? top = null, int? skip = null, bool? getDefaultTeamImageUrl = null)
@@ -425,14 +393,14 @@ namespace DevOps.Util
             EnsureAuthorizationToken();
             var builder = GetBuilder(project, $"test/Runs/{runId}/Results/{testCaseResultId}/attachments/{attachmentId}");
             builder.ApiVersion = "5.1-preview.1";
-            return DownloadZipFileAsync(builder.ToString(), destinationStream);
+            return _client.DownloadZipFileAsync(builder.ToString(), destinationStream);
         }
 
         public Task<MemoryStream> DownloadTestCaseResultAttachmentZipAsync(
             string project,
             int runId,
             int testCaseResultId,
-            int attachmentId) => WithMemoryStream(s => DownloadTestCaseResultAttachmentZipAsync(project, runId, testCaseResultId, attachmentId, s));
+            int attachmentId) => _client.WithMemoryStream(s => DownloadTestCaseResultAttachmentZipAsync(project, runId, testCaseResultId, attachmentId, s));
 
         public Task DownloadTestCaseResultAttachmentZipAsync(
             string project,
@@ -440,7 +408,7 @@ namespace DevOps.Util
             int testCaseResultId,
             int attachmentId,
             string destinationFilePath) =>
-            WithFileStream(destinationFilePath, s => DownloadTestCaseResultAttachmentZipAsync(project, runId, testCaseResultId, attachmentId, s));
+            _client.WithFileStream(destinationFilePath, s => DownloadTestCaseResultAttachmentZipAsync(project, runId, testCaseResultId, attachmentId, s));
 
         private RequestBuilder GetBuilder(string? project, string apiPath) => new RequestBuilder(Organization, project, apiPath);
 
@@ -457,46 +425,6 @@ namespace DevOps.Util
         {
             var json = await GetJsonAsync(builder.ToString()).ConfigureAwait(false);
             return AzureJsonUtil.GetArray<T>(json);
-        }
-
-        public async Task DownloadFileAsync(string uri, Stream destinationStream)
-        {
-            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
-            using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            await response.Content.CopyToAsync(destinationStream).ConfigureAwait(false);
-        }
-
-        public Task<MemoryStream> DownloadFileAsync(string uri) =>
-            WithMemoryStream(s => DownloadFileAsync(uri, s));
-
-        public async Task DownloadZipFileAsync(string uri, Stream destinationStream)
-        {
-            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
-            message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/zip"));
-            using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            await response.Content.CopyToAsync(destinationStream).ConfigureAwait(false);
-        }
-
-        public Task DownloadZipFileAsync(string uri, string destinationFilePath) =>
-            WithFileStream(destinationFilePath, fileStream => DownloadZipFileAsync(uri, fileStream));
-
-        public Task<MemoryStream> DownloadZipFileAsync(string uri) =>
-            WithMemoryStream(s => DownloadFileAsync(uri, s));
-
-        private async Task<MemoryStream> WithMemoryStream(Func<MemoryStream, Task> func)
-        {
-            var stream = new MemoryStream();
-            await func(stream).ConfigureAwait(false);
-            stream.Position = 0;
-            return stream;
-        }
-
-        private async Task WithFileStream(string destinationFilePath, Func<FileStream, Task> func)
-        {
-            using var fileStream = new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write);
-            await func(fileStream).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -550,36 +478,15 @@ namespace DevOps.Util
 
         private void EnsureAuthorizationToken()
         {
-            if (AuthorizationToken.IsNone)
+            if (_client.AuthorizationToken.IsNone)
             {
                 throw new InvalidOperationException("Must have an authorization token specified to view test information");
             }
         }
 
-        private HttpRequestMessage CreateHttpRequestMessage(HttpMethod method, string uri)
-        {
-            var message = new HttpRequestMessage(method ?? HttpMethod.Get, uri);
-            switch (AuthorizationToken.AuthorizationKind)
-            {
-                case AuthorizationKind.PersonalAccessToken:
-                    message.Headers.Authorization = new AuthenticationHeaderValue(
-                        "Basic",
-                        Convert.ToBase64String(Encoding.ASCII.GetBytes($":{AuthorizationToken.Token}")));
-                    break;
-                case AuthorizationKind.BearerToken:
-                    message.Headers.Authorization = new AuthenticationHeaderValue(
-                        "Bearer",
-                        AuthorizationToken.Token);
-                    break;
-            }
-
-            return message;
-        }
-
         private async Task<string> GetTextAsync(string uri)
         {
-            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
-            using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
+            using var response = await _client.SendAsync(HttpMethod.Get, uri).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return responseBody;
@@ -589,9 +496,9 @@ namespace DevOps.Util
         {
             do
             {
-                var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
+                var message = _client.CreateHttpRequestMessage(HttpMethod.Get, uri);
                 message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
+                using var response = await _client.SendAsync(message).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                 {
                     var tryAgain = await predicate(response).ConfigureAwait(false);
@@ -609,9 +516,9 @@ namespace DevOps.Util
 
         private async Task<string> GetJsonAsync(string uri)
         {
-            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
+            var message = _client.CreateHttpRequestMessage(HttpMethod.Get, uri);
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
+            using var response = await _client.SendAsync(message).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return responseBody;
@@ -619,9 +526,9 @@ namespace DevOps.Util
 
         private async Task<(string Json, string? ContinuationToken)> GetJsonAndContinuationTokenAsync(string uri)
         {
-            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
+            var message = _client.CreateHttpRequestMessage(HttpMethod.Get, uri);
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
+            using var response = await _client.SendAsync(message).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
             string? continuationToken = null;
@@ -633,6 +540,60 @@ namespace DevOps.Util
             string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return (responseBody, continuationToken);
         }
+
+        public async Task<string?> GetJsonAsync(string uri, Action<Exception>? onError = null)
+        {
+            var message = new HttpRequestMessage(HttpMethod.Get, uri);
+            message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            try
+            {
+                var response = await _client.SendAsync(message).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                onError?.Invoke(ex);
+                return null;
+            }
+        }
+
+        public async Task<string?> DownloadFileTextAsync(string uri, Action<Exception>? onError = null)
+        {
+            var message = new HttpRequestMessage(HttpMethod.Get, uri);
+            try
+            {
+                var response = await _client.SendAsync(message).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                onError?.Invoke(ex);
+                return null;
+            }
+        }
+
+        public async Task<MemoryStream?> DownloadFileStreamAsync(string uri, Action<Exception>? onError = null)
+        {
+            var message = new HttpRequestMessage(HttpMethod.Get, uri);
+            try
+            {
+                var response = await _client.SendAsync(message).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                var stream = new MemoryStream();
+                await response.Content.CopyToAsync(stream).ConfigureAwait(false);
+                stream.Position = 0;
+                return stream;
+            }
+            catch (Exception ex)
+            {
+                onError?.Invoke(ex);
+                return null;
+            }
+        }
+
+        public Task<MemoryStream> DownloadFileAsync(string uri) => _client.DownloadFileAsync(uri);
 
     }
 }
