@@ -42,10 +42,19 @@ namespace DevOps.Status.Util
             bool includeAttemptColumn,
             bool includeIssueTypeColumn)
         {
-            var results = await query.ToListAsync();
+            var results = await query
+                .Select(x => new
+                {
+                    x.ModelBuild.BuildNumber,
+                    x.Message,
+                    x.JobName,
+                    x.IssueType,
+                    x.Attempt,
+                })
+                .ToListAsync();
             var issues = results.Select(x => new TimelineIssueDisplayData()
             {
-                BuildNumber = x.ModelBuild.BuildNumber,
+                BuildNumber = x.BuildNumber,
                 Message = x.Message,
                 JobName = x.JobName,
                 IssueType = x.IssueType.ToString(),

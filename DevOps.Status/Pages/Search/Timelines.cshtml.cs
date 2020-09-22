@@ -51,7 +51,6 @@ namespace DevOps.Status.Pages.Search
                 query = buildSearchOptions.FilterBuilds(query);
                 query = timelineSearchOptions.FilterTimelines(query);
                 query = query
-                    .Include(x => x.ModelBuild)
                     .OrderByDescending(x => x.ModelBuild.BuildNumber)
                     .Skip(PageNumber * PageSize)
                     .Take(PageSize);
