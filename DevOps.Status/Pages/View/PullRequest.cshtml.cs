@@ -25,20 +25,16 @@ namespace DevOps.Status.Pages.View
         }
 
         public TriageContext TriageContext { get; set; }
-
-        public StatusGitHubClientFactory GitHubClientFactory { get; set; }
+        public IGitHubClientFactory GitHubClientFactory { get; set; }
 
         [BindProperty(SupportsGet = true)]
         public int? Number { get; set; }
-
         [BindProperty(SupportsGet = true)]
         public string? Repository { get; set; }
-
         public PullRequest? PullRequest { get; set; }
-
         public List<PullRequestBuildInfo> Builds { get; set; } = new List<PullRequestBuildInfo>();
 
-        public PullRequestModel(TriageContext triageContext, StatusGitHubClientFactory gitHubClientFactory)
+        public PullRequestModel(TriageContext triageContext, IGitHubClientFactory gitHubClientFactory)
         {
             TriageContext = triageContext;
             GitHubClientFactory = gitHubClientFactory;

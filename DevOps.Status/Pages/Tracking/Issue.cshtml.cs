@@ -41,6 +41,7 @@ namespace DevOps.Status.Pages.Tracking
 
         public TriageContext Context { get; }
         public DotNetQueryUtilFactory QueryUtilFactory { get; }
+        public IGitHubClientFactory GitHubClientFactory { get;  }
         [BindProperty]
         public string? IssueTitle { get; set; }
         public string? SearchQuery { get; set; }
@@ -54,10 +55,11 @@ namespace DevOps.Status.Pages.Tracking
         public bool IsActive { get; set; }
         public PaginationDisplay? PaginationDisplay { get; set; }
 
-        public TrackingIssueModel(TriageContext context, DotNetQueryUtilFactory queryUtilFactory)
+        public TrackingIssueModel(TriageContext context, DotNetQueryUtilFactory queryUtilFactory, IGitHubClientFactory gitHubClientFactory)
         {
             Context = context;
             QueryUtilFactory = queryUtilFactory;
+            GitHubClientFactory = gitHubClientFactory;
         }
 
         public async Task OnGetAsync(int id, int pageNumber = 0)
@@ -128,6 +130,22 @@ namespace DevOps.Status.Pages.Tracking
 
             async Task<IActionResult> CloseAsync()
             {
+                if (modelTrackingIssue.GetGitHubIssueKey() is { } issueKey)
+                {
+                    try
+                    {
+
+                        var gitHubClient = await GitHubClientFactory.CreateForAppAsync(issueKey.Organization, issueKey.Repository);
+                        var issueUpdate = new IssueUpdate() { State = ItemState.Closed };
+                        var issue = await gitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, issueUpdate);
+                    }
+                    catch (Exception ex)
+                    {
+                        ErrorMessage = $"Cannot close GitHub issue {ex.Message}";
+                        return Page();
+                    }
+                }
+
                 modelTrackingIssue.IsActive = false;
                 await Context.SaveChangesAsync();
                 return RedirectToPage("./Index");

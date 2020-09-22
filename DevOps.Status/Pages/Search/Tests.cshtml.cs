@@ -33,7 +33,7 @@ namespace DevOps.Status.Pages.Search
         public const int PageSize = 100;
         
         public TriageContextUtil TriageContextUtil { get; }
-        public StatusGitHubClientFactory GitHubClientFactory { get; }
+        public IGitHubClientFactory GitHubClientFactory { get; }
         public string? ErrorMessage { get; set; }
         [BindProperty(SupportsGet = true, Name = "bq")]
         public string? BuildQuery { get; set; }
@@ -46,7 +46,7 @@ namespace DevOps.Status.Pages.Search
         public int BuildCount { get; set; }
         public List<TestInfo> TestInfos { get; set; } = new List<TestInfo>();
 
-        public TestsModel(TriageContextUtil triageContextUtil, StatusGitHubClientFactory gitHubClientFactory)
+        public TestsModel(TriageContextUtil triageContextUtil, IGitHubClientFactory gitHubClientFactory)
         {
             TriageContextUtil = triageContextUtil;
             GitHubClientFactory = gitHubClientFactory;

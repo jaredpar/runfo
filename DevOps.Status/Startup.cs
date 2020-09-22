@@ -57,8 +57,8 @@ namespace DevOps.Status
             });
 
             services.AddHttpContextAccessor();
-            services.AddSingleton<StatusGitHubClientFactory>();
             services.AddScoped<DotNetQueryUtilFactory>();
+            services.AddScoped<IGitHubClientFactory>(_ => new GitHubClientFactory(Configuration));
 
             services.AddScoped<BlobStorageUtil>(_ =>
             {

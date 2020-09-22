@@ -22,7 +22,7 @@ namespace DevOps.Status.Pages.Tracking
     {
         public TriageContext TriageContext { get; }
         public TriageContextUtil TriageContextUtil { get; }
-        public StatusGitHubClientFactory GitHubClientFactory { get; }
+        public IGitHubClientFactory GitHubClientFactory { get; }
         public DotNetQueryUtilFactory QueryUtilFactory { get; }
         public ILogger Logger { get; }
 
@@ -41,7 +41,7 @@ namespace DevOps.Status.Pages.Tracking
 
         public string? ErrorMessage { get; set; }
 
-        public NewTrackingIssueModel(TriageContext triageContext, DotNetQueryUtilFactory queryUtilFactory, StatusGitHubClientFactory gitHubClientFactory, ILogger<NewTrackingIssueModel> logger)
+        public NewTrackingIssueModel(TriageContext triageContext, DotNetQueryUtilFactory queryUtilFactory, IGitHubClientFactory gitHubClientFactory, ILogger<NewTrackingIssueModel> logger)
         {
             TriageContext = triageContext;
             TriageContextUtil = new TriageContextUtil(triageContext);
@@ -183,7 +183,7 @@ namespace DevOps.Status.Pages.Tracking
 
             async Task UpdateGitHubIssueAsync(IGitHubClient gitHubClient, ModelTrackingIssue modelTrackingIssue, GitHubIssueKey issueKey)
             {
-                var util = new TrackingGitHubUtil(GitHubClientFactory.GitHubClientFactory, TriageContext, Logger);
+                var util = new TrackingGitHubUtil(GitHubClientFactory, TriageContext, Logger);
                 var reportText = await util.GetReportAsync(modelTrackingIssue);
                 var issueUpdate = new IssueUpdate()
                 {

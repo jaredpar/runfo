@@ -1,6 +1,10 @@
 ﻿using AspNet.Security.OAuth.GitHub;
 using AspNet.Security.OAuth.VisualStudio;
+using DevOps.Util.DotNet;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,5 +21,11 @@ namespace DevOps.Status.Util
 
         public static ClaimsIdentity? GetVsoIdentity(this ClaimsPrincipal principal) =>
             principal.Identities.FirstOrDefault(x => x.AuthenticationType == VisualStudioAuthenticationDefaults.AuthenticationScheme);
+
+        public static async Task<IGitHubClient> CreateForUserAsync(this IGitHubClientFactory gitHubClientFactory, HttpContext httpContext)
+        {
+            var accessToken = await httpContext.GetTokenAsync("access_token");
+            return GitHubClientFactory.CreateForToken(accessToken, AuthenticationType.Oauth);
+        }
     }
 }
