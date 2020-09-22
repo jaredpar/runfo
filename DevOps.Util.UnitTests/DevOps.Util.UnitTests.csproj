@@ -6,10 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="JsonData\5.0\build-list-1.json" />
-  </ItemGroup>
-
-  <ItemGroup>
     <EmbeddedResource Include="JsonData\5.0\*" />
   </ItemGroup>
 

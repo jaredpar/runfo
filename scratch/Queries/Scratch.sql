@@ -1,4 +1,15 @@
-﻿/* SELECT * FROM dbo.BuildCloneTime WHERE DefinitionId = 15 and BuildStartTime > '8/14	/2019' and maxduration > '00:10:00' */
+﻿
+/* This is a TimelineIssuesDisplay query */
+SELECT [m].[Id], [m].[Attempt], [m].[IssueType], [m].[JobName], [m].[Message], [m].[ModelBuildAttemptId], [m].[ModelBuildId], [m].[RecordId], [m].[RecordName]
+FROM [ModelTimelineIssues] AS [m]
+LEFT JOIN [ModelBuilds] AS [m0] ON [m].[ModelBuildId] = [m0].[Id]
+LEFT JOIN [ModelBuildDefinitions] AS [m1] ON [m0].[ModelBuildDefinitionId] = [m1].[Id]
+WHERE [m1].[DefinitionName] = 'roslyn-ci'
+ORDER BY [m0].[BuildNumber] DESC
+OFFSET 0 ROWS FETCH NEXT 25 ROWS ONLY
+
+
+/* SELECT * FROM dbo.BuildCloneTime WHERE DefinitionId = 15 and BuildStartTime > '8/14	/2019' and maxduration > '00:10:00' */
 
 /* SELECT * FROM dbo.JobCloneTime WHERE BuildId = 311446 */
 
@@ -34,7 +45,9 @@ FROM BuildCloneTime
 WHERE DefinitionId = 228 AND BuildStartTime > '2019/08/27'
 */
 
+/*
 SELECT BuildId 
 FROM JobCloneTime
 WHERE AverageFetchSpeed IS NOT NULL
 GROUP BY BuildId
+*/

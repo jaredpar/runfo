@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
-using DevOps.Util.Triage;
+using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -90,7 +90,7 @@ namespace DevOps.Status.Pages.Search
                     BuildNumber = result.BuildInfo.Number,
                     Line = result.Line,
                     JobName = result.JobName,
-                    BuildLogUri = result.BuildLogReference.Url
+                    BuildLogUri = result.BuildLogReference.Url,
                 });
             }
 

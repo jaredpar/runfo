@@ -1,5 +1,5 @@
 ﻿using DevOps.Util;
-using DevOps.Util.Triage;
+using DevOps.Util.DotNet.Triage;
 using Octokit;
 using System;
 using System.Collections.Generic;
@@ -40,7 +40,7 @@ namespace DevOps.Status.Util
                 var testResultInfo = new TestResultInfo()
                 {
                     BuildNumber = modelTestResult.ModelBuild.BuildNumber,
-                    BuildUri = DevOpsUtil.GetBuildUri(modelTestResult.ModelBuild.ModelBuildDefinition.AzureOrganization, modelTestResult.ModelBuild.ModelBuildDefinition.AzureProject, modelTestResult.ModelBuild.BuildNumber),
+                    BuildUri = DevOpsUtil.GetBuildUri(modelTestResult.ModelBuild.AzureOrganization, modelTestResult.ModelBuild.AzureProject, modelTestResult.ModelBuild.BuildNumber),
                     Kind = modelTestResult.ModelBuild.GetModelBuildKind().GetDisplayString(),
                     TestRun = modelTestResult.ModelTestRun.Name,
                     TestFullName = modelTestResult.TestFullName,

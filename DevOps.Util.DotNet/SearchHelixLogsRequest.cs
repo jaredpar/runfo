@@ -1,5 +1,5 @@
 ﻿using DevOps.Util.DotNet;
-using DevOps.Util.Triage;
+using DevOps.Util.DotNet.Triage;
 using Octokit;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DevOps.Util.Triage
+namespace DevOps.Util.DotNet.Triage
 {
     public class SearchHelixLogsRequest : ISearchRequest
     {

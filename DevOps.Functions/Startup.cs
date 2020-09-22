@@ -1,7 +1,7 @@
 using System;
 using DevOps.Util;
 using DevOps.Util.DotNet;
-using DevOps.Util.Triage;
+using DevOps.Util.DotNet.Triage;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;

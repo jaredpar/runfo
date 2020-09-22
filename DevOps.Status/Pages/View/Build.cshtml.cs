@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
-using DevOps.Util.Triage;
+using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -15,32 +15,17 @@ namespace DevOps.Status.Pages.View
 {
     public class BuildModel : PageModel
     {
-        public sealed class TimelineData
-        {
-            public int Attempt { get; set; }
-            public string? JobName { get; set;  }
-            public string? Line { get; set;  }
-        }
-
         public TriageContextUtil TriageContextUtil { get; }
 
         [BindProperty(SupportsGet = true)]
         public int? Number { get; set; }
-
         public string? BuildUri { get; set; }
-
         public BuildResult BuildResult { get; set; }
-
         public int Attempts { get; set; }
-
         public string? Repository { get; set; }
-
         public string? RepositoryUri { get; set; }
-
         public GitHubPullRequestKey? PullRequestKey { get; set; }
-
-        public List<TimelineData> TimelineDataList { get; } = new List<TimelineData>();
-
+        public TimelineIssuesDisplay TimelineIssuesDisplay { get; set; } = TimelineIssuesDisplay.Empty;
         public TestResultsDisplay TestResultsDisplay { get; set; } = TestResultsDisplay.Empty;
 
         public BuildModel(TriageContextUtil triageContextUtil)
@@ -92,22 +77,16 @@ namespace DevOps.Status.Pages.View
                     .Where(x =>
                         x.ModelBuild.BuildNumber == number &&
                         x.ModelBuild.ModelBuildDefinition.AzureOrganization == organization &&
-                        x.ModelBuild.ModelBuildDefinition.AzureProject == project);
-                Attempts = 1;
-                foreach (var modelTimeline in (await query.ToListAsync()).OrderBy(x => x.Attempt))
-                {
-                    TimelineDataList.Add(new TimelineData()
-                    {
-                        Attempt = modelTimeline.Attempt,
-                        JobName = modelTimeline.JobName,
-                        Line = modelTimeline.Message,
-                    });
-
-                    if (modelTimeline.Attempt > Attempts)
-                    {
-                        Attempts = modelTimeline.Attempt;
-                    }
-                }
+                        x.ModelBuild.ModelBuildDefinition.AzureProject == project)
+                    .Include(x => x.ModelBuild);
+                TimelineIssuesDisplay = await TimelineIssuesDisplay.Create(
+                    query,
+                    includeBuildColumn: false,
+                    includeIssueTypeColumn: true,
+                    includeAttemptColumn: true);
+                Attempts = TimelineIssuesDisplay.Issues.Count > 0
+                    ? TimelineIssuesDisplay.Issues.Max(x => x.Attempt)
+                    : 1;
             }
 
             async Task PopulateTests()
@@ -117,11 +96,10 @@ namespace DevOps.Status.Pages.View
                     .ModelTestResults
                     .Where(x =>
                         x.ModelBuild.BuildNumber == number &&
-                        x.ModelBuild.ModelBuildDefinition.AzureOrganization == organization &&
-                        x.ModelBuild.ModelBuildDefinition.AzureProject == project)
+                        x.ModelBuild.AzureOrganization == organization &&
+                        x.ModelBuild.AzureProject == project)
                     .Include(x => x.ModelTestRun)
-                    .Include(x => x.ModelBuild)
-                    .ThenInclude(x => x.ModelBuildDefinition);
+                    .Include(x => x.ModelBuild);
                 var modelTestResults = await query.ToListAsync();
                 TestResultsDisplay = new TestResultsDisplay(modelTestResults)
                 {

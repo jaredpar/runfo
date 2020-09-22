@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
-using DevOps.Util.Triage;
+using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -91,7 +91,7 @@ namespace DevOps.Status.Pages.Search
                         TestResultsDisplay = new TestResultsDisplay(group)
                         {
                             IncludeBuildColumn = true,
-                            IncludeBuildKindColumn = searchBuildsRequest.Kind == ModelBuildKind.All,
+                            IncludeBuildKindColumn = searchBuildsRequest.BuildType is { BuildType: ModelBuildKind.All },
                         }
                     };
 
@@ -144,14 +144,14 @@ namespace DevOps.Status.Pages.Search
                     .Include(x => x.ModelTestRun)
                     .Take(100)
                     .ToListAsync();
-                var results = new List<(BuildInfo BuildInfo, string? TestRunName, HelixLogInfo? LogInfo)>();
+                var results = new List<(BuildAndDefinitionInfo BuildAndDefinitionInfo, string? TestRunName, HelixLogInfo? LogInfo)>();
                 var includeHelix = false;
                 foreach (var item in testResults)
                 {
-                    var buildInfo = item.ModelBuild.GetBuildInfo();
+                    var buildAndDefinitionInfo = item.ModelBuild.GetBuildAndDefinitionInfo();
                     var helixLogInfo = item.GetHelixLogInfo();
                     includeHelix = includeHelix || helixLogInfo is object;
-                    results.Add((buildInfo, item.ModelTestRun.Name, helixLogInfo));
+                    results.Add((buildAndDefinitionInfo, item.ModelTestRun.Name, helixLogInfo));
                 }
 
                 var builder = new ReportBuilder();

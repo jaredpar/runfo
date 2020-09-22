@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -23,7 +24,7 @@ namespace DevOps.Util
         public static BuildKey GetBuildKey(BuildResultInfo buildInfo) =>
             new BuildKey(buildInfo.Organization, buildInfo.Project, buildInfo.Number);
 
-        public static DefinitionInfo GetBuildDefinitionInfo(Build build)
+        public static DefinitionInfo GetDefinitionInfo(Build build)
         {
             var organization = GetOrganization(build);
             return new DefinitionInfo(
@@ -35,17 +36,28 @@ namespace DevOps.Util
 
         public static BuildResultInfo GetBuildResultInfo(Build build)
         {
-            var buildInfo = GetBuildInfo(build);
+            var buildAndDefinitionInfo = GetBuildAndDefinitionInfo(build);
+            var queueTime = build.GetQueueTime()?.UtcDateTime;
             var startTime = build.GetStartTime()?.UtcDateTime;
             var finishTime = build.GetFinishTime()?.UtcDateTime;
             var gitHubBuildInfo = GetGitHubBuildInfo(build);
-            return new BuildResultInfo(buildInfo, startTime, finishTime, build.Result);
+            return new BuildResultInfo(buildAndDefinitionInfo, queueTime, startTime, finishTime, build.Result);
         }
 
         public static BuildInfo GetBuildInfo(Build build)
         {
             var buildKey = GetBuildKey(build);
             return new BuildInfo(
+                buildKey.Organization,
+                buildKey.Project,
+                buildKey.Number,
+                GetGitHubBuildInfo(build));
+        }
+
+        public static BuildAndDefinitionInfo GetBuildAndDefinitionInfo(Build build)
+        {
+            var buildKey = GetBuildKey(build);
+            return new BuildAndDefinitionInfo(
                 buildKey.Organization,
                 buildKey.Project,
                 buildKey.Number,
@@ -68,11 +80,11 @@ namespace DevOps.Util
             return false;
         }
 
-        public static string GetBuildDefinitionUri(string organization, string project, int definitionId) =>
+        public static string GetDefinitionUri(string organization, string project, int definitionId) =>
              $"https://{organization}.visualstudio.com/{project}/_build?definitionId={definitionId}";
 
-        public static string GetBuildDefinitionUri(Build build) =>
-            GetBuildDefinitionUri(
+        public static string GetDefinitionUri(Build build) =>
+            GetDefinitionUri(
                 GetOrganization(build),
                 build.Project.Name,
                 build.Definition.Id);
@@ -118,6 +130,39 @@ namespace DevOps.Util
             return null;
         }
 
+        /// <summary>
+        /// This will return the target branch for a given build. For a pull request this will be the branch
+        /// the code wants to merge to. For other build types it will be the branch they were against
+        /// </summary>
+        public static string? GetTargetBranch(Build build)
+        {
+            try
+            {
+                if (build.Reason == BuildReason.PullRequest)
+                {
+                    dynamic d = JValue.Parse(build.Parameters);
+                    var target = d["system.pullRequest.targetBranch"];
+                    return target;
+                }
+
+                const string prefix = "refs/heads/";
+                if (build.SourceBranch is string &&
+                    build.SourceBranch.StartsWith(prefix))
+                {
+                    return build.SourceBranch.Substring(prefix.Length);
+                }
+
+                // One valid way to end up here is when dealing with manual builds. These can be 
+                // against arbitrary commits, branch names, etc ... They aren't necessarily an attempt
+                // to merge into the repository hence won't always have a target branch
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public static GitHubBuildInfo? GetGitHubBuildInfo(Build build)
         {
             if (GetRepositoryInfo(build) is { } repositoryInfo &&
@@ -134,7 +179,8 @@ namespace DevOps.Util
                     }
                 }
 
-                return new GitHubBuildInfo(organization, repository, prNumber);
+                var targetBranch = GetTargetBranch(build);
+                return new GitHubBuildInfo(organization, repository, prNumber, targetBranch);
             }
 
             return null;

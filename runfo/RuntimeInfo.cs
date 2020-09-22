@@ -229,7 +229,7 @@ namespace Runfo
                 }
             }
             Console.WriteLine(ReportBuilder.BuildSearchTimeline(
-                found.Select(x => (x.BuildResultInfo.BuildInfo, x.Record.JobName)),
+                found.Select(x => (x.BuildResultInfo.BuildAndDefinitionInfo, x.Record.JobName)),
                 markdown: markdown,
                 includeDefinition: !hadDefinition));
 
@@ -524,7 +524,7 @@ namespace Runfo
         {
             foreach (var (name, project, definitionId) in DotNetUtil.BuildDefinitions)
             {
-                var uri = DevOpsUtil.GetBuildDefinitionUri(DevOpsServer.Organization, project, definitionId);
+                var uri = DevOpsUtil.GetDefinitionUri(DevOpsServer.Organization, project, definitionId);
                 Console.WriteLine($"{name,-20}{uri}");
             }
         }

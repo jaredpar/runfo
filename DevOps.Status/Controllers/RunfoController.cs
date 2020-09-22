@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using DevOps.Status.Util;
 using Microsoft.AspNetCore.Authentication;
-using DevOps.Util.Triage;
+using DevOps.Util.DotNet.Triage;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevOps.Status.Controllers

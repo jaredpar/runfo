@@ -1,6 +1,6 @@
 ﻿using DevOps.Status.Util;
 using DevOps.Util.DotNet;
-using DevOps.Util.Triage;
+using DevOps.Util.DotNet.Triage;
 using System;
 using System.Collections.Generic;
 using System.Text;

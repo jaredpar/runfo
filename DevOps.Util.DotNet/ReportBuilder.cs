@@ -16,7 +16,7 @@ namespace DevOps.Util.DotNet
         public static readonly Regex MarkdownReportEndRegex = new Regex(@"<!--\s*runfo report end\s*-->", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         public string BuildSearchTests(
-            IEnumerable<(BuildInfo BuildInfo, string? TestRunName, HelixLogInfo? LogInfo)> results,
+            IEnumerable<(BuildAndDefinitionInfo BuildAndDefinitionInfo, string? TestRunName, HelixLogInfo? LogInfo)> results,
             bool includeDefinition,
             bool includeHelix)
         {
@@ -29,20 +29,20 @@ namespace DevOps.Util.DotNet
             foreach (var result in results)
             {
                 resultsCount++;
-                var buildInfo = result.BuildInfo;
+                var buildAndDefinitionInfo = result.BuildAndDefinitionInfo;
 
                 builder.Append('|');
-                AppendBuildLink(builder, buildInfo);
+                AppendBuildLink(builder, buildAndDefinitionInfo.BuildInfo);
 
                 if (includeDefinition)
                 {
-                    var definitionName = buildInfo.DefinitionName;
-                    var definitionUri = buildInfo.DefinitionInfo.DefinitionUri;
+                    var definitionName = buildAndDefinitionInfo.DefinitionName;
+                    var definitionUri = buildAndDefinitionInfo.DefinitionInfo.DefinitionUri;
                     builder.Append($"|[{definitionName}]({definitionUri})");
                 }
 
                 builder.Append('|');
-                AppendBuildKind(builder, buildInfo);
+                AppendBuildKind(builder, buildAndDefinitionInfo.BuildInfo);
                 builder.Append($"|{result.TestRunName}");
 
                 if (includeHelix)
@@ -100,7 +100,7 @@ namespace DevOps.Util.DotNet
 
 
         public string BuildSearchTimeline(
-            IEnumerable<(BuildInfo BuildInfo, string? JobName)> results,
+            IEnumerable<(BuildAndDefinitionInfo BuildAndDefinitionInfo, string? JobName)> results,
             bool markdown,
             bool includeDefinition,
             string? footer = null)
@@ -127,25 +127,25 @@ namespace DevOps.Util.DotNet
             foreach (var result in results)
             {
                 resultsCount++;
-                var buildInfo = result.BuildInfo;
+                var buildAndDefinitionInfo = result.BuildAndDefinitionInfo;
                 if (markdown)
                 {
                     if (includeDefinition)
                     {
-                        var definitionName = buildInfo.DefinitionName;
-                        var definitionUri = buildInfo.DefinitionInfo.DefinitionUri;
+                        var definitionName = buildAndDefinitionInfo.DefinitionName;
+                        var definitionUri = buildAndDefinitionInfo.DefinitionInfo.DefinitionUri;
                         builder.Append($"|[{definitionName}]({definitionUri})");
                     }
 
                     builder.Append("|");
-                    AppendBuildLink(builder, buildInfo);
+                    AppendBuildLink(builder, buildAndDefinitionInfo.BuildInfo);
                     builder.Append("|");
-                    AppendBuildKind(builder, buildInfo);
+                    AppendBuildKind(builder, buildAndDefinitionInfo.BuildInfo);
                     builder.AppendLine($"|{result.JobName}|");
                 }
                 else
                 {
-                    builder.AppendLine(buildInfo.BuildUri);
+                    builder.AppendLine(buildAndDefinitionInfo.BuildUri);
                 }
             }
 

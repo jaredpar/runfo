@@ -16,9 +16,9 @@ namespace DevOps.Util
             Type = type;
         }
 
-        public RepositoryInfo(GitHubBuildInfo gitHubBuildInfo)
+        public RepositoryInfo(GitHubPullRequestKey prKey)
         {
-            Id = $"{gitHubBuildInfo.Organization}/{gitHubBuildInfo.Repository}";
+            Id = $"{prKey.Organization}/{prKey.Repository}";
             Type = GitHubTypeName;
         }
 

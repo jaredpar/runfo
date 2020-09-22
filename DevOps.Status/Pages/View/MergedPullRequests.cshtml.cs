@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
-using DevOps.Util.Triage;
+using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -75,7 +75,7 @@ namespace DevOps.Status.Pages.View
                         PullRequestNumber = prNumber,
                         BuildUri = b.GetBuildResultInfo().BuildUri,
                         BuildNumber = b.BuildNumber,
-                        DefinitionUri = b.ModelBuildDefinition.GetBuildDefinitionKey().DefinitionUri,
+                        DefinitionUri = b.ModelBuildDefinition.GetDefinitionKey().DefinitionUri,
                         DefinitionName = b.ModelBuildDefinition.DefinitionName,
                         Result = b.BuildResult!.Value,
                     };

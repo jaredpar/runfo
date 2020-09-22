@@ -13,7 +13,6 @@
   <ItemGroup>
     <ProjectReference Include="..\DevOps.Util.DotNet\DevOps.Util.DotNet.csproj" />
     <ProjectReference Include="..\DevOps.Util\DevOps.Util.csproj" />
-    <ProjectReference Include="..\DevOps.Util.Triage\DevOps.Util.Triage.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">

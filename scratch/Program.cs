@@ -1,11 +1,14 @@
-﻿using DevOps.Util;
+﻿using Azure.Storage.Queues;
+using DevOps.Util;
 using DevOps.Util.DotNet;
-using DevOps.Util.Triage;
+using DevOps.Util.DotNet.Triage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic;
+using Newtonsoft.Json;
 using Octokit;
 using System;
 using System.Collections.Generic;
@@ -83,7 +86,7 @@ namespace Scratch
 
             var builder = new DbContextOptionsBuilder<TriageContext>();
             builder.UseSqlServer(configuration[DotNetConstants.ConfigurationSqlConnectionString]);
-            builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+            // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
             TriageContext = new TriageContext(builder.Options);
             TriageContextUtil = new TriageContextUtil(TriageContext);
 
@@ -114,11 +117,59 @@ namespace Scratch
 
         internal static ILogger CreateLogger() => LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Scratch");
 
+
+
         internal async Task Scratch()
         {
-            await QueryProfile();
-            // await ExhaustTimelineAsync();
-            // await PopulateDb();
+            // await ReprocessPoison("build-complete");
+
+            var pageSize = 100;
+            var count = 0;
+            var limit = DateTime.UtcNow - TimeSpan.FromDays(28);
+
+            var baseQuery = TriageContextUtil.Context.ModelBuilds
+                .Where(x => x.QueueTime == null && x.StartTime >= limit)
+                .OrderByDescending(x => x.BuildNumber);
+            var total = await baseQuery.CountAsync();
+            Console.WriteLine($"Total {total}");
+
+            do
+            {
+                Console.WriteLine($"Processed {count}, Remaining {total - count}");
+                var query = baseQuery.Take(pageSize);
+                var results = await query.ToListAsync();
+                if (results.Count == 0)
+                {
+                    break;
+                }
+
+                var ids = results.Select(x => x.BuildNumber).ToArray();
+                var builds = await DevOpsServer.ListBuildsAsync("public", buildIds: ids);
+                foreach (var modelBuild in results)
+                {
+                    var build = builds.SingleOrDefault(x => x.Id == modelBuild.BuildNumber);
+                    if (build is null)
+                    {
+                        Console.WriteLine($"Can't get bulid for {modelBuild.BuildNumber}, re-use StartTime");
+                        modelBuild.QueueTime = modelBuild.StartTime;
+                        continue;
+                    }
+
+                    if (build.Status == BuildStatus.InProgress)
+                    {
+                        continue;
+                    }
+
+                    var resultInfo = build.GetBuildResultInfo();
+                    modelBuild.QueueTime = resultInfo.QueueTime;
+                    modelBuild.AzureOrganization = resultInfo.Organization;
+                    modelBuild.AzureProject = resultInfo.Project;
+                    modelBuild.GitHubTargetBranch = resultInfo.GitHubBuildInfo?.TargetBranch;
+                }
+
+                await TriageContextUtil.Context.SaveChangesAsync();
+                count += results.Count;
+            } while (true);
         }
 
         internal async Task PopulateDb()
@@ -172,6 +223,37 @@ namespace Scratch
             }
     
             */
+        }
+
+        internal async Task ReprocessPoison(string queueName)
+        {
+            var connectionString = CreateConfiguration()["AzureWebJobsStorage"];
+            var client = new QueueClient(connectionString, queueName);
+            var poisonClient = new QueueClient(connectionString, $"{queueName}-poison");
+            do
+            {
+                try
+                {
+                    var cts = new CancellationTokenSource();
+                    var response = await poisonClient.ReceiveMessagesAsync(cts.Token);
+                    if (response.Value.Length == 0)
+                    {
+                        break;
+                    }
+
+                    foreach (var message in response.Value)
+                    {
+                        Console.WriteLine($"Processing {message.MessageText}");
+                        await client.SendMessageAsync(message.MessageText);
+                        await poisonClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error: {ex.Message}");
+                }
+            }
+            while (true) ;
         }
 
         internal async Task QueryProfile()

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
-using DevOps.Util.Triage;
+using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +28,8 @@ namespace DevOps.Status.Pages.Search
             public string? Definition { get; set; }
             public string? DefinitionUri { get; set; }
             public GitHubPullRequestKey? PullRequestKey { get; set; }
+            public string? TargetBranch { get; set; }
+            public string? Queued { get; set; }
         }
 
         public TriageContext TriageContext { get; }
@@ -40,7 +42,9 @@ namespace DevOps.Status.Pages.Search
         public int? PreviousPageNumber { get; set; }
         public string? PassRate { get; set; }
         public bool IncludeDefinitionColumn { get; set; }
+        public bool IncludeTargetBranchColumn { get; set; }
         public List<BuildData> Builds { get; set; } = new List<BuildData>();
+        public DateTimeUtil DateTimeUtil = new DateTimeUtil();
 
         public BuildsModel(TriageContext triageContext)
         {
@@ -52,18 +56,27 @@ namespace DevOps.Status.Pages.Search
             const int PageSize = 50;
             if (string.IsNullOrEmpty(Query))
             {
-                Query = new SearchBuildsRequest() { Definition = "roslyn-ci" }.GetQueryString();
+                Query = new SearchBuildsRequest()
+                {
+                    Definition = "roslyn-ci",
+                    Started = new DateRequestValue(dayQuery: 5),
+                }.GetQueryString();
                 return;
             }
 
             var options = new SearchBuildsRequest();
             options.ParseQueryString(Query);
 
+            var totalCount = await options
+                .FilterBuilds(TriageContext.ModelBuilds)
+                .CountAsync();
+
+            var skipCount = PageNumber * PageSize;
             var results = await options
                 .FilterBuilds(TriageContext.ModelBuilds)
                 .OrderByDescending(x => x.BuildNumber)
                 .Include(x => x.ModelBuildDefinition)
-                .Skip(PageNumber * PageSize) 
+                .Skip(skipCount)
                 .Take(PageSize)
                 .ToListAsync();
 
@@ -82,6 +95,8 @@ namespace DevOps.Status.Pages.Search
                         BuildUri = buildInfo.BuildUri,
                         Definition = x.ModelBuildDefinition.DefinitionName,
                         DefinitionUri = buildInfo.DefinitionInfo.DefinitionUri,
+                        TargetBranch = buildInfo.GitHubBuildInfo?.TargetBranch,
+                        Queued = DateTimeUtil.ConvertDateTime(buildInfo.QueueTime)?.ToString("yyyy-MM-dd hh:mm tt"),
                     };
                 })
                 .ToList();
@@ -89,8 +104,11 @@ namespace DevOps.Status.Pages.Search
             passRate *= 100;
             PassRate = $"{passRate:N2}%";
             PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
-            NextPageNumber = PageNumber + 1;
+            NextPageNumber = results.Count + skipCount < totalCount
+                ? PageNumber + 1
+                : (int?)null;
             IncludeDefinitionColumn = !options.HasDefinition;
+            IncludeTargetBranchColumn = !options.TargetBranch.HasValue;
         }
     }
 }
