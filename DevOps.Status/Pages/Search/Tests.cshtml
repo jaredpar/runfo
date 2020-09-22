@@ -52,11 +52,14 @@
                             <a class="btn btn-primary" asp-route-bq=@Model.BuildQuery asp-route-tq=@filterTestQuery>Filter to test</a>
                         </div>
                         <div class="m-2">
-                            <form method="post">
-                                <input type="hidden" name="testFullName" value="@testInfo.TestName" />
-                                <input type="hidden" name="gitHubRepository" value="@testInfo.TestResultsDisplay?.GitHubRepository" />
-                                <button class="btn btn-primary">Create Issue</button>
-                            </form>
+                            <a class="btn btn-primary"
+                               asp-page="/Tracking/New"
+                               asp-route-IssueTitle="@testInfo.TestName"
+                               asp-route-TrackingKind="@DevOps.Util.DotNet.Triage.TrackingKind.Test"
+                               asp-route-SearchText="@testInfo.TestNameQuery"
+                               asp-route-GitHubOrganization="@testInfo.GitHubOrganization"
+                               asp-route-GitHubRepository="@testInfo.GitHubRepository"
+                               asp-route-Definition="@testInfo.BuildDefinition">Create Issue</a>
                         </div>
                     </div>
                 </div>

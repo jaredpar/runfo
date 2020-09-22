@@ -117,7 +117,7 @@ namespace DevOps.Util.UnitTests
             var trackingIssue = new ModelTrackingIssue()
             {
                 TrackingKind = (TrackingKind)Enum.Parse(typeof(TrackingKind), parts[0]),
-                SearchRegexText = parts[1],
+                SearchQuery = parts[1],
                 IsActive = true,
             };
             Context.ModelTrackingIssues.Add(trackingIssue);

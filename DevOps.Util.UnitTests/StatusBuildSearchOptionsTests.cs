@@ -11,13 +11,12 @@ namespace DevOps.Util.UnitTests
     public class StatusBuildSearchOptionsTests
     {
         [Theory]
-        [InlineData("count:10", "")]
-        [InlineData("count:11", "count:11")]
-        [InlineData("kind:pullrequest", "kind:pr")]
+        [InlineData("started:~10", "started:~10")]
+        [InlineData("started:~11", "started:~11")]
+        [InlineData("kind:pullrequest", "kind:pullrequest")]
         [InlineData("kind:pr", "kind:pr")]
         [InlineData("kind:mpr", "kind:mpr")]
         [InlineData("repository:roslyn kind:mpr", "repository:roslyn kind:mpr")]
-        [InlineData("count:1 repository:roslyn kind:mpr", "repository:roslyn kind:mpr count:1")]
         public void RoundTripQueryString(string toParse, string userQuery)
         {
             var options = new SearchBuildsRequest();

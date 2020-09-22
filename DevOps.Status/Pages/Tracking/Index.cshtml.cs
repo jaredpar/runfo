@@ -20,7 +20,7 @@ namespace DevOps.Status.Pages.Tracking
         {
             public int Id { get; set; }
 
-            public string? SearchText { get; set; }
+            public string? Title { get; set; }
 
             public string? Kind { get; set; }
 
@@ -46,7 +46,7 @@ namespace DevOps.Status.Pages.Tracking
                 .Select(issue => new IssueData()
                 {
                     Id = issue.Id,
-                    SearchText = issue.SearchRegexText,
+                    Title = issue.IssueTitle,
                     Kind = issue.TrackingKind.ToString(),
                     TotalCount = issue.ModelTrackingIssueMatches.Count(),
                     WeekCount = issue.ModelTrackingIssueMatches.Where(x => x.ModelBuildAttempt.ModelBuild.StartTime >= week).Count()

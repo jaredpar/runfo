@@ -17,7 +17,7 @@
         @foreach(var issueData in @Model.Issues)
         {
             <tr>
-                <td><a asp-page="issue" asp-route-id=@issueData.Id>@issueData.SearchText</a></td>
+                <td><a asp-page="issue" asp-route-id=@issueData.Id>@issueData.Title</a></td>
                 <td>@issueData.Kind</td>
                 <td>@issueData.WeekCount</td>
                 <td>@issueData.TotalCount</td>

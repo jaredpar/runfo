@@ -43,7 +43,7 @@ namespace DevOps.Util.UnitTests
 ";
 
             var report = await TrackingGitHubUtil.GetReportAsync(tracking);
-            Assert.Equal(expected, report.TrimNewlines());
+            Assert.Equal(expected.TrimNewlines(), report.TrimNewlines());
         }
     }
 }

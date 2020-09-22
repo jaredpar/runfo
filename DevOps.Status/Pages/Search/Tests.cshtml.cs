@@ -24,10 +24,12 @@ namespace DevOps.Status.Pages.Search
         public class TestInfo
         {
             public string? TestName { get; set; }
-
             public string? CollapseName { get; set; }
-
             public TestResultsDisplay? TestResultsDisplay { get; set; }
+            public string? TestNameQuery { get; set; }
+            public string? BuildDefinition { get; set; }
+            public string? GitHubOrganization { get; set; }
+            public string? GitHubRepository { get; set; }
         }
 
         public const int PageSize = 100;
@@ -69,8 +71,7 @@ namespace DevOps.Status.Pages.Search
 
                 IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults
                     .Include(x => x.ModelTestRun)
-                    .Include(x => x.ModelBuild)
-                    .ThenInclude(x => x.ModelBuildDefinition);
+                    .Include(x => x.ModelBuild);
                 query = searchBuildsRequest.FilterBuilds(query);
                 query = testSearchOptions.FilterTestResults(query);
                 var results = await query
@@ -84,10 +85,16 @@ namespace DevOps.Status.Pages.Search
                 {
                     count++;
 
+                    testSearchOptions.Name = group.Key;
+                    var firstBuild = group.FirstOrDefault()?.ModelBuild;
                     var testInfo = new TestInfo()
                     {
                         TestName = group.Key,
                         CollapseName = $"collapse{count}",
+                        TestNameQuery = testSearchOptions.GetQueryString(),
+                        BuildDefinition = searchBuildsRequest.Definition,
+                        GitHubOrganization = firstBuild?.GitHubOrganization,
+                        GitHubRepository = firstBuild?.GitHubRepository,
                         TestResultsDisplay = new TestResultsDisplay(group)
                         {
                             IncludeBuildColumn = true,
@@ -107,58 +114,6 @@ namespace DevOps.Status.Pages.Search
             {
                 ErrorMessage = ex.Message;
                 return Page();
-            }
-        }
-
-        public async Task<IActionResult> OnPost(string testFullName, string gitHubRepository)
-        {
-            if (string.IsNullOrEmpty(testFullName) || string.IsNullOrEmpty(BuildQuery))
-            {
-                throw new Exception("Invalid request");
-            }
-
-            var reportText = await GetReportText();
-            var gitHubApp = await GitHubClientFactory.CreateForAppAsync(DotNetUtil.GitHubOrganization, gitHubRepository);
-            var newIssue = new NewIssue($"Test failures: {testFullName}")
-            {
-                Body = reportText,
-            };
-            var issue = await gitHubApp.Issue.Create(DotNetUtil.GitHubOrganization, gitHubRepository, newIssue);
-            return Redirect(issue.HtmlUrl);
-
-            async Task<string> GetReportText()
-            {
-                var searchBuildsRequest = GetSearchBuildsRquest();
-                var testSearchOptions = new SearchTestsRequest()
-                {
-                    Name = testFullName,
-                };
-
-                IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults;
-                query = searchBuildsRequest.FilterBuilds(query);
-                query = testSearchOptions.FilterTestResults(query);
-                var testResults = await query
-                    .OrderByDescending(x => x.ModelBuild.BuildNumber)
-                    .Include(x => x.ModelBuild)
-                    .Include(x => x.ModelBuild.ModelBuildDefinition)
-                    .Include(x => x.ModelTestRun)
-                    .Take(100)
-                    .ToListAsync();
-                var results = new List<(BuildAndDefinitionInfo BuildAndDefinitionInfo, string? TestRunName, HelixLogInfo? LogInfo)>();
-                var includeHelix = false;
-                foreach (var item in testResults)
-                {
-                    var buildAndDefinitionInfo = item.ModelBuild.GetBuildAndDefinitionInfo();
-                    var helixLogInfo = item.GetHelixLogInfo();
-                    includeHelix = includeHelix || helixLogInfo is object;
-                    results.Add((buildAndDefinitionInfo, item.ModelTestRun.Name, helixLogInfo));
-                }
-
-                var builder = new ReportBuilder();
-                return builder.BuildSearchTests(
-                    results,
-                    includeDefinition: !searchBuildsRequest.HasDefinition,
-                    includeHelix: includeHelix);
             }
         }
 

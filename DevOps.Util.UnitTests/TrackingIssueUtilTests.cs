@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -71,6 +72,7 @@ namespace DevOps.Util.UnitTests
             await TrackingIssueUtil.TriageAsync(attempt);
             var matches = await Context.ModelTrackingIssueMatches.ToListAsync();
             Assert.Equal(count, matches.Count);
+            Assert.True(matches.All(x => x.JobName == "windows"));
 
             var result = await Context.ModelTrackingIssueResults.SingleAsync();
             Assert.True(result.IsPresent);

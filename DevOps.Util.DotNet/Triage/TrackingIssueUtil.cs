@@ -61,7 +61,7 @@ namespace DevOps.Util.DotNet.Triage
             {
                 var query = TriageContextUtil.Context
                     .ModelTrackingIssues
-                    .Where(x => x.TrackingKind == trackingKind && x.SearchRegexText == searchText);
+                    .Where(x => x.TrackingKind == trackingKind && x.SearchQuery == searchText);
                 var modelTrackingIssue = await query.FirstOrDefaultAsync().ConfigureAwait(false);
                 if (modelTrackingIssue is object)
                 {
@@ -88,7 +88,7 @@ namespace DevOps.Util.DotNet.Triage
                 modelTrackingIssue = new ModelTrackingIssue()
                 {
                     TrackingKind = trackingKind,
-                    SearchRegexText = searchText,
+                    SearchQuery = searchText,
                     ModelBuildDefinition = modelBuildDefinition,
                     IsActive = true,
                     GitHubOrganization = issueKey?.Organization,
@@ -195,30 +195,29 @@ namespace DevOps.Util.DotNet.Triage
             Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
             Debug.Assert(modelTrackingIssue.IsActive);
             Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Test);
-            Debug.Assert(modelTrackingIssue.SearchRegexText is object);
+            Debug.Assert(modelTrackingIssue.SearchQuery is object);
 
-            // TODO: stop using a regex here, use an actual test search regex
-            var nameRegex = DotNetQueryUtil.CreateSearchRegex(modelTrackingIssue.SearchRegexText);
-            var testQuery = Context
-                .ModelTestResults
+            var request = new SearchTestsRequest();
+            request.ParseQueryString(modelTrackingIssue.SearchQuery);
+            IQueryable<ModelTestResult> testQuery = request
+                .FilterTestResults(Context.ModelTestResults)
                 .Where(x =>
                     x.ModelBuildId == modelBuildAttempt.ModelBuildId &&
-                    x.ModelTestRun.Attempt == modelBuildAttempt.Attempt);
+                    x.ModelTestRun.Attempt == modelBuildAttempt.Attempt)
+                .Include(x => x.ModelTestRun);
             var any = false;
             foreach (var testResult in await testQuery.ToListAsync().ConfigureAwait(false))
             {
-                if (nameRegex.IsMatch(testResult.TestFullName))
+                var modelMatch = new ModelTrackingIssueMatch()
                 {
-                    var modelMatch = new ModelTrackingIssueMatch()
-                    {
-                        ModelTrackingIssue = modelTrackingIssue,
-                        ModelBuildAttempt = modelBuildAttempt,
-                        ModelTestResult = testResult,
-                    };
+                    ModelTrackingIssue = modelTrackingIssue,
+                    ModelBuildAttempt = modelBuildAttempt,
+                    ModelTestResult = testResult,
+                    JobName = testResult.ModelTestRun.Name,
+                };
 
-                    Context.ModelTrackingIssueMatches.Add(modelMatch);
-                    any = true;
-                }
+                Context.ModelTrackingIssueMatches.Add(modelMatch);
+                any = true;
             }
 
             return any;
@@ -230,29 +229,26 @@ namespace DevOps.Util.DotNet.Triage
             Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
             Debug.Assert(modelTrackingIssue.IsActive);
             Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Timeline);
-            Debug.Assert(modelTrackingIssue.SearchRegexText is object);
+            Debug.Assert(modelTrackingIssue.SearchQuery is object);
 
-            // TODO: stop using a regex here, use an actual timeline search request data
-            var textRegex = DotNetQueryUtil.CreateSearchRegex(modelTrackingIssue.SearchRegexText);
-            var timelineQuery = Context
-                .ModelTimelineIssues
+            var request = new SearchTimelinesRequest();
+            request.ParseQueryString(modelTrackingIssue.SearchQuery);
+            var timelineQuery = request.FilterTimelines(Context.ModelTimelineIssues)
                 .Where(x =>
                     x.ModelBuildId == modelBuildAttempt.ModelBuild.Id &&
                     x.Attempt == modelBuildAttempt.Attempt);
             var any = false;
             foreach (var modelTimelineIssue in await timelineQuery.ToListAsync().ConfigureAwait(false))
             {
-                if (textRegex.IsMatch(modelTimelineIssue.Message))
+                var modelMatch = new ModelTrackingIssueMatch()
                 {
-                    var modelMatch = new ModelTrackingIssueMatch()
-                    {
-                        ModelTrackingIssue = modelTrackingIssue,
-                        ModelBuildAttempt = modelBuildAttempt,
-                        ModelTimelineIssue = modelTimelineIssue,
-                    };
-                    Context.ModelTrackingIssueMatches.Add(modelMatch);
-                    any = true;
-                }
+                    ModelTrackingIssue = modelTrackingIssue,
+                    ModelBuildAttempt = modelBuildAttempt,
+                    ModelTimelineIssue = modelTimelineIssue,
+                    JobName = modelTimelineIssue.JobName,
+                };
+                Context.ModelTrackingIssueMatches.Add(modelMatch);
+                any = true;
             }
 
             return any;
@@ -263,9 +259,9 @@ namespace DevOps.Util.DotNet.Triage
             Debug.Assert(modelBuildAttempt.ModelBuild is object);
             Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
             Debug.Assert(modelTrackingIssue.IsActive);
-            Debug.Assert(modelTrackingIssue.SearchRegexText is object);
+            Debug.Assert(modelTrackingIssue.SearchQuery is object);
 
-            var textRegex = DotNetQueryUtil.CreateSearchRegex(modelTrackingIssue.SearchRegexText);
+            var textRegex = DotNetQueryUtil.CreateSearchRegex(modelTrackingIssue.SearchQuery);
             var query = Context
                 .ModelTestResults
                 .Where(x => x.IsHelixTestResult && x.ModelBuild.Id == modelBuildAttempt.ModelBuild.Id && x.ModelTestRun.Attempt == modelBuildAttempt.Attempt);
