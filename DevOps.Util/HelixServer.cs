@@ -10,9 +10,14 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util
 {
-    public class HelixServer : BaseServer
+    public class HelixServer
     {
-        public HelixServer() : base() { }
+        private readonly DevOpsHttpClient _client;
+
+        public HelixServer()
+        {
+            _client = new DevOpsHttpClient();
+        }
 
         private IHelixApi HelixApi { get; } = ApiFactory.GetAnonymous();
 
@@ -28,11 +33,10 @@ namespace DevOps.Util
 
             if (string.IsNullOrEmpty(jobListFile))
             {
-                Console.WriteLine($"Couldn't find job list for job {jobId}");
-                return;
+                throw new ArgumentException($"Couldn't find job list for job {jobId}");
             }
 
-            using MemoryStream memoryStream = await DownloadFileAsync(jobListFile).ConfigureAwait(false);
+            using MemoryStream memoryStream = await _client.DownloadFileAsync(jobListFile).ConfigureAwait(false);
             using StreamReader reader = new StreamReader(memoryStream);
             string jobListJson = await reader.ReadToEndAsync().ConfigureAwait(false);
 
@@ -53,7 +57,7 @@ namespace DevOps.Util
                     string fileName = uri.Segments[^1];
                     string destinationFile = Path.Combine(correlationDir, fileName);
                     Console.WriteLine($"Payload {fileName} => {destinationFile}");
-                    await DownloadZipFileAsync(url, destinationFile).ConfigureAwait(false);
+                    await _client.DownloadZipFileAsync(url, destinationFile).ConfigureAwait(false);
                 }
 
                 if (workItems.Count > 0)
@@ -79,12 +83,12 @@ namespace DevOps.Util
 
                         Console.WriteLine($"WorkItem {workItemInfo.WorkItemId} => {fileName}");
 
-                        await DownloadZipFileAsync(workItemInfo.PayloadUri, fileName).ConfigureAwait(false);
+                        await _client.DownloadZipFileAsync(workItemInfo.PayloadUri, fileName).ConfigureAwait(false);
                     }
                 }
                 else
                 {
-                    Console.WriteLine("No workitems specified");
+                    throw new ArgumentException("No workitems specified");
                 }
             }
         }

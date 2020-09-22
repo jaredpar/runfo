@@ -336,7 +336,7 @@ namespace Scratch
 
                 var duration = TryGetDuration(record.StartTime, record.FinishTime);
 
-                var log = await server.HttpClient.DownloadFileTextAsync(record.Log.Url);
+                var log = await server.DownloadFileTextAsync(record.Log.Url);
                 // Console.WriteLine(log);
                 using var reader = new StringReader(log);
                 var regex = new Regex(@"Test execution time: (.*)", RegexOptions.IgnoreCase | RegexOptions.Compiled);

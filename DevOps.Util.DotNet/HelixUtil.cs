@@ -148,7 +148,7 @@ namespace DevOps.Util.DotNet
             try
             {
                 var uri = $"https://helix.dot.net/api/2019-06-17/jobs/{helixInfo.JobId}/workitems/{helixInfo.WorkItemName}/";
-                var json = await server.HttpClient.GetJsonAsync(uri).ConfigureAwait(false);
+                var json = await server.GetJsonAsync(uri).ConfigureAwait(false);
                 if (json is null)
                 {
                     return null;
