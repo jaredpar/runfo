@@ -22,7 +22,7 @@ namespace DevOps.Util.DotNet.Function
             var buildMessage = new BuildMessage(buildKey);
             var text = JsonConvert.SerializeObject(buildMessage);
             var queue = new QueueClient(_connectionString, QueueNameTriageBuild);
-            await queue.SendMessageAsync(text).ConfigureAwait(false);
+            await queue.SendMessageEncodedAsync(text).ConfigureAwait(false);
         }
     }
 }
