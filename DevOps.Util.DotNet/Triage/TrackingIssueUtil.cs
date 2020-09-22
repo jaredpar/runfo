@@ -101,18 +101,19 @@ namespace DevOps.Util.DotNet.Triage
             }
         }
 
+        public async Task TriageAsync(BuildAttemptKey attemptKey, int modelTrackingIssueId)
+        {
+            var modelTrackingIssue = await Context
+                .ModelTrackingIssues
+                .Where(x => x.Id == modelTrackingIssueId)
+                .SingleAsync().ConfigureAwait(false);
+            var modelBuildAttempt = await GetModelBuildAttemptAsync(attemptKey).ConfigureAwait(false);
+            await TriageAsync(modelBuildAttempt, modelTrackingIssue).ConfigureAwait(false);
+        }
+
         public async Task TriageAsync(BuildAttemptKey attemptKey)
         {
-            var query = Context
-                .ModelBuildAttempts
-                .Where(x =>
-                    x.Attempt == attemptKey.Attempt &&
-                    x.ModelBuild.BuildNumber == attemptKey.Number &&
-                    x.ModelBuild.ModelBuildDefinition.AzureOrganization == attemptKey.Organization &&
-                    x.ModelBuild.ModelBuildDefinition.AzureProject == attemptKey.Project)
-                .Include(x => x.ModelBuild)
-                .ThenInclude(x => x.ModelBuildDefinition);
-            var modelBuildAttempt = await query.SingleAsync().ConfigureAwait(false);
+            var modelBuildAttempt = await GetModelBuildAttemptAsync(attemptKey).ConfigureAwait(false);
             await TriageAsync(modelBuildAttempt).ConfigureAwait(false);
         }
 
@@ -273,7 +274,7 @@ namespace DevOps.Util.DotNet.Triage
                 .Select(x => (buildInfo, x));
             var request = new SearchHelixLogsRequest()
             {
-                Text = modelTrackingIssue.SearchRegexText,
+                Text = modelTrackingIssue.SearchQuery,
                 HelixLogKinds = new List<HelixLogKind>(new[] { helixLogKind }),
                 Limit = 100,
             };
@@ -296,5 +297,16 @@ namespace DevOps.Util.DotNet.Triage
             }
             return any;
         }
+
+        private Task<ModelBuildAttempt> GetModelBuildAttemptAsync(BuildAttemptKey attemptKey) => Context
+            .ModelBuildAttempts
+            .Where(x =>
+                x.Attempt == attemptKey.Attempt &&
+                x.ModelBuild.BuildNumber == attemptKey.Number &&
+                x.ModelBuild.AzureOrganization == attemptKey.Organization &&
+                x.ModelBuild.AzureProject == attemptKey.Project)
+            .Include(x => x.ModelBuild)
+            .ThenInclude(x => x.ModelBuildDefinition)
+            .SingleAsync();
     }
 }

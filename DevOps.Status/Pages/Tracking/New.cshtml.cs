@@ -1,18 +1,13 @@
 ﻿using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
+using DevOps.Util.DotNet.Function;
 using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Octokit;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,7 +18,7 @@ namespace DevOps.Status.Pages.Tracking
         public TriageContext TriageContext { get; }
         public TriageContextUtil TriageContextUtil { get; }
         public IGitHubClientFactory GitHubClientFactory { get; }
-        public DotNetQueryUtilFactory QueryUtilFactory { get; }
+        public FunctionQueueUtil FunctionQueueUtil { get; }
         public ILogger Logger { get; }
 
         [BindProperty(SupportsGet = true)]
@@ -41,12 +36,12 @@ namespace DevOps.Status.Pages.Tracking
 
         public string? ErrorMessage { get; set; }
 
-        public NewTrackingIssueModel(TriageContext triageContext, DotNetQueryUtilFactory queryUtilFactory, IGitHubClientFactory gitHubClientFactory, ILogger<NewTrackingIssueModel> logger)
+        public NewTrackingIssueModel(TriageContext triageContext, FunctionQueueUtil functionQueueUtil, IGitHubClientFactory gitHubClientFactory, ILogger<NewTrackingIssueModel> logger)
         {
             TriageContext = triageContext;
             TriageContextUtil = new TriageContextUtil(triageContext);
             GitHubClientFactory = gitHubClientFactory;
-            QueryUtilFactory = queryUtilFactory;
+            FunctionQueueUtil = functionQueueUtil;
             Logger = logger;
         }
 
@@ -129,7 +124,6 @@ namespace DevOps.Status.Pages.Tracking
             async Task<ModelTrackingIssue> CreateTrackingIssue(IGitHubClient gitHubClient)
             {
                 var issueKey = await CreateGitHubIssueAsync(gitHubClient);
-
                 var modelTrackingIssue = new ModelTrackingIssue()
                 {
                     IsActive = true,
@@ -145,28 +139,17 @@ namespace DevOps.Status.Pages.Tracking
                 TriageContext.ModelTrackingIssues.Add(modelTrackingIssue);
                 await TriageContext.SaveChangesAsync();
                 await InitialTriageAsync(modelTrackingIssue);
-                await UpdateGitHubIssueAsync(gitHubClient, modelTrackingIssue, issueKey);
 
                 return modelTrackingIssue;
             }
 
             async Task InitialTriageAsync(ModelTrackingIssue modelTrackingIssue)
             {
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-                try
-                {
-                    // Picking how many days to triage here. If there is no definition then there will be 
-                    // a _lot_ more builds in the first day alone so just triage that far.
-                    var days = modelBuildDefinition is object ? 3 : 1;
-                    var request = new SearchBuildsRequest() { Queued = new DateRequestValue(days) };
-                    var queryUtil = QueryUtilFactory.CreateDotNetQueryUtilForAnonymous();
-                    var util = new TrackingIssueUtil(queryUtil, TriageContextUtil, Logger);
-                    await util.TriageBuildsAsync(modelTrackingIssue, request, cts.Token);
-                }
-                catch (OperationCanceledException)
-                {
-                    Logger.LogInformation("Couldn't fully triage issue in time alotted");
-                }
+                // Picking how many days to triage here. If there is no definition then there will be 
+                // a _lot_ more builds in the first day alone so just triage that far.
+                var days = modelBuildDefinition is object ? 3 : 1;
+                var request = new SearchBuildsRequest() { Queued = new DateRequestValue(days) };
+                await FunctionQueueUtil.QueueTriageBuildQuery(request, TriageContext, limit: 20);
             }
 
             async Task<GitHubIssueKey> CreateGitHubIssueAsync(IGitHubClient gitHubClient)
@@ -179,18 +162,6 @@ namespace DevOps.Status.Pages.Tracking
                 var issue = await gitHubClient.Issue.Create(GitHubOrganization, GitHubRepository, newIssue);
 
                 return issue.GetIssueKey();
-            }
-
-            async Task UpdateGitHubIssueAsync(IGitHubClient gitHubClient, ModelTrackingIssue modelTrackingIssue, GitHubIssueKey issueKey)
-            {
-                var util = new TrackingGitHubUtil(GitHubClientFactory, TriageContext, Logger);
-                var reportText = await util.GetReportAsync(modelTrackingIssue);
-                var issueUpdate = new IssueUpdate()
-                {
-                    Body = reportText,
-                };
-
-                await gitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, issueUpdate);
             }
         }
     }

@@ -16,21 +16,21 @@ namespace DevOps.Util.DotNet.Triage
 
         public static BuildKey GetBuildKey(this ModelBuild modelBuild) =>
             new BuildKey(
-                modelBuild.ModelBuildDefinition.AzureOrganization,
-                modelBuild.ModelBuildDefinition.AzureProject,
+                modelBuild.AzureOrganization,
+                modelBuild.AzureProject,
                 modelBuild.BuildNumber);
 
         public static BuildInfo GetBuildInfo(this ModelBuild modelBuild) =>
             new BuildInfo(
-                modelBuild.ModelBuildDefinition.AzureOrganization,
-                modelBuild.ModelBuildDefinition.AzureProject,
+                modelBuild.AzureOrganization,
+                modelBuild.AzureProject,
                 modelBuild.BuildNumber,
                 GetGitHubBuildInfo(modelBuild));
 
         public static BuildAndDefinitionInfo GetBuildAndDefinitionInfo(this ModelBuild modelBuild) =>
             new BuildAndDefinitionInfo(
-                modelBuild.ModelBuildDefinition.AzureOrganization,
-                modelBuild.ModelBuildDefinition.AzureProject,
+                modelBuild.AzureOrganization,
+                modelBuild.AzureProject,
                 modelBuild.BuildNumber,
                 modelBuild.ModelBuildDefinition.DefinitionId,
                 modelBuild.ModelBuildDefinition.DefinitionName,
@@ -51,9 +51,17 @@ namespace DevOps.Util.DotNet.Triage
                 modelBuild.PullRequestNumber,
                 modelBuild.GitHubTargetBranch);
 
-
         public static ModelBuildKind GetModelBuildKind(this ModelBuild modelBuild) =>
             TriageContextUtil.GetModelBuildKind(modelBuild.IsMergedPullRequest, modelBuild.PullRequestNumber);
+
+        #endregion
+
+        #region ModelBuildAttempt
+
+        public static BuildAttemptKey GetBuildAttemptKey(this ModelBuildAttempt modelBuildAttempt) =>
+            new BuildAttemptKey(
+                modelBuildAttempt.ModelBuild.GetBuildKey(),
+                modelBuildAttempt.Attempt);
 
         #endregion
 

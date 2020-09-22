@@ -1,4 +1,5 @@
 ﻿using DevOps.Util.DotNet;
+using DevOps.Util.DotNet.Triage;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using System;
 using System.Collections.Generic;
@@ -7,7 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DevOps.Util.DotNet.Triage
+namespace DevOps.Util.DotNet.Function
 {
     public sealed class FunctionUtil
     {

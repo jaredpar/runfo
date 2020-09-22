@@ -269,8 +269,7 @@ namespace DevOps.Util.DotNet.Triage
             return modelBuildAttempt;
         }
 
-        public Task<ModelBuild?> FindModelBuildAsync(string organization, string project, int buildNumber) =>
-            Context.
+        public Task<ModelBuild?> FindModelBuildAsync(string organization, string project, int buildNumber) => Context.
             ModelBuilds
             .Where(x =>
                 x.BuildNumber == buildNumber &&
@@ -278,13 +277,19 @@ namespace DevOps.Util.DotNet.Triage
                 x.ModelBuildDefinition.AzureProject == project)
             .FirstOrDefaultAsync();
 
-        public Task<ModelBuildAttempt?> FindModelBuildAttemptAsync(string organization, string project, int buildNumber, int attempt) =>
-            Context.
+        public IQueryable<ModelBuildAttempt> FindModelBuildAttemptsQuery(string organization, string project, int buildNumber) => Context
+            .ModelBuildAttempts
+            .Where(x =>
+                x.ModelBuild.BuildNumber == buildNumber &&
+                x.ModelBuild.AzureOrganization == organization &&
+                x.ModelBuild.AzureProject == project);
+
+        public Task<ModelBuildAttempt?> FindModelBuildAttemptAsync(string organization, string project, int buildNumber, int attempt) => Context.
             ModelBuildAttempts
             .Where(x =>
                 x.ModelBuild.BuildNumber == buildNumber &&
-                x.ModelBuild.ModelBuildDefinition.AzureOrganization == organization &&
-                x.ModelBuild.ModelBuildDefinition.AzureProject == project &&
+                x.ModelBuild.AzureOrganization == organization &&
+                x.ModelBuild.AzureProject == project &&
                 x.Attempt == attempt)
             .FirstOrDefaultAsync();
 

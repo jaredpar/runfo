@@ -9,6 +9,7 @@ using AspNet.Security.OAuth.VisualStudio;
 using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
+using DevOps.Util.DotNet.Function;
 using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -66,6 +67,8 @@ namespace DevOps.Status
                     DotNetUtil.AzureOrganization,
                     Configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
             });
+
+            services.AddScoped(_ => new FunctionQueueUtil(Configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]));
 
             services.AddDbContext<TriageContext>(options => 
             {
