@@ -96,4 +96,14 @@ namespace DevOps.Util.DotNet.Function
             ModelTrackingIssueId = modelTrackingIssueId;
         }
     }
+
+    public sealed class IssueUpdateManualMessage
+    {
+        public int? ModelTrackingIssueId { get; set; }
+
+        public IssueUpdateManualMessage(int modelTrackingIssueId)
+        {
+            ModelTrackingIssueId = modelTrackingIssueId;
+        }
+    }
 }

@@ -15,11 +15,12 @@ namespace DevOps.Util.DotNet.Function
         /// issues with Azure Functions
         /// https://github.com/Azure/azure-sdk-for-net/issues/10242
         /// </summary>
-        public static async Task<SendReceipt> SendMessageEncodedAsync(this QueueClient queueClient, string messageText)
+        public static async Task<SendReceipt> SendMessageEncodedAsync(this QueueClient queueClient, string messageText, TimeSpan? visibilityTimeout = null)
         {
             var bytes = Encoding.UTF8.GetBytes(messageText);
             var encodedMessageText = Convert.ToBase64String(bytes);
-            return await queueClient.SendMessageAsync(encodedMessageText).ConfigureAwait(false);
+            return await queueClient.SendMessageAsync(encodedMessageText, visibilityTimeout: visibilityTimeout).ConfigureAwait(false);
         }
+
     }
 }

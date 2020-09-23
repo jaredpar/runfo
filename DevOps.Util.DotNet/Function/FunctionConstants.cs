@@ -12,5 +12,6 @@ namespace DevOps.Util.DotNet.Function
         public const string QueueNameTriageTrackingIssue = "triage-tracking-issue";
         public const string QueueNamePullRequestMerged = "pull-request-merged";
         public const string QueueNameOsxRetry = "osx-retry";
+        public const string QueueNameIssueUpdateManual = "issue-update-manual";
     }
 }

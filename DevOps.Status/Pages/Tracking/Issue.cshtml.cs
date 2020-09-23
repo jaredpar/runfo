@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
+using DevOps.Util.DotNet.Function;
 using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -40,8 +41,8 @@ namespace DevOps.Status.Pages.Tracking
         }
 
         public TriageContext Context { get; }
-        public DotNetQueryUtilFactory QueryUtilFactory { get; }
         public IGitHubClientFactory GitHubClientFactory { get;  }
+        public FunctionQueueUtil FunctionQueueUtil { get;  }
         [BindProperty]
         public string? IssueTitle { get; set; }
         public string? SearchQuery { get; set; }
@@ -55,10 +56,10 @@ namespace DevOps.Status.Pages.Tracking
         public bool IsActive { get; set; }
         public PaginationDisplay? PaginationDisplay { get; set; }
 
-        public TrackingIssueModel(TriageContext context, DotNetQueryUtilFactory queryUtilFactory, IGitHubClientFactory gitHubClientFactory)
+        public TrackingIssueModel(TriageContext context, FunctionQueueUtil functionQueueUtil, IGitHubClientFactory gitHubClientFactory)
         {
             Context = context;
-            QueryUtilFactory = queryUtilFactory;
+            FunctionQueueUtil = functionQueueUtil;
             GitHubClientFactory = gitHubClientFactory;
         }
 
@@ -134,7 +135,6 @@ namespace DevOps.Status.Pages.Tracking
                 {
                     try
                     {
-
                         var gitHubClient = await GitHubClientFactory.CreateForAppAsync(issueKey.Organization, issueKey.Repository);
                         var issueUpdate = new IssueUpdate() { State = ItemState.Closed };
                         var issue = await gitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, issueUpdate);
@@ -153,21 +153,11 @@ namespace DevOps.Status.Pages.Tracking
 
             async Task<IActionResult> PopulateAsync()
             {
-                try
-                {
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-                    var queryUtil = await QueryUtilFactory.CreateDotNetQueryUtilForUserAsync();
-                    var triageContextUtil = new TriageContextUtil(Context);
-                    var trackingIssueUtil = new TrackingIssueUtil(queryUtil, triageContextUtil, NullLogger.Instance);
-                    var request = new SearchBuildsRequest();
-                    request.ParseQueryString(PopulateBuildsQuery ?? "");
+                var request = new SearchBuildsRequest();
+                request.ParseQueryString(PopulateBuildsQuery ?? "");
 
-                    await trackingIssueUtil.TriageBuildsAsync(modelTrackingIssue, request, cts.Token);
-                }
-                catch (Exception ex)
-                {
-                    ErrorMessage = ex.Message;
-                }
+                await FunctionQueueUtil.QueueTriageBuildQuery(request, Context);
+                await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, delay: TimeSpan.FromMinutes(1));
                 await OnGetAsync(id);
                 return Page();
             }

@@ -9,12 +9,6 @@ namespace DevOps.Util.DotNet
 {
     public sealed class ReportBuilder
     {
-        // TODO: the header / fotter should be in the GitHub issue layer, not the raw report layer
-        public static readonly string MarkdownReportStart = "<!-- runfo report start -->";
-        public static readonly Regex MarkdownReportStartRegex = new Regex(@"<!--\s*runfo report start\s*-->", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        public static readonly string MarkdownReportEnd = "<!-- runfo report end -->";
-        public static readonly Regex MarkdownReportEndRegex = new Regex(@"<!--\s*runfo report end\s*-->", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
         public string BuildSearchTests(
             IEnumerable<(BuildAndDefinitionInfo BuildAndDefinitionInfo, string? TestRunName, HelixLogInfo? LogInfo)> results,
             bool includeDefinition,
@@ -22,7 +16,6 @@ namespace DevOps.Util.DotNet
         {
             var builder = new StringBuilder();
 
-            builder.AppendLine(MarkdownReportStart);
             BuildHeader();
 
             var resultsCount = 0;
@@ -58,7 +51,6 @@ namespace DevOps.Util.DotNet
             }
 
             builder.AppendLine();
-            builder.AppendLine(MarkdownReportEnd);
 
             return builder.ToString();
 
@@ -108,7 +100,6 @@ namespace DevOps.Util.DotNet
             var builder = new StringBuilder();
             if (markdown)
             {
-                builder.AppendLine(MarkdownReportStart);
                 if (includeDefinition)
                 {
                     builder.Append("|Definition");
@@ -157,11 +148,6 @@ namespace DevOps.Util.DotNet
                 builder.AppendLine(footer);
             }
 
-            if (markdown)
-            {
-                builder.AppendLine(MarkdownReportEnd);
-            }
-
             return builder.ToString();
         }
 
@@ -174,7 +160,6 @@ namespace DevOps.Util.DotNet
             var builder = new StringBuilder();
             if (markdown)
             {
-                builder.AppendLine(MarkdownReportStart);
                 builder.Append("|Build|Kind|");
 
                 var header = "|---|---|";
@@ -212,7 +197,6 @@ namespace DevOps.Util.DotNet
                 }
 
                 AppendFooter();
-                builder.AppendLine(MarkdownReportEnd);
             }
             else
             {

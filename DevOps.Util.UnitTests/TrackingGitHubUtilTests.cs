@@ -34,15 +34,13 @@ namespace DevOps.Util.UnitTests
             await Context.SaveChangesAsync();
 
             var expected = @"
-<!-- runfo report start -->
 |Definition|Build|Kind|Job Name|
 |---|---|---|---|
 |[roslyn](https://dnceng.visualstudio.com/public/_build?definitionId=42)|[1](https://dev.azure.com/dnceng/public/_build/results?buildId=1)|Rolling|windows|
 
-<!-- runfo report end -->
 ";
 
-            var report = await TrackingGitHubUtil.GetReportAsync(tracking);
+            var report = await TrackingGitHubUtil.GetReportAsync(tracking, includeMarkers: false);
             Assert.Equal(expected.TrimNewlines(), report.TrimNewlines());
         }
     }

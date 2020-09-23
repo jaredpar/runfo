@@ -11,8 +11,10 @@ using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Logging;
 using Octokit;
+using Org.BouncyCastle.Asn1.Crmf;
 
 namespace DevOps.Util.DotNet.Triage
 {
@@ -23,6 +25,10 @@ namespace DevOps.Util.DotNet.Triage
     public sealed class TrackingGitHubUtil
     {
         public const int DefaultReportLimit = 100;
+        public const string MarkdownReportStart = "<!-- runfo report start -->";
+        public const string MarkdownReportEnd = "<!-- runfo report end -->";
+        public static readonly Regex MarkdownReportStartRegex = new Regex(@"<!--\s*runfo report start\s*-->", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        public static readonly Regex MarkdownReportEndRegex = new Regex(@"<!--\s*runfo report end\s*-->", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         public IGitHubClientFactory GitHubClientFactory { get; }
         public TriageContextUtil TriageContextUtil { get; }
@@ -48,15 +54,29 @@ namespace DevOps.Util.DotNet.Triage
             {
                 try
                 {
-                    if (modelTrackingIssue.GetGitHubIssueKey() is { } issueKey)
-                    {
-                        await UpdateGitHubIssueAsync(modelTrackingIssue, issueKey).ConfigureAwait(false);
-                    }
+                    await UpdateGitHubIssueAsync(modelTrackingIssue).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
                     Logger.LogError($"Error updating {modelTrackingIssue.Id}: {ex.Message}");
                 }
+            }
+        }
+
+        public async Task UpdateGitHubIssueAsync(int modelTrackingIssueId)
+        {
+            var modelTrackingIssue = await Context
+                .ModelTrackingIssues
+                .Where(x => x.Id == modelTrackingIssueId)
+                .SingleAsync().ConfigureAwait(false);
+            await UpdateGitHubIssueAsync(modelTrackingIssue).ConfigureAwait(false);
+        }
+
+        public async Task UpdateGitHubIssueAsync(ModelTrackingIssue modelTrackingIssue)
+        {
+            if (modelTrackingIssue.GetGitHubIssueKey() is { } issueKey)
+            {
+                await UpdateGitHubIssueAsync(modelTrackingIssue, issueKey).ConfigureAwait(false);
             }
         }
 
@@ -123,13 +143,13 @@ namespace DevOps.Util.DotNet.Triage
                 if (inReportBody)
                 {
                     // Skip until we hit the end of the existing report
-                    if (ReportBuilder.MarkdownReportEndRegex.IsMatch(line))
+                    if (MarkdownReportEndRegex.IsMatch(line))
                     {
                         inReportBody = false;
                         foundEnd = true;
                     }
                 }
-                else if (ReportBuilder.MarkdownReportStartRegex.IsMatch(line))
+                else if (MarkdownReportStartRegex.IsMatch(line))
                 {
                     builder.AppendLine(reportBody);
                     inReportBody = true;
@@ -152,21 +172,30 @@ namespace DevOps.Util.DotNet.Triage
             }
         }
 
-        public Task<string> GetReportAsync(ModelTrackingIssue modelTrackingIssue, int limit = DefaultReportLimit)
+        public static string WrapInStartEndMarkers(string text)
         {
-            switch (modelTrackingIssue.TrackingKind)
+            var builder = new StringBuilder();
+            builder.AppendLine(MarkdownReportStart);
+            builder.AppendLine(text);
+            builder.AppendLine(MarkdownReportEnd);
+            return builder.ToString();
+        }
+
+        public async Task<string> GetReportAsync(ModelTrackingIssue modelTrackingIssue, int limit = DefaultReportLimit, bool includeMarkers = true)
+        {
+            var reportTextTask = modelTrackingIssue.TrackingKind switch
             {
-                case TrackingKind.Test:
-                    return GetReportForTestAsync(modelTrackingIssue, limit);
-                case TrackingKind.Timeline:
-                    return GetReportForTimelineAsync(modelTrackingIssue, limit);
-                case TrackingKind.HelixConsole:
-                    return GetReportForHelixAsync(modelTrackingIssue, HelixLogKind.Console, limit);
-                case TrackingKind.HelixRunClient:
-                    return GetReportForHelixAsync(modelTrackingIssue, HelixLogKind.RunClient, limit);
-                default:
-                    return Task.FromException<string>(new Exception($"Invalid value {modelTrackingIssue.TrackingKind}"));
-            }
+                TrackingKind.Test => GetReportForTestAsync(modelTrackingIssue, limit),
+                TrackingKind.Timeline => GetReportForTimelineAsync(modelTrackingIssue, limit),
+                TrackingKind.HelixConsole => GetReportForHelixAsync(modelTrackingIssue, HelixLogKind.Console, limit),
+                TrackingKind.HelixRunClient => GetReportForHelixAsync(modelTrackingIssue, HelixLogKind.RunClient, limit),
+                _ => throw new Exception($"Invalid value {modelTrackingIssue.TrackingKind}"),
+            };
+
+            var reportText = await reportTextTask.ConfigureAwait(false);
+            return includeMarkers
+                ? WrapInStartEndMarkers(reportText)
+                : reportText;
         }
 
         private async Task<string> GetReportForTestAsync(ModelTrackingIssue modelTrackingIssue, int limit)

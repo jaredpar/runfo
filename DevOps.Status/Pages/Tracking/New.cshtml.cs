@@ -148,19 +148,28 @@ namespace DevOps.Status.Pages.Tracking
                 // Picking how many days to triage here. If there is no definition then there will be 
                 // a _lot_ more builds in the first day alone so just triage that far.
                 var days = modelBuildDefinition is object ? 3 : 1;
-                var request = new SearchBuildsRequest() { Queued = new DateRequestValue(days) };
-                await FunctionQueueUtil.QueueTriageBuildQuery(request, TriageContext, limit: 20);
+                var request = new SearchBuildsRequest()
+                {
+                    Definition = modelBuildDefinition?.DefinitionId.ToString() ?? null,
+                    Queued = new DateRequestValue(days)
+                };
+                await FunctionQueueUtil.QueueTriageBuildQuery(request, TriageContext);
+
+                // Issues are bulk updated on a 15 minute cycle. This is a new issue though so want to make sure that
+                // the user sees progress soon. Schedule two manual updates in the near future on this so the issue 
+                // gets rolling then it will fall into the 15 minute bulk cycle.
+                await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, TimeSpan.FromSeconds(30));
+                await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, TimeSpan.FromMinutes(2));
             }
 
             async Task<GitHubIssueKey> CreateGitHubIssueAsync(IGitHubClient gitHubClient)
             {
-                var newIssue = new NewIssue("Temporary title")
+                var newIssue = new NewIssue(IssueTitle)
                 {
-                    Body = "Runfo Creating Tracking Issue"
+                    Body = TrackingGitHubUtil.WrapInStartEndMarkers("Runfo Creating Tracking Issue (data being generated)")
                 };
 
                 var issue = await gitHubClient.Issue.Create(GitHubOrganization, GitHubRepository, newIssue);
-
                 return issue.GetIssueKey();
             }
         }

@@ -43,7 +43,7 @@ namespace DevOps.Status.Util
             foreach (var build in builds)
             {
                 var key = build.GetBuildKey();
-                await util.QueueTriageBuild(key);
+                await util.QueueTriageBuildAsync(key);
             }
         }
     }

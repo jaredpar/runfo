@@ -163,13 +163,13 @@ namespace DevOps.Util.DotNet.Triage
                 if (inReportBody)
                 {
                     // Skip until we hit the end of the existing report
-                    if (ReportBuilder.MarkdownReportEndRegex.IsMatch(line))
+                    if (TrackingGitHubUtil.MarkdownReportEndRegex.IsMatch(line))
                     {
                         inReportBody = false;
                         foundEnd = true;
                     }
                 }
-                else if (ReportBuilder.MarkdownReportStartRegex.IsMatch(line))
+                else if (TrackingGitHubUtil.MarkdownReportStartRegex.IsMatch(line))
                 {
                     builder.AppendLine(reportBody);
                     inReportBody = true;

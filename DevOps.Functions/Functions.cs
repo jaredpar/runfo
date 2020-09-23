@@ -200,6 +200,42 @@ namespace DevOps.Functions
             }
         }
 
+        [FunctionName("issues-update-timer")]
+        public async Task IssuesUpdateTimerAsync(
+            [TimerTrigger("0 */15 15-23 * * 1-5")] TimerInfo timerInfo,
+            ILogger logger)
+        {
+            var util = new TrackingGitHubUtil(GitHubClientFactory, Context, logger);
+            await util.UpdateGithubIssuesAsync();
+        }
+
+        [FunctionName("issues-update-manual")]
+        public async Task IssuesUpdateManualAsync(
+            [QueueTrigger(QueueNameIssueUpdateManual, Connection = ConfigurationAzureBlobConnectionString)] string message,
+            ILogger logger)
+        { 
+            var updateMessage = JsonConvert.DeserializeObject<IssueUpdateManualMessage>(message);
+            if (updateMessage.ModelTrackingIssueId is { } id)
+            {
+                var util = new TrackingGitHubUtil(GitHubClientFactory, Context, logger);
+                await util.UpdateGitHubIssueAsync(id);
+            }
+            else
+            {
+                logger.LogError($"Message not a valid update message: {message}");
+            }
+        }
+
+        [FunctionName("issues-update-legacy")]
+        public async Task IssuesUpdateLegacyAsync(
+            [TimerTrigger("0 */15 15-23 * * 1-5")] TimerInfo timerInfo,
+            ILogger logger)
+        { 
+            var util = new LegacyTriageGitHubUtil(GitHubClientFactory, Context, logger);
+            await util.UpdateGithubIssues();
+            await util.UpdateStatusIssue();
+        }
+
         [FunctionName("osx-retry")]
         public async Task RetryMac(
             [QueueTrigger(QueueNameOsxRetry, Connection = ConfigurationAzureBlobConnectionString)] string message,
@@ -209,16 +245,6 @@ namespace DevOps.Functions
             Debug.Assert(buildInfoMessage.ProjectName is object);
             var util = new LegacyAutoTriageUtil(Server, Context, logger);
             await util.RetryOsxDeprovisionAsync(buildInfoMessage.ProjectName, buildInfoMessage.BuildNumber);
-        }
-
-        [FunctionName("issues-update")]
-        public async Task IssuesUpdate(
-            [TimerTrigger("0 */15 15-23 * * 1-5")] TimerInfo timerInfo,
-            ILogger logger)
-        { 
-            var util = new LegacyTriageGitHubUtil(GitHubClientFactory, Context, logger);
-            await util.UpdateGithubIssues();
-            await util.UpdateStatusIssue();
         }
 
         [FunctionName("webhook-github")]
