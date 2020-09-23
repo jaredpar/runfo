@@ -209,6 +209,15 @@ namespace DevOps.Functions
             await util.UpdateGithubIssuesAsync();
         }
 
+        [FunctionName("issues-update-status-page")]
+        public async Task IssuesUpdateStatusPageAsync(
+            [TimerTrigger("0 */30 15-23 * * 1-5")] TimerInfo timerInfo,
+            ILogger logger)
+        {
+            var util = new StatusPageUtil(GitHubClientFactory, Context, logger);
+            await util.UpdateStatusIssue();
+        }
+
         [FunctionName("issues-update-manual")]
         public async Task IssuesUpdateManualAsync(
             [QueueTrigger(QueueNameIssueUpdateManual, Connection = ConfigurationAzureBlobConnectionString)] string message,
@@ -224,16 +233,6 @@ namespace DevOps.Functions
             {
                 logger.LogError($"Message not a valid update message: {message}");
             }
-        }
-
-        [FunctionName("issues-update-legacy")]
-        public async Task IssuesUpdateLegacyAsync(
-            [TimerTrigger("0 */15 15-23 * * 1-5")] TimerInfo timerInfo,
-            ILogger logger)
-        { 
-            var util = new LegacyTriageGitHubUtil(GitHubClientFactory, Context, logger);
-            await util.UpdateGithubIssues();
-            await util.UpdateStatusIssue();
         }
 
         [FunctionName("osx-retry")]

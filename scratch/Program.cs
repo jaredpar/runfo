@@ -60,6 +60,18 @@ namespace Scratch
         }
     }
 
+    internal sealed class FakeGitHubClientFactory : IGitHubClientFactory
+    {
+        public GitHubClient GitHubClient { get; }
+
+        public FakeGitHubClientFactory(GitHubClient gitHubClient)
+        {
+            GitHubClient = gitHubClient;
+        }
+
+        public Task<IGitHubClient> CreateForAppAsync(string owner, string repository) => Task.FromResult<IGitHubClient>(GitHubClient);
+    }
+
     internal sealed class ScratchUtil
     { 
         public static string DefaultOrganization { get; set; } = "dnceng";
@@ -67,7 +79,7 @@ namespace Scratch
         public DevOpsServer DevOpsServer { get; set; }
         public TriageContext TriageContext { get; set; }
         public TriageContextUtil TriageContextUtil { get; set; }
-        public IGitHubClient GitHubClient { get; set; }
+        public IGitHubClientFactory GitHubClientFactory { get; set; }
         public DotNetQueryUtil DotNetQueryUtil { get; set; }
         public BlobStorageUtil BlobStorageUtil { get; set; }
 
@@ -98,7 +110,7 @@ namespace Scratch
                 var both = value.Split(new[] { ':' }, count: 2);
                 gitHubClient.Credentials = new Credentials(both[0], both[1]);
             }
-            GitHubClient = gitHubClient;
+            GitHubClientFactory = new FakeGitHubClientFactory(gitHubClient);
 
             BlobStorageUtil = new BlobStorageUtil(organization, configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
 
@@ -119,58 +131,11 @@ namespace Scratch
         internal static ILogger CreateLogger() => LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Scratch");
 
 
-
         internal async Task Scratch()
         {
+            var util = new StatusPageUtil(GitHubClientFactory, TriageContext, CreateLogger());
+            var text = await util.GetStatusIssueTextAsync();
             // await ReprocessPoison("build-complete");
-
-            var pageSize = 100;
-            var count = 0;
-            var limit = DateTime.UtcNow - TimeSpan.FromDays(28);
-
-            var baseQuery = TriageContextUtil.Context.ModelBuilds
-                .Where(x => x.QueueTime == null && x.StartTime >= limit)
-                .OrderByDescending(x => x.BuildNumber);
-            var total = await baseQuery.CountAsync();
-            Console.WriteLine($"Total {total}");
-
-            do
-            {
-                Console.WriteLine($"Processed {count}, Remaining {total - count}");
-                var query = baseQuery.Take(pageSize);
-                var results = await query.ToListAsync();
-                if (results.Count == 0)
-                {
-                    break;
-                }
-
-                var ids = results.Select(x => x.BuildNumber).ToArray();
-                var builds = await DevOpsServer.ListBuildsAsync("public", buildIds: ids);
-                foreach (var modelBuild in results)
-                {
-                    var build = builds.SingleOrDefault(x => x.Id == modelBuild.BuildNumber);
-                    if (build is null)
-                    {
-                        Console.WriteLine($"Can't get bulid for {modelBuild.BuildNumber}, re-use StartTime");
-                        modelBuild.QueueTime = modelBuild.StartTime;
-                        continue;
-                    }
-
-                    if (build.Status == BuildStatus.InProgress)
-                    {
-                        continue;
-                    }
-
-                    var resultInfo = build.GetBuildResultInfo();
-                    modelBuild.QueueTime = resultInfo.QueueTime;
-                    modelBuild.AzureOrganization = resultInfo.Organization;
-                    modelBuild.AzureProject = resultInfo.Project;
-                    modelBuild.GitHubTargetBranch = resultInfo.GitHubBuildInfo?.TargetBranch;
-                }
-
-                await TriageContextUtil.Context.SaveChangesAsync();
-                count += results.Count;
-            } while (true);
         }
 
         internal async Task PopulateDb()
@@ -329,10 +294,10 @@ namespace Scratch
 
         internal async Task BuildMergedPullRequestBuilds()
         {
+            /*
             var functionUtil = new FunctionUtil();
             var gitHubUtil = new GitHubUtil(GitHubClient);
             var triageContextUtil = new TriageContextUtil(TriageContext);
-            /*
             foreach (var modelBuild in await TriageContext.ModelBuilds.Include(x => x.ModelBuildDefinition).Where(x => x.IsMergedPullRequest).ToListAsync())
             {
                 try
@@ -347,25 +312,6 @@ namespace Scratch
                 }
             }
             */
-
-            var organization = "dotnet";
-            var repository = "runtime";
-            int count = 0;
-            await foreach (var pr in gitHubUtil.EnumerateMergedPullRequests(organization, repository))
-            {
-                Console.WriteLine($"Processing {pr.HtmlUrl}");
-                var prKey = new GitHubPullRequestKey(organization, repository, pr.Number);
-                await functionUtil.OnPullRequestMergedAsync(
-                    DevOpsServer,
-                    triageContextUtil,
-                    prKey,
-                    "public");
-                count++;
-                if (count >= 500)
-                {
-                    break;
-                }
-            }
 
         }
 
@@ -756,9 +702,6 @@ namespace Scratch
 
         private async Task ListStaleChecks()
         {
-            var gitHub = GitHubClient;
-            var apiConnection = new ApiConnection(gitHub.Connection);
-            var checksClient = new ChecksClient(apiConnection);
             var server = new DevOpsServer("dnceng");
             var list = new List<string>();
             foreach (var build in await server.ListBuildsAsync("public", new[] { 196 }, top: 500))
@@ -774,6 +717,9 @@ namespace Scratch
                         // Build is complete for at  least five minutes. Results should be available 
                         if (build.GetBuildResultInfo().PullRequestKey is { } prKey)
                         {
+                            var gitHub = await GitHubClientFactory.CreateForAppAsync(prKey.Organization, prKey.Repository);
+                            var apiConnection = new ApiConnection(gitHub.Connection);
+                            var checksClient = new ChecksClient(apiConnection);
                             var repository = await gitHub.Repository.Get(prKey.Organization, prKey.Repository);
 
                             var pullRequest = await gitHub.PullRequest.Get(repository.Id, prKey.Number);

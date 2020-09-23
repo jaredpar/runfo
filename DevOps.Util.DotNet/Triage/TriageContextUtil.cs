@@ -590,5 +590,13 @@ namespace DevOps.Util.DotNet.Triage
 
             return query;
         }
+
+        public IQueryable<ModelTrackingIssue> GetModelTrackingIssuesQuery(GitHubIssueKey issueKey) => Context
+            .ModelTrackingIssues
+            .Where(x =>
+                x.IsActive &&
+                x.GitHubOrganization == issueKey.Organization &&
+                x.GitHubRepository == issueKey.Repository &&
+                x.GitHubIssueNumber == issueKey.Number);
     }
 }
