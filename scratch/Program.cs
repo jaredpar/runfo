@@ -292,7 +292,7 @@ namespace Scratch
             }
         }
 
-        internal async Task BuildMergedPullRequestBuilds()
+        internal void BuildMergedPullRequestBuilds()
         {
             /*
             var functionUtil = new FunctionUtil();

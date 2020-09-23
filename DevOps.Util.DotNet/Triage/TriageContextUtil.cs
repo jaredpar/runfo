@@ -591,6 +591,14 @@ namespace DevOps.Util.DotNet.Triage
             return query;
         }
 
+        public IQueryable<ModelBuildAttempt> GetModelBuildAttemptsQuery(BuildKey buildKey)
+        {
+            var modelBuildId = GetModelBuildId(buildKey);
+            return Context
+                .ModelBuildAttempts
+                .Where(x => x.ModelBuildId == modelBuildId);
+        }
+
         public IQueryable<ModelTrackingIssue> GetModelTrackingIssuesQuery(GitHubIssueKey issueKey) => Context
             .ModelTrackingIssues
             .Where(x =>

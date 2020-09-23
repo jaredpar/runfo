@@ -91,7 +91,7 @@ namespace DevOps.Functions
         public async Task BuildCompleteAsync(
             [QueueTrigger(QueueNameBuildComplete, Connection = ConfigurationAzureBlobConnectionString)] string message,
             [Queue(QueueNameTriageBuildAttempt, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> triageCollector,
-            [Queue(QueueNameOsxRetry, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> retryCollector,
+            [Queue(QueueNameBuildRetry, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> retryCollector,
             ILogger logger)
         {
             var buildInfoMessage = JsonConvert.DeserializeObject<BuildInfoMessage>(message);
@@ -115,7 +115,24 @@ namespace DevOps.Functions
             var buildAttemptKey = await modelDataUtil.EnsureModelInfoAsync(build);
 
             await triageCollector.AddAsync(JsonConvert.SerializeObject(new BuildAttemptMessage(buildAttemptKey)));
-            await retryCollector.AddAsync(JsonConvert.SerializeObject(buildInfoMessage));
+            await retryCollector.AddAsync(JsonConvert.SerializeObject(new BuildAttemptMessage(buildAttemptKey)));
+        }
+
+        [FunctionName("build-retry")]
+        public async Task BuildRetryAsync(
+            [QueueTrigger(QueueNameBuildRetry, Connection = ConfigurationAzureBlobConnectionString)] string message,
+            ILogger logger)
+        {
+            var buildAttemptMessage = JsonConvert.DeserializeObject<BuildAttemptMessage>(message);
+            if (buildAttemptMessage.BuildAttemptKey is { } buildAttemptKey)
+            {
+                var util = new BuildRetryUtil(Server, Context, logger);
+                await util.ProcessBuildAsync(buildAttemptKey.BuildKey);
+            }
+            else
+            {
+                logger.LogError($"Message not a valid build attempt key: {message}");
+            }
         }
 
         /// <summary>
@@ -233,17 +250,6 @@ namespace DevOps.Functions
             {
                 logger.LogError($"Message not a valid update message: {message}");
             }
-        }
-
-        [FunctionName("osx-retry")]
-        public async Task RetryMac(
-            [QueueTrigger(QueueNameOsxRetry, Connection = ConfigurationAzureBlobConnectionString)] string message,
-            ILogger logger)
-        {
-            var buildInfoMessage = JsonConvert.DeserializeObject<BuildInfoMessage>(message);
-            Debug.Assert(buildInfoMessage.ProjectName is object);
-            var util = new LegacyAutoTriageUtil(Server, Context, logger);
-            await util.RetryOsxDeprovisionAsync(buildInfoMessage.ProjectName, buildInfoMessage.BuildNumber);
         }
 
         [FunctionName("webhook-github")]
