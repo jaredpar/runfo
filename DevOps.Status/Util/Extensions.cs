@@ -37,7 +37,7 @@ namespace DevOps.Status.Util
             IQueryable<ModelBuild> query = context.ModelBuilds;
             query = request.FilterBuilds(query);
             query = query
-                .Where(x => !context.ModelTriageIssueResults.Any(r => r.ModelBuildId == x.Id))
+                .Where(x => !context.ModelTrackingIssueResults.Any(r => r.ModelBuildAttempt.ModelBuildId == x.Id))
                 .Take(limit);
             var builds = await query.ToListAsync();
             foreach (var build in builds)

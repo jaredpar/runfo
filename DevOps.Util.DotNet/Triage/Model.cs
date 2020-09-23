@@ -17,14 +17,6 @@ namespace DevOps.Util.DotNet.Triage
 
         public DbSet<ModelBuildDefinition> ModelBuildDefinitions { get; set; }
 
-        public DbSet<ModelTriageIssue> ModelTriageIssues { get; set; }
-
-        public DbSet<ModelTriageIssueResult> ModelTriageIssueResults { get; set; }
-
-        public DbSet<ModelTriageIssueResultComplete> ModelTriageIssueResultCompletes { get; set; }
-
-        public DbSet<ModelTriageGitHubIssue> ModelTriageGitHubIssues { get; set; }
-
         public DbSet<ModelOsxDeprovisionRetry> ModelOsxDeprovisionRetry { get; set; }
 
         public DbSet<ModelTimelineIssue> ModelTimelineIssues { get; set; }
@@ -61,30 +53,6 @@ namespace DevOps.Util.DotNet.Triage
 
             modelBuilder.Entity<ModelBuildDefinition>()
                 .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionId })
-                .IsUnique();
-
-            modelBuilder.Entity<ModelTriageIssue>()
-                .HasIndex(x => new { x.SearchKind, x.SearchText })
-                .IsUnique();
-
-            modelBuilder.Entity<ModelTriageIssue>()
-                .Property(x => x.SearchKind)
-                .HasConversion<string>();
-
-            modelBuilder.Entity<ModelTriageIssue>()
-                .Property(x => x.TriageIssueKind)
-                .HasConversion<string>();
-
-            modelBuilder.Entity<ModelTriageGitHubIssue>()
-                .HasIndex(x => new { x.Organization, x.Repository, x.IssueNumber })
-                .IsUnique();
-
-            modelBuilder.Entity<ModelTriageIssueResult>()
-                .Property(x => x.Attempt)
-                .HasDefaultValue(1);
-
-            modelBuilder.Entity<ModelTriageIssueResultComplete>()
-                .HasIndex(x => new { x.ModelTriageIssueId, x.ModelBuildId })
                 .IsUnique();
 
             modelBuilder.Entity<ModelTestRun>()
@@ -181,153 +149,6 @@ namespace DevOps.Util.DotNet.Triage
         public List<ModelTestResult> ModelTestResults { get; set; }
 
         public List<ModelTimelineIssue> ModelTimelineIssues { get; set; }
-    }
-
-    public enum TriageIssueKind
-    {
-        Unknown = 0,
-
-        Azure,
-
-        Helix,
-
-        NuGet,
-
-        // General infrastructure owned by the .NET Team
-        Infra,
-
-        Build,
-
-        Test,
-    }
-
-    public enum SearchKind
-    {
-        Unknown,
-
-        SearchTimeline,
-
-        SearchHelixRunClient,
-
-        SearchHelixConsole,
-
-        SearchHelixTestResults,
-
-        SearchTest,
-    }
-
-    /// <summary>
-    /// This is an issue that the tool is attempting to auto-triage as builds complete
-    // TODO: delete this 
-    /// </summary>
-    public class ModelTriageIssue
-    {
-        public int Id { get; set;}
-
-        [Column(TypeName = "nvarchar(30)")]
-        public TriageIssueKind TriageIssueKind { get; set; }
-
-        [Column(TypeName = "nvarchar(30)")]
-        public SearchKind SearchKind { get; set; }
-
-        [Column(TypeName="nvarchar(400)")]
-        public string SearchText { get; set; }
-
-        public List<ModelTriageIssueResult> ModelTriageIssueResults { get; set; }
-
-        public List<ModelTriageGitHubIssue> ModelTriageGitHubIssues { get; set; }
-    }
-
-    /// <summary>
-    /// Represents an issue that needs to be updated for the associated triage issue 
-    /// above
-    /// </summary>
-    // TODO: include fields that will shape the report that we include in the actually
-    // issue here
-    public class  ModelTriageGitHubIssue
-    {
-        public int Id { get; set; }
-
-        [Required]
-        public string Organization { get; set; }
-
-        [Required]
-        public string Repository { get; set; }
-
-        [Required]
-        public int IssueNumber { get; set; }
-
-        // Whether or not to include BuildDefinitions in the report
-        public bool IncludeDefinitions { get; set; }
-
-        /// <summary>
-        /// This property uses the old style query string, from Mono.Options, to get the builds. 
-        /// </summary>
-        [Obsolete("Use BuildQueryString instead")]
-        public string BuildQuery { get; set; }
-
-        /// <summary>
-        /// The query to use to filter builds hitting the overall triage issue to this specific
-        /// GitHub issue. If empty it will filter to builds against the repository where this 
-        /// issue was defined
-        /// </summary>
-        public string SearchBuildsQueryString { get; set; }
-
-        [NotMapped]
-        public GitHubIssueKey IssueKey => new GitHubIssueKey(Organization, Repository, IssueNumber);
-
-        public int ModelTriageIssueId { get; set; }
-
-        public ModelTriageIssue ModelTriageIssue { get; set; }
-    }
-
-    /// <summary>
-    /// Represents a result from a ModelTriageIssue for a given build. 
-    /// </summary>
-    public class ModelTriageIssueResult
-    {
-        public int Id { get; set; }
-
-        public int BuildNumber { get; set; }
-
-        public string JobName { get; set; }
-
-        public string JobRecordId { get ; set; }
-
-        public string RootRecordId { get; set;}
-
-        public int Attempt { get; set; }
-
-        public string TimelineRecordName { get; set; }
-
-        public string Line { get; set; }
-
-        public string HelixJobId { get; set; }
-
-        public string HelixWorkItem { get; set; }
-
-        [Column(TypeName="nvarchar(100)")]
-        public string ModelBuildId { get; set; }
-
-        public ModelBuild ModelBuild { get; set; }
-
-        public int ModelTriageIssueId { get; set; }
-
-        public ModelTriageIssue ModelTriageIssue { get; set; }
-    }
-
-    public class ModelTriageIssueResultComplete
-    {
-        public int Id { get; set; }
-
-        public int ModelTriageIssueId { get; set; }
-
-        public ModelTriageIssue ModelTriageIssue { get; set; }
-
-        [Column(TypeName="nvarchar(100)")]
-        public string ModelBuildId { get; set; }
-
-        public ModelBuild ModelBuild { get; set; }
     }
 
     public class ModelOsxDeprovisionRetry
