@@ -38,9 +38,7 @@ namespace DevOps.Status.Pages.Search
         public string? Query { get; set; }
         [BindProperty(SupportsGet = true, Name = "pageNumber")]
         public int PageNumber { get; set; }
-        public int? NextPageNumber { get; set; }
-        public int? PreviousPageNumber { get; set; }
-        public string? PassRate { get; set; }
+        public PaginationDisplay? PaginationDisplay { get; set; }
         public bool IncludeDefinitionColumn { get; set; }
         public bool IncludeTargetBranchColumn { get; set; }
         public List<BuildData> Builds { get; set; } = new List<BuildData>();
@@ -53,7 +51,7 @@ namespace DevOps.Status.Pages.Search
 
         public async Task OnGet()
         {
-            const int PageSize = 50;
+            const int PageSize = 25;
             if (string.IsNullOrEmpty(Query))
             {
                 Query = new SearchBuildsRequest()
@@ -70,6 +68,14 @@ namespace DevOps.Status.Pages.Search
             var totalCount = await options
                 .FilterBuilds(TriageContext.ModelBuilds)
                 .CountAsync();
+            PaginationDisplay = new PaginationDisplay(
+                "/Search/Builds",
+                new Dictionary<string, string>()
+                {
+                    { "q", Query },
+                },
+                PageNumber,
+                totalCount / PageSize);
 
             var skipCount = PageNumber * PageSize;
             var results = await options
@@ -100,13 +106,7 @@ namespace DevOps.Status.Pages.Search
                     };
                 })
                 .ToList();
-            var passRate = (double)Builds.Count(x => x.BuildResult == BuildResult.Succeeded || x.BuildResult == BuildResult.PartiallySucceeded) / Builds.Count;
-            passRate *= 100;
-            PassRate = $"{passRate:N2}%";
-            PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
-            NextPageNumber = results.Count + skipCount < totalCount
-                ? PageNumber + 1
-                : (int?)null;
+
             IncludeDefinitionColumn = !options.HasDefinition;
             IncludeTargetBranchColumn = !options.TargetBranch.HasValue;
         }
