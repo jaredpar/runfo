@@ -19,21 +19,21 @@ namespace DevOps.Util
             _client = new DevOpsHttpClient();
         }
 
-        private IHelixApi HelixApi { get; } = ApiFactory.GetAnonymous();
-
-        public async ValueTask GetHelixPayloads(string jobId, List<string> workItems, string downloadDir)
+        public async ValueTask GetHelixPayloads(string jobId, List<string> workItems, string downloadDir, string? token)
         {
             if (!Path.IsPathFullyQualified(downloadDir))
             {
                 downloadDir = Path.Combine(Environment.CurrentDirectory, downloadDir);
             }
 
-            JobDetails jobDetails = await HelixApi.Job.DetailsAsync(jobId).ConfigureAwait(false);
+
+            IHelixApi helixApi = string.IsNullOrEmpty(token) ? ApiFactory.GetAnonymous() : ApiFactory.GetAuthenticated(token);
+            JobDetails jobDetails = await helixApi.Job.DetailsAsync(jobId).ConfigureAwait(false);
             string? jobListFile = jobDetails.JobList;
 
             if (string.IsNullOrEmpty(jobListFile))
             {
-                throw new ArgumentException($"Couldn't find job list for job {jobId}");
+                throw new ArgumentException($"Couldn't find job list for job {jobId}, if is an internal job, please use a helix access token");
             }
 
             using MemoryStream memoryStream = await _client.DownloadFileAsync(jobListFile).ConfigureAwait(false);
