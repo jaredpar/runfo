@@ -15,12 +15,7 @@
 
 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
 {
-    <div class="alert alert-danger" role="alert">
-      @Model.ErrorMessage
-    </div>
-    <div>
-        <p>See the <a asp-page="/SearchDoc">search syntax</a> for allowed syntax and examples</p>
-    </div>
+    <partial name="../Shared/_SearchQuerySyntaxErrorDisplay" model="@Model.ErrorMessage" />
 }
 
 @if (Model.Builds.Count > 0)

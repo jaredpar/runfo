@@ -58,71 +58,61 @@ namespace DevOps.Status.Pages.Search
         {
             if (string.IsNullOrEmpty(BuildQuery))
             {
-                BuildQuery = new SearchBuildsRequest() { Definition = "runtime" }.GetQueryString();
-
-                return Page();
-            }
-
-            try
-            {
-                var searchBuildsRequest = GetSearchBuildsRquest();
-                var testSearchOptions = new SearchTestsRequest();
-                testSearchOptions.ParseQueryString(TestsQuery ?? "");
-
-                IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults
-                    .Include(x => x.ModelTestRun)
-                    .Include(x => x.ModelBuild);
-                query = searchBuildsRequest.Filter(query);
-                query = testSearchOptions.Filter(query);
-                var results = await query
-                    .OrderByDescending(x => x.ModelBuild.BuildNumber)
-                    .Skip(PageNumber * PageSize)
-                    .Take(PageSize + 1)
-                    .ToListAsync();
-
-                var count = 0;
-                foreach (var group in results.GroupBy(x => x.TestFullName).OrderByDescending(x => x.Count()))
+                BuildQuery = new SearchBuildsRequest()
                 {
-                    count++;
-
-                    testSearchOptions.Name = group.Key;
-                    var firstBuild = group.FirstOrDefault()?.ModelBuild;
-                    var testInfo = new TestInfo()
-                    {
-                        TestName = group.Key,
-                        CollapseName = $"collapse{count}",
-                        TestNameQuery = testSearchOptions.GetQueryString(),
-                        BuildDefinition = searchBuildsRequest.Definition,
-                        GitHubOrganization = firstBuild?.GitHubOrganization,
-                        GitHubRepository = firstBuild?.GitHubRepository,
-                        TestResultsDisplay = new TestResultsDisplay(group)
-                        {
-                            IncludeBuildColumn = true,
-                            IncludeBuildKindColumn = searchBuildsRequest.BuildType is { BuildType: ModelBuildKind.All },
-                        }
-                    };
-
-                    TestInfos.Add(testInfo);
-                }
-
-                BuildCount = results.GroupBy(x => x.ModelBuild.BuildNumber).Count();
-                PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
-                NextPageNumber = results.Count > PageSize ? PageNumber + 1 : (int?)null;
+                    Definition = "roslyn-ci",
+                    Started = new DateRequestValue(dayQuery: 3),
+                }.GetQueryString();
                 return Page();
             }
-            catch (Exception ex)
+
+            if (!SearchBuildsRequest.TryCreate(BuildQuery ?? "", out var buildsRequest, out var errorMessage) ||
+                !SearchTestsRequest.TryCreate(TestsQuery ?? "", out var testsRequest, out errorMessage))
             {
-                ErrorMessage = ex.Message;
+                ErrorMessage = errorMessage;
                 return Page();
             }
-        }
 
-        private SearchBuildsRequest GetSearchBuildsRquest()
-        {
-            Debug.Assert(!string.IsNullOrEmpty(BuildQuery));
-            var buildSearchOptions = new SearchBuildsRequest();
-            buildSearchOptions.ParseQueryString(BuildQuery);
-            return buildSearchOptions;
+            IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults
+                .Include(x => x.ModelTestRun)
+                .Include(x => x.ModelBuild);
+            query = buildsRequest.Filter(query);
+            query = testsRequest.Filter(query);
+            var results = await query
+                .OrderByDescending(x => x.ModelBuild.BuildNumber)
+                .Skip(PageNumber * PageSize)
+                .Take(PageSize + 1)
+                .ToListAsync();
+
+            var count = 0;
+            foreach (var group in results.GroupBy(x => x.TestFullName).OrderByDescending(x => x.Count()))
+            {
+                count++;
+
+                testsRequest.Name = group.Key;
+                var firstBuild = group.FirstOrDefault()?.ModelBuild;
+                var testInfo = new TestInfo()
+                {
+                    TestName = group.Key,
+                    CollapseName = $"collapse{count}",
+                    TestNameQuery = testsRequest.GetQueryString(),
+                    BuildDefinition = buildsRequest.Definition,
+                    GitHubOrganization = firstBuild?.GitHubOrganization,
+                    GitHubRepository = firstBuild?.GitHubRepository,
+                    TestResultsDisplay = new TestResultsDisplay(group)
+                    {
+                        IncludeBuildColumn = true,
+                        IncludeBuildKindColumn = buildsRequest.BuildType is { BuildType: ModelBuildKind.All },
+                    }
+                };
+
+                TestInfos.Add(testInfo);
+            }
+
+            BuildCount = results.GroupBy(x => x.ModelBuild.BuildNumber).Count();
+            PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
+            NextPageNumber = results.Count > PageSize ? PageNumber + 1 : (int?)null;
+            return Page();
         }
     }
 }

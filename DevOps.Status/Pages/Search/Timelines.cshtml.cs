@@ -40,36 +40,30 @@ namespace DevOps.Status.Pages.Search
                 return Page();
             }
 
-            try
+            if (!SearchBuildsRequest.TryCreate(BuildQuery ?? "", out var buildsRequest, out var errorMessage) ||
+                !SearchTimelinesRequest.TryCreate(TimelineQuery ?? "", out var timelinesRequest, out errorMessage))
             {
-                var buildSearchOptions = new SearchBuildsRequest();
-                buildSearchOptions.ParseQueryString(BuildQuery);
-                var timelineSearchOptions = new SearchTimelinesRequest();
-                timelineSearchOptions.ParseQueryString(TimelineQuery ?? "");
+                ErrorMessage = errorMessage;
+                return Page();
+            }
 
-                IQueryable<ModelTimelineIssue> query = TriageContextUtil.Context.ModelTimelineIssues;
-                query = buildSearchOptions.Filter(query);
-                query = timelineSearchOptions.Filter(query);
-                query = query
-                    .OrderByDescending(x => x.ModelBuild.BuildNumber)
-                    .Skip(PageNumber * PageSize)
-                    .Take(PageSize);
-                TimelineIssuesDisplay = await TimelineIssuesDisplay.Create(
-                    query,
-                    includeBuildColumn: true,
-                    includeIssueTypeColumn: timelineSearchOptions.Type is null,
-                    includeAttemptColumn: true);
-                BuildCount = TimelineIssuesDisplay.Issues.GroupBy(x => x.BuildNumber).Count();
-                IncludeIssueTypeColumn = timelineSearchOptions.Type is null;
-                PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
-                NextPageNumber = PageNumber + 1;
-                return Page();
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = ex.Message;
-                return Page();
-            }
+            IQueryable<ModelTimelineIssue> query = TriageContextUtil.Context.ModelTimelineIssues;
+            query = buildsRequest.Filter(query);
+            query = timelinesRequest.Filter(query);
+            query = query
+                .OrderByDescending(x => x.ModelBuild.BuildNumber)
+                .Skip(PageNumber * PageSize)
+                .Take(PageSize);
+            TimelineIssuesDisplay = await TimelineIssuesDisplay.Create(
+                query,
+                includeBuildColumn: true,
+                includeIssueTypeColumn: timelinesRequest.Type is null,
+                includeAttemptColumn: true);
+            BuildCount = TimelineIssuesDisplay.Issues.GroupBy(x => x.BuildNumber).Count();
+            IncludeIssueTypeColumn = timelinesRequest.Type is null;
+            PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
+            NextPageNumber = PageNumber + 1;
+            return Page();
         }
     }
 }

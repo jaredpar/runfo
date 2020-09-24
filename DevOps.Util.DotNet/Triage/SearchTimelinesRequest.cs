@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Octokit;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -101,6 +102,26 @@ namespace DevOps.Util.DotNet.Triage
                     default:
                         throw new Exception($"Invalid option {tuple.Name}");
                 }
+            }
+        }
+
+        public static bool TryCreate(
+            string queryString,
+            [NotNullWhen(true)] out SearchTimelinesRequest? request,
+            [NotNullWhen(false)] out string? errorMessage)
+        {
+            try
+            {
+                request = new SearchTimelinesRequest();
+                request.ParseQueryString(queryString);
+                errorMessage = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+                request = null;
+                return false;
             }
         }
     }
