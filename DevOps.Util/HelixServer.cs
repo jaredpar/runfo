@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util
 {
-    public class HelixServer
+    public sealed class HelixServer
     {
         private readonly DevOpsHttpClient _client;
 
@@ -92,6 +92,8 @@ namespace DevOps.Util
                 }
             }
         }
+
+        public Task<MemoryStream> DownloadFileAsync(string uri) => _client.DownloadFileAsync(uri);
 
         private class WorkItemInfo
         {

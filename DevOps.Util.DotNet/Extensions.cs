@@ -47,7 +47,7 @@ namespace DevOps.Util.DotNet
             _ => throw new InvalidOperationException($"Invalid kind {kind}"),
         };
 
-        public static string GetDisplayName(this HelixLogKind kind) => kind switch 
+        public static string GetDisplayName(this HelixLogKind kind) => kind switch
         {
             HelixLogKind.Console => "Console",
             HelixLogKind.CoreDump => "Core Dump",
@@ -57,6 +57,5 @@ namespace DevOps.Util.DotNet
         };
 
         #endregion
-
     }
 }

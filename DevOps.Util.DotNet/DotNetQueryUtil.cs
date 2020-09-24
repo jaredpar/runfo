@@ -309,62 +309,6 @@ namespace DevOps.Util.DotNet
             return results;
         }
 
-        // TODO: Should this method be here? It doesn't actually use AzDO at all. Perhaps we need to move this to a 
-        // different type
-        public async Task<List<SearchHelixLogsResult>> SearchHelixLogsAsync(
-            IEnumerable<(BuildInfo BuildInfo, HelixLogInfo HelixLogInfo)> builds,
-            SearchHelixLogsRequest request,
-            Action<Exception>? onError = null)
-        {
-            if (request.Text is null)
-            {
-                throw new ArgumentException("Need text to search for", nameof(request));
-            }
-
-            var textRegex = CreateSearchRegex(request.Text);
-
-            var list = builds
-                .SelectMany(x => request.HelixLogKinds.Select(k => (x.BuildInfo, x.HelixLogInfo, Kind: k, Uri: x.HelixLogInfo.GetUri(k))))
-                .Where(x => x.Uri is object)
-                .Where(x => x.Kind != HelixLogKind.CoreDump)
-                .ToList();
-            
-            if (list.Count > request.Limit)
-            {
-                onError?.Invoke(new Exception($"Limiting the {list.Count} logs to first {request.Limit}"));
-                list = list.Take(request.Limit).ToList();
-            }
-
-            var resultTasks = list
-                .AsParallel()
-                .Select(async x =>
-                {
-                    var match = await SearchFileForFirstMatchAsync(x.Uri!, textRegex, onError).ConfigureAwait(false);
-                    var line = match is object && match.Success
-                        ? match.Value
-                        : null;
-                    return (Query: x, Line: line);
-                });
-            var results = new List<SearchHelixLogsResult>();
-            foreach (var task in resultTasks)
-            {
-                try
-                {
-                    var result = await task.ConfigureAwait(false);
-                    if (result.Line is object)
-                    {
-                        results.Add(new SearchHelixLogsResult(result.Query.BuildInfo, result.Query.Kind, result.Query.Uri!, result.Line));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    onError?.Invoke(ex);
-                }
-            }
-
-            return results;
-        }
-
         public async IAsyncEnumerable<Match> SearchFileAsync(
             string uri,
             Regex regex,
@@ -377,11 +321,17 @@ namespace DevOps.Util.DotNet
             {
                 yield break;
             }
+        }
 
+        public static async IAsyncEnumerable<Match> SearchFileAsync(
+            Stream stream,
+            Regex regex,
+            Action<Exception>? onError = null)
+        {
             using var reader = new StreamReader(stream);
             do
             {
-                var line = reader.ReadLine();
+                var line = await reader.ReadLineAsync().ConfigureAwait(false);
                 if (line is null)
                 {
                     break;
@@ -401,6 +351,15 @@ namespace DevOps.Util.DotNet
             Action<Exception>? onError = null)
         {
             var enumerable = SearchFileAsync(uri, regex, onError);
+            return await enumerable.FirstOrDefaultAsync().ConfigureAwait(false);
+        }
+
+        public static async Task<Match?> SearchFileForFirstMatchAsync(
+            Stream stream,
+            Regex regex,
+            Action<Exception>? onError = null)
+        {
+            var enumerable = SearchFileAsync(stream, regex, onError);
             return await enumerable.FirstOrDefaultAsync().ConfigureAwait(false);
         }
 

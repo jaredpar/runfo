@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using DevOps.Status.Util;
+using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
@@ -26,7 +27,6 @@ namespace DevOps.Status.Pages.Search
         public List<HelixLogData> HelixLogs { get; } = new List<HelixLogData>();
         public int? BuildCount { get; set; }
         public string? ErrorMessage { get; set; }
-        public string? AzureDevOpsEmail { get; set; }
 
         [BindProperty(SupportsGet = true, Name = "bq")]
         public string? BuildQuery { get; set; }
@@ -35,21 +35,15 @@ namespace DevOps.Status.Pages.Search
         public string? LogQuery { get; set; }
 
         public TriageContextUtil TriageContextUtil { get; }
-        public DotNetQueryUtilFactory DotNetQueryUtilFactory { get; }
 
-        public HelixLogsModel(TriageContextUtil triageContextUtil, DotNetQueryUtilFactory factory)
+        public HelixLogsModel(TriageContextUtil triageContextUtil)
         {
             TriageContextUtil = triageContextUtil;
-            DotNetQueryUtilFactory = factory;
         }
 
         public async Task OnGet()
         {
             ErrorMessage = null;
-            if (User.GetVsoIdentity() is { } identity)
-            {
-                AzureDevOpsEmail = identity.FindFirst(ClaimTypes.Email)?.Value;
-            }
 
             if (string.IsNullOrEmpty(BuildQuery))
             {
@@ -90,9 +84,9 @@ namespace DevOps.Status.Pages.Search
                 .Select(x => (x.ModelBuild.GetBuildInfo(), x.GetHelixLogInfo()))
                 .Where(x => x.Item2 is object);
 
-            var queryUtil = await DotNetQueryUtilFactory.CreateDotNetQueryUtilForUserAsync();
+            var helixServer = new HelixServer();
             var errorBuilder = new StringBuilder();
-            var results = await queryUtil.SearchHelixLogsAsync(
+            var results = await helixServer.SearchHelixLogsAsync(
                 toQuery!,
                 logsRequest,
                 ex => errorBuilder.AppendLine(ex.Message));

@@ -12,10 +12,6 @@
   <button class="btn btn-primary">Search</button>
 </form>
 
-<div>
-    <p>Azure DevOps Signin: @Model.AzureDevOpsEmail</p>
-</div>
-
 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
 {
     <partial name="../Shared/_SearchQuerySyntaxErrorDisplay" model="@Model.ErrorMessage" />

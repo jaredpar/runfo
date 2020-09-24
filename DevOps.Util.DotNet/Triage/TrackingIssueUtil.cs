@@ -279,7 +279,8 @@ namespace DevOps.Util.DotNet.Triage
                 Limit = 100,
             };
 
-            var results = await QueryUtil.SearchHelixLogsAsync(
+            var helixServer = new HelixServer();
+            var results = await helixServer.SearchHelixLogsAsync(
                 helixLogInfos,
                 request,
                 onError: x => Logger.LogWarning(x.Message)).ConfigureAwait(false);
