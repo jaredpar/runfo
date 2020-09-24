@@ -126,7 +126,7 @@ namespace DevOps.Util.DotNet.Triage
                 request.Definition = null;
             }
 
-            buildAttemptQuery = request.FilterBuilds(buildAttemptQuery);
+            buildAttemptQuery = request.Filter(buildAttemptQuery);
 
             var attempts = await buildAttemptQuery
                 .Include(x => x.ModelBuild)

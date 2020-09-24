@@ -35,7 +35,7 @@ namespace DevOps.Status.Util
         public static async Task QueueTriageBuildQuery(this FunctionQueueUtil util, SearchBuildsRequest request, TriageContext context, int limit = 100)
         {
             IQueryable<ModelBuild> query = context.ModelBuilds;
-            query = request.FilterBuilds(query);
+            query = request.Filter(query);
             query = query
                 .Where(x => !context.ModelTrackingIssueResults.Any(r => r.ModelBuildAttempt.ModelBuildId == x.Id))
                 .Take(limit);

@@ -81,7 +81,7 @@ namespace DevOps.Status.Pages.View
             {
                 var buildQuery = TriageContextUtil.Context.ModelBuilds
                     .Where(x => x.ModelBuildDefinitionId == modelBuildDefinition.Id && x.BuildResult.HasValue);
-                var builds = await searchBuildsRequest.FilterBuilds(buildQuery)
+                var builds = await searchBuildsRequest.Filter(buildQuery)
                     .Select(x => new
                     {
                         x.BuildResult,
@@ -118,7 +118,7 @@ namespace DevOps.Status.Pages.View
                 IQueryable<ModelTimelineIssue> query = TriageContextUtil.Context
                     .ModelTimelineIssues
                     .Where(x => x.IssueType == IssueType.Error && x.ModelBuild.ModelBuildDefinitionId == modelBuildDefinition.Id && x.ModelBuild.BuildResult.HasValue);
-                query = searchBuildsRequest.FilterBuilds(query);
+                query = searchBuildsRequest.Filter(query);
                 const int limit = 1_000;
                 var issues = await query
                     .Select(x => new

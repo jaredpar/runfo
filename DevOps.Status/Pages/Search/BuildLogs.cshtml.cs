@@ -73,7 +73,7 @@ namespace DevOps.Status.Pages.Search
             ErrorMessage = null;
 
             var buildInfos = (await searchBuildsRequest
-                .FilterBuilds(TriageContextUtil.Context.ModelBuilds)
+                .Filter(TriageContextUtil.Context.ModelBuilds)
                 .OrderByDescending(x => x.BuildNumber)
                 .Include(x => x.ModelBuildDefinition)
                 .ToListAsync()).Select(x => x.GetBuildResultInfo()).ToList();

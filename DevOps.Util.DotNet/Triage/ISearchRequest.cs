@@ -13,4 +13,9 @@ namespace DevOps.Util.DotNet.Triage
         string GetQueryString();
         void ParseQueryString(string userQuery);
     }
+
+    public interface ISearchQueryRequest<T> : ISearchRequest
+    {
+        IQueryable<T> Filter(IQueryable<T> query);
+    }
 }

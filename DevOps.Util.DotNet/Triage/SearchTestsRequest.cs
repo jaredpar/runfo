@@ -12,12 +12,12 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public class SearchTestsRequest : ISearchRequest
+    public class SearchTestsRequest : ISearchQueryRequest<ModelTestResult>
     {
         public string? Name { get; set; }
         public string? JobName { get; set; }
 
-        public IQueryable<ModelTestResult> FilterTestResults(IQueryable<ModelTestResult> query)
+        public IQueryable<ModelTestResult> Filter(IQueryable<ModelTestResult> query)
         {
             if (!string.IsNullOrEmpty(JobName))
             {

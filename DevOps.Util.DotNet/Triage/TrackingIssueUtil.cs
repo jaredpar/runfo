@@ -201,7 +201,7 @@ namespace DevOps.Util.DotNet.Triage
             var request = new SearchTestsRequest();
             request.ParseQueryString(modelTrackingIssue.SearchQuery);
             IQueryable<ModelTestResult> testQuery = request
-                .FilterTestResults(Context.ModelTestResults)
+                .Filter(Context.ModelTestResults)
                 .Where(x =>
                     x.ModelBuildId == modelBuildAttempt.ModelBuildId &&
                     x.ModelTestRun.Attempt == modelBuildAttempt.Attempt)
@@ -234,7 +234,7 @@ namespace DevOps.Util.DotNet.Triage
 
             var request = new SearchTimelinesRequest();
             request.ParseQueryString(modelTrackingIssue.SearchQuery);
-            var timelineQuery = request.FilterTimelines(Context.ModelTimelineIssues)
+            var timelineQuery = request.Filter(Context.ModelTimelineIssues)
                 .Where(x =>
                     x.ModelBuildId == modelBuildAttempt.ModelBuild.Id &&
                     x.Attempt == modelBuildAttempt.Attempt);

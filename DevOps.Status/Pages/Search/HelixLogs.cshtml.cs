@@ -73,7 +73,7 @@ namespace DevOps.Status.Pages.Search
             }
 
             IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults.Where(x => x.IsHelixTestResult);
-            query = searchBuildsRequest.FilterBuilds(query);
+            query = searchBuildsRequest.Filter(query);
             query = query
                 .Take(100)
                 .Include(x => x.ModelBuild)

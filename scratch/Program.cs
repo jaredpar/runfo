@@ -230,7 +230,7 @@ namespace Scratch
             };
 
             var results = await searchBuildsRequest
-                .FilterBuilds(TriageContext.ModelTimelineIssues)
+                .Filter(TriageContext.ModelTimelineIssues)
                 .OrderByDescending(x => x.ModelBuild.BuildNumber)
                 .Take(50)
                 .ToListAsync();

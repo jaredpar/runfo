@@ -72,8 +72,8 @@ namespace DevOps.Status.Pages.Search
                 IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults
                     .Include(x => x.ModelTestRun)
                     .Include(x => x.ModelBuild);
-                query = searchBuildsRequest.FilterBuilds(query);
-                query = testSearchOptions.FilterTestResults(query);
+                query = searchBuildsRequest.Filter(query);
+                query = testSearchOptions.Filter(query);
                 var results = await query
                     .OrderByDescending(x => x.ModelBuild.BuildNumber)
                     .Skip(PageNumber * PageSize)

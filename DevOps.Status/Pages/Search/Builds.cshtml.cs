@@ -66,7 +66,7 @@ namespace DevOps.Status.Pages.Search
             options.ParseQueryString(Query);
 
             var totalCount = await options
-                .FilterBuilds(TriageContext.ModelBuilds)
+                .Filter(TriageContext.ModelBuilds)
                 .CountAsync();
             PaginationDisplay = new PaginationDisplay(
                 "/Search/Builds",
@@ -79,7 +79,7 @@ namespace DevOps.Status.Pages.Search
 
             var skipCount = PageNumber * PageSize;
             var results = await options
-                .FilterBuilds(TriageContext.ModelBuilds)
+                .Filter(TriageContext.ModelBuilds)
                 .OrderByDescending(x => x.BuildNumber)
                 .Include(x => x.ModelBuildDefinition)
                 .Skip(skipCount)

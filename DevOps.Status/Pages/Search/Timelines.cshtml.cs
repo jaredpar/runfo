@@ -48,8 +48,8 @@ namespace DevOps.Status.Pages.Search
                 timelineSearchOptions.ParseQueryString(TimelineQuery ?? "");
 
                 IQueryable<ModelTimelineIssue> query = TriageContextUtil.Context.ModelTimelineIssues;
-                query = buildSearchOptions.FilterBuilds(query);
-                query = timelineSearchOptions.FilterTimelines(query);
+                query = buildSearchOptions.Filter(query);
+                query = timelineSearchOptions.Filter(query);
                 query = query
                     .OrderByDescending(x => x.ModelBuild.BuildNumber)
                     .Skip(PageNumber * PageSize)
