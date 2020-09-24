@@ -267,7 +267,7 @@ namespace DevOps.Util.DotNet.Triage
                 .ModelTestResults
                 .Where(x => x.IsHelixTestResult && x.ModelBuild.Id == modelBuildAttempt.ModelBuild.Id && x.ModelTestRun.Attempt == modelBuildAttempt.Attempt);
             var testResultList = await query.ToListAsync().ConfigureAwait(false);
-            var buildInfo = modelBuildAttempt.ModelBuild.GetBuildResultInfo();
+            var buildInfo = modelBuildAttempt.ModelBuild.GetBuildInfo();
             var helixLogInfos = testResultList
                 .Select(x => x.GetHelixLogInfo())
                 .SelectNotNull()

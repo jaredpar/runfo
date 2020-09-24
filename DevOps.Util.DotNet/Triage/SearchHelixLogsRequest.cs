@@ -3,6 +3,7 @@ using DevOps.Util.DotNet.Triage;
 using Octokit;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -97,6 +98,26 @@ namespace DevOps.Util.DotNet.Triage
                 {
                     HelixLogKinds.Add(kind);
                 }
+            }
+        }
+
+        public static bool TryCreate(
+            string queryString,
+            [NotNullWhen(true)] out SearchHelixLogsRequest? request,
+            [NotNullWhen(false)] out string? errorMessage)
+        {
+            try
+            {
+                request = new SearchHelixLogsRequest();
+                request.ParseQueryString(queryString);
+                errorMessage = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                request = null;
+                errorMessage = ex.Message;
+                return false;
             }
         }
     }

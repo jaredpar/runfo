@@ -53,42 +53,48 @@ namespace DevOps.Status.Pages.Search
 
             if (string.IsNullOrEmpty(BuildQuery))
             {
-                BuildQuery = new SearchBuildsRequest() { Definition = "runtime" }.GetQueryString();
+                BuildQuery = new SearchBuildsRequest()
+                {
+                    Definition = "runtime",
+                    Started = new DateRequestValue(dayQuery: 3),
+                }.GetQueryString();
                 return;
             }
 
-            var searchBuildsRequest = new SearchBuildsRequest();
-            searchBuildsRequest.ParseQueryString(BuildQuery);
-
-            var searchHelixLogsRequest = new SearchHelixLogsRequest()
+            if (!SearchBuildsRequest.TryCreate(BuildQuery, out var buildsRequest, out var errorMessage) ||
+                !SearchHelixLogsRequest.TryCreate(LogQuery ?? "", out var logsRequest, out errorMessage))
             {
-                HelixLogKinds = new List<HelixLogKind>(new[] { HelixLogKind.Console }),
-            };
-            searchHelixLogsRequest.ParseQueryString(LogQuery ?? "");
+                ErrorMessage = errorMessage;
+                return;
+            }
 
-            if (string.IsNullOrEmpty(searchHelixLogsRequest.Text))
+            if (logsRequest.HelixLogKinds.Count == 0)
+            {
+                logsRequest.HelixLogKinds.Add(HelixLogKind.Console);
+            }
+
+            if (string.IsNullOrEmpty(logsRequest.Text))
             {
                 ErrorMessage = @"Must specify text to search for 'text: ""StackOverflowException""'";
                 return;
             }
 
             IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults.Where(x => x.IsHelixTestResult);
-            query = searchBuildsRequest.Filter(query);
+            query = buildsRequest.Filter(query);
             query = query
                 .Take(100)
-                .Include(x => x.ModelBuild)
-                .ThenInclude(x => x.ModelBuildDefinition);
+                .Include(x => x.ModelBuild);
 
             var modelResults = await query.ToListAsync();
             var toQuery = modelResults
-                .Select(x => (x.ModelBuild.GetBuildResultInfo(), x.GetHelixLogInfo()))
+                .Select(x => (x.ModelBuild.GetBuildInfo(), x.GetHelixLogInfo()))
                 .Where(x => x.Item2 is object);
 
             var queryUtil = await DotNetQueryUtilFactory.CreateDotNetQueryUtilForUserAsync();
             var errorBuilder = new StringBuilder();
             var results = await queryUtil.SearchHelixLogsAsync(
                 toQuery!,
-                searchHelixLogsRequest,
+                logsRequest,
                 ex => errorBuilder.AppendLine(ex.Message));
             foreach (var result in results)
             {

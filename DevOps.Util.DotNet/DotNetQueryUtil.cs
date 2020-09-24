@@ -85,12 +85,12 @@ namespace DevOps.Util.DotNet
 
     public sealed class SearchHelixLogsResult
     {
-        public BuildResultInfo BuildInfo { get; }
+        public BuildInfo BuildInfo { get; }
         public HelixLogKind HelixLogKind { get;  }
         public string HelixLogUri { get; }
         public string Line { get; }
 
-        public SearchHelixLogsResult(BuildResultInfo buildInfo, HelixLogKind helixLogKind, string helixLogUri, string line)
+        public SearchHelixLogsResult(BuildInfo buildInfo, HelixLogKind helixLogKind, string helixLogUri, string line)
         {
             BuildInfo = buildInfo;
             HelixLogKind = helixLogKind;
@@ -312,7 +312,7 @@ namespace DevOps.Util.DotNet
         // TODO: Should this method be here? It doesn't actually use AzDO at all. Perhaps we need to move this to a 
         // different type
         public async Task<List<SearchHelixLogsResult>> SearchHelixLogsAsync(
-            IEnumerable<(BuildResultInfo BuildInfo, HelixLogInfo HelixLogInfo)> builds,
+            IEnumerable<(BuildInfo BuildInfo, HelixLogInfo HelixLogInfo)> builds,
             SearchHelixLogsRequest request,
             Action<Exception>? onError = null)
         {
