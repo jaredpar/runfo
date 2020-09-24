@@ -82,6 +82,7 @@ namespace Scratch
         public IGitHubClientFactory GitHubClientFactory { get; set; }
         public DotNetQueryUtil DotNetQueryUtil { get; set; }
         public BlobStorageUtil BlobStorageUtil { get; set; }
+        public FunctionQueueUtil FunctionQueueUtil { get; set; }
 
 
 #pragma warning disable CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
@@ -117,6 +118,7 @@ namespace Scratch
             DotNetQueryUtil = new DotNetQueryUtil(
                 DevOpsServer,
                 new CachingAzureUtil(BlobStorageUtil, DevOpsServer));
+            FunctionQueueUtil = new FunctionQueueUtil(configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
         }
 
         internal static IConfiguration CreateConfiguration()
@@ -133,9 +135,30 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            var util = new StatusPageUtil(GitHubClientFactory, TriageContext, CreateLogger());
-            var text = await util.GetStatusIssueTextAsync();
-            // await ReprocessPoison("build-complete");
+            var issue = await TriageContext.ModelTrackingIssues.Where(x => x.Id == 32).SingleAsync();
+            var buildsRequest = new SearchBuildsRequest()
+            {
+                Definition = "roslyn-ci",
+                Started = new DateRequestValue(21),
+            };
+            var testsRequest = new SearchTestsRequest()
+            {
+                Name = "GetDocumentTextChangesAsync",
+            };
+
+            IQueryable<ModelTestResult> query = TriageContext.ModelTestResults;
+            query = buildsRequest.Filter(query);
+            query = testsRequest.Filter(query);
+            var results = await query.Select(x => x.ModelBuild).ToListAsync();
+
+            foreach (var build in results)
+            {
+                Console.WriteLine($"Triaging {build.GetBuildKey().BuildUri}");
+                var util = new TrackingIssueUtil(DotNetQueryUtil, TriageContextUtil, CreateLogger());
+                await util.TriageAsync(build.GetBuildKey(), issue.Id);
+            }
+
+            await FunctionQueueUtil.QueueUpdateIssueAsync(issue, delay: null);
         }
 
         internal async Task PopulateDb()

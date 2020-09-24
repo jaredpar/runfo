@@ -101,6 +101,19 @@ namespace DevOps.Util.DotNet.Triage
             }
         }
 
+        public async Task TriageAsync(BuildKey buildKey, int modelTrackingIssueId)
+        {
+            var attempts = await TriageContextUtil
+                .GetModelBuildAttemptsQuery(buildKey)
+                .Include(x => x.ModelBuild)
+                .ToListAsync()
+                .ConfigureAwait(false);
+            foreach (var attempt in attempts)
+            {
+                await TriageAsync(attempt.GetBuildAttemptKey(), modelTrackingIssueId).ConfigureAwait(false);
+            }
+        }
+
         public async Task TriageAsync(BuildAttemptKey attemptKey, int modelTrackingIssueId)
         {
             var modelTrackingIssue = await Context
