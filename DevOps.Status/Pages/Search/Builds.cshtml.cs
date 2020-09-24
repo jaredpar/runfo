@@ -39,6 +39,8 @@ namespace DevOps.Status.Pages.Search
         [BindProperty(SupportsGet = true, Name = "pageNumber")]
         public int PageNumber { get; set; }
         public PaginationDisplay? PaginationDisplay { get; set; }
+        public int TotalBuildCount { get; set; }
+        public string? ErrorMessage { get; set; } 
         public bool IncludeDefinitionColumn { get; set; }
         public bool IncludeTargetBranchColumn { get; set; }
         public List<BuildData> Builds { get; set; } = new List<BuildData>();
@@ -62,10 +64,13 @@ namespace DevOps.Status.Pages.Search
                 return;
             }
 
-            var options = new SearchBuildsRequest();
-            options.ParseQueryString(Query);
+            if (!SearchBuildsRequest.TryCreate(Query, out var request, out var errorMessage))
+            {
+                ErrorMessage = errorMessage;
+                return;
+            }
 
-            var totalCount = await options
+            TotalBuildCount = await request
                 .Filter(TriageContext.ModelBuilds)
                 .CountAsync();
             PaginationDisplay = new PaginationDisplay(
@@ -75,10 +80,10 @@ namespace DevOps.Status.Pages.Search
                     { "q", Query },
                 },
                 PageNumber,
-                totalCount / PageSize);
+                TotalBuildCount / PageSize);
 
             var skipCount = PageNumber * PageSize;
-            var results = await options
+            var results = await request
                 .Filter(TriageContext.ModelBuilds)
                 .OrderByDescending(x => x.BuildNumber)
                 .Include(x => x.ModelBuildDefinition)
@@ -107,8 +112,8 @@ namespace DevOps.Status.Pages.Search
                 })
                 .ToList();
 
-            IncludeDefinitionColumn = !options.HasDefinition;
-            IncludeTargetBranchColumn = !options.TargetBranch.HasValue;
+            IncludeDefinitionColumn = !request.HasDefinition;
+            IncludeTargetBranchColumn = !request.TargetBranch.HasValue;
         }
     }
 }
