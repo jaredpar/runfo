@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DevOps.Status.Util;
@@ -17,10 +18,9 @@ namespace DevOps.Status.Pages.Search
         public string? BuildQuery { get; set; }
         [BindProperty(SupportsGet = true, Name = "tq")]
         public string? TimelineQuery { get; set; }
-        [BindProperty(SupportsGet = true, Name = "page")]
+        [BindProperty(SupportsGet = true, Name = "pageNumber")]
         public int PageNumber { get; set; }
-        public int? NextPageNumber { get; set; }
-        public int? PreviousPageNumber { get; set; }
+        public PaginationDisplay? PaginationDisplay { get; set; }
         public TimelineIssuesDisplay TimelineIssuesDisplay { get; set; } = TimelineIssuesDisplay.Empty;
         public int? BuildCount { get; set; }
         public bool IncludeIssueTypeColumn { get; set; }
@@ -61,8 +61,14 @@ namespace DevOps.Status.Pages.Search
                 includeAttemptColumn: true);
             BuildCount = TimelineIssuesDisplay.Issues.GroupBy(x => x.BuildNumber).Count();
             IncludeIssueTypeColumn = timelinesRequest.Type is null;
-            PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
-            NextPageNumber = PageNumber + 1;
+            PaginationDisplay = new PaginationDisplay(
+                "/Search/Timelines",
+                new Dictionary<string, string>()
+                {
+                    { "bq", BuildQuery ?? "" },
+                    { "tq", TimelineQuery ?? "" }
+                },
+                PageNumber);
             return Page();
         }
     }

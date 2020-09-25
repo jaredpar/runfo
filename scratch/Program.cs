@@ -135,21 +135,33 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            var issue = await TriageContext.ModelTrackingIssues.Where(x => x.Id == 32).SingleAsync();
-            var buildsRequest = new SearchBuildsRequest()
-            {
-                Definition = "roslyn-ci",
-                Started = new DateRequestValue(21),
-            };
-            var testsRequest = new SearchTestsRequest()
-            {
-                Name = "GetDocumentTextChangesAsync",
-            };
+            await PopulateTrackingIssue(33, "started:~2 definition:roslyn-ci");
 
-            IQueryable<ModelTestResult> query = TriageContext.ModelTestResults;
-            query = buildsRequest.Filter(query);
-            query = testsRequest.Filter(query);
-            var results = await query.Select(x => x.ModelBuild).ToListAsync();
+        }
+
+        internal async Task PopulateTrackingIssue(int issueId, string buildsQueryString)
+        {
+            var issue = await TriageContext.ModelTrackingIssues.Where(x => x.Id == issueId).SingleAsync();
+
+            var buildsRequest = new SearchBuildsRequest();
+            buildsRequest.ParseQueryString(buildsQueryString);
+            IQueryable<ModelBuild> buildsQuery;
+            switch (issue.TrackingKind)
+            {
+                case TrackingKind.Timeline:
+                    {
+                        var request = new SearchTimelinesRequest();
+                        request.ParseQueryString(issue.SearchQuery);
+                        var query = request.Filter(TriageContext.ModelTimelineIssues);
+                        query = buildsRequest.Filter(query);
+                        buildsQuery = query.Select(x => x.ModelBuild);
+                        break;
+                    };
+                default:
+                    throw new Exception("Not Supported");
+            }
+
+            var results = await buildsQuery.ToListAsync();
 
             foreach (var build in results)
             {

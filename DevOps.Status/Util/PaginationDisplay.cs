@@ -27,10 +27,17 @@ namespace DevOps.Status.Util
         /// </summary>
         public Dictionary<string, string> RouteData { get; }
 
-        public PaginationDisplay(string route, Dictionary<string, string> routeData)
+        public PaginationDisplay(string route, Dictionary<string, string> routeData, int pageNumber)
         {
             Route = route;
             RouteData = routeData;
+            PageNumber = pageNumber;
+            if (pageNumber > 0)
+            {
+                PreviousPageNumber = pageNumber - 1;
+            }
+
+            NextPageNumber = pageNumber + 1;
         }
 
         public PaginationDisplay(string route, Dictionary<string, string> routeData, int pageNumber, int totalPages)
