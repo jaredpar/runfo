@@ -24,7 +24,7 @@ namespace DevOps.Util.UnitTests
         }
 
         [Fact]
-        public async Task SimpleTimelineSearh()
+        public async Task TimelineSearchSimple()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
             var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
@@ -39,6 +39,25 @@ namespace DevOps.Util.UnitTests
 
             var result = await Context.ModelTrackingIssueResults.SingleAsync();
             Assert.True(result.IsPresent);
+        }
+
+        [Fact]
+        public async Task TimelineSearchFilterToDefinition()
+        {
+            var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
+            var def2 = AddBuildDefinition("dnceng|public|runtime|13");
+            var attempt1 = AddAttempt(1, AddBuild("1|dotnet|roslyn", def1));
+            var timeline1 = AddTimelineIssue("windows|dog", attempt1);
+            var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def2));
+            var timeline2 = AddTimelineIssue("windows|dog", attempt2);
+            var tracking = AddTrackingIssue("Timeline|dog", def2);
+            await Context.SaveChangesAsync();
+
+            await TrackingIssueUtil.TriageAsync(attempt1);
+            await TrackingIssueUtil.TriageAsync(attempt2);
+            var results = await Context.ModelTrackingIssueResults.ToListAsync();
+            Assert.Single(results);
+            Assert.Equal(attempt2.Id, results.Single().ModelBuildAttemptId);
         }
 
         [Fact]

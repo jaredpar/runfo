@@ -111,7 +111,7 @@ namespace DevOps.Util.UnitTests
             return def;
         }
 
-        public ModelTrackingIssue AddTrackingIssue(string data)
+        public ModelTrackingIssue AddTrackingIssue(string data, ModelBuildDefinition? definition = null)
         {
             var parts = data.Split("|");
             var trackingIssue = new ModelTrackingIssue()
@@ -119,6 +119,7 @@ namespace DevOps.Util.UnitTests
                 TrackingKind = (TrackingKind)Enum.Parse(typeof(TrackingKind), parts[0]),
                 SearchQuery = parts[1],
                 IsActive = true,
+                ModelBuildDefinition = definition,
             };
             Context.ModelTrackingIssues.Add(trackingIssue);
             return trackingIssue;
