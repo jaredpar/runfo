@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Newtonsoft;
 using Newtonsoft.Json.Linq;
 using System.Net.Http;
+using System.Diagnostics.CodeAnalysis;
 
 namespace DevOps.Util.DotNet
 {
@@ -103,10 +104,24 @@ namespace DevOps.Util.DotNet
             }
 
             return new HelixLogInfo(
-                runClientUri: runClientUri,
-                consoleUri: consoleUri,
-                coreDumpUri: coreUri,
-                testResultsUri: testResultsUri);
+                runClientUri: RewriteUri(runClientUri),
+                consoleUri: RewriteUri(consoleUri),
+                coreDumpUri: RewriteUri(coreUri),
+                testResultsUri: RewriteUri(testResultsUri));
+
+            // This works around the following arcade bug which causes query strings to be imporperly escaped
+            // https://github.com/dotnet/arcade/issues/6256
+            static string? RewriteUri(string? uri)
+            {
+                if (uri is object && uri.Contains(':') && Uri.TryCreate(uri, UriKind.Absolute, out var realUri))
+                {
+                    var builder = new UriBuilder(realUri);
+                    builder.Query = Uri.EscapeDataString(realUri.Query);
+                    return builder.Uri.ToString();
+                }
+
+                return uri;
+            }
         }
 
         public static async Task<HelixLogInfo> GetHelixLogInfoAsync(
@@ -167,7 +182,6 @@ namespace DevOps.Util.DotNet
             {
                 return null;
             }
-
         }
     }
 }

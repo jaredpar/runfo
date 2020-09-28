@@ -170,7 +170,7 @@ namespace Runfo
                             var isMatch = await queryUtil.SearchFileForAnyMatchAsync(
                                 logInfo.ConsoleUri,
                                 textRegex,
-                                ex => badLogList.Add($"Unable to search helix logs {build.Id} {workItem.HelixInfo.JobId}: {ex.Message}")).ConfigureAwait(false);
+                                ex => badLogList.Add($"Unable to search helix logs {build.Id} {workItem.HelixInfo.JobId}, {logInfo.ConsoleUri}: {ex.Message}")).ConfigureAwait(false);
                             if (isMatch)
                             {
                                 return (build, logInfo, badLogList);

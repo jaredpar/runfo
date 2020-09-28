@@ -2,7 +2,7 @@
   "profiles": {
     "runfo": {
       "commandName": "Project",
-      "commandLineArgs": "search-timeline -d runtime-official -c 100 -v \"has no version resource\" -m"
+      "commandLineArgs": "search-helix -d runtime -c 10 -v \"mono_threads_pthread_kill: pthread_kill failed with error 11\" -m"
     }
   }
 }
