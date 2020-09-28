@@ -132,11 +132,98 @@ namespace Scratch
 
         internal static ILogger CreateLogger() => LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Scratch");
 
+        class Data
+        {
+            public string Count7;
+            public string Count14;
+            public string Count30;
+        }
 
         internal async Task Scratch()
         {
-            await PopulateTrackingIssue(33, "started:~2 definition:roslyn-ci");
+            var timelineRequest = new SearchTimelinesRequest()
+            {
+                Type = IssueType.Error,
+                Text = "We stopped hearing from agent",
+            };
 
+            const string allBuildsName = "[All Builds]";
+            var defMap = new Dictionary<string, Data>();
+            defMap[allBuildsName] = new Data();
+            var buildMap = new Dictionary<int, ModelBuild>();
+            foreach (var dayCount in new int[] { 7, 14, 30 })
+            {
+                var buildsRequest = new SearchBuildsRequest()
+                {
+                    Started = new DateRequestValue(dayCount, RelationalKind.GreaterThan),
+                };
+
+                IQueryable<ModelTimelineIssue> query = TriageContext.ModelTimelineIssues;
+                query = buildsRequest.Filter(query);
+                query = timelineRequest.Filter(query);
+
+                var resultBuilds = await query
+                    .Select(x => new
+                    {
+                        x.ModelBuild.BuildNumber,
+                        x.ModelBuild.ModelBuildDefinition.DefinitionName,
+                    })
+                    .ToListAsync();
+                var allBuilds = await buildsRequest.Filter(TriageContext.ModelBuilds)
+                    .Select(x => new
+                    {
+                        x.BuildNumber,
+                        x.ModelBuildDefinition.DefinitionName,
+                    })
+                    .ToListAsync();
+
+                foreach (var group in resultBuilds.GroupBy(x => x.DefinitionName))
+                {
+                    if (!defMap.TryGetValue(group.Key, out var data))
+                    {
+                        data = new Data();
+                        defMap[group.Key] = data;
+                    }
+
+                    var allDefCount = allBuilds.Count(x => x.DefinitionName == group.Key);
+                    var ratioStr = GetRatioString(group.Count(), allDefCount);
+                    UpdateRatioString(data, ratioStr);
+                }
+
+                UpdateRatioString(defMap[allBuildsName], GetRatioString(resultBuilds.Count, allBuilds.Count));
+
+                static string GetRatioString(double hitCount, double buildCount)
+                {
+                    var ratio = hitCount / buildCount;
+                    var ratioStr = ratio.ToString("P1");
+                    return ratioStr;
+                }
+
+                void UpdateRatioString(Data data, string ratioStr)
+                {
+                    switch (dayCount)
+                    {
+                        case 7:
+                            data.Count7 = ratioStr;
+                            break;
+                        case 14:
+                            data.Count14 = ratioStr;
+                            break;
+                        case 30:
+                            data.Count30 = ratioStr;
+                            break;
+                        default:
+                            throw null;
+                    }
+                }
+            }
+
+            Console.WriteLine("|Definition|7 days| 14 days|30 days|");
+            Console.WriteLine("|---|---|---|---|");
+            foreach (var pair in defMap.OrderBy(x => x.Key))
+            {
+                Console.WriteLine($"|{pair.Key}|{pair.Value.Count7}|{pair.Value.Count14}|{pair.Value.Count30}|");
+            }
         }
 
         internal async Task PopulateTrackingIssue(int issueId, string buildsQueryString)
