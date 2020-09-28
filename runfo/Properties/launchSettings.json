@@ -2,7 +2,7 @@
   "profiles": {
     "runfo": {
       "commandName": "Project",
-      "commandLineArgs": "search-tests -d roslyn -c 5"
+      "commandLineArgs": "search-timeline -d runtime-official -c 100 -v \"has no version resource\" -m"
     }
   }
 }

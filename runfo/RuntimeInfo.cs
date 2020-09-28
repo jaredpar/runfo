@@ -218,14 +218,21 @@ namespace Runfo
             Console.WriteLine("Got builds");
             foreach (var build in builds)
             {
-                foreach (var timeline in await ListTimelinesAsync(build, attempt))
+                try
                 {
-                    found.AddRange(QueryUtil.SearchTimeline(
-                        build.GetBuildResultInfo(),
-                        timeline,
-                        text,
-                        name,
-                        task));
+                    foreach (var timeline in await ListTimelinesAsync(build, attempt))
+                    {
+                        found.AddRange(QueryUtil.SearchTimeline(
+                            build.GetBuildResultInfo(),
+                            timeline,
+                            text,
+                            name,
+                            task));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error getting timeline for {build.GetBuildInfo().BuildUri}: {ex.Message}");
                 }
             }
             Console.WriteLine(ReportBuilder.BuildSearchTimeline(
