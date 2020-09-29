@@ -40,9 +40,10 @@ namespace DevOps.Status.Pages.Tracking
             public string? RepositoryUri { get; set; }
         }
 
-        public TriageContext Context { get; }
+        public TriageContextUtil TriageContextUtil { get; }
         public IGitHubClientFactory GitHubClientFactory { get;  }
         public FunctionQueueUtil FunctionQueueUtil { get;  }
+        public TriageContext Context => TriageContextUtil.Context;
         [BindProperty]
         public string? IssueTitle { get; set; }
         public string? SearchQuery { get; set; }
@@ -56,9 +57,9 @@ namespace DevOps.Status.Pages.Tracking
         public bool IsActive { get; set; }
         public PaginationDisplay? PaginationDisplay { get; set; }
 
-        public TrackingIssueModel(TriageContext context, FunctionQueueUtil functionQueueUtil, IGitHubClientFactory gitHubClientFactory)
+        public TrackingIssueModel(TriageContextUtil triageContextUtil, FunctionQueueUtil functionQueueUtil, IGitHubClientFactory gitHubClientFactory)
         {
-            Context = context;
+            TriageContextUtil = triageContextUtil;
             FunctionQueueUtil = functionQueueUtil;
             GitHubClientFactory = gitHubClientFactory;
         }
@@ -156,7 +157,7 @@ namespace DevOps.Status.Pages.Tracking
                 var request = new SearchBuildsRequest();
                 request.ParseQueryString(PopulateBuildsQuery ?? "");
 
-                await FunctionQueueUtil.QueueTriageBuildQuery(request, Context);
+                await FunctionQueueUtil.QueueTriageBuildQuery(TriageContextUtil, modelTrackingIssue, request);
                 await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, delay: TimeSpan.FromMinutes(1));
                 await OnGetAsync(id);
                 return Page();

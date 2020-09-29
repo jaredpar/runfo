@@ -132,14 +132,49 @@ namespace Scratch
 
         internal static ILogger CreateLogger() => LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Scratch");
 
-        class Data
+        internal async Task Scratch()
         {
-            public string Count7;
-            public string Count14;
-            public string Count30;
+            var pageCount = 100;
+            var count = 0;
+            var startTime = DateTime.Parse("2020-08-01");
+            while (true)
+            {
+                var query = TriageContext
+                    .ModelBuilds
+                    .Where(x => x.AzureOrganization == null && x.StartTime >= startTime)
+                    .OrderByDescending(x => x.BuildNumber)
+                    .Take(pageCount)
+                    .Include(x => x.ModelBuildDefinition);
+                var results = await query.ToListAsync();
+                Console.WriteLine(count * pageCount);
+
+                foreach (var build in results)
+                {
+                    if (build.ModelBuildDefinition.AzureOrganization == null)
+                    {
+                    }
+                    build.AzureOrganization = build.ModelBuildDefinition.AzureOrganization;
+                    build.AzureProject = build.ModelBuildDefinition.AzureProject;
+                }
+
+                count++;
+                await TriageContext.SaveChangesAsync();
+
+                if (results.Count == 0)
+                {
+                    break;
+                }
+            }
         }
 
-        internal async Task Scratch()
+        class Data
+        {
+            public string? Count7;
+            public string? Count14;
+            public string? Count30;
+        }
+
+        internal async Task GenerateChrisReport()
         {
             var timelineRequest = new SearchTimelinesRequest()
             {
@@ -213,7 +248,7 @@ namespace Scratch
                             data.Count30 = ratioStr;
                             break;
                         default:
-                            throw null;
+                            throw null!;
                     }
                 }
             }

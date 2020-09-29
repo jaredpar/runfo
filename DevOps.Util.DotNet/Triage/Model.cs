@@ -149,6 +149,8 @@ namespace DevOps.Util.DotNet.Triage
         public List<ModelTestResult> ModelTestResults { get; set; }
 
         public List<ModelTimelineIssue> ModelTimelineIssues { get; set; }
+
+        public List<ModelBuildAttempt> ModelBuildAttempts { get; set; }
     }
 
     public class ModelOsxDeprovisionRetry

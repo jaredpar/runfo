@@ -462,5 +462,38 @@ namespace DevOps.Util.DotNet.Triage
                 x.GitHubOrganization == issueKey.Organization &&
                 x.GitHubRepository == issueKey.Repository &&
                 x.GitHubIssueNumber == issueKey.Number);
+
+        public IQueryable<ModelBuild> GetModelBuildsQuery(ModelTrackingIssue modelTrackingIssue)
+        {
+            switch (modelTrackingIssue.TrackingKind)
+            {
+                case TrackingKind.Timeline:
+                    {
+                        var request = new SearchTimelinesRequest();
+                        request.ParseQueryString(modelTrackingIssue.SearchQuery);
+                        return request
+                            .Filter(Context.ModelTimelineIssues)
+                            .Select(x => x.ModelBuild);
+                    }
+                case TrackingKind.Test:
+                    {
+                        var request = new SearchTestsRequest();
+                        request.ParseQueryString(modelTrackingIssue.SearchQuery);
+                        return request
+                            .Filter(Context.ModelTestResults)
+                            .Select(x => x.ModelBuild);
+                    }
+                case TrackingKind.HelixConsole:
+                case TrackingKind.HelixRunClient:
+                    {
+                        return Context
+                            .ModelTestResults
+                            .Where(x => x.IsHelixTestResult)
+                            .Select(x => x.ModelBuild);
+                    }
+                default:
+                    throw new InvalidOperationException($"Invalid kind {modelTrackingIssue.TrackingKind}");
+            }
+        }
     }
 }

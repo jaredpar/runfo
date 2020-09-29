@@ -153,7 +153,7 @@ namespace DevOps.Status.Pages.Tracking
                     Definition = modelBuildDefinition?.DefinitionId.ToString() ?? null,
                     Queued = new DateRequestValue(days)
                 };
-                await FunctionQueueUtil.QueueTriageBuildQuery(request, TriageContext);
+                await FunctionQueueUtil.QueueTriageBuildQuery(TriageContextUtil, modelTrackingIssue, request);
 
                 // Issues are bulk updated on a 15 minute cycle. This is a new issue though so want to make sure that
                 // the user sees progress soon. Schedule two manual updates in the near future on this so the issue 
