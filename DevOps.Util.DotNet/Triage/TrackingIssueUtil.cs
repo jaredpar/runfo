@@ -159,6 +159,12 @@ namespace DevOps.Util.DotNet.Triage
                 throw new Exception("The attempt must include the build and definition");
             }
 
+            if (modelTrackingIssue.ModelBuildDefinitionId is { } definitionId &&
+                definitionId != modelBuildAttempt.ModelBuild.ModelBuildDefinitionId)
+            {
+                return;
+            }
+
             // Quick spot check to avoid doing extra work if we've already triaged this attempt against this
             // issue
             if (await WasTriaged().ConfigureAwait(false))

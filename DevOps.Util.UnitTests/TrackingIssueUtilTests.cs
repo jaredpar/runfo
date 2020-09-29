@@ -96,5 +96,42 @@ namespace DevOps.Util.UnitTests
             var result = await Context.ModelTrackingIssueResults.SingleAsync();
             Assert.True(result.IsPresent);
         }
+
+        [Fact]
+        public async Task TriageTrackingIssueWrongDefinition()
+        {
+            var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
+            var def2 = AddBuildDefinition("dnceng|public|runtime|13");
+            var attempt1 = AddAttempt(1, AddBuild("1|dotnet|roslyn", def1));
+            var timeline1 = AddTimelineIssue("windows|dog", attempt1);
+            var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def2));
+            var timeline2 = AddTimelineIssue("windows|dog", attempt2);
+            var tracking = AddTrackingIssue("Timeline|dog", def2);
+            await Context.SaveChangesAsync();
+
+            await TrackingIssueUtil.TriageAsync(attempt1.GetBuildAttemptKey(), tracking.Id);
+            await TrackingIssueUtil.TriageAsync(attempt2.GetBuildAttemptKey(), tracking.Id);
+            var results = await Context.ModelTrackingIssueResults.ToListAsync();
+            Assert.Single(results);
+            Assert.Equal(attempt2.Id, results.Single().ModelBuildAttemptId);
+        }
+
+        [Fact]
+        public async Task TriageTrackingIssueNoDefinition()
+        {
+            var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
+            var def2 = AddBuildDefinition("dnceng|public|runtime|13");
+            var attempt1 = AddAttempt(1, AddBuild("1|dotnet|roslyn", def1));
+            var timeline1 = AddTimelineIssue("windows|dog", attempt1);
+            var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def2));
+            var timeline2 = AddTimelineIssue("windows|dog", attempt2);
+            var tracking = AddTrackingIssue("Timeline|dog");
+            await Context.SaveChangesAsync();
+
+            await TrackingIssueUtil.TriageAsync(attempt1.GetBuildAttemptKey(), tracking.Id);
+            await TrackingIssueUtil.TriageAsync(attempt2.GetBuildAttemptKey(), tracking.Id);
+            var results = await Context.ModelTrackingIssueResults.ToListAsync();
+            Assert.Equal(2, results.Count);
+        }
     }
 }

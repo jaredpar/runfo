@@ -196,7 +196,7 @@ namespace Scratch
                 {
                     var ratio = hitCount / buildCount;
                     var ratioStr = ratio.ToString("P1");
-                    return ratioStr;
+                    return $"{ratioStr} ({hitCount}/{buildCount})";
                 }
 
                 void UpdateRatioString(Data data, string ratioStr)
