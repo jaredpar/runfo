@@ -19,9 +19,9 @@
     <partial name="../Shared/_SearchQuerySyntaxErrorDisplay" model="@Model.ErrorMessage" />
 }
 
-@if (Model.BuildCount is { } count)
+@if (Model.TotalCount is { } count)
 {
-    <p>Build Count: @count</p>
+    <p>Count: @count</p>
 
     <div>
         <h3>Results</h3>

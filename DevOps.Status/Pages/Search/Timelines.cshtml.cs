@@ -22,7 +22,7 @@ namespace DevOps.Status.Pages.Search
         public int PageNumber { get; set; }
         public PaginationDisplay? PaginationDisplay { get; set; }
         public TimelineIssuesDisplay TimelineIssuesDisplay { get; set; } = TimelineIssuesDisplay.Empty;
-        public int? BuildCount { get; set; }
+        public int? TotalCount { get; set; }
         public bool IncludeIssueTypeColumn { get; set; }
         public string? ErrorMessage { get; set; }
 
@@ -50,6 +50,8 @@ namespace DevOps.Status.Pages.Search
             IQueryable<ModelTimelineIssue> query = TriageContextUtil.Context.ModelTimelineIssues;
             query = buildsRequest.Filter(query);
             query = timelinesRequest.Filter(query);
+            var totalCount = await query.CountAsync();
+
             query = query
                 .OrderByDescending(x => x.ModelBuild.BuildNumber)
                 .Skip(PageNumber * PageSize)
@@ -59,7 +61,6 @@ namespace DevOps.Status.Pages.Search
                 includeBuildColumn: true,
                 includeIssueTypeColumn: timelinesRequest.Type is null,
                 includeAttemptColumn: true);
-            BuildCount = TimelineIssuesDisplay.Issues.GroupBy(x => x.BuildNumber).Count();
             IncludeIssueTypeColumn = timelinesRequest.Type is null;
             PaginationDisplay = new PaginationDisplay(
                 "/Search/Timelines",
@@ -68,7 +69,9 @@ namespace DevOps.Status.Pages.Search
                     { "bq", BuildQuery ?? "" },
                     { "tq", TimelineQuery ?? "" }
                 },
-                PageNumber);
+                PageNumber,
+                totalCount / PageSize);
+            TotalCount = totalCount;
             return Page();
         }
     }

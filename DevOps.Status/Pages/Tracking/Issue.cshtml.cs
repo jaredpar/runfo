@@ -18,6 +18,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Octokit;
+using YamlDotNet.Serialization.NodeTypeResolvers;
 
 namespace DevOps.Status.Pages.Tracking
 {
@@ -26,23 +27,26 @@ namespace DevOps.Status.Pages.Tracking
         public sealed class Result
         {
             public int BuildNumber { get; set; }
-
             public string? BuildUri { get; set; }
-
             public string? BuildKind { get; set; }
-
             public string? JobName { get; set; }
-
             public int Attempt { get; set; }
-
             public string? RepositoryName { get; set; }
-
             public string? RepositoryUri { get; set; }
+            public DateTime? Queued { get; set; }
+        }
+
+        public struct HitCountInfo
+        {
+            public int Today { get; set; }
+            public int Week { get; set; }
+            public int Month { get; set; }
         }
 
         public TriageContextUtil TriageContextUtil { get; }
         public IGitHubClientFactory GitHubClientFactory { get;  }
         public FunctionQueueUtil FunctionQueueUtil { get;  }
+
         public TriageContext Context => TriageContextUtil.Context;
         [BindProperty]
         public string? IssueTitle { get; set; }
@@ -50,7 +54,9 @@ namespace DevOps.Status.Pages.Tracking
         public string? TrackingKind { get; set; }
         public string? Definition { get; set; }
         public string? GitHubIssueUri { get; set; }
+        [BindProperty]
         public string? PopulateBuildsQuery { get; set; }
+        public HitCountInfo HitCount { get; set; }
         public List<Result> Results { get; set; } = new List<Result>();
         public int ModelTrackingIssueId { get; set; }
         public string? ErrorMessage { get; set; }
@@ -91,28 +97,42 @@ namespace DevOps.Status.Pages.Tracking
                 pageNumber,
                 totalPages);
 
+            var dateTimeUtil = new DateTimeUtil();
             Results = await Context.ModelTrackingIssueMatches
                 .Where(x => x.ModelTrackingIssueId == issue.Id)
                 .Include(x => x.ModelBuildAttempt)
                 .ThenInclude(x => x.ModelBuild)
-                .ThenInclude(x => x.ModelBuildDefinition)
                 .OrderByDescending(x => x.ModelBuildAttempt.ModelBuild.BuildNumber)
                 .Skip(pageNumber * pageSize)
                 .Take(pageSize)
                 .Select(x => new Result()
                 {
                     BuildNumber = x.ModelBuildAttempt.ModelBuild.BuildNumber,
-                    BuildUri = DevOpsUtil.GetBuildUri(x.ModelBuildAttempt.ModelBuild.ModelBuildDefinition.AzureOrganization, x.ModelBuildAttempt.ModelBuild.ModelBuildDefinition.AzureProject, x.ModelBuildAttempt.ModelBuild.BuildNumber),
+                    BuildUri = DevOpsUtil.GetBuildUri(x.ModelBuildAttempt.ModelBuild.AzureOrganization, x.ModelBuildAttempt.ModelBuild.AzureProject, x.ModelBuildAttempt.ModelBuild.BuildNumber),
                     BuildKind = x.ModelBuildAttempt.ModelBuild.PullRequestNumber is object ? "Pull Request" : "Rolling",
                     JobName = x.JobName,
                     Attempt = x.ModelBuildAttempt.Attempt,
                     RepositoryName = x.ModelBuildAttempt.ModelBuild.GitHubRepository,
-                    RepositoryUri = x.ModelBuildAttempt.ModelBuild.GitHubRepository is object 
+                    RepositoryUri = x.ModelBuildAttempt.ModelBuild.GitHubRepository is object
                         ? $"https://github.com/{x.ModelBuildAttempt.ModelBuild.GitHubOrganization}/{x.ModelBuildAttempt.ModelBuild.GitHubRepository}"
-                        : ""
+                        : "",
+                    Queued = dateTimeUtil.ConvertDateTime(x.ModelBuildAttempt.ModelBuild.QueueTime),
                 })
                 .AsNoTracking()
                 .ToListAsync();
+
+            var now = dateTimeUtil.Now;
+            HitCount = new HitCountInfo()
+            {
+                Today =  await GetHitCount(now - TimeSpan.FromDays(1)),
+                Week =  await GetHitCount(now - TimeSpan.FromDays(7)),
+                Month =  await GetHitCount(now - TimeSpan.FromDays(30)),
+            };
+
+            async Task<int> GetHitCount(DateTime before) => await Context
+                .ModelTrackingIssueResults
+                .Where(x => x.ModelTrackingIssueId == ModelTrackingIssueId && x.IsPresent && x.ModelBuildAttempt.ModelBuild.QueueTime > before)
+                .CountAsync();
         }
 
         public async Task<IActionResult> OnPostAsync(int id, string formAction)
@@ -155,7 +175,7 @@ namespace DevOps.Status.Pages.Tracking
             async Task<IActionResult> PopulateAsync()
             {
                 var request = new SearchBuildsRequest();
-                request.ParseQueryString(PopulateBuildsQuery ?? "");
+                request.ParseQueryString(string.IsNullOrEmpty(PopulateBuildsQuery) ? "started:~7" : PopulateBuildsQuery);
 
                 await FunctionQueueUtil.QueueTriageBuildQuery(TriageContextUtil, modelTrackingIssue, request);
                 await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, delay: TimeSpan.FromMinutes(1));
