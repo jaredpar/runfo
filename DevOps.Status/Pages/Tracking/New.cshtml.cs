@@ -84,6 +84,12 @@ namespace DevOps.Status.Pages.Tracking
                 return Page();
             }
 
+            if (IssueTitle.Length >= ModelTrackingIssue.IssueTitleLengthLimit)
+            {
+                ErrorMessage = $"Please limit issue title to {ModelTrackingIssue.IssueTitleLengthLimit} characters";
+                return Page();
+            }
+
             if (string.IsNullOrEmpty(SearchText))
             {
                 ErrorMessage = "Must provide search text";
