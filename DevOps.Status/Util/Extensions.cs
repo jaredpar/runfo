@@ -37,7 +37,7 @@ namespace DevOps.Status.Util
             IQueryable<ModelBuild> query = triageContextUtil.GetModelBuildsQuery(trackingIssue);
             query = buildsRequest.Filter(query);
             var attemptsQuery = query
-                .Where(x => !triageContextUtil.Context.ModelTrackingIssueResults.Any(r => r.ModelBuildAttempt.ModelBuildId == x.Id))
+                .Where(x => !triageContextUtil.Context.ModelTrackingIssueResults.Any(r => r.ModelBuildAttempt.ModelBuildId == x.Id && r.ModelTrackingIssueId == trackingIssue.Id))
                 .SelectMany(x => x.ModelBuildAttempts)
                 .Include(x => x.ModelBuild)
                 .Take(limit);

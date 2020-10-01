@@ -33,6 +33,8 @@ namespace DevOps.Status.Pages.Tracking
         public string? GitHubOrganization { get; set; }
         [BindProperty(SupportsGet = true)]
         public string? GitHubRepository { get; set; }
+        [BindProperty(SupportsGet = true)]
+        public string? GitHubIssueUri { get; set; }
 
         public string? ErrorMessage { get; set; }
 
@@ -99,7 +101,22 @@ namespace DevOps.Status.Pages.Tracking
                 }
             }
 
-            if (string.IsNullOrEmpty(GitHubRepository) || string.IsNullOrEmpty(GitHubOrganization))
+            GitHubIssueKey? issueKey = null;
+            if (!string.IsNullOrEmpty(GitHubIssueUri))
+            {
+                if (GitHubIssueKey.TryCreateFromUri(GitHubIssueUri, out var key))
+                {
+                    issueKey = key;
+                    GitHubOrganization = key.Organization;
+                    GitHubRepository = key.Repository;
+                }
+                else
+                {
+                    ErrorMessage = $"Invalid GitHub issue link: {GitHubIssueUri}";
+                    return Page();
+                }
+            }
+            else if (string.IsNullOrEmpty(GitHubRepository) || string.IsNullOrEmpty(GitHubOrganization))
             {
                 ErrorMessage = "Must provide GitHub organization and repository";
                 return Page();
@@ -123,7 +140,7 @@ namespace DevOps.Status.Pages.Tracking
 
             async Task<ModelTrackingIssue> CreateTrackingIssue(IGitHubClient gitHubClient)
             {
-                var issueKey = await CreateGitHubIssueAsync(gitHubClient);
+                var issueKey = await GetOrCreateGitHubIssueAsync(gitHubClient);
                 var modelTrackingIssue = new ModelTrackingIssue()
                 {
                     IsActive = true,
@@ -162,8 +179,14 @@ namespace DevOps.Status.Pages.Tracking
                 await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, TimeSpan.FromMinutes(2));
             }
 
-            async Task<GitHubIssueKey> CreateGitHubIssueAsync(IGitHubClient gitHubClient)
+            async Task<GitHubIssueKey> GetOrCreateGitHubIssueAsync(IGitHubClient gitHubClient)
             {
+                if (issueKey is { } key)
+                {
+                    _ = await gitHubClient.Issue.Get(key.Organization, key.Repository, key.Number);
+                    return key;
+                }
+
                 var newIssue = new NewIssue(IssueTitle)
                 {
                     Body = TrackingGitHubUtil.WrapInStartEndMarkers("Runfo Creating Tracking Issue (data being generated)")
