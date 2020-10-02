@@ -81,16 +81,9 @@ namespace DevOps.Util.DotNet.Triage
 
         private async Task UpdateGitHubIssueAsync(ModelTrackingIssue modelTrackingIssue, GitHubIssueKey issueKey)
         {
-            IGitHubClient gitHubClient;
-            try
+            IGitHubClient? gitHubClient = await TryCreateForIssue(issueKey).ConfigureAwait(false);
+            if (gitHubClient is null)
             {
-                gitHubClient = await GitHubClientFactory.CreateForAppAsync(
-                    issueKey.Organization,
-                    issueKey.Repository).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"Cannot create GitHubClient for {issueKey.Organization} {issueKey.Repository}: {ex.Message}");
                 return;
             }
 
@@ -123,6 +116,80 @@ namespace DevOps.Util.DotNet.Triage
             }
 
             return false;
+        }
+
+        private async Task<IGitHubClient?> TryCreateForIssue(GitHubIssueKey issueKey)
+        {
+            try
+            {
+                var gitHubClient = await GitHubClientFactory.CreateForAppAsync(
+                    issueKey.Organization,
+                    issueKey.Repository).ConfigureAwait(false);
+                return gitHubClient;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Cannot create GitHubClient for {issueKey.Organization} {issueKey.Repository}: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Ensure the issue has the appropriate start / end markers in the body so it can be updated later 
+        /// by automation
+        /// </summary>
+        public async Task EnsureGitHubIssueHasMarkers(GitHubIssueKey issueKey)
+        {
+            IGitHubClient? gitHubClient = await TryCreateForIssue(issueKey).ConfigureAwait(false);
+            if (gitHubClient is null)
+            {
+                return;
+            }
+
+            await EnsureGitHubIssueHasMarkers(gitHubClient, issueKey).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Ensure the issue has the appropriate start / end markers in the body so it can be updated later 
+        /// by automation
+        /// </summary>
+        public static async Task EnsureGitHubIssueHasMarkers(IGitHubClient gitHubClient, GitHubIssueKey issueKey)
+        {
+            var issue = await gitHubClient.Issue.Get(issueKey.Organization, issueKey.Repository, issueKey.Number).ConfigureAwait(false);
+            if (HasMarkers())
+            {
+                return;
+            }
+
+            var builder = new StringBuilder();
+            builder.AppendLine(issue.Body);
+            builder.AppendLine(MarkdownReportStart);
+            builder.AppendLine(MarkdownReportEnd);
+
+            var issueUpdate = issue.ToUpdate();
+            issueUpdate.Body = builder.ToString();
+
+            await gitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, issueUpdate).ConfigureAwait(false);
+
+            bool HasMarkers()
+            {
+                using var reader = new StringReader(issue.Body);
+                bool foundStart = false;
+                while (reader.ReadLine() is string line)
+                {
+                    if (MarkdownReportStartRegex.IsMatch(line))
+                    {
+                        foundStart = true;
+                    }
+
+                    if (MarkdownReportEndRegex.IsMatch(line) && foundStart)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
         }
 
         private static bool TryUpdateIssueText(string reportBody, string oldIssueText, [NotNullWhen(true)] out string? newIssueText)

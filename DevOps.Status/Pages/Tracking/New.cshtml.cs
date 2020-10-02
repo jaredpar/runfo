@@ -189,7 +189,7 @@ namespace DevOps.Status.Pages.Tracking
             {
                 if (issueKey is { } key)
                 {
-                    _ = await gitHubClient.Issue.Get(key.Organization, key.Repository, key.Number);
+                    await TrackingGitHubUtil.EnsureGitHubIssueHasMarkers(gitHubClient, key);
                     return key;
                 }
 
