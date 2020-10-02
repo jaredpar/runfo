@@ -38,6 +38,12 @@ namespace DevOps.Util.UnitTests
 |---|---|---|---|
 |[roslyn](https://dnceng.visualstudio.com/public/_build?definitionId=42)|[1](https://dev.azure.com/dnceng/public/_build/results?buildId=1)|Rolling|windows|
 
+
+
+Build Result Summary
+|Day Hit Count|Week Hit Count|Month Hit Count|
+|---|---|---|
+|0|0|0|
 ";
 
             var report = await TrackingGitHubUtil.GetReportAsync(tracking, includeMarkers: false);
