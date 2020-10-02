@@ -21,6 +21,7 @@ namespace DevOps.Util.DotNet.Triage
         public DateRequestValue? Finished { get; set; }
         public DateRequestValue? Queued { get; set; }
         public StringRequestValue? TargetBranch { get; set; }
+        public BuildResultRequestValue? Result { get; set; }
 
         public bool HasDefinition => !string.IsNullOrEmpty(Definition);
 
@@ -158,6 +159,22 @@ namespace DevOps.Util.DotNet.Triage
                 };
             }
 
+            if (Result is { } buildResult)
+            {
+                query = (buildResult.BuildResult, buildResult.Kind) switch
+                {
+                    (BuildResult.Succeeded, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.BuildResult == BuildResult.Succeeded)),
+                    (BuildResult.Succeeded, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.BuildResult != BuildResult.Succeeded)),
+                    (BuildResult.PartiallySucceeded, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.BuildResult == BuildResult.PartiallySucceeded)),
+                    (BuildResult.PartiallySucceeded, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.BuildResult != BuildResult.PartiallySucceeded)),
+                    (BuildResult.Failed, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.BuildResult == BuildResult.Failed)),
+                    (BuildResult.Failed, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.BuildResult != BuildResult.Failed)),
+                    (BuildResult.Canceled, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.BuildResult == BuildResult.Canceled)),
+                    (BuildResult.Canceled, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.BuildResult != BuildResult.Canceled)),
+                    _ => query,
+                };
+            }
+
             return query;
         }
 
@@ -177,6 +194,11 @@ namespace DevOps.Util.DotNet.Triage
             if (BuildType is { } buildType)
             {
                 Append($"kind:{buildType.GetQueryValue(EqualsKind.Equals)}");
+            }
+
+            if (Result is { } result)
+            {
+                Append($"result:{result.GetQueryValue(EqualsKind.Equals)}");
             }
 
             if (Started is { } startTime)
@@ -238,6 +260,9 @@ namespace DevOps.Util.DotNet.Triage
                         break;
                     case "kind":
                         BuildType = BuildTypeRequestValue.Parse(tuple.Value, EqualsKind.Equals);
+                        break;
+                    case "result":
+                        Result = BuildResultRequestValue.Parse(tuple.Value, EqualsKind.Equals);
                         break;
                     default:
                         throw new Exception($"Invalid option {tuple.Name}");
