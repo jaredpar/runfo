@@ -33,6 +33,23 @@ namespace DevOps.Util
         public override int GetHashCode() => HashCode.Combine(Organization, Repository, Number);
 
         public override string ToString() => $"{Organization}/{Repository}/{Number}";
+
+        public static bool TryCreateFromUri(string uri, out GitHubIssueKey issueKey)
+        {
+            if (Uri.TryCreate(uri, UriKind.Absolute, out var result))
+            {
+                var items = result.PathAndQuery.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                if (items.Length >= 4 && int.TryParse(items[3], out var number))
+                {
+                    issueKey = new GitHubIssueKey(items[0], items[1], number);
+                    return true;
+                }
+
+            }
+
+            issueKey = default;
+            return false;
+        }
     }
 
     public readonly struct GitHubPullRequestKey : IEquatable<GitHubPullRequestKey>

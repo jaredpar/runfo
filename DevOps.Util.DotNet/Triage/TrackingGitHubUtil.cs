@@ -14,7 +14,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Logging;
 using Octokit;
-using Org.BouncyCastle.Asn1.Crmf;
 
 namespace DevOps.Util.DotNet.Triage
 {
@@ -82,16 +81,9 @@ namespace DevOps.Util.DotNet.Triage
 
         private async Task UpdateGitHubIssueAsync(ModelTrackingIssue modelTrackingIssue, GitHubIssueKey issueKey)
         {
-            IGitHubClient gitHubClient;
-            try
+            IGitHubClient? gitHubClient = await TryCreateForIssue(issueKey).ConfigureAwait(false);
+            if (gitHubClient is null)
             {
-                gitHubClient = await GitHubClientFactory.CreateForAppAsync(
-                    issueKey.Organization,
-                    issueKey.Repository).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"Cannot create GitHubClient for {issueKey.Organization} {issueKey.Repository}: {ex.Message}");
                 return;
             }
 
@@ -124,6 +116,80 @@ namespace DevOps.Util.DotNet.Triage
             }
 
             return false;
+        }
+
+        private async Task<IGitHubClient?> TryCreateForIssue(GitHubIssueKey issueKey)
+        {
+            try
+            {
+                var gitHubClient = await GitHubClientFactory.CreateForAppAsync(
+                    issueKey.Organization,
+                    issueKey.Repository).ConfigureAwait(false);
+                return gitHubClient;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Cannot create GitHubClient for {issueKey.Organization} {issueKey.Repository}: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Ensure the issue has the appropriate start / end markers in the body so it can be updated later 
+        /// by automation
+        /// </summary>
+        public async Task EnsureGitHubIssueHasMarkers(GitHubIssueKey issueKey)
+        {
+            IGitHubClient? gitHubClient = await TryCreateForIssue(issueKey).ConfigureAwait(false);
+            if (gitHubClient is null)
+            {
+                return;
+            }
+
+            await EnsureGitHubIssueHasMarkers(gitHubClient, issueKey).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Ensure the issue has the appropriate start / end markers in the body so it can be updated later 
+        /// by automation
+        /// </summary>
+        public static async Task EnsureGitHubIssueHasMarkers(IGitHubClient gitHubClient, GitHubIssueKey issueKey)
+        {
+            var issue = await gitHubClient.Issue.Get(issueKey.Organization, issueKey.Repository, issueKey.Number).ConfigureAwait(false);
+            if (HasMarkers())
+            {
+                return;
+            }
+
+            var builder = new StringBuilder();
+            builder.AppendLine(issue.Body);
+            builder.AppendLine(MarkdownReportStart);
+            builder.AppendLine(MarkdownReportEnd);
+
+            var issueUpdate = issue.ToUpdate();
+            issueUpdate.Body = builder.ToString();
+
+            await gitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, issueUpdate).ConfigureAwait(false);
+
+            bool HasMarkers()
+            {
+                using var reader = new StringReader(issue.Body);
+                bool foundStart = false;
+                while (reader.ReadLine() is string line)
+                {
+                    if (MarkdownReportStartRegex.IsMatch(line))
+                    {
+                        foundStart = true;
+                    }
+
+                    if (MarkdownReportEndRegex.IsMatch(line) && foundStart)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
         }
 
         private static bool TryUpdateIssueText(string reportBody, string oldIssueText, [NotNullWhen(true)] out string? newIssueText)
@@ -181,12 +247,18 @@ namespace DevOps.Util.DotNet.Triage
             return builder.ToString();
         }
 
-        public async Task<string> GetReportAsync(ModelTrackingIssue modelTrackingIssue, int limit = DefaultReportLimit, bool includeMarkers = true)
+        public async Task<string> GetReportAsync(
+            ModelTrackingIssue modelTrackingIssue,
+            int limit = DefaultReportLimit,
+            bool includeMarkers = true,
+            DateTime? baseTime = null)
+
         {
+            var time = baseTime ?? DateTime.UtcNow;
             var reportTextTask = modelTrackingIssue.TrackingKind switch
             {
-                TrackingKind.Test => GetReportForTestAsync(modelTrackingIssue, limit),
-                TrackingKind.Timeline => GetReportForTimelineAsync(modelTrackingIssue, limit),
+                TrackingKind.Test => GetReportForTestAsync(modelTrackingIssue, limit, time),
+                TrackingKind.Timeline => GetReportForTimelineAsync(modelTrackingIssue, limit, time),
                 TrackingKind.HelixConsole => GetReportForHelixAsync(modelTrackingIssue, HelixLogKind.Console, limit),
                 TrackingKind.HelixRunClient => GetReportForHelixAsync(modelTrackingIssue, HelixLogKind.RunClient, limit),
                 _ => throw new Exception($"Invalid value {modelTrackingIssue.TrackingKind}"),
@@ -198,14 +270,12 @@ namespace DevOps.Util.DotNet.Triage
                 : reportText;
         }
 
-        private async Task<string> GetReportForTestAsync(ModelTrackingIssue modelTrackingIssue, int limit)
+        private async Task<string> GetReportForTestAsync(ModelTrackingIssue modelTrackingIssue, int limit, DateTime baseTime)
         {
             Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Test);
             var matches = await Context
                 .ModelTrackingIssueMatches
                 .Where(x => x.ModelTrackingIssueId == modelTrackingIssue.Id)
-                .OrderByDescending(x => x.ModelBuildAttempt.ModelBuild.BuildNumber)
-                .Take(limit)
                 .Select(x => new
                 {
                     AzureOrganization = x.ModelBuildAttempt.ModelBuild.ModelBuildDefinition.AzureOrganization,
@@ -217,14 +287,17 @@ namespace DevOps.Util.DotNet.Triage
                     GitHubPullRequestNumber = x.ModelBuildAttempt.ModelBuild.PullRequestNumber,
                     GitHubTargetBranch = x.ModelBuildAttempt.ModelBuild.GitHubTargetBranch,
                     BuildNumber = x.ModelBuildAttempt.ModelBuild.BuildNumber,
+                    QueueTime = x.ModelBuildAttempt.ModelBuild.QueueTime,
                     TestRunName = x.ModelTestResult.ModelTestRun.Name,
                     TestResult = x.ModelTestResult,
                 })
                 .ToListAsync().ConfigureAwait(false);
 
             var reportBuilder = new ReportBuilder();
-            return reportBuilder.BuildSearchTests(
-                matches.Select(x => (
+            var reportBody = reportBuilder.BuildSearchTests(matches
+                .OrderByDescending(x => x.BuildNumber)
+                .Take(limit)
+                .Select(x => (
                     new BuildAndDefinitionInfo(
                         x.AzureOrganization,
                         x.AzureProject,
@@ -236,9 +309,18 @@ namespace DevOps.Util.DotNet.Triage
                     x.TestResult.GetHelixLogInfo())),
                 includeDefinition: true,
                 includeHelix: matches.Any(x => x.TestResult.IsHelixTestResult));
+
+            var builder = new StringBuilder();
+            builder.AppendLine(reportBody);
+            if (matches.Count > limit)
+            {
+                builder.AppendLine($"Displaying {limit} of {matches.Count} results");
+            }
+            AppendFooter(builder, matches.Select(x => (x.BuildNumber, x.QueueTime)), baseTime);
+            return builder.ToString();
         }
 
-        private async Task<string> GetReportForTimelineAsync(ModelTrackingIssue modelTrackingIssue, int limit)
+        private async Task<string> GetReportForTimelineAsync(ModelTrackingIssue modelTrackingIssue, int limit, DateTime baseTime)
         {
             Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Timeline);
             var matches = await Context
@@ -257,12 +339,13 @@ namespace DevOps.Util.DotNet.Triage
                     GitHubPullRequestNumber = x.ModelBuildAttempt.ModelBuild.PullRequestNumber,
                     GitHubTargetBranch = x.ModelBuildAttempt.ModelBuild.GitHubTargetBranch,
                     BuildNumber = x.ModelBuildAttempt.ModelBuild.BuildNumber,
+                    QueueTime = x.ModelBuildAttempt.ModelBuild.QueueTime,
                     TimelineIssue = x.ModelTimelineIssue
                 })
                 .ToListAsync().ConfigureAwait(false);
 
             var reportBuilder = new ReportBuilder();
-            return reportBuilder.BuildSearchTimeline(
+            var reportBody = reportBuilder.BuildSearchTimeline(
                 matches.Select(x => (
                     new BuildAndDefinitionInfo(
                         x.AzureOrganization,
@@ -274,6 +357,12 @@ namespace DevOps.Util.DotNet.Triage
                     x.TimelineIssue?.JobName)),
                 markdown: true,
                 includeDefinition: true);
+
+            var builder = new StringBuilder();
+            builder.AppendLine(reportBody);
+            AppendFooter(builder, matches.Select(x => (x.BuildNumber, x.QueueTime)), baseTime);
+
+            return builder.ToString();
         }
 
         private async Task<string> GetReportForHelixAsync(ModelTrackingIssue modelTrackingIssue, HelixLogKind helixLogKind, int limit)
@@ -310,6 +399,24 @@ namespace DevOps.Util.DotNet.Triage
                     (HelixLogInfo?)(new HelixLogInfo(helixLogKind, x.HelixLogUri)))),
                 new[] { helixLogKind },
                 markdown: true);
+        }
+
+        private static void AppendFooter(StringBuilder builder, IEnumerable<(int BuildNumber, DateTime? QueueTime)> builds, DateTime baseTime)
+        {
+            builder.AppendLine();
+            builder.AppendLine("Build Result Summary");
+            builder.AppendLine("|Day Hit Count|Week Hit Count|Month Hit Count|");
+            builder.AppendLine("|---|---|---|");
+
+            var list = builds
+                .GroupBy(x => x.BuildNumber)
+                .Select(x => (BuildNumber: x.Key, QueueTime: x.SelectNullableValue(x => x.QueueTime).FirstOrDefault()))
+                .Where(x => x.QueueTime != default)
+                .ToList();
+            var dayCount = list.Count(x => x.QueueTime > baseTime - TimeSpan.FromDays(1));
+            var weekCount = list.Count(x => x.QueueTime > baseTime - TimeSpan.FromDays(7));
+            var monthCount = list.Count(x => x.QueueTime > baseTime - TimeSpan.FromDays(30));
+            builder.AppendLine($"|{dayCount}|{weekCount}|{monthCount}|");
         }
     }
 }

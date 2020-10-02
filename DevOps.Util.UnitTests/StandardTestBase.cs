@@ -24,6 +24,7 @@ namespace DevOps.Util.UnitTests
         public TestableLogger TestableLogger { get; set; }
         public TestableGitHubClientFactory TestableGitHubClientFactory { get; set; }
         public TestableGitHubClient TestableGitHubClient => TestableGitHubClientFactory.TestableGitHubClient;
+        private int TestRunCount { get; set; }
 
         public StandardTestBase()
         {
@@ -92,6 +93,7 @@ namespace DevOps.Util.UnitTests
                 GitHubRepository = parts.Length > 2 ? parts[2] : null,
                 AzureOrganization = def.AzureOrganization,
                 AzureProject = def.AzureProject,
+                QueueTime = parts.Length > 3 ? DateTime.Parse(parts[3]) : (DateTime?)null,
                 ModelBuildDefinition = def,
             };
 
@@ -134,6 +136,7 @@ namespace DevOps.Util.UnitTests
             {
                 Name = parts[0],
                 Attempt = parts.Length > 1 ? int.Parse(parts[1]) : 1,
+                TestRunId = parts.Length > 2 ? int.Parse(parts[2]) : TestRunCount++,
                 AzureOrganization = build.ModelBuildDefinition.AzureOrganization,
                 AzureProject = build.ModelBuildDefinition.AzureProject,
                 ModelBuild = build,
@@ -190,6 +193,15 @@ namespace DevOps.Util.UnitTests
             };
             Context.ModelTrackingIssueResults.Add(result);
             return result;
+        }
+
+        public async Task TriageAll()
+        {
+            var util = new TrackingIssueUtil(QueryUtil, TriageContextUtil, TestableLogger);
+            foreach (var modelBuildAttempt in await Context.ModelBuildAttempts.Include(x => x.ModelBuild).ToListAsync())
+            {
+                await util.TriageAsync(modelBuildAttempt.GetBuildAttemptKey());
+            }
         }
     }
 }

@@ -282,6 +282,9 @@ namespace DevOps.Util.DotNet.Triage
     /// </summary>
     public class ModelTrackingIssue
     {
+        [NotMapped]
+        public const int IssueTitleLengthLimit = 100;
+
         public int Id { get; set; }
 
         [Column(TypeName = "nvarchar(30)")]
