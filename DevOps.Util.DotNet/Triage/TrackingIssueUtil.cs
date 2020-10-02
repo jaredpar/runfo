@@ -318,13 +318,8 @@ namespace DevOps.Util.DotNet.Triage
             return any;
         }
 
-        private Task<ModelBuildAttempt> GetModelBuildAttemptAsync(BuildAttemptKey attemptKey) => Context
-            .ModelBuildAttempts
-            .Where(x =>
-                x.Attempt == attemptKey.Attempt &&
-                x.ModelBuild.BuildNumber == attemptKey.Number &&
-                x.ModelBuild.AzureOrganization == attemptKey.Organization &&
-                x.ModelBuild.AzureProject == attemptKey.Project)
+        private Task<ModelBuildAttempt> GetModelBuildAttemptAsync(BuildAttemptKey attemptKey) => TriageContextUtil
+            .GetModelBuildAttemptQuery(attemptKey)
             .Include(x => x.ModelBuild)
             .ThenInclude(x => x.ModelBuildDefinition)
             .SingleAsync();

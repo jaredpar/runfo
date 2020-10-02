@@ -90,6 +90,8 @@ namespace DevOps.Util.UnitTests
                 BuildNumber = number,
                 GitHubOrganization = parts.Length > 1 ? parts[1] : null,
                 GitHubRepository = parts.Length > 2 ? parts[2] : null,
+                AzureOrganization = def.AzureOrganization,
+                AzureProject = def.AzureProject,
                 ModelBuildDefinition = def,
             };
 
