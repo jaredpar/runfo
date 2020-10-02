@@ -2,6 +2,7 @@
 using DevOps.Util.DotNet.Triage;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -85,6 +86,9 @@ namespace DevOps.Util.UnitTests
         {
             var parts = data.Split("|");
             var number = int.Parse(parts[0]);
+            var dt = GetPartOrNull(3);
+            var br = GetPartOrNull(4);
+
             var build = new ModelBuild()
             {
                 Id = TriageContextUtil.GetModelBuildId(new BuildKey(def.AzureOrganization, def.AzureProject, number)),
@@ -93,12 +97,15 @@ namespace DevOps.Util.UnitTests
                 GitHubRepository = parts.Length > 2 ? parts[2] : null,
                 AzureOrganization = def.AzureOrganization,
                 AzureProject = def.AzureProject,
-                QueueTime = parts.Length > 3 ? DateTime.Parse(parts[3]) : (DateTime?)null,
+                QueueTime = dt is object ? DateTime.Parse(dt) : (DateTime?)null,
+                BuildResult = br is object ? Enum.Parse<BuildResult>(br) : (BuildResult?)null,
                 ModelBuildDefinition = def,
             };
 
             Context.ModelBuilds.Add(build);
             return build;
+
+            string? GetPartOrNull(int index) => parts.Length > index && !string.IsNullOrEmpty(parts[index]) ? parts[index] : null;
         }
 
         public ModelBuildDefinition AddBuildDefinition(string data)

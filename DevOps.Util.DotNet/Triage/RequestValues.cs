@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Org.BouncyCastle.Bcpg.OpenPgp;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
@@ -196,6 +197,43 @@ namespace DevOps.Util.DotNet.Triage
             };
 
             return new BuildTypeRequestValue(buildType, kind, data);
+        }
+    }
+
+    public readonly struct BuildResultRequestValue : IRequestValue<EqualsKind>
+    {
+        public BuildResult BuildResult { get; }
+        public EqualsKind Kind { get; }
+        public string? BuildResultName { get; }
+
+        public BuildResultRequestValue(BuildResult buildResult, EqualsKind kind, string? buildResultName = null)
+        {
+            BuildResult = buildResult;
+            Kind = kind;
+            BuildResultName = buildResultName;
+        }
+
+        public string GetQueryValue(EqualsKind? defaultKind = null)
+        {
+            var prefix = Kind == defaultKind ? (char?)null : RequestValueUtil.GetPrefix(Kind);
+            var name = BuildResultName ?? BuildResult.ToString();
+            return $"{prefix}{name}";
+        }
+
+        public static BuildResultRequestValue Parse(string data, EqualsKind defaultKind)
+        {
+            EqualsKind kind;
+            (data, kind) = RequestValueUtil.Parse(data, defaultKind);
+            var buildResult = data.ToLower() switch
+            {
+                "failed" => BuildResult.Failed,
+                "canceled" => BuildResult.Canceled,
+                "succeeded" => BuildResult.Succeeded,
+                "partiallysucceeded" => BuildResult.PartiallySucceeded,
+                _ => throw new Exception($"Invalid result {data}")
+            };
+
+            return new BuildResultRequestValue(buildResult, kind, data);
         }
     }
 

@@ -29,6 +29,20 @@ namespace DevOps.Util.UnitTests
         }
 
         [Theory]
+        [InlineData("succeeded", BuildResult.Succeeded, EqualsKind.Equals, "succeeded", null)]
+        [InlineData("!succeeded", BuildResult.Succeeded, EqualsKind.NotEquals, "succeeded", null)]
+        [InlineData("failed", BuildResult.Failed, EqualsKind.Equals, "failed", null)]
+        public void BuildResultRequestValues(string value, BuildResult buildResult, EqualsKind kind, string name, EqualsKind? defaultKind)
+        {
+            defaultKind ??= EqualsKind.Equals;
+            var request = BuildResultRequestValue.Parse(value, defaultKind: defaultKind.Value);
+            Assert.Equal(buildResult, request.BuildResult);
+            Assert.Equal(kind, request.Kind);
+            Assert.Equal(name, request.BuildResultName);
+            Assert.Equal(value, request.GetQueryValue(defaultKind));
+        }
+
+        [Theory]
         [InlineData("~1", RelationalKind.GreaterThan, 1, null, null)]
         [InlineData("<~1", RelationalKind.LessThan, 1, null, null)]
         [InlineData("2020-09-15", RelationalKind.GreaterThan, null, null, null)]
