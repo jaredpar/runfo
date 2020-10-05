@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using DevOps.Status.Util;
+using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
@@ -26,7 +27,6 @@ namespace DevOps.Status.Pages.Search
         public List<HelixLogData> HelixLogs { get; } = new List<HelixLogData>();
         public int? BuildCount { get; set; }
         public string? ErrorMessage { get; set; }
-        public string? AzureDevOpsEmail { get; set; }
 
         [BindProperty(SupportsGet = true, Name = "bq")]
         public string? BuildQuery { get; set; }
@@ -35,60 +35,60 @@ namespace DevOps.Status.Pages.Search
         public string? LogQuery { get; set; }
 
         public TriageContextUtil TriageContextUtil { get; }
-        public DotNetQueryUtilFactory DotNetQueryUtilFactory { get; }
 
-        public HelixLogsModel(TriageContextUtil triageContextUtil, DotNetQueryUtilFactory factory)
+        public HelixLogsModel(TriageContextUtil triageContextUtil)
         {
             TriageContextUtil = triageContextUtil;
-            DotNetQueryUtilFactory = factory;
         }
 
         public async Task OnGet()
         {
             ErrorMessage = null;
-            if (User.GetVsoIdentity() is { } identity)
-            {
-                AzureDevOpsEmail = identity.FindFirst(ClaimTypes.Email)?.Value;
-            }
 
             if (string.IsNullOrEmpty(BuildQuery))
             {
-                BuildQuery = new SearchBuildsRequest() { Definition = "runtime" }.GetQueryString();
+                BuildQuery = new SearchBuildsRequest()
+                {
+                    Definition = "runtime",
+                    Started = new DateRequestValue(dayQuery: 3),
+                }.GetQueryString();
                 return;
             }
 
-            var searchBuildsRequest = new SearchBuildsRequest();
-            searchBuildsRequest.ParseQueryString(BuildQuery);
-
-            var searchHelixLogsRequest = new SearchHelixLogsRequest()
+            if (!SearchBuildsRequest.TryCreate(BuildQuery, out var buildsRequest, out var errorMessage) ||
+                !SearchHelixLogsRequest.TryCreate(LogQuery ?? "", out var logsRequest, out errorMessage))
             {
-                HelixLogKinds = new List<HelixLogKind>(new[] { HelixLogKind.Console }),
-            };
-            searchHelixLogsRequest.ParseQueryString(LogQuery ?? "");
+                ErrorMessage = errorMessage;
+                return;
+            }
 
-            if (string.IsNullOrEmpty(searchHelixLogsRequest.Text))
+            if (logsRequest.HelixLogKinds.Count == 0)
+            {
+                logsRequest.HelixLogKinds.Add(HelixLogKind.Console);
+            }
+
+            if (string.IsNullOrEmpty(logsRequest.Text))
             {
                 ErrorMessage = @"Must specify text to search for 'text: ""StackOverflowException""'";
                 return;
             }
 
             IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults.Where(x => x.IsHelixTestResult);
-            query = searchBuildsRequest.FilterBuilds(query);
+            query = buildsRequest.Filter(query);
             query = query
                 .Take(100)
-                .Include(x => x.ModelBuild)
-                .ThenInclude(x => x.ModelBuildDefinition);
+                .Include(x => x.ModelBuild);
 
             var modelResults = await query.ToListAsync();
             var toQuery = modelResults
-                .Select(x => (x.ModelBuild.GetBuildResultInfo(), x.GetHelixLogInfo()))
+                .Select(x => (x.ModelBuild.GetBuildInfo(), x.GetHelixLogInfo()))
                 .Where(x => x.Item2 is object);
 
-            var queryUtil = await DotNetQueryUtilFactory.CreateDotNetQueryUtilForUserAsync();
+            var helixServer = new HelixServer();
             var errorBuilder = new StringBuilder();
-            var results = await queryUtil.SearchHelixLogsAsync(
+            var results = await helixServer.SearchHelixLogsAsync(
                 toQuery!,
-                searchHelixLogsRequest,
+                logsRequest,
                 ex => errorBuilder.AppendLine(ex.Message));
             foreach (var result in results)
             {

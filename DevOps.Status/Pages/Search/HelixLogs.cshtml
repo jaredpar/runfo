@@ -12,15 +12,9 @@
   <button class="btn btn-primary">Search</button>
 </form>
 
-<div>
-    <p>Azure DevOps Signin: @Model.AzureDevOpsEmail</p>
-</div>
-
 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
 {
-    <div class="alert alert-danger" role="alert">
-      @Model.ErrorMessage
-    </div>
+    <partial name="../Shared/_SearchQuerySyntaxErrorDisplay" model="@Model.ErrorMessage" />
 }
 
 @if (Model.HelixLogs.Count > 0)

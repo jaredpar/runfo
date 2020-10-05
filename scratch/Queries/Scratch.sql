@@ -1,5 +1,6 @@
 ﻿
 /* This is a TimelineIssuesDisplay query */
+/*
 SELECT [m].[Id], [m].[Attempt], [m].[IssueType], [m].[JobName], [m].[Message], [m].[ModelBuildAttemptId], [m].[ModelBuildId], [m].[RecordId], [m].[RecordName]
 FROM [ModelTimelineIssues] AS [m]
 LEFT JOIN [ModelBuilds] AS [m0] ON [m].[ModelBuildId] = [m0].[Id]
@@ -7,7 +8,12 @@ LEFT JOIN [ModelBuildDefinitions] AS [m1] ON [m0].[ModelBuildDefinitionId] = [m1
 WHERE [m1].[DefinitionName] = 'roslyn-ci'
 ORDER BY [m0].[BuildNumber] DESC
 OFFSET 0 ROWS FETCH NEXT 25 ROWS ONLY
+*/
 
+SELECT TOP 100 *
+FROM ModelBuilds
+WHERE AzureOrganization is NULL
+ORDER BY BuildNumber DESC
 
 /* SELECT * FROM dbo.BuildCloneTime WHERE DefinitionId = 15 and BuildStartTime > '8/14	/2019' and maxduration > '00:10:00' */
 

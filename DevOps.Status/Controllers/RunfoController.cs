@@ -36,7 +36,7 @@ namespace DevOps.Status.Controllers
                 var searchBuildsRequest = new SearchBuildsRequest();
                 searchBuildsRequest.ParseQueryString(query);
                 var builds = await searchBuildsRequest
-                    .FilterBuilds(TriageContextUtil.Context.ModelBuilds)
+                    .Filter(TriageContextUtil.Context.ModelBuilds)
                     .OrderByDescending(x => x.BuildNumber)
                     .Include(x => x.ModelBuildDefinition)
                     .Take(100)
@@ -75,7 +75,7 @@ namespace DevOps.Status.Controllers
             }
 
             var builds = await searchBuildsRequest
-                .FilterBuilds(TriageContextUtil.Context.ModelBuilds)
+                .Filter(TriageContextUtil.Context.ModelBuilds)
                 .OrderByDescending(x => x.BuildNumber)
                 .Include(x => x.ModelBuildDefinition)
                 .Take(100)

@@ -201,7 +201,7 @@ namespace DevOps.Functions
                 logger.LogInformation($"Triaging build: {buildKey}");
 
                 var attempts = await TriageContextUtil
-                    .FindModelBuildAttemptsQuery(buildKey.Organization, buildKey.Project, buildKey.Number)
+                    .GetModelBuildAttemptsQuery(buildKey)
                     .Select(x => x.Attempt)
                     .ToListAsync();
                 foreach (var attempt in attempts)

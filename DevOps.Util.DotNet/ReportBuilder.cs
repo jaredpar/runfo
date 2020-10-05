@@ -259,7 +259,7 @@ namespace DevOps.Util.DotNet
             }
 
             var name = GetHelixKindValueName(kind);
-            builder.Append("[{name}]({uri})");
+            builder.Append($"[{name}]({uri})");
         }
     }
 }

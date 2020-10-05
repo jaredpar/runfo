@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Octokit;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -13,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public class SearchTimelinesRequest : ISearchRequest
+    public class SearchTimelinesRequest : ISearchQueryRequest<ModelTimelineIssue>
     {
         public const int DefaultLimit = 50;
 
@@ -21,7 +22,7 @@ namespace DevOps.Util.DotNet.Triage
         public string? JobName { get; set; }
         public IssueType? Type { get; set; }
 
-        public IQueryable<ModelTimelineIssue> FilterTimelines(IQueryable<ModelTimelineIssue> query)
+        public IQueryable<ModelTimelineIssue> Filter(IQueryable<ModelTimelineIssue> query)
         {
             if (Type is { } type)
             {
@@ -101,6 +102,26 @@ namespace DevOps.Util.DotNet.Triage
                     default:
                         throw new Exception($"Invalid option {tuple.Name}");
                 }
+            }
+        }
+
+        public static bool TryCreate(
+            string queryString,
+            [NotNullWhen(true)] out SearchTimelinesRequest? request,
+            [NotNullWhen(false)] out string? errorMessage)
+        {
+            try
+            {
+                request = new SearchTimelinesRequest();
+                request.ParseQueryString(queryString);
+                errorMessage = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+                request = null;
+                return false;
             }
         }
     }

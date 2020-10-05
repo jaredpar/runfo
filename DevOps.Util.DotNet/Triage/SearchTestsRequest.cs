@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Octokit;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -12,12 +13,12 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public class SearchTestsRequest : ISearchRequest
+    public class SearchTestsRequest : ISearchQueryRequest<ModelTestResult>
     {
         public string? Name { get; set; }
         public string? JobName { get; set; }
 
-        public IQueryable<ModelTestResult> FilterTestResults(IQueryable<ModelTestResult> query)
+        public IQueryable<ModelTestResult> Filter(IQueryable<ModelTestResult> query)
         {
             if (!string.IsNullOrEmpty(JobName))
             {
@@ -79,6 +80,26 @@ namespace DevOps.Util.DotNet.Triage
                     default:
                         throw new Exception($"Invalid option {tuple.Name}");
                 }
+            }
+        }
+
+        public static bool TryCreate(
+            string queryString,
+            [NotNullWhen(true)] out SearchTestsRequest? request,
+            [NotNullWhen(false)] out string? errorMessage)
+        {
+            try
+            {
+                request = new SearchTestsRequest();
+                request.ParseQueryString(queryString);
+                errorMessage = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+                request = null;
+                return false;
             }
         }
     }

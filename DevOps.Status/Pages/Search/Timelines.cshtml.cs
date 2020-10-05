@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DevOps.Status.Util;
@@ -17,12 +18,11 @@ namespace DevOps.Status.Pages.Search
         public string? BuildQuery { get; set; }
         [BindProperty(SupportsGet = true, Name = "tq")]
         public string? TimelineQuery { get; set; }
-        [BindProperty(SupportsGet = true, Name = "page")]
+        [BindProperty(SupportsGet = true, Name = "pageNumber")]
         public int PageNumber { get; set; }
-        public int? NextPageNumber { get; set; }
-        public int? PreviousPageNumber { get; set; }
+        public PaginationDisplay? PaginationDisplay { get; set; }
         public TimelineIssuesDisplay TimelineIssuesDisplay { get; set; } = TimelineIssuesDisplay.Empty;
-        public int? BuildCount { get; set; }
+        public int? TotalCount { get; set; }
         public bool IncludeIssueTypeColumn { get; set; }
         public string? ErrorMessage { get; set; }
 
@@ -40,36 +40,39 @@ namespace DevOps.Status.Pages.Search
                 return Page();
             }
 
-            try
+            if (!SearchBuildsRequest.TryCreate(BuildQuery ?? "", out var buildsRequest, out var errorMessage) ||
+                !SearchTimelinesRequest.TryCreate(TimelineQuery ?? "", out var timelinesRequest, out errorMessage))
             {
-                var buildSearchOptions = new SearchBuildsRequest();
-                buildSearchOptions.ParseQueryString(BuildQuery);
-                var timelineSearchOptions = new SearchTimelinesRequest();
-                timelineSearchOptions.ParseQueryString(TimelineQuery ?? "");
+                ErrorMessage = errorMessage;
+                return Page();
+            }
 
-                IQueryable<ModelTimelineIssue> query = TriageContextUtil.Context.ModelTimelineIssues;
-                query = buildSearchOptions.FilterBuilds(query);
-                query = timelineSearchOptions.FilterTimelines(query);
-                query = query
-                    .OrderByDescending(x => x.ModelBuild.BuildNumber)
-                    .Skip(PageNumber * PageSize)
-                    .Take(PageSize);
-                TimelineIssuesDisplay = await TimelineIssuesDisplay.Create(
-                    query,
-                    includeBuildColumn: true,
-                    includeIssueTypeColumn: timelineSearchOptions.Type is null,
-                    includeAttemptColumn: true);
-                BuildCount = TimelineIssuesDisplay.Issues.GroupBy(x => x.BuildNumber).Count();
-                IncludeIssueTypeColumn = timelineSearchOptions.Type is null;
-                PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
-                NextPageNumber = PageNumber + 1;
-                return Page();
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = ex.Message;
-                return Page();
-            }
+            IQueryable<ModelTimelineIssue> query = TriageContextUtil.Context.ModelTimelineIssues;
+            query = buildsRequest.Filter(query);
+            query = timelinesRequest.Filter(query);
+            var totalCount = await query.CountAsync();
+
+            query = query
+                .OrderByDescending(x => x.ModelBuild.BuildNumber)
+                .Skip(PageNumber * PageSize)
+                .Take(PageSize);
+            TimelineIssuesDisplay = await TimelineIssuesDisplay.Create(
+                query,
+                includeBuildColumn: true,
+                includeIssueTypeColumn: timelinesRequest.Type is null,
+                includeAttemptColumn: true);
+            IncludeIssueTypeColumn = timelinesRequest.Type is null;
+            PaginationDisplay = new PaginationDisplay(
+                "/Search/Timelines",
+                new Dictionary<string, string>()
+                {
+                    { "bq", BuildQuery ?? "" },
+                    { "tq", TimelineQuery ?? "" }
+                },
+                PageNumber,
+                totalCount / PageSize);
+            TotalCount = totalCount;
+            return Page();
         }
     }
 }

@@ -1,40 +1,28 @@
 ﻿using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
-using Octokit;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public class SearchHelixLogsRequest : ISearchRequest
+    public class SearchBuildLogsRequest : ISearchRequest
     {
         public const int DefaultLimit = 100;
 
-        public List<HelixLogKind> HelixLogKinds { get; set; } = new List<HelixLogKind>();
+        public string? LogName { get; set; } 
         public string? Text { get; set; }
         public int Limit { get; set; } = DefaultLimit;
 
         public string GetQueryString()
         {
             var builder = new StringBuilder();
-            foreach (var helixLogKind in HelixLogKinds)
+            if (!string.IsNullOrEmpty(LogName))
             {
-                switch (helixLogKind)
-                {
-                    case HelixLogKind.Console:
-                        Append("logKind:console");
-                        break;
-                    case HelixLogKind.RunClient:
-                        Append("logKind:runclient");
-                        break;
-                    case HelixLogKind.TestResults:
-                        Append("logKind:testresults");
-                        break;
-                }
+                Append($"logName:{LogName} ");
             }
 
             if (!string.IsNullOrEmpty(Text))
@@ -66,19 +54,8 @@ namespace DevOps.Util.DotNet.Triage
             {
                 switch (tuple.Name.ToLower())
                 {
-                    case "logkind":
-                        switch (tuple.Value)
-                        {
-                            case "console":
-                                MaybeAdd(HelixLogKind.Console);
-                                break;
-                            case "runclient":
-                                MaybeAdd(HelixLogKind.RunClient);
-                                break;
-                            case "testresults":
-                                MaybeAdd(HelixLogKind.TestResults);
-                                break;
-                        }
+                    case "logname":
+                        LogName = tuple.Value.Trim('"');
                         break;
                     case "text":
                         Text = tuple.Value.Trim('"');
@@ -90,13 +67,25 @@ namespace DevOps.Util.DotNet.Triage
                         throw new Exception($"Invalid option {tuple.Name}");
                 }
             }
+        }
 
-            void MaybeAdd(HelixLogKind kind)
+        public static bool TryCreate(
+            string queryString,
+            [NotNullWhen(true)] out SearchBuildLogsRequest? request,
+            [NotNullWhen(false)] out string? errorMessage)
+        {
+            try
             {
-                if (!HelixLogKinds.Contains(kind))
-                {
-                    HelixLogKinds.Add(kind);
-                }
+                request = new SearchBuildLogsRequest();
+                request.ParseQueryString(queryString);
+                errorMessage = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                request = null;
+                errorMessage = ex.Message;
+                return false;
             }
         }
     }

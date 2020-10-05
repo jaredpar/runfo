@@ -49,7 +49,8 @@ namespace DevOps.Status.Pages.View
 
             async Task PopulateBuildInfo()
             {
-                var modelBuild = await TriageContextUtil.FindModelBuildAsync(organization, project, number);
+                var buildKey = new BuildKey(organization, project, number);
+                var modelBuild = await TriageContextUtil.FindModelBuildAsync(buildKey);
                 if (modelBuild is null)
                 {
                     return;

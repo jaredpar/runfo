@@ -54,17 +54,22 @@ namespace DevOps.Status.Pages.Search
 
             if (string.IsNullOrEmpty(BuildQuery))
             {
-                BuildQuery = new SearchBuildsRequest() { Definition = "runtime" }.GetQueryString();
+                BuildQuery = new SearchBuildsRequest()
+                {
+                    Definition = "roslyn-ci",
+                    Started = new DateRequestValue(dayQuery: 3),
+                }.GetQueryString();
                 return;
             }
 
-            var searchBuildsRequest = new SearchBuildsRequest();
-            searchBuildsRequest.ParseQueryString(BuildQuery);
+            if (!SearchBuildsRequest.TryCreate(BuildQuery, out var buildsRequest, out var errorMessage) ||
+                !SearchBuildLogsRequest.TryCreate(LogQuery ?? "", out var logsRequest, out errorMessage))
+            {
+                ErrorMessage = errorMessage;
+                return;
+            }
 
-            var searchBuildLogsRequest = new SearchBuildLogsRequest();
-            searchBuildLogsRequest.ParseQueryString(LogQuery ?? "");
-
-            if (string.IsNullOrEmpty(searchBuildLogsRequest.Text))
+            if (string.IsNullOrEmpty(logsRequest.Text))
             {
                 ErrorMessage = @"Must specify text to search for 'text: ""StackOverflowException""'";
                 return;
@@ -72,8 +77,8 @@ namespace DevOps.Status.Pages.Search
 
             ErrorMessage = null;
 
-            var buildInfos = (await searchBuildsRequest
-                .FilterBuilds(TriageContextUtil.Context.ModelBuilds)
+            var buildInfos = (await buildsRequest
+                .Filter(TriageContextUtil.Context.ModelBuilds)
                 .OrderByDescending(x => x.BuildNumber)
                 .Include(x => x.ModelBuildDefinition)
                 .ToListAsync()).Select(x => x.GetBuildResultInfo()).ToList();
@@ -82,7 +87,7 @@ namespace DevOps.Status.Pages.Search
             var queryUtil = await DotNetQueryUtilFactory.CreateDotNetQueryUtilForUserAsync();
 
             var errorBuilder = new StringBuilder();
-            var results = await queryUtil.SearchBuildLogsAsync(buildInfos, searchBuildLogsRequest, ex => errorBuilder.AppendLine(ex.Message));
+            var results = await queryUtil.SearchBuildLogsAsync(buildInfos, logsRequest, ex => errorBuilder.AppendLine(ex.Message));
             foreach (var result in results)
             {
                 BuildLogs.Add(new BuildLogData()

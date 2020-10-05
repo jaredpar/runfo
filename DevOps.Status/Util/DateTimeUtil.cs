@@ -21,6 +21,8 @@ namespace DevOps.Status.Util
             }
         }
 
+        public DateTime Now => ConvertDateTime(DateTime.UtcNow);
+
         public DateTime? ConvertDateTime(DateTime? dateTime) =>
             dateTime is { } dt ? ConvertDateTime(dt) : (DateTime?)null;
 

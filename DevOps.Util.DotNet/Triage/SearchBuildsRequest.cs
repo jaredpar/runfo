@@ -3,6 +3,7 @@ using DevOps.Util.DotNet.Triage;
 using Org.BouncyCastle.Math.EC.Rfc7748;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
@@ -11,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public class SearchBuildsRequest : ISearchRequest
+    public class SearchBuildsRequest : ISearchQueryRequest<ModelBuild>
     {
         public string? Definition { get; set; }
         public BuildTypeRequestValue? BuildType { get; set; }
@@ -44,25 +45,25 @@ namespace DevOps.Util.DotNet.Triage
             }
         }
 
-        public IQueryable<ModelTimelineIssue> FilterBuilds(IQueryable<ModelTimelineIssue> query) =>
-            FilterBuilds(
+        public IQueryable<ModelTimelineIssue> Filter(IQueryable<ModelTimelineIssue> query) =>
+            Filter(
                 query,
                 x => PredicateRewriter.ComposeContainerProperty<ModelTimelineIssue, ModelBuild>(x, nameof(ModelTimelineIssue.ModelBuild)));
 
-        public IQueryable<ModelTestResult> FilterBuilds(IQueryable<ModelTestResult> query) =>
-            FilterBuilds(
+        public IQueryable<ModelTestResult> Filter(IQueryable<ModelTestResult> query) =>
+            Filter(
                 query,
                 x => PredicateRewriter.ComposeContainerProperty<ModelTestResult, ModelBuild>(x, nameof(ModelTestResult.ModelBuild)));
 
-        public IQueryable<ModelBuildAttempt> FilterBuilds(IQueryable<ModelBuildAttempt> query) =>
-            FilterBuilds(
+        public IQueryable<ModelBuildAttempt> Filter(IQueryable<ModelBuildAttempt> query) =>
+            Filter(
                 query,
                 x => PredicateRewriter.ComposeContainerProperty<ModelBuildAttempt, ModelBuild>(x, nameof(ModelBuildAttempt.ModelBuild)));
 
-        public IQueryable<ModelBuild> FilterBuilds(IQueryable<ModelBuild> query) =>
-            FilterBuilds(query, x => x);
+        public IQueryable<ModelBuild> Filter(IQueryable<ModelBuild> query) =>
+            Filter(query, x => x);
 
-        private IQueryable<T> FilterBuilds<T>(
+        private IQueryable<T> Filter<T>(
             IQueryable<T> query,
             Func<Expression<Func<ModelBuild, bool>>, Expression<Func<T, bool>>> convertPredicateFunc)
         {
@@ -241,6 +242,26 @@ namespace DevOps.Util.DotNet.Triage
                     default:
                         throw new Exception($"Invalid option {tuple.Name}");
                 }
+            }
+        }
+
+        public static bool TryCreate(
+            string queryString,
+            [NotNullWhen(true)] out SearchBuildsRequest? request,
+            [NotNullWhen(false)] out string? errorMessage)
+        {
+            try
+            {
+                request = new SearchBuildsRequest();
+                request.ParseQueryString(queryString);
+                errorMessage = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                request = null;
+                errorMessage = ex.Message;
+                return false;
             }
         }
     }

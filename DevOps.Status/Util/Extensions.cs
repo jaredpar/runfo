@@ -32,18 +32,20 @@ namespace DevOps.Status.Util
             return GitHubClientFactory.CreateForToken(accessToken, AuthenticationType.Oauth);
         }
 
-        public static async Task QueueTriageBuildQuery(this FunctionQueueUtil util, SearchBuildsRequest request, TriageContext context, int limit = 100)
+        public static async Task QueueTriageBuildQuery(this FunctionQueueUtil util, TriageContextUtil triageContextUtil, ModelTrackingIssue trackingIssue, SearchBuildsRequest buildsRequest, int limit = 100)
         {
-            IQueryable<ModelBuild> query = context.ModelBuilds;
-            query = request.FilterBuilds(query);
-            query = query
-                .Where(x => !context.ModelTrackingIssueResults.Any(r => r.ModelBuildAttempt.ModelBuildId == x.Id))
+            IQueryable<ModelBuild> query = triageContextUtil.GetModelBuildsQuery(trackingIssue);
+            query = buildsRequest.Filter(query);
+            var attemptsQuery = query
+                .Where(x => !triageContextUtil.Context.ModelTrackingIssueResults.Any(r => r.ModelBuildAttempt.ModelBuildId == x.Id && r.ModelTrackingIssueId == trackingIssue.Id))
+                .SelectMany(x => x.ModelBuildAttempts)
+                .Include(x => x.ModelBuild)
                 .Take(limit);
-            var builds = await query.ToListAsync();
-            foreach (var build in builds)
+            var attempts = await attemptsQuery.ToListAsync();
+            foreach (var attempt in attempts)
             {
-                var key = build.GetBuildKey();
-                await util.QueueTriageBuildAsync(key);
+                var key = attempt.GetBuildAttemptKey();
+                await util.QueueTriageBuildAttemptAsync(key, trackingIssue);
             }
         }
     }

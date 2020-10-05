@@ -26,6 +26,14 @@ namespace DevOps.Util.DotNet.Function
             await queue.SendMessageEncodedAsync(text).ConfigureAwait(false);
         }
 
+        public async Task QueueTriageBuildAttemptAsync(BuildAttemptKey attemptKey, ModelTrackingIssue modelTrackingIssue)
+        {
+            var message = new TriageTrackingIssueMessage(attemptKey, modelTrackingIssue.Id);
+            var text = JsonConvert.SerializeObject(message);
+            var queue = new QueueClient(_connectionString, QueueNameTriageTrackingIssue);
+            await queue.SendMessageEncodedAsync(text).ConfigureAwait(false);
+        }
+
         public async Task QueueUpdateIssueAsync(ModelTrackingIssue modelTrackingIssue, TimeSpan? delay)
         {
             var updateMessage = new IssueUpdateManualMessage(modelTrackingIssue.Id);

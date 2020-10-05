@@ -101,6 +101,19 @@ namespace DevOps.Util.DotNet.Triage
             }
         }
 
+        public async Task TriageAsync(BuildKey buildKey, int modelTrackingIssueId)
+        {
+            var attempts = await TriageContextUtil
+                .GetModelBuildAttemptsQuery(buildKey)
+                .Include(x => x.ModelBuild)
+                .ToListAsync()
+                .ConfigureAwait(false);
+            foreach (var attempt in attempts)
+            {
+                await TriageAsync(attempt.GetBuildAttemptKey(), modelTrackingIssueId).ConfigureAwait(false);
+            }
+        }
+
         public async Task TriageAsync(BuildAttemptKey attemptKey, int modelTrackingIssueId)
         {
             var modelTrackingIssue = await Context
@@ -144,6 +157,12 @@ namespace DevOps.Util.DotNet.Triage
                 modelBuildAttempt.ModelBuild.ModelBuildDefinition is null)
             {
                 throw new Exception("The attempt must include the build and definition");
+            }
+
+            if (modelTrackingIssue.ModelBuildDefinitionId is { } definitionId &&
+                definitionId != modelBuildAttempt.ModelBuild.ModelBuildDefinitionId)
+            {
+                return;
             }
 
             // Quick spot check to avoid doing extra work if we've already triaged this attempt against this
@@ -201,7 +220,7 @@ namespace DevOps.Util.DotNet.Triage
             var request = new SearchTestsRequest();
             request.ParseQueryString(modelTrackingIssue.SearchQuery);
             IQueryable<ModelTestResult> testQuery = request
-                .FilterTestResults(Context.ModelTestResults)
+                .Filter(Context.ModelTestResults)
                 .Where(x =>
                     x.ModelBuildId == modelBuildAttempt.ModelBuildId &&
                     x.ModelTestRun.Attempt == modelBuildAttempt.Attempt)
@@ -234,7 +253,7 @@ namespace DevOps.Util.DotNet.Triage
 
             var request = new SearchTimelinesRequest();
             request.ParseQueryString(modelTrackingIssue.SearchQuery);
-            var timelineQuery = request.FilterTimelines(Context.ModelTimelineIssues)
+            var timelineQuery = request.Filter(Context.ModelTimelineIssues)
                 .Where(x =>
                     x.ModelBuildId == modelBuildAttempt.ModelBuild.Id &&
                     x.Attempt == modelBuildAttempt.Attempt);
@@ -267,7 +286,7 @@ namespace DevOps.Util.DotNet.Triage
                 .ModelTestResults
                 .Where(x => x.IsHelixTestResult && x.ModelBuild.Id == modelBuildAttempt.ModelBuild.Id && x.ModelTestRun.Attempt == modelBuildAttempt.Attempt);
             var testResultList = await query.ToListAsync().ConfigureAwait(false);
-            var buildInfo = modelBuildAttempt.ModelBuild.GetBuildResultInfo();
+            var buildInfo = modelBuildAttempt.ModelBuild.GetBuildInfo();
             var helixLogInfos = testResultList
                 .Select(x => x.GetHelixLogInfo())
                 .SelectNotNull()
@@ -279,7 +298,8 @@ namespace DevOps.Util.DotNet.Triage
                 Limit = 100,
             };
 
-            var results = await QueryUtil.SearchHelixLogsAsync(
+            var helixServer = new HelixServer();
+            var results = await helixServer.SearchHelixLogsAsync(
                 helixLogInfos,
                 request,
                 onError: x => Logger.LogWarning(x.Message)).ConfigureAwait(false);
@@ -298,13 +318,8 @@ namespace DevOps.Util.DotNet.Triage
             return any;
         }
 
-        private Task<ModelBuildAttempt> GetModelBuildAttemptAsync(BuildAttemptKey attemptKey) => Context
-            .ModelBuildAttempts
-            .Where(x =>
-                x.Attempt == attemptKey.Attempt &&
-                x.ModelBuild.BuildNumber == attemptKey.Number &&
-                x.ModelBuild.AzureOrganization == attemptKey.Organization &&
-                x.ModelBuild.AzureProject == attemptKey.Project)
+        private Task<ModelBuildAttempt> GetModelBuildAttemptAsync(BuildAttemptKey attemptKey) => TriageContextUtil
+            .GetModelBuildAttemptQuery(attemptKey)
             .Include(x => x.ModelBuild)
             .ThenInclude(x => x.ModelBuildDefinition)
             .SingleAsync();

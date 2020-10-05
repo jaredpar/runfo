@@ -32,10 +32,10 @@ namespace DevOps.Util.DotNet
             string? coreDumpUri,
             string? testResultsUri)
         {
-            RunClientUri = runClientUri;
-            ConsoleUri = consoleUri;
-            CoreDumpUri = coreDumpUri;
-            TestResultsUri = testResultsUri;
+            RunClientUri = HelixUtil.RewriteUri(runClientUri);
+            ConsoleUri = HelixUtil.RewriteUri(consoleUri);
+            CoreDumpUri = HelixUtil.RewriteUri(coreDumpUri);
+            TestResultsUri = HelixUtil.RewriteUri(testResultsUri);
         }
 
         public HelixLogInfo(

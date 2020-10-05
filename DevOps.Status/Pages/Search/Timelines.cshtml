@@ -16,59 +16,18 @@
 
 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
 {
-    <div class="alert alert-danger" role="alert">
-      @Model.ErrorMessage
-    </div>
+    <partial name="../Shared/_SearchQuerySyntaxErrorDisplay" model="@Model.ErrorMessage" />
 }
 
-@if (Model.BuildCount is { } count)
+@if (Model.TotalCount is { } count)
 {
-    <p>Build Count: @count</p>
+    <p>Count: @count</p>
 
     <div>
         <h3>Results</h3>
         <partial name="../Shared/_TimelineIssuesDisplay" model="@Model.TimelineIssuesDisplay" />
     </div>
 
-    <nav>
-        <ul class="pagination">
-            @if (Model.PreviousPageNumber is { } previousPageNumber)
-            {
-                <li class="page-item">
-                    <a 
-                       class="page-link"
-                       asp-page="/Search/Timelines"
-                       asp-route-bq="@Model.BuildQuery"
-                       asp-route-tq="@Model.TimelineQuery"
-                       asp-route-pageNumber="@previousPageNumber">Previous
-                    </a>
-                </li>
-            }
-            else
-            {
-                <li class="page-item disabled">
-                    <a class="page-link" href="#" tabindex="-1">Previous</a>
-                </li>
-            }
-            @if (Model.NextPageNumber is { } nextPageNumber)
-            {
-                <li class="page-item">
-                    <a 
-                       class="page-link"
-                       asp-page="/Search/Timelines"
-                       asp-route-bq="@Model.BuildQuery"
-                       asp-route-tq="@Model.TimelineQuery"
-                       asp-route-pageNumber="@nextPageNumber">Next
-                    </a>
-                </li>
-            }
-            else
-            {
-                <li class="page-item disabled">
-                    <a class="page-link" href="#" tabindex="-1">Next</a>
-                </li>
-            }
-      </ul>
-    </nav>
+    <partial name="../Shared/_PaginationDisplay" model="@Model.PaginationDisplay" />
 }
 

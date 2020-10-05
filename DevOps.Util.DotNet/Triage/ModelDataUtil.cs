@@ -92,7 +92,7 @@ namespace DevOps.Util.DotNet.Triage
             {
                 try
                 {
-                    var modelTestRun = await TriageContextUtil.FindModelTestRunAsync(modelBuild, testRun.Id).ConfigureAwait(false);
+                    var modelTestRun = await TriageContextUtil.FindModelTestRunAsync(modelBuild.GetBuildKey(), testRun.Id).ConfigureAwait(false);
                     if (modelTestRun is object)
                     {
                         return;

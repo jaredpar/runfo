@@ -12,16 +12,24 @@ namespace DevOps.Util
 
         public BuildKey(string organization, string project, int number)
         {
+            if (organization is null)
+            {
+                throw new ArgumentNullException(nameof(organization));
+            }
+
+            if (project is null)
+            {
+                throw new ArgumentNullException(nameof(project));
+            }
+
             Organization = organization;
             Project = project;
             Number = number;
         }
 
-        public BuildKey(Build build)
+        public BuildKey(Build build) : 
+            this(DevOpsUtil.GetOrganization(build), build.Project.Name, build.Id)
         {
-            Organization = DevOpsUtil.GetOrganization(build);
-            Project = build.Project.Name;
-            Number = build.Id;
         }
 
         public static bool operator==(BuildKey left, BuildKey right) => left.Equals(right); 

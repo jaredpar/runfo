@@ -18,9 +18,7 @@
 
 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
 {
-    <div class="alert alert-danger" role="alert">
-      @Model.ErrorMessage
-    </div>
+    <partial name="../Shared/_SearchQuerySyntaxErrorDisplay" model="@Model.ErrorMessage" />
 }
 
 @if (Model.TestInfos.Count > 0)
