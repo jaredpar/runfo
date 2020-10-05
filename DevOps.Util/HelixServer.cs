@@ -15,7 +15,7 @@ namespace DevOps.Util
         private readonly DevOpsHttpClient _client;
         private readonly AuthorizationToken _token;
 
-        public HelixServer(string? token)
+        public HelixServer(string? token = null)
         {
             _token = string.IsNullOrEmpty(token) ?
                 default : new AuthorizationToken(AuthorizationKind.PersonalAccessToken, token);
