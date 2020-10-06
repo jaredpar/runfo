@@ -12,6 +12,8 @@ namespace Runfo
 
         internal string? DownloadDir { get; set; }
 
+        internal string? Token { get; set; }
+
         internal GetFromHelixOptionSet()
         {
             Add("j|jobid=", "helix job id to download items from.", j => JobId = j);

@@ -16,10 +16,12 @@ namespace Runfo
         internal static async Task<int> Main(string[] args)
         {
             var token = Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN");
+            var helixToken = Environment.GetEnvironmentVariable("RUNFO_HELIX_TOKEN");
             var disableCache = false;
             var optionSet = new OptionSet()
         {
             { "token=", "The Azure DevOps personal access token", t => token = t },
+            { "helix-token=", "The helix personal access token", ht => helixToken = ht},
             { "dc|disable-cache", "Disable caching", dc => disableCache = dc is object }
         };
 
@@ -36,7 +38,7 @@ namespace Runfo
                     new LocalAzureStorageUtil(DotNetUtil.AzureOrganization, RuntimeInfoUtil.CacheDirectory),
                     new AzureUtil(devopsServer));
 
-                var runtimeInfo = new RuntimeInfo(devopsServer, new HelixServer(), azureUtil);
+                var runtimeInfo = new RuntimeInfo(devopsServer, new HelixServer(helixToken), azureUtil);
 
                 // Kick off a collection of the file system cache
                 var collectTask = runtimeInfo.CollectCache();
