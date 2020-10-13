@@ -29,7 +29,7 @@ namespace DevOps.Util.UnitTests
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
             var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
             var timeline = AddTimelineIssue("windows|dog", attempt);
-            var tracking = AddTrackingIssue("Timeline|dog");
+            var tracking = AddTrackingIssue("Timeline|#dog");
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt);
@@ -50,7 +50,7 @@ namespace DevOps.Util.UnitTests
             var timeline1 = AddTimelineIssue("windows|dog", attempt1);
             var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def2));
             var timeline2 = AddTimelineIssue("windows|dog", attempt2);
-            var tracking = AddTrackingIssue("Timeline|dog", def2);
+            var tracking = AddTrackingIssue("Timeline|#dog", def2);
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt1);
@@ -66,7 +66,7 @@ namespace DevOps.Util.UnitTests
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
             var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
             var timeline = AddTimelineIssue("windows|dog", attempt);
-            var tracking = AddTrackingIssue("Timeline|dog");
+            var tracking = AddTrackingIssue("Timeline|#dog");
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt);
@@ -106,7 +106,7 @@ namespace DevOps.Util.UnitTests
             var timeline1 = AddTimelineIssue("windows|dog", attempt1);
             var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def2));
             var timeline2 = AddTimelineIssue("windows|dog", attempt2);
-            var tracking = AddTrackingIssue("Timeline|dog", def2);
+            var tracking = AddTrackingIssue("Timeline|#dog", def2);
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt1.GetBuildAttemptKey(), tracking.Id);
@@ -125,7 +125,7 @@ namespace DevOps.Util.UnitTests
             var timeline1 = AddTimelineIssue("windows|dog", attempt1);
             var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def2));
             var timeline2 = AddTimelineIssue("windows|dog", attempt2);
-            var tracking = AddTrackingIssue("Timeline|dog");
+            var tracking = AddTrackingIssue("Timeline|#dog");
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt1.GetBuildAttemptKey(), tracking.Id);

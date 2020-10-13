@@ -1,5 +1,6 @@
 ﻿using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
+using DevOps.Util.DotNet.Triage.Migrations;
 using Microsoft.EntityFrameworkCore;
 using Octokit;
 using System;
@@ -36,7 +37,23 @@ namespace DevOps.Util.DotNet.Triage
 
             if (!string.IsNullOrEmpty(Text))
             {
-                query = query.Where(x => x.Message.Contains(Text));
+                var c = Text[0];
+                query = c switch
+                {
+                    '#' => query = query.Where(x => x.Message.Contains(Text.Substring(1))),
+                    '*' => GetFullText(query, Text.Substring(1)),
+                    _ => GetFullText(query, Text)
+                };
+
+                static IQueryable<ModelTimelineIssue> GetFullText(IQueryable<ModelTimelineIssue> query, string text)
+                {
+                    if (text.Contains(' '))
+                    {
+                        text = '"' + text + '"';
+                    }
+
+                    return query.Where(x => EF.Functions.Contains(x.Message, text));
+                }
             }
 
             return query;
