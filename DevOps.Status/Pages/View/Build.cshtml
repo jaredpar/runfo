@@ -6,9 +6,9 @@
 <h1>Build</h1>
 
 <form method="get">
-    <div class="form-group">
-        <label for="numberId">Build Number</label>
-        <input type="text" class="form-control" id="numberId" asp-for="Number" placeholder="100" />
+    <div class="form-group row">
+        <label class="col-sm-2 col-form-label" for="numberId">Build Number</label>
+        <input class="col-sm-10 form-control" type="text" id="numberId" asp-for="Number" placeholder="100" />
     </div>
 
   <button class="btn btn-primary">Display</button>
@@ -17,15 +17,30 @@
 @if (Model.Number is { } number)
 {
     <h3>Build Info</h3>
-    <p>Azure DevOps Build: <a href="@Model.BuildUri">@number</a></p>
-    <p>Repository: <a href="@Model.RepositoryUri">@Model.Repository</a></p>
-    @if (Model.PullRequestKey is { } prKey)
-    {
-        <p>Pull Request: <a asp-page="/View/PullRequest" asp-route-repository="@prKey.Repository" asp-route-number=@prKey.Number>@prKey.Number</a></p>
-    }
 
-    <p>Attempts: @Model.Attempts</p>
-    <p>Result: @Model.BuildResult</p>
+    <dl class="row">
+        <dt class="col-sm-3">Azure DevOps Build</dt>
+        <dd class="col-sm-9"><a href="@Model.BuildUri" target="_blank">@number</a></dd>
+
+        <dt class="col-sm-3">Definition</dt>
+        <dd class="col-sm-9"><a asp-page="/View/Definition" asp-route-definition="@Model.DefinitionName">@Model.DefinitionName</a></dd>
+
+        <dt class="col-sm-3">GitHub Repository</dt>
+        <dd class="col-sm-9"><a href="@Model.RepositoryUri">@Model.Repository</a></dd>
+
+        @if (Model.PullRequestKey is { } prKey)
+        {
+            <dt class="col-sm-3">Pull Request</dt>
+            <dd class="col-sm-9"><a asp-page="/View/PullRequest" asp-route-repository="@prKey.Repository" asp-route-number=@prKey.Number>@prKey.Number</a></dd>
+        }
+
+        <dt class="col-sm-3">Attempts</dt>
+        <dd class="col-sm-9">@Model.Attempts</dd>
+
+        <dt class="col-sm-3">Result</dt>
+        <dd class="col-sm-9">@Model.BuildResult</dd>
+
+    </dl>
 
     <div>
         <h3>Timeline Issues</h3>

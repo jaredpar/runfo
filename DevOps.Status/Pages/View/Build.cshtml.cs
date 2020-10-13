@@ -24,6 +24,7 @@ namespace DevOps.Status.Pages.View
         public int Attempts { get; set; }
         public string? Repository { get; set; }
         public string? RepositoryUri { get; set; }
+        public string? DefinitionName { get; set; }
         public GitHubPullRequestKey? PullRequestKey { get; set; }
         public TimelineIssuesDisplay TimelineIssuesDisplay { get; set; } = TimelineIssuesDisplay.Empty;
         public TestResultsDisplay TestResultsDisplay { get; set; } = TestResultsDisplay.Empty;
@@ -50,7 +51,10 @@ namespace DevOps.Status.Pages.View
             async Task PopulateBuildInfo()
             {
                 var buildKey = new BuildKey(organization, project, number);
-                var modelBuild = await TriageContextUtil.FindModelBuildAsync(buildKey);
+                var modelBuild = await TriageContextUtil
+                    .GetModelBuildQuery(buildKey)
+                    .Include(x => x.ModelBuildDefinition)
+                    .FirstOrDefaultAsync();
                 if (modelBuild is null)
                 {
                     return;
@@ -60,6 +64,7 @@ namespace DevOps.Status.Pages.View
                 BuildResult = modelBuild.BuildResult ?? BuildResult.None;
                 Repository = $"{modelBuild.GitHubOrganization}/{modelBuild.GitHubRepository}";
                 RepositoryUri = $"https://{modelBuild.GitHubOrganization}/{modelBuild.GitHubRepository}";
+                DefinitionName = modelBuild.ModelBuildDefinition.DefinitionName;
 
                 if (modelBuild.PullRequestNumber is { } prNumber)
                 {
