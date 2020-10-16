@@ -472,31 +472,33 @@ namespace DevOps.Util.DotNet.Triage
                 x.GitHubRepository == issueKey.Repository &&
                 x.GitHubIssueNumber == issueKey.Number);
 
-        public IQueryable<ModelBuild> GetModelBuildsQuery(ModelTrackingIssue modelTrackingIssue)
+        public IQueryable<ModelBuild> GetModelBuildsQuery(ModelTrackingIssue modelTrackingIssue, SearchBuildsRequest buildsRequest)
         {
             switch (modelTrackingIssue.TrackingKind)
             {
                 case TrackingKind.Timeline:
                     {
+                        var query = buildsRequest.Filter(Context.ModelTimelineIssues);
                         var request = new SearchTimelinesRequest();
                         request.ParseQueryString(modelTrackingIssue.SearchQuery);
                         return request
-                            .Filter(Context.ModelTimelineIssues)
+                            .Filter(query)
                             .Select(x => x.ModelBuild);
                     }
                 case TrackingKind.Test:
                     {
+                        var query = buildsRequest.Filter(Context.ModelTestResults);
                         var request = new SearchTestsRequest();
                         request.ParseQueryString(modelTrackingIssue.SearchQuery);
                         return request
-                            .Filter(Context.ModelTestResults)
+                            .Filter(query)
                             .Select(x => x.ModelBuild);
                     }
                 case TrackingKind.HelixConsole:
                 case TrackingKind.HelixRunClient:
                     {
-                        return Context
-                            .ModelTestResults
+                        var query = buildsRequest.Filter(Context.ModelTestResults);
+                        return query
                             .Where(x => x.IsHelixTestResult)
                             .Select(x => x.ModelBuild);
                     }

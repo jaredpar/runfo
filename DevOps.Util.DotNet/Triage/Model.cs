@@ -187,6 +187,12 @@ namespace DevOps.Util.DotNet.Triage
         public string ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
+
+        public List<ModelTimelineIssue> ModelTimelineIssues { get; set; }
+
+        public List<ModelTrackingIssueMatch> ModelTrackingIssueMatches { get; set; }
+
+        public List<ModelTrackingIssueResult> ModelTrackingIssueResults { get; set; }
     }
 
     public class ModelTimelineIssue

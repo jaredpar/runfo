@@ -140,6 +140,7 @@ namespace DevOps.Status.Pages.Tracking
             var modelTrackingIssue = await Context
                 .ModelTrackingIssues
                 .Where(x => x.Id == id)
+                .Include(x => x.ModelBuildDefinition)
                 .SingleAsync()
                 .ConfigureAwait(false);
             return formAction switch
@@ -174,7 +175,11 @@ namespace DevOps.Status.Pages.Tracking
 
             async Task<IActionResult> PopulateAsync()
             {
-                var request = new SearchBuildsRequest();
+                var request = new SearchBuildsRequest()
+                {
+                    Definition = modelTrackingIssue?.ModelBuildDefinition.DefinitionName,
+                };
+
                 request.ParseQueryString(string.IsNullOrEmpty(PopulateBuildsQuery) ? "started:~7" : PopulateBuildsQuery);
 
                 await FunctionQueueUtil.QueueTriageBuildQuery(TriageContextUtil, modelTrackingIssue, request);

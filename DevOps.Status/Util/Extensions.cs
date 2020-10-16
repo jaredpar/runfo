@@ -1,5 +1,6 @@
 ﻿using AspNet.Security.OAuth.GitHub;
 using AspNet.Security.OAuth.VisualStudio;
+using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Function;
 using DevOps.Util.DotNet.Triage;
@@ -34,18 +35,44 @@ namespace DevOps.Status.Util
 
         public static async Task QueueTriageBuildQuery(this FunctionQueueUtil util, TriageContextUtil triageContextUtil, ModelTrackingIssue trackingIssue, SearchBuildsRequest buildsRequest, int limit = 100)
         {
-            IQueryable<ModelBuild> query = triageContextUtil.GetModelBuildsQuery(trackingIssue);
-            query = buildsRequest.Filter(query);
+            var resultQuery = triageContextUtil.Context
+                .ModelTrackingIssueResults
+                .Where(x => x.ModelTrackingIssueId == trackingIssue.Id)
+                .Select(x => x.ModelBuildAttempt);
+            resultQuery = buildsRequest.Filter(resultQuery);
+            var attemptIds = await resultQuery
+                .Select(x => x.Id)
+                .ToListAsync();
+            var attemptIdSet = new HashSet<int>(attemptIds);
+
+            IQueryable<ModelBuild> query = triageContextUtil.GetModelBuildsQuery(trackingIssue, buildsRequest);
             var attemptsQuery = query
-                .Where(x => !triageContextUtil.Context.ModelTrackingIssueResults.Any(r => r.ModelBuildAttempt.ModelBuildId == x.Id && r.ModelTrackingIssueId == trackingIssue.Id))
                 .SelectMany(x => x.ModelBuildAttempts)
-                .Include(x => x.ModelBuild)
-                .Take(limit);
+                .Select(x => new
+                {
+                    x.ModelBuild.BuildNumber,
+                    x.ModelBuild.AzureOrganization,
+                    x.ModelBuild.AzureProject,
+                    x.Attempt,
+                    x.Id
+                });
+
+            var count = 0;
             var attempts = await attemptsQuery.ToListAsync();
             foreach (var attempt in attempts)
             {
-                var key = attempt.GetBuildAttemptKey();
-                await util.QueueTriageBuildAttemptAsync(key, trackingIssue);
+                if (!attemptIds.Contains(attempt.Id))
+                {
+                    var key = new BuildAttemptKey(
+                        new BuildKey(attempt.AzureOrganization, attempt.AzureProject, attempt.BuildNumber),
+                        attempt.Id);
+                    await util.QueueTriageBuildAttemptAsync(key, trackingIssue);
+                }
+
+                if (count++ >= limit)
+                {
+                    break;
+                }
             }
         }
     }
