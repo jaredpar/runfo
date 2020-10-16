@@ -65,7 +65,7 @@ namespace DevOps.Status.Util
                 {
                     var key = new BuildAttemptKey(
                         new BuildKey(attempt.AzureOrganization, attempt.AzureProject, attempt.BuildNumber),
-                        attempt.Id);
+                        attempt.Attempt);
                     await util.QueueTriageBuildAttemptAsync(key, trackingIssue);
                 }
 
