@@ -177,7 +177,7 @@ namespace DevOps.Status.Pages.Tracking
             {
                 var request = new SearchBuildsRequest()
                 {
-                    Definition = modelTrackingIssue?.ModelBuildDefinition.DefinitionName,
+                    Definition = modelTrackingIssue.ModelBuildDefinition?.DefinitionName,
                 };
 
                 request.ParseQueryString(string.IsNullOrEmpty(PopulateBuildsQuery) ? "started:~7" : PopulateBuildsQuery);
