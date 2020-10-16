@@ -28,6 +28,12 @@
         <dt class="col-sm-3">GitHub Repository</dt>
         <dd class="col-sm-9"><a href="@Model.RepositoryUri">@Model.Repository</a></dd>
 
+        @if (Model.TargetBranch is { })
+        {
+            <dt class="col-sm-3">Target Branch</dt>
+            <dd class="col-sm-9">@Model.TargetBranch</dd>
+        }
+
         @if (Model.PullRequestKey is { } prKey)
         {
             <dt class="col-sm-3">Pull Request</dt>

@@ -85,6 +85,10 @@ namespace DevOps.Status.Pages.Search
                 .ToListAsync();
 
             var count = 0;
+            var isBuildKindFiltered =
+                buildsRequest.BuildType is { } bt &&
+                !(bt is { BuildType: ModelBuildKind.All, Kind: EqualsKind.Equals });
+
             foreach (var group in results.GroupBy(x => x.TestFullName).OrderByDescending(x => x.Count()))
             {
                 count++;
@@ -102,7 +106,7 @@ namespace DevOps.Status.Pages.Search
                     TestResultsDisplay = new TestResultsDisplay(group)
                     {
                         IncludeBuildColumn = true,
-                        IncludeBuildKindColumn = buildsRequest.BuildType is { BuildType: ModelBuildKind.All },
+                        IncludeBuildKindColumn = !isBuildKindFiltered
                     }
                 };
 

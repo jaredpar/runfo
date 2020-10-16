@@ -14,6 +14,11 @@ namespace DevOps.Status.Util
 
         public List<TestResultInfo> Results { get; } = new List<TestResultInfo>();
 
+        /// <summary>
+        /// This is only used when creating links for the test name
+        /// </summary>
+        public SearchBuildsRequest? BuildsRequest { get; set; }
+
         public bool IncludeTestFullNameColumn { get; set; }
 
         public bool IncludeBuildColumn { get; set; }
@@ -21,6 +26,8 @@ namespace DevOps.Status.Util
         public bool IncludeBuildKindColumn { get; set; }
 
         public bool IncludeHelixColumns { get; set; }
+
+        public bool IncludeTestFullNameLinks { get; set; }
 
         public string? GitHubRepository { get; set; }
 
@@ -32,10 +39,24 @@ namespace DevOps.Status.Util
         {
             var anyHelix = false;
             string? gitHubRepository = null;
+            var emptyDictionary = new Dictionary<string, string>();
             foreach (var modelTestResult in modelTestResults)
             {
                 anyHelix = anyHelix || modelTestResult.IsHelixTestResult;
                 gitHubRepository ??= modelTestResult.ModelBuild.GitHubRepository;
+
+                var routeData = new Dictionary<string, string>();
+                if (BuildsRequest is object)
+                {
+                    routeData["bq"] = BuildsRequest.GetQueryString();
+                }
+
+                var request = new SearchTestsRequest()
+                {
+                    Name = modelTestResult.TestFullName
+                };
+
+                routeData["tq"] = request.GetQueryString();
 
                 var testResultInfo = new TestResultInfo()
                 {
@@ -44,6 +65,7 @@ namespace DevOps.Status.Util
                     Kind = modelTestResult.ModelBuild.GetModelBuildKind().GetDisplayString(),
                     TestRun = modelTestResult.ModelTestRun.Name,
                     TestFullName = modelTestResult.TestFullName,
+                    TestFullNameRouteData = routeData,
                     HelixConsoleUri = modelTestResult.HelixConsoleUri,
                     HelixRunClientUri = modelTestResult.HelixRunClientUri,
                     HelixCoreDumpUri = modelTestResult.HelixCoreDumpUri,
@@ -63,6 +85,8 @@ namespace DevOps.Status.Util
             public string? TestRun { get; set; }
 
             public string? TestFullName { get; set; }
+
+            public Dictionary<string, string>? TestFullNameRouteData { get; set; }
 
             public string? Kind { get; set; }
 

@@ -32,11 +32,18 @@
                 <td>@result.TestRun</td>
                 @if (Model.IncludeTestFullNameColumn)
                 {
-                    <td>@result.TestFullName</td>
+                    @if (Model.IncludeTestFullNameLinks)
+                    {
+                        <td><a asp-page="/Search/Tests" asp-all-route-data="@result.TestFullNameRouteData">@result.TestFullName</a></td>
+                    }
+                    else
+                    {
+                        <td>@result.TestFullName</td>
+                    }
                 }
                 @if (Model.IncludeBuildColumn)
                 {
-                    <td><a asp-page="/view/build" asp-route-number="@result.BuildNumber">@result.BuildNumber</a></td>
+                    <td><a asp-page="/View/Build" asp-route-number="@result.BuildNumber">@result.BuildNumber</a></td>
                 }
 
                 @if (Model.IncludeBuildKindColumn)

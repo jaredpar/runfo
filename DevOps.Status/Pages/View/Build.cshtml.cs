@@ -22,6 +22,7 @@ namespace DevOps.Status.Pages.View
         public string? BuildUri { get; set; }
         public BuildResult BuildResult { get; set; }
         public int Attempts { get; set; }
+        public string? TargetBranch { get; set; }
         public string? Repository { get; set; }
         public string? RepositoryUri { get; set; }
         public string? DefinitionName { get; set; }
@@ -43,21 +44,22 @@ namespace DevOps.Status.Pages.View
 
             var organization = DotNetUtil.AzureOrganization;
             var project = DotNetUtil.DefaultAzureProject;
+            var buildKey = new BuildKey(organization, project, number);
+            var buildId = TriageContextUtil.GetModelBuildId(buildKey);
 
-            await PopulateBuildInfo();
+            var modelBuild = await PopulateBuildInfo();
             await PopulateTimeline();
             await PopulateTests();
 
-            async Task PopulateBuildInfo()
+            async Task<ModelBuild?> PopulateBuildInfo()
             {
-                var buildKey = new BuildKey(organization, project, number);
                 var modelBuild = await TriageContextUtil
                     .GetModelBuildQuery(buildKey)
                     .Include(x => x.ModelBuildDefinition)
                     .FirstOrDefaultAsync();
                 if (modelBuild is null)
                 {
-                    return;
+                    return null;
                 }
 
                 BuildUri = DevOpsUtil.GetBuildUri(organization, project, number);
@@ -65,6 +67,7 @@ namespace DevOps.Status.Pages.View
                 Repository = $"{modelBuild.GitHubOrganization}/{modelBuild.GitHubRepository}";
                 RepositoryUri = $"https://{modelBuild.GitHubOrganization}/{modelBuild.GitHubRepository}";
                 DefinitionName = modelBuild.ModelBuildDefinition.DefinitionName;
+                TargetBranch = modelBuild.GitHubTargetBranch;
 
                 if (modelBuild.PullRequestNumber is { } prNumber)
                 {
@@ -73,6 +76,8 @@ namespace DevOps.Status.Pages.View
                         modelBuild.GitHubRepository,
                         prNumber);
                 }
+
+                return modelBuild;
             }
 
             async Task PopulateTimeline()
@@ -80,10 +85,7 @@ namespace DevOps.Status.Pages.View
                 var query = TriageContextUtil
                     .Context
                     .ModelTimelineIssues
-                    .Where(x =>
-                        x.ModelBuild.BuildNumber == number &&
-                        x.ModelBuild.ModelBuildDefinition.AzureOrganization == organization &&
-                        x.ModelBuild.ModelBuildDefinition.AzureProject == project)
+                    .Where(x => x.ModelBuildId  == buildId)
                     .Include(x => x.ModelBuild);
                 TimelineIssuesDisplay = await TimelineIssuesDisplay.Create(
                     query,
@@ -100,19 +102,27 @@ namespace DevOps.Status.Pages.View
                 var query = TriageContextUtil
                     .Context
                     .ModelTestResults
-                    .Where(x =>
-                        x.ModelBuild.BuildNumber == number &&
-                        x.ModelBuild.AzureOrganization == organization &&
-                        x.ModelBuild.AzureProject == project)
+                    .Where(x => x.ModelBuildId == buildId)
                     .Include(x => x.ModelTestRun)
                     .Include(x => x.ModelBuild);
                 var modelTestResults = await query.ToListAsync();
+
                 TestResultsDisplay = new TestResultsDisplay(modelTestResults)
                 {
                     IncludeBuildColumn = false,
                     IncludeBuildKindColumn = false,
                     IncludeTestFullNameColumn = true,
+                    IncludeTestFullNameLinks = true,
                 };
+
+                if (modelBuild is object)
+                {
+                    TestResultsDisplay.BuildsRequest = new SearchBuildsRequest()
+                    {
+                        Definition = modelBuild.ModelBuildDefinition.DefinitionName,
+                        Started = new DateRequestValue(dayQuery: 7)
+                    };
+                }
             }
         }
     }
