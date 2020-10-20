@@ -102,7 +102,12 @@ namespace DevOps.Util.DotNet.Triage
                     // protect us from a catastrophic run that has say several million failures (this is a real
                     // possibility
                     const int maxTestCaseResultCount = 200;
-                    var dotNetTestRun = await QueryUtil.GetDotNetTestRunAsync(build, testRun, DotNetUtil.FailedTestOutcomes).ConfigureAwait(false);
+                    var dotNetTestRun = await QueryUtil.GetDotNetTestRunAsync(
+                        build,
+                        testRun,
+                        DotNetUtil.FailedTestOutcomes,
+                        includeSubResults: true,
+                        onError: ex => Logger.LogWarning($"Error fetching test data {ex.Message}")).ConfigureAwait(false);
                     if (dotNetTestRun.TestCaseResults.Count > maxTestCaseResultCount)
                     {
                         dotNetTestRun = new DotNetTestRun(
@@ -118,6 +123,8 @@ namespace DevOps.Util.DotNet.Triage
                     Logger.LogWarning($"Error uploading test run: {ex.Message}");
                     return;
                 }
+
+
             }
         }
     }

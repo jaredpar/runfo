@@ -603,13 +603,13 @@ namespace DevOps.Util.DotNet
         // TODO: need to get rid of all these overloads that take project + build number or 
         // Build or BuildInfo. Need a type that combines them together. Also should consider one
         // that encapsulates the attempt
-        public async Task<List<DotNetTestRun>> ListDotNetTestRunsAsync(Build build, params TestOutcome[] outcomes)
+        public async Task<List<DotNetTestRun>> ListDotNetTestRunsAsync(Build build, bool includeSubResults, params TestOutcome[] outcomes)
         {
             var testRuns = await AzureUtil.ListTestRunsAsync(build.Project.Name, build.Id).ConfigureAwait(false);
             var taskList = new List<Task<DotNetTestRun>>();
             foreach (var testRun in testRuns)
             {
-                taskList.Add(GetDotNetTestRunAsync(build, testRun, outcomes));
+                taskList.Add(GetDotNetTestRunAsync(build, testRun, outcomes, includeSubResults));
             }
 
             await Task.WhenAll(taskList).ConfigureAwait(false);
@@ -623,12 +623,17 @@ namespace DevOps.Util.DotNet
 
         }
 
-        public async Task<DotNetTestRun> GetDotNetTestRunAsync(Build build, TestRun testRun, TestOutcome[] outcomes)
+        public async Task<DotNetTestRun> GetDotNetTestRunAsync(
+            Build build,
+            TestRun testRun,
+            TestOutcome[] outcomes,
+            bool includeSubResults,
+            Action<Exception>? onError = null)
         {
             var buildInfo = build.GetBuildResultInfo();
-            var all = await AzureUtil.ListTestResultsAsync(buildInfo.Project, testRun.Id, outcomes: outcomes).ConfigureAwait(false);
+            var testCaseResults = await Server.ListTestResultsAsync(build.Project.Name, testRun.Id, outcomes, includeSubResults, onError).ConfigureAwait(false);
             var info = new DotNetTestRunInfo(build, testRun);
-            var list = ToDotNetTestCaseResult(info, all.ToList());
+            var list = ToDotNetTestCaseResult(info, testCaseResults);
             return new DotNetTestRun(info, new ReadOnlyCollection<DotNetTestCaseResult>(list));
 
             static List<DotNetTestCaseResult> ToDotNetTestCaseResult(DotNetTestRunInfo testRunInfo, List<TestCaseResult> testCaseResults)
@@ -671,7 +676,8 @@ namespace DevOps.Util.DotNet
 
         public async Task<List<HelixWorkItem>> ListHelixWorkItemsAsync(Build build, params TestOutcome[] outcomes)
         {
-            var testRuns = await ListDotNetTestRunsAsync(build, outcomes).ConfigureAwait(false);
+            // Don't need sub results to get the helix work item info 
+            var testRuns = await ListDotNetTestRunsAsync(build, includeSubResults: false, outcomes).ConfigureAwait(false);
             return ListHelixWorkItems(testRuns);
         }
 

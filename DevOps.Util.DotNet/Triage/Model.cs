@@ -250,6 +250,20 @@ namespace DevOps.Util.DotNet.Triage
 
         public string Outcome { get; set; }
 
+        /// <summary>
+        /// This is true when the value modeled here is a <see cref="TestSubResult"/> entry. For xUnit
+        /// this represents iterations of a Theory entry. 
+        /// </summary>
+        public bool IsSubResult { get; set; }
+
+        /// <summary>
+        /// This is true when a <see cref="TestCaseResult"/> contains <see cref="TestSubResult"/> entries.
+        /// This generally means it's a xUnit Theory and the actual result here is probably a bit meaningless
+        /// because it's just a container. The actual data for the failure is in the <see cref="TestSubResult"/>
+        /// entries.
+        /// </summary>
+        public bool IsSubResultContainer { get; set; }
+
         public bool IsHelixTestResult { get; set; }
 
         public string HelixConsoleUri { get; set; }
@@ -259,6 +273,8 @@ namespace DevOps.Util.DotNet.Triage
         public string HelixCoreDumpUri { get; set; }
 
         public string HelixTestResultsUri { get; set; }
+
+        public string ErrorMessage { get; set; }
 
         public int ModelTestRunId { get; set; }
 

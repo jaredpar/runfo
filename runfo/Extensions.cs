@@ -142,7 +142,7 @@ namespace Runfo
             {
                 try
                 {
-                    var collection = await queryUtil.ListDotNetTestRunsAsync(build, outcomes);
+                    var collection = await queryUtil.ListDotNetTestRunsAsync(build, includeSubResults: true, outcomes);
                     var buildTestInfo = new BuildTestInfo(build, collection.SelectMany(x => x.TestCaseResults).ToList());
                     list.Add(buildTestInfo);
                 }

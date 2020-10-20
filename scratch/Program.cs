@@ -178,20 +178,16 @@ namespace Scratch
             { 
                 foreach (var testRun in await DevOpsServer.ListTestRunsAsync("public", build.Id, detail: ResultDetail.SubResults))
                 {
-                    var detail = ResultDetail.SubResults;
-                    foreach (var testCaseResult in await DevOpsServer.ListTestResultsAsync("public", testRun.Id, new TestOutcome[] { TestOutcome.Failed }, detail))
+                    var testCaseResults = await DevOpsServer.ListTestResultsAsync("public", testRun.Id, DotNetUtil.FailedTestOutcomes, includeSubResults: true);
+                    foreach (var testCaseResult in testCaseResults)
                     {
-                        if (string.IsNullOrEmpty(testCaseResult.ErrorMessage))
+                        Console.WriteLine($"{testCaseResult.TestCaseTitle} - {testCaseResult.ErrorMessage}");
+                        if (testCaseResult.SubResults is object)
                         {
-                            var other = await DevOpsServer.GetTestCaseResultAsync("public", testRun.Id, testCaseResult.Id, ResultDetail.SubResults);
-                            foreach (var subResult in other.SubResults)
+                            foreach (var subResult in testCaseResult.SubResults)
                             {
-                                Console.WriteLine($"{subResult.DisplayName} - {subResult.ErrorMessage}");
+                                Console.WriteLine($"   {subResult.DisplayName} - {subResult.ErrorMessage}");
                             }
-                        }
-                        else
-                        {
-                            Console.WriteLine($"{testCaseResult.TestCaseTitle} - {testCaseResult.ErrorMessage}");
                         }
                     }
                 }
@@ -748,11 +744,8 @@ namespace Scratch
             public int PassedOnRetry { get; set;}
             public int Failed { get; set; }
 
-
             public int TotalPassed => Passed + PassedOnRetry;
-
             public int Total => Passed + PassedOnRetry + Failed;
-
             public double PercentPassed => (double)TotalPassed / Total;
         }
 
@@ -769,7 +762,7 @@ namespace Scratch
             var server = DevOpsServer;
             var queryUtil = DotNetQueryUtil;
             var build = await server.GetBuildAsync(project, buildId);
-            var testRuns = await queryUtil.ListDotNetTestRunsAsync(build);
+            var testRuns = await queryUtil.ListDotNetTestRunsAsync(build, includeSubResults: true);
             var testCases = testRuns.SelectMany(x => x.TestCaseResults).ToList();
             Console.WriteLine($"Total {testCases.Count}");
 

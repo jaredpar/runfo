@@ -366,19 +366,46 @@ namespace DevOps.Util.DotNet.Triage
                     Outcome = testCaseResult.Outcome,
                     ModelTestRun = modelTestRun,
                     ModelBuild = modelBuild,
+                    ErrorMessage = testCaseResult.ErrorMessage,
+                    IsSubResultContainer = testCaseResult.SubResults?.Length > 0,
+                    IsSubResult = false,
                 };
 
-                if (dotnetTestCaseResult.HelixInfo is { } helixInfo &&
-                    helixMap.TryGetValue(helixInfo, out var helixLogInfo))
+                AddHelixInfo(testResult);
+                Context.ModelTestResults.Add(testResult);
+
+                if (testCaseResult.SubResults is { } subResults)
                 {
-                    testResult.IsHelixTestResult = true;
-                    testResult.HelixConsoleUri = helixLogInfo.ConsoleUri;
-                    testResult.HelixCoreDumpUri = helixLogInfo.CoreDumpUri;
-                    testResult.HelixRunClientUri = helixLogInfo.RunClientUri;
-                    testResult.HelixTestResultsUri = helixLogInfo.TestResultsUri;
+                    foreach (var subResult in subResults)
+                    {
+                        var iterationTestResult = new ModelTestResult()
+                        {
+                            TestFullName = testCaseResult.TestCaseTitle,
+                            Outcome = subResult.Outcome,
+                            ModelTestRun = modelTestRun,
+                            ModelBuild = modelBuild,
+                            ErrorMessage = subResult.ErrorMessage,
+                            IsSubResultContainer = false,
+                            IsSubResult = true
+                        };
+
+                        AddHelixInfo(iterationTestResult);
+                        Context.ModelTestResults.Add(iterationTestResult);
+                    }
                 }
 
-                Context.ModelTestResults.Add(testResult);
+                void AddHelixInfo(ModelTestResult testResult)
+                {
+                    if (dotnetTestCaseResult.HelixInfo is { } helixInfo &&
+                        helixMap.TryGetValue(helixInfo, out var helixLogInfo))
+                    {
+                        testResult.IsHelixTestResult = true;
+                        testResult.HelixConsoleUri = helixLogInfo.ConsoleUri;
+                        testResult.HelixCoreDumpUri = helixLogInfo.CoreDumpUri;
+                        testResult.HelixRunClientUri = helixLogInfo.RunClientUri;
+                        testResult.HelixTestResultsUri = helixLogInfo.TestResultsUri;
+                    }
+                }
             }
 
             await Context.SaveChangesAsync().ConfigureAwait(false);

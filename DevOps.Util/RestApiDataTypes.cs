@@ -1340,7 +1340,7 @@ namespace DevOps.Util
         public string State { get; set; }
 
         // List of sub results inside a test result, if ResultGroupType is not None, it holds corresponding type sub results.
-        public TestSubResult[] SubResults { get; set; }
+        public TestSubResult[]? SubResults { get; set; }
 
         // Reference to the test executed.
         public ShallowReference TestCase { get; set; }
