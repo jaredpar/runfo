@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 using Octokit;
+using Org.BouncyCastle.Asn1;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -133,6 +134,71 @@ namespace Scratch
         internal static ILogger CreateLogger() => LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Scratch");
 
         internal async Task Scratch()
+        {
+            var logger = CreateLogger();
+            var trackingUtil = new TrackingIssueUtil(DotNetQueryUtil, TriageContextUtil, logger);
+
+            // await DumpOutcomes(27335328);
+            var thatBuild = await DevOpsServer.GetBuildAsync("public", 855241);
+            await DumpTestData(thatBuild);
+
+            /*
+            var builds = await DotNetQueryUtil.ListBuildsAsync(count: 100, definitions: new[] { 15 });
+            foreach (var build in builds)
+            {
+
+                if (build.Result != BuildResult.Failed)
+                {
+                    continue;
+                }
+
+                await DumpTestData(build);
+            }
+
+            async Task DumpOutcomes(int testRunId)
+            {
+                var set = new HashSet<string>();
+                await foreach (var testCaseResult in DevOpsServer.EnumerateTestResultsAsync("public", runId: testRunId, detail: ResultDetail.SubResults))
+                {
+                    set.Add(testCaseResult.Outcome);
+                    if (testCaseResult.TestCaseTitle.Contains("TestNonTrailingNamedArgumentInCSharp7_2"))
+                    {
+
+                    }
+                }
+
+                foreach (var outcome in set)
+                {
+                    Console.WriteLine(outcome);
+                }
+            }
+            */
+
+            async Task DumpTestData(Build build)
+            { 
+                foreach (var testRun in await DevOpsServer.ListTestRunsAsync("public", build.Id, detail: ResultDetail.SubResults))
+                {
+                    var detail = ResultDetail.SubResults;
+                    foreach (var testCaseResult in await DevOpsServer.ListTestResultsAsync("public", testRun.Id, new TestOutcome[] { TestOutcome.Failed }, detail))
+                    {
+                        if (string.IsNullOrEmpty(testCaseResult.ErrorMessage))
+                        {
+                            var other = await DevOpsServer.GetTestCaseResultAsync("public", testRun.Id, testCaseResult.Id, ResultDetail.SubResults);
+                            foreach (var subResult in other.SubResults)
+                            {
+                                Console.WriteLine($"{subResult.DisplayName} - {subResult.ErrorMessage}");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"{testCaseResult.TestCaseTitle} - {testCaseResult.ErrorMessage}");
+                        }
+                    }
+                }
+            }
+        }
+
+        internal async Task Unknown()
         {
             var pageCount = 100;
             var count = 0;

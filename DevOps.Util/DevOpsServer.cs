@@ -274,12 +274,14 @@ namespace DevOps.Util
         public async Task<TestRun[]> ListTestRunsAsync(
             string project,
             Uri buildUri,
+            ResultDetail? detail,
             int? skip = null,
             int? top = null)
         {
             EnsureAuthorizationToken();
             var builder = GetBuilder(project, $"test/runs");
             builder.AppendUri("buildUri", buildUri);
+            builder.AppendEnum("detailsToInclude", detail);
             builder.AppendInt("$skip", top);
             builder.AppendInt("$top", top);
 
@@ -307,6 +309,7 @@ namespace DevOps.Util
         public Task<TestRun[]> ListTestRunsAsync(
             string project,
             int buildId,
+            ResultDetail? detail = null,
             int? skip = null,
             int? top = null)
         {
@@ -314,6 +317,7 @@ namespace DevOps.Util
             return ListTestRunsAsync(
                 project,
                 new Uri(uri),
+                detail,
                 skip: skip,
                 top: top);
         }
@@ -322,11 +326,12 @@ namespace DevOps.Util
             string project,
             int runId,
             TestOutcome[]? outcomes = null,
+            ResultDetail? detail = null,
             int? skip = null,
             int? top = null)
         {
             var list = new List<TestCaseResult>();
-            await foreach (var item in EnumerateTestResultsAsync(project, runId, outcomes, skip, top).ConfigureAwait(false))
+            await foreach (var item in EnumerateTestResultsAsync(project, runId, outcomes, detail, skip, top).ConfigureAwait(false))
             {
                 list.Add(item);
             }
@@ -338,6 +343,7 @@ namespace DevOps.Util
             string project,
             int runId,
             TestOutcome[]? outcomes = null,
+            ResultDetail? detail = null,
             int? skip = null,
             int? top = null)
         {
@@ -353,6 +359,7 @@ namespace DevOps.Util
             {
                 var builder = GetBuilder(project, $"test/runs/{runId}/results");
                 builder.AppendList("outcomes", outcomes);
+                builder.AppendEnum("detailsToInclude", detail);
                 builder.AppendInt("$top", top);
                 builder.AppendInt("$skip", skip);
 
@@ -370,6 +377,19 @@ namespace DevOps.Util
                 skip ??= 0;
                 skip += pageCount;
             }
+        }
+
+        public Task<TestCaseResult> GetTestCaseResultAsync(
+            string project,
+            int runId,
+            int testCaseResultId,
+            ResultDetail? detail = null)
+        {
+            EnsureAuthorizationToken();
+            var builder = GetBuilder(project, $"test/Runs/{runId}/Results/{testCaseResultId}");
+            builder.AppendEnum("detailsToInclude", detail);
+            builder.ApiVersion = "6.0";
+            return GetJsonAsync<TestCaseResult>(builder);
         }
 
         public Task<TestAttachment[]> GetTestCaseResultAttachmentsAsync(

@@ -327,6 +327,18 @@ namespace DevOps.Util
     }
 
     /// <summary>
+    /// https://docs.microsoft.com/en-us/rest/api/azure/devops/test/results/get?view=azure-devops-rest-6.0#resultdetails
+    /// </summary>
+    public enum ResultDetail
+    {
+        None,
+        Iterations,
+        Point,
+        SubResults,
+        WorkItems
+    }
+
+    /// <summary>
     /// https://docs.microsoft.com/en-us/rest/api/azure/devops/build/builds/list?view=azure-devops-rest-5.0#teamprojectreference
     /// </summary>
     public sealed class TeamProjectReference
