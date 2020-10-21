@@ -24,5 +24,17 @@ namespace DevOps.Util.UnitTests
             options.ParseQueryString(toParse);
             Assert.Equal(userQuery, options.GetQueryString());
         }
+
+        [Theory]
+        [InlineData("message:error", "message:\"error\"")]
+        [InlineData("message:\"error again\"", "message:\"error again\"")]
+        [InlineData("name:test", "name:\"test\"")]
+        [InlineData("name:test message:error", "name:\"test\" message:\"error\"")]
+        public void TestsRoundTrip(string toParse, string userQuery)
+        {
+            var options = new SearchTestsRequest();
+            options.ParseQueryString(toParse);
+            Assert.Equal(userQuery, options.GetQueryString());
+        }
     }
 }

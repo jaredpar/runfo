@@ -35,6 +35,7 @@ namespace DevOps.Util.DotNet.Triage
                 query = query.Where(x => x.JobName.Contains(JobName));
             }
 
+            // Keep this in sync with logic in SearchTestsRequest
             if (!string.IsNullOrEmpty(Text))
             {
                 var c = Text[0];

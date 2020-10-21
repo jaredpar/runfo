@@ -33,5 +33,36 @@ namespace DevOps.Util.UnitTests
                 Assert.Equal(count, queryCount);
             }
         }
+
+        [Fact]
+        public async Task TestResultSearchMessage()
+        {
+            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var build1 = AddBuild("1|dotnet|roslyn||Failed", def);
+            var testRun1 = AddTestRun("windows", build1);
+            AddTestResult("Test1||||cat", testRun1);
+            AddTestResult("Test2||||cat", testRun1);
+            AddTestResult("Test3||||dog", testRun1);
+            var build2 = AddBuild("2|dotnet|roslyn||Failed", def);
+            var testRun2 = AddTestRun("windows", build2);
+            AddTestResult("Test1||||fish", testRun1);
+            AddTestResult("Test2||||fish", testRun1);
+            AddTestResult("Test3||||cat", testRun1);
+            await Context.SaveChangesAsync();
+
+            await Test(3, "message:#cat");
+            await Test(1, "message:#dog");
+            await Test(2, "message:#fish");
+            await Test(0, "message:#tree");
+
+            async Task Test(int count, string value)
+            {
+                var request = new SearchTestsRequest();
+                request.ParseQueryString(value);
+                var query = request.Filter(Context.ModelTestResults);
+                var queryCount = await query.CountAsync();
+                Assert.Equal(count, queryCount);
+            }
+        }
     }
 }

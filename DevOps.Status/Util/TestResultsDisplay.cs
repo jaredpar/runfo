@@ -21,6 +21,8 @@ namespace DevOps.Status.Util
 
         public bool IncludeTestFullNameColumn { get; set; }
 
+        public bool IncludeErrorMessageColumn { get; set; }
+
         public bool IncludeBuildColumn { get; set; }
 
         public bool IncludeBuildKindColumn { get; set; }
@@ -66,6 +68,7 @@ namespace DevOps.Status.Util
                     TestRun = modelTestResult.ModelTestRun.Name,
                     TestFullName = modelTestResult.TestFullName,
                     TestFullNameRouteData = routeData,
+                    ErrorMessage = modelTestResult.ErrorMessage,
                     HelixConsoleUri = modelTestResult.HelixConsoleUri,
                     HelixRunClientUri = modelTestResult.HelixRunClientUri,
                     HelixCoreDumpUri = modelTestResult.HelixCoreDumpUri,
@@ -81,23 +84,15 @@ namespace DevOps.Status.Util
         public class TestResultInfo
         {
             public int BuildNumber { get; set; }
-
             public string? TestRun { get; set; }
-
             public string? TestFullName { get; set; }
-
+            public string? ErrorMessage { get; set; }
             public Dictionary<string, string>? TestFullNameRouteData { get; set; }
-
             public string? Kind { get; set; }
-
             public string? BuildUri { get; set; }
-
             public string? HelixConsoleUri { get; set; }
-
             public string? HelixRunClientUri { get; set; }
-
             public string? HelixCoreDumpUri { get; set; }
-
             public string? HelixTestResultsUri { get; set; }
         }
     }

@@ -23,6 +23,10 @@
                 <th scope="col">Helix Core Dump</th>
                 <th scope="col">Helix Test Results</th>
             }
+            @if (Model.IncludeErrorMessageColumn)
+            {
+                <th scope="col">Message</th>
+            }
         </tr>
     </thead>
     <tbody>
@@ -50,6 +54,7 @@
                 {
                     <td>@result.Kind</td>
                 }
+
                 @if (Model.IncludeHelixColumns)
                 {
                     <td>
@@ -77,6 +82,12 @@
                         }
                     </td>
                 }
+
+                @if (Model.IncludeErrorMessageColumn)
+                {
+                    <td>@result.ErrorMessage</td>
+                }
+
             </tr>
         }
     </tbody>

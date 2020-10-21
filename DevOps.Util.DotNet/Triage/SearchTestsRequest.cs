@@ -17,6 +17,7 @@ namespace DevOps.Util.DotNet.Triage
     {
         public string? Name { get; set; }
         public string? JobName { get; set; }
+        public string? Message { get; set; }
 
         public IQueryable<ModelTestResult> Filter(IQueryable<ModelTestResult> query)
         {
@@ -28,6 +29,28 @@ namespace DevOps.Util.DotNet.Triage
             if (!string.IsNullOrEmpty(Name))
             {
                 query = query.Where(x => x.TestFullName.Contains(Name));
+            }
+
+            // Keep this in sync with logic in SearchTimelineRequest
+            if (!string.IsNullOrEmpty(Message))
+            {
+                var c = Message[0];
+                query = c switch
+                {
+                    '#' => query = query.Where(x => x.ErrorMessage.Contains(Message.Substring(1))),
+                    '*' => GetFullText(query, Message.Substring(1)),
+                    _ => GetFullText(query, Message)
+                };
+
+                static IQueryable<ModelTestResult> GetFullText(IQueryable<ModelTestResult> query, string text)
+                {
+                    if (text.Contains(' '))
+                    {
+                        text = '"' + text + '"';
+                    }
+
+                    return query.Where(x => EF.Functions.Contains(x.ErrorMessage, text));
+                }
             }
 
             return query;
@@ -44,6 +67,11 @@ namespace DevOps.Util.DotNet.Triage
             if (!string.IsNullOrEmpty(JobName))
             {
                 Append($"jobName:\"{JobName}\"");
+            }
+
+            if (!string.IsNullOrEmpty(Message))
+            {
+                Append($"message:\"{Message}\"");
             }
 
             return builder.ToString();
@@ -76,6 +104,9 @@ namespace DevOps.Util.DotNet.Triage
                         break;
                     case "jobname":
                         JobName = tuple.Value.Trim('"');
+                        break;
+                    case "message":
+                        Message = tuple.Value.Trim('"');
                         break;
                     default:
                         throw new Exception($"Invalid option {tuple.Name}");

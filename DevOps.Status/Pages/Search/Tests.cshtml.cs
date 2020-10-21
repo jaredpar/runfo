@@ -106,7 +106,8 @@ namespace DevOps.Status.Pages.Search
                     TestResultsDisplay = new TestResultsDisplay(group)
                     {
                         IncludeBuildColumn = true,
-                        IncludeBuildKindColumn = !isBuildKindFiltered
+                        IncludeBuildKindColumn = !isBuildKindFiltered,
+                        IncludeErrorMessageColumn = true,
                     }
                 };
 

@@ -1,5 +1,6 @@
 ﻿using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -86,8 +87,8 @@ namespace DevOps.Util.UnitTests
         {
             var parts = data.Split("|");
             var number = int.Parse(parts[0]);
-            var dt = GetPartOrNull(3);
-            var br = GetPartOrNull(4);
+            var dt = GetPartOrNull(parts, 3);
+            var br = GetPartOrNull(parts, 4);
 
             var build = new ModelBuild()
             {
@@ -104,8 +105,6 @@ namespace DevOps.Util.UnitTests
 
             Context.ModelBuilds.Add(build);
             return build;
-
-            string? GetPartOrNull(int index) => parts.Length > index && !string.IsNullOrEmpty(parts[index]) ? parts[index] : null;
         }
 
         public ModelBuildDefinition AddBuildDefinition(string data)
@@ -158,9 +157,10 @@ namespace DevOps.Util.UnitTests
             var testResult = new ModelTestResult()
             {
                 TestFullName = parts[0],
-                IsHelixTestResult = parts.Length > 1 ? bool.Parse(parts[1]) : false,
-                HelixConsoleUri = parts.Length > 2 ? parts[2] : null,
-                HelixRunClientUri = parts.Length > 3 ? parts[3] : null,
+                IsHelixTestResult = GetPartOrNull(parts, 1) is { } s ? bool.Parse(s) : false,
+                HelixConsoleUri = GetPartOrNull(parts, 2),
+                HelixRunClientUri = GetPartOrNull(parts, 3),
+                ErrorMessage = GetPartOrNull(parts, 4),
                 ModelTestRun = testRun,
                 ModelBuild = testRun.ModelBuild,
             };
@@ -201,6 +201,8 @@ namespace DevOps.Util.UnitTests
             Context.ModelTrackingIssueResults.Add(result);
             return result;
         }
+
+        private static string? GetPartOrNull(string[] parts, int index) => parts.Length > index && !string.IsNullOrEmpty(parts[index]) ? parts[index] : null;
 
         public async Task TriageAll()
         {

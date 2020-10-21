@@ -3,7 +3,9 @@ using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Function;
 using DevOps.Util.DotNet.Triage;
+using Microsoft.DotNet.Helix.Client.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -135,6 +137,84 @@ namespace Scratch
 
         internal async Task Scratch()
         {
+            await PopulateTestResultsWithNewData(15, 200);
+        }
+
+        internal async Task PopulateTestResultsWithNewData(int definitionId, int limit)
+        {
+            var builds = await TriageContext
+                .ModelBuilds
+                .Where(x => x.ModelBuildDefinition.DefinitionId == definitionId && x.BuildResult == BuildResult.Failed)
+                .OrderByDescending(x => x.BuildNumber)
+                .Take(limit)
+                .ToListAsync();
+            foreach (var modelBuild in builds)
+            {
+                var buildInfo = modelBuild.GetBuildInfo();
+
+                var modelTestResults = await TriageContext
+                    .ModelTestResults
+                    .Where(x => x.ModelBuildId == modelBuild.Id)
+                    .Include(x => x.ModelTestRun)
+                    .ToListAsync();
+                if (modelTestResults.Where(x => !x.IsSubResult).Any(x => !string.IsNullOrEmpty(x.ErrorMessage)))
+                {
+                    continue;
+                }
+
+                Console.WriteLine($"Populating {buildInfo.BuildUri}");
+
+                try
+                {
+                    foreach (var group in modelTestResults.GroupBy(x => x.ModelTestRunId))
+                    {
+                        var modelTestRun = group.First().ModelTestRun;
+                        foreach (var testCaseResult in await DevOpsServer.ListTestResultsAsync(buildInfo.Project, modelTestRun.TestRunId, DotNetUtil.FailedTestOutcomes, includeSubResults: true))
+                        {
+                            var modelTestResult = modelTestResults.FirstOrDefault(x => x.TestFullName == testCaseResult.TestCaseTitle);
+                            if (modelTestResult is object)
+                            {
+                                modelTestResult.ErrorMessage = testCaseResult.ErrorMessage;
+                            }
+
+                            if (testCaseResult.SubResults is { } subResults)
+                            {
+                                if (modelTestResult is object)
+                                {
+                                    modelTestResult.IsSubResultContainer = true;
+                                }
+
+                                foreach (var subResult in subResults)
+                                {
+                                    var iterationTestResult = new ModelTestResult()
+                                    {
+                                        TestFullName = testCaseResult.TestCaseTitle,
+                                        Outcome = subResult.Outcome,
+                                        ModelTestRun = modelTestRun,
+                                        ModelBuild = modelBuild,
+                                        ErrorMessage = subResult.ErrorMessage,
+                                        IsSubResultContainer = false,
+                                        IsSubResult = true
+                                    };
+
+                                    TriageContext.ModelTestResults.Add(iterationTestResult);
+                                }
+
+                            }
+                            await TriageContext.SaveChangesAsync();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+        }
+
+        internal async Task DumpingTestData()
+        {
+
             var logger = CreateLogger();
             var trackingUtil = new TrackingIssueUtil(DotNetQueryUtil, TriageContextUtil, logger);
 
