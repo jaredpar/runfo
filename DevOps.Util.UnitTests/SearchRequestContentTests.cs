@@ -36,5 +36,18 @@ namespace DevOps.Util.UnitTests
             options.ParseQueryString(toParse);
             Assert.Equal(userQuery, options.GetQueryString());
         }
+
+        [Theory]
+        [InlineData("text:\"error\"", "text:\"error\"")]
+        [InlineData("text:\"error and space\"", "text:\"error and space\"")]
+        [InlineData("text:\"error and space\"   ", "text:\"error and space\"")]
+        [InlineData("error", "text:\"error\"")]
+        [InlineData("text:error", "text:\"error\"")]
+        public void TimelineRoundTrip(string toParse, string userQuery)
+        {
+            var options = new SearchTimelinesRequest();
+            options.ParseQueryString(toParse);
+            Assert.Equal(userQuery, options.GetQueryString());
+        }
     }
 }
