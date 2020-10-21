@@ -113,6 +113,7 @@ namespace DevOps.Status.Pages.View
                     IncludeBuildKindColumn = false,
                     IncludeTestFullNameColumn = true,
                     IncludeTestFullNameLinks = true,
+                    IncludeErrorMessageColumn = true,
                 };
 
                 if (modelBuild is object)
