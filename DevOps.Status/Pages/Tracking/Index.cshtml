@@ -4,6 +4,19 @@
     ViewData["Title"] = "Tracking Issues";
 }
 
+<form method="get">
+  <div class="form-group row">
+    <label class="col-sm-2 col-form-label">Query</label>
+    <input class="col-sm-10 form-control" type="text" asp-for="Query" />
+  </div>
+  <button class="btn btn-primary">Search</button>
+</form>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <partial name="../Shared/_SearchQuerySyntaxErrorDisplay" model="@Model.ErrorMessage" />
+}
+
 <table class="table table-striped table-bordered">
     <thead>
         <tr>
@@ -25,3 +38,5 @@
         }
     </tbody>
 </table>
+
+<partial name="../Shared/_PaginationDisplay" model="@Model.PaginationDisplay" />
