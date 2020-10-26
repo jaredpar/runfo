@@ -31,6 +31,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public IGitHubClientFactory GitHubClientFactory { get; }
         public TriageContextUtil TriageContextUtil { get; }
+        public SiteLinkUtil SiteLinkUtil { get; }
         public ReportBuilder ReportBuilder { get; } = new ReportBuilder();
 
         private ILogger Logger { get; }
@@ -40,10 +41,12 @@ namespace DevOps.Util.DotNet.Triage
         public TrackingGitHubUtil(
             IGitHubClientFactory gitHubClientFactory,
             TriageContext context,
+            SiteLinkUtil siteLinkUtil,
             ILogger logger)
         {
             GitHubClientFactory = gitHubClientFactory;
             TriageContextUtil = new TriageContextUtil(context);
+            SiteLinkUtil = siteLinkUtil;
             Logger = logger;
         }
 
@@ -311,6 +314,7 @@ namespace DevOps.Util.DotNet.Triage
                 includeHelix: matches.Any(x => x.TestResult.IsHelixTestResult));
 
             var builder = new StringBuilder();
+            AppendHeader(builder, modelTrackingIssue);
             builder.AppendLine(reportBody);
             if (matches.Count > limit)
             {
@@ -359,6 +363,7 @@ namespace DevOps.Util.DotNet.Triage
                 includeDefinition: true);
 
             var builder = new StringBuilder();
+            AppendHeader(builder, modelTrackingIssue);
             builder.AppendLine(reportBody);
             AppendFooter(builder, matches.Select(x => (x.BuildNumber, x.QueueTime)), baseTime);
 
@@ -399,6 +404,11 @@ namespace DevOps.Util.DotNet.Triage
                     (HelixLogInfo?)(new HelixLogInfo(helixLogKind, x.HelixLogUri)))),
                 new[] { helixLogKind },
                 markdown: true);
+        }
+
+        private void AppendHeader(StringBuilder builder, ModelTrackingIssue modelTrackingIssue)
+        {
+            builder.AppendLine($"Runfo Tracking Issue: [{modelTrackingIssue.IssueTitle}]({SiteLinkUtil.GetTrackingIssueUri(modelTrackingIssue.Id)})");
         }
 
         private static void AppendFooter(StringBuilder builder, IEnumerable<(int BuildNumber, DateTime? QueueTime)> builds, DateTime baseTime)

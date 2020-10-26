@@ -19,7 +19,7 @@ namespace DevOps.Util.UnitTests
 
         public TrackingGitHubUtilTests()
         {
-            TrackingGitHubUtil = new TrackingGitHubUtil(TestableGitHubClientFactory, Context, TestableLogger);
+            TrackingGitHubUtil = new TrackingGitHubUtil(TestableGitHubClientFactory, Context, new SiteLinkUtil("localhost"), TestableLogger);
         }
 
         [Fact]
@@ -28,12 +28,13 @@ namespace DevOps.Util.UnitTests
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
             var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
             var timeline = AddTimelineIssue("windows|dog", attempt);
-            var tracking = AddTrackingIssue("Timeline|dog");
+            var tracking = AddTrackingIssue("Timeline|dog|Dog Search");
             var match = AddTrackingMatch(tracking, attempt, timelineIssue: timeline);
             var result = AddTrackingResult(tracking, attempt);
             await Context.SaveChangesAsync();
 
             var expected = @"
+Runfo Tracking Issue: [Dog Search](https://localhost/tracking/issue/1)
 |Definition|Build|Kind|Job Name|
 |---|---|---|---|
 |[roslyn](https://dnceng.visualstudio.com/public/_build?definitionId=42)|[1](https://dev.azure.com/dnceng/public/_build/results?buildId=1)|Rolling|windows|
@@ -61,11 +62,12 @@ Build Result Summary
             AddTestData(5, "2020-07-29");
             AddTestData(6, "2020-07-29");
             AddTestData(7, "2020-07-05");
-            var tracking = AddTrackingIssue("Test|Util");
+            var tracking = AddTrackingIssue("Test|Util|Test Search");
             await Context.SaveChangesAsync();
             await TriageAll();
 
             var expected = @"
+Runfo Tracking Issue: [Test Search](https://localhost/tracking/issue/1)
 |Build|Definition|Kind|Run Name|
 |---|---|---|---|
 |[7](https://dev.azure.com/dnceng/public/_build/results?buildId=7)|[roslyn](https://dnceng.visualstudio.com/public/_build?definitionId=42)|Rolling|windows|

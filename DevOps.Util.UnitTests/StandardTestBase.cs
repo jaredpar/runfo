@@ -130,6 +130,7 @@ namespace DevOps.Util.UnitTests
                 SearchQuery = parts[1],
                 IsActive = true,
                 ModelBuildDefinition = definition,
+                IssueTitle = GetPartOrNull(parts, 2) ?? "Tracking Issue",
             };
             Context.ModelTrackingIssues.Add(trackingIssue);
             return trackingIssue;
