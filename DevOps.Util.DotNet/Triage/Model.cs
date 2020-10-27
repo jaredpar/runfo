@@ -75,7 +75,18 @@ namespace DevOps.Util.DotNet.Triage
             modelBuilder.Entity<ModelTrackingIssueResult>()
                 .HasIndex(x => new { x.ModelTrackingIssueId, x.ModelBuildAttemptId })
                 .IsUnique();
+
+            modelBuilder.Entity<ModelGitHubIssue>()
+                .HasIndex(x => new { x.Organization, x.Repository, x.Number, x.ModelBuildId })
+                .IsUnique();
         }
+    }
+
+    public static class ModelConstants
+    {
+        public const string GitHubRepositoryTypeName = "nvarchar(100)";
+
+        public const string GitHubOrganizationTypeName = "nvarchar(100)";
     }
 
     public class ModelBuildDefinition
@@ -102,8 +113,10 @@ namespace DevOps.Util.DotNet.Triage
 
         public string AzureProject { get; set; }
 
+        [Column(TypeName=ModelConstants.GitHubOrganizationTypeName)]
         public string GitHubOrganization { get; set; }
 
+        [Column(TypeName=ModelConstants.GitHubRepositoryTypeName)]
         public string GitHubRepository { get; set; }
 
         public int? PullRequestNumber { get; set; }
@@ -151,6 +164,8 @@ namespace DevOps.Util.DotNet.Triage
         public List<ModelTimelineIssue> ModelTimelineIssues { get; set; }
 
         public List<ModelBuildAttempt> ModelBuildAttempts { get; set; }
+
+        public List<ModelGitHubIssue> ModelGitHubIssues { get; set; }
     }
 
     public class ModelOsxDeprovisionRetry
@@ -337,11 +352,13 @@ namespace DevOps.Util.DotNet.Triage
         /// <summary>
         /// GitHub organization the tracking issue exists in 
         /// </summary>
+        [Column(TypeName=ModelConstants.GitHubOrganizationTypeName)]
         public string GitHubOrganization { get; set; }
 
         /// <summary>
         /// GitHub repository the tracking issue exists in
         /// </summary>
+        [Column(TypeName=ModelConstants.GitHubOrganizationTypeName)]
         public string GitHubRepository { get; set; }
 
         /// <summary>
@@ -357,6 +374,10 @@ namespace DevOps.Util.DotNet.Triage
         public ModelBuildDefinition ModelBuildDefinition { get; set; }
 
         public List<ModelTrackingIssueMatch> ModelTrackingIssueMatches { get; set; }
+
+        public int? ModelGitHubIssueId { get; set; }
+
+        public ModelGitHubIssue ModelGitHubIssue { get; set; }
     }
 
     /// <summary>
@@ -408,5 +429,24 @@ namespace DevOps.Util.DotNet.Triage
         public int ModelBuildAttemptId { get; set; }
 
         public ModelBuildAttempt ModelBuildAttempt { get; set; }
+    }
+
+    public class ModelGitHubIssue
+    {
+        public int Id { get; set; }
+
+        [Column(TypeName=ModelConstants.GitHubOrganizationTypeName)]
+        [Required]
+        public string Organization { get; set; }
+
+        [Column(TypeName=ModelConstants.GitHubRepositoryTypeName)]
+        [Required]
+        public string Repository { get; set; }
+
+        public int Number { get; set; }
+
+        public int ModelBuildId { get; set; }
+
+        public ModelBuild ModelBuild { get; set; }
     }
 }
