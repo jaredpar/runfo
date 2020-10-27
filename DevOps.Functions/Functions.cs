@@ -32,12 +32,15 @@ namespace DevOps.Functions
         public TriageContextUtil TriageContextUtil { get; }
         public DevOpsServer Server { get; }
         public GitHubClientFactory GitHubClientFactory { get; }
+        public SiteLinkUtil SiteLinkUtil { get; }
+
         public Functions(DevOpsServer server, TriageContext context, GitHubClientFactory gitHubClientFactory)
         {
             Server = server;
             Context = context;
             TriageContextUtil = new TriageContextUtil(context);
             GitHubClientFactory = gitHubClientFactory;
+            SiteLinkUtil = SiteLinkUtil.Published;
         }
 
         [FunctionName("status")]
@@ -222,7 +225,7 @@ namespace DevOps.Functions
             [TimerTrigger("0 */15 15-23 * * 1-5")] TimerInfo timerInfo,
             ILogger logger)
         {
-            var util = new TrackingGitHubUtil(GitHubClientFactory, Context, logger);
+            var util = new TrackingGitHubUtil(GitHubClientFactory, Context, SiteLinkUtil, logger);
             await util.UpdateGithubIssuesAsync();
         }
 
@@ -243,7 +246,7 @@ namespace DevOps.Functions
             var updateMessage = JsonConvert.DeserializeObject<IssueUpdateManualMessage>(message);
             if (updateMessage.ModelTrackingIssueId is { } id)
             {
-                var util = new TrackingGitHubUtil(GitHubClientFactory, Context, logger);
+                var util = new TrackingGitHubUtil(GitHubClientFactory, Context, SiteLinkUtil, logger);
                 await util.UpdateGitHubIssueAsync(id);
             }
             else

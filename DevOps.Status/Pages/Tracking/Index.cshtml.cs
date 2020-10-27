@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
@@ -33,6 +34,13 @@ namespace DevOps.Status.Pages.Tracking
 
         public List<IssueData> Issues { get; set; } = new List<IssueData>();
 
+        [BindProperty(SupportsGet = true)]
+        public string? Query { get; set; }
+        [BindProperty(SupportsGet = true, Name = "pageNumber")]
+        public int PageNumber { get; set; }
+        public PaginationDisplay? PaginationDisplay { get; set; }
+        public string? ErrorMessage { get; set; }
+
         public TrackingIndexModel(TriageContext context)
         {
             Context = context;
@@ -40,8 +48,26 @@ namespace DevOps.Status.Pages.Tracking
 
         public async Task OnGetAsync()
         {
+            const int PageSize = 25;
+
+            IQueryable<ModelTrackingIssue> query = Context.ModelTrackingIssues;
+            if (!string.IsNullOrEmpty(Query))
+            {
+                try
+                {
+                    var request = new SearchTrackingIssuesRequest();
+                    request.ParseQueryString(Query);
+                    query = request.Filter(query);
+                }
+                catch (Exception ex)
+                {
+                    ErrorMessage = ex.Message;
+                    return;
+                }
+            }
+
             var week = DateTime.UtcNow - TimeSpan.FromDays(7);
-            Issues = await Context.ModelTrackingIssues
+            Issues = await query
                 .Where(x => x.IsActive)
                 .Select(issue => new IssueData()
                 {
@@ -52,7 +78,18 @@ namespace DevOps.Status.Pages.Tracking
                     WeekCount = issue.ModelTrackingIssueMatches.Where(x => x.ModelBuildAttempt.ModelBuild.StartTime >= week).Count()
                 })
                 .OrderByDescending(x => x.WeekCount)
+                .Skip(PageSize * PageNumber)
+                .Take(PageSize)
                 .ToListAsync();
+
+            PaginationDisplay = new PaginationDisplay(
+                "/Tracking/Index",
+                new Dictionary<string, string>()
+                {
+                    {nameof(Query), Query ?? "" }
+                },
+                PageNumber);
+
         }
     }
 }
