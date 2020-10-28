@@ -133,6 +133,14 @@ namespace DevOps.Util.DotNet.Triage
                 IsPresent = isPresent
             };
             Context.ModelTrackingIssueResults.Add(result);
+
+            // This can race with other attempts to associate issues here. That is okay though because triage attempts are 
+            // retried because they assume races with other operations can happen. 
+            if (isPresent && modelTrackingIssue.GetGitHubIssueKey() is { } issueKey)
+            {
+                await TriageContextUtil.EnsureGitHubIssueAsync(modelBuildAttempt.ModelBuild, issueKey, saveChanges: false).ConfigureAwait(false);
+            }
+
             await Context.SaveChangesAsync().ConfigureAwait(false);
 
             async Task<bool> WasTriaged()

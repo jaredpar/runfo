@@ -379,10 +379,6 @@ namespace DevOps.Util.DotNet.Triage
         public ModelBuildDefinition ModelBuildDefinition { get; set; }
 
         public List<ModelTrackingIssueMatch> ModelTrackingIssueMatches { get; set; }
-
-        public int? ModelGitHubIssueId { get; set; }
-
-        public ModelGitHubIssue ModelGitHubIssue { get; set; }
     }
 
     /// <summary>

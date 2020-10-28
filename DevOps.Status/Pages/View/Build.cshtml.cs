@@ -138,49 +138,53 @@ namespace DevOps.Status.Pages.View
             }
         }
 
-        public async Task<IActionResult> OnPost(int buildNumber, string gitHubIssueUri)
+        public async Task<IActionResult> OnPost(string gitHubIssueUri, string formAction)
         {
             if (!GitHubIssueKey.TryCreateFromUri(gitHubIssueUri, out var issueKey))
             {
                 return await OnError("Not a valid GitHub Issue Url");
             }
 
-            var buildKey = GetBuildKey(buildNumber);
-            var modelBuild = await TriageContextUtil.GetModelBuildAsync(buildKey);
-            var modelGitHubIssue = new ModelGitHubIssue()
-            {
-                Organization = issueKey.Organization,
-                Repository = issueKey.Repository,
-                Number = issueKey.Number,
-                ModelBuild = modelBuild,
-            };
+            var buildKey = GetBuildKey(Number!.Value);
 
-            TriageContextUtil.Context.ModelGitHubIssues.Add(modelGitHubIssue);
-
-            try
+            if (formAction == "addIssue")
             {
-                await TriageContextUtil.Context.SaveChangesAsync();
-            }
-            catch (DbUpdateException ex)
-            {
-                if (ex.IsUniqueKeyViolation())
+                try
                 {
-                    return await OnError("Duplicate issue detected");
+                    var modelBuild = await TriageContextUtil.GetModelBuildAsync(buildKey);
+                    await TriageContextUtil.EnsureGitHubIssueAsync(modelBuild, issueKey, saveChanges: true);
                 }
+                catch (DbUpdateException ex)
+                {
+                    if (!ex.IsUniqueKeyViolation())
+                    {
+                        throw;
+                    }
+                }
+            }
+            else
+            {
+                var query = TriageContextUtil
+                    .GetModelBuildQuery(buildKey)
+                    .SelectMany(x => x.ModelGitHubIssues)
+                    .Where(x =>
+                        x.Organization == issueKey.Organization &&
+                        x.Repository == issueKey.Repository &&
+                        x.Number == issueKey.Number);
 
-                throw;
+                var modelGitHubIssue = await query.FirstOrDefaultAsync();
+                if (modelGitHubIssue is object)
+                {
+                    TriageContextUtil.Context.ModelGitHubIssues.Remove(modelGitHubIssue);
+                    await TriageContextUtil.Context.SaveChangesAsync();
+                }
             }
 
-            var trackingGitHubUtil = new TrackingGitHubUtil(GitHubClientFactory, TriageContextUtil.Context, SiteLinkUtil.Published, Logger);
-            await trackingGitHubUtil.UpdateAssociatedGitHubIssueAsync(issueKey);
-
-            Number = buildNumber;
             return await OnGet();
 
             async Task<IActionResult> OnError(string message)
             {
                 GitHubIssueAddErrorMessage = message;
-                Number = buildNumber;
                 return await OnGet();
             }
         }

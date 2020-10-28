@@ -54,12 +54,27 @@
         <p>GitHub Issues that are linked to the result of this build.</p>
         @if (Model.GitHubIssues.Count > 0)
         {
-            <ul class="list-group">
+            <div class="container">
                 @foreach (var gitHubIssueKey in Model.GitHubIssues)
                 {
-                    <li class="list-group-item"><a href="@gitHubIssueKey.IssueUri">@gitHubIssueKey.IssueUri</a></li>
+                    <div class="row">
+                        <div class="col-10"><a href="@gitHubIssueKey.IssueUri">@gitHubIssueKey.IssueUri</a></div>
+                        @if (User.GetGitHubIdentity()?.IsAuthenticated == true)
+                        {
+                            <div class="col-1">
+                            <form method="post">
+                                <input type="hidden" name="formAction" value="removeIssue" />
+                                <input type="hidden" name="gitHubIssueUri" value="@gitHubIssueKey.IssueUri" />
+                                <button class="close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </form>
+                            </div>
+                        }
+
+                    </div>
                 }
-            </ul>
+            </div>
         }
         else
         {
@@ -68,14 +83,16 @@
 
         @if (User.GetGitHubIdentity()?.IsAuthenticated == true)
         {
-            <form method="post">
-                <input type="hidden" name="buildNumber" value="@number" />
-                <div class="form-group row">
-                    <label class="col-sm-2 col-form-label" for="numberId">New Issue Url</label>
-                    <input class="col-sm-8 form-control" type="text" name="gitHubIssueUri" value="https://github/dotnet/" />
-                    <button class="col-sm-1 ml-2 btn btn-primary">Associate</button>
-                </div>
-            </form>
+            <div class="mt-2">
+                <form method="post">
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label" for="numberId">New Issue Url</label>
+                        <input class="col-sm-8 form-control" type="text" name="gitHubIssueUri" value="https://github/dotnet/" />
+                        <input type="hidden" name="formAction" value="addIssue" />
+                        <button class="col-sm-1 ml-2 btn btn-primary">Associate</button>
+                    </div>
+                </form>
+            </div>
         }
 
         @if (!string.IsNullOrEmpty(Model.GitHubIssueAddErrorMessage))
