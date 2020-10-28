@@ -226,7 +226,7 @@ namespace DevOps.Functions
             ILogger logger)
         {
             var util = new TrackingGitHubUtil(GitHubClientFactory, Context, SiteLinkUtil, logger);
-            await util.UpdateGithubIssuesAsync();
+            await util.UpdateTrackingGitHubIssuesAsync();
         }
 
         [FunctionName("issues-update-status-page")]
@@ -247,7 +247,7 @@ namespace DevOps.Functions
             if (updateMessage.ModelTrackingIssueId is { } id)
             {
                 var util = new TrackingGitHubUtil(GitHubClientFactory, Context, SiteLinkUtil, logger);
-                await util.UpdateGitHubIssueAsync(id);
+                await util.UpdateTrackingGitHubIssueAsync(id);
             }
             else
             {

@@ -57,7 +57,6 @@ namespace DevOps.Util.DotNet.Triage
             return ModelBuildKind.Rolling;
         }
 
-
         public async Task<ModelBuildDefinition> EnsureBuildDefinitionAsync(DefinitionInfo definitionInfo)
         {
             var buildDefinition = Context.ModelBuildDefinitions
@@ -268,6 +267,7 @@ namespace DevOps.Util.DotNet.Triage
             await Context.SaveChangesAsync().ConfigureAwait(false);
             return modelBuildAttempt;
         }
+
         public IQueryable<ModelBuild> GetModelBuildQuery(BuildKey buildKey)
         {
             var id = GetModelBuildId(buildKey);
@@ -336,6 +336,13 @@ namespace DevOps.Util.DotNet.Triage
                 .FirstOrDefaultAsync()
                 .ConfigureAwait(false);
         }
+
+        public IQueryable<ModelGitHubIssue> GetModelGitHubIssuesQuery(GitHubIssueKey issueKey) => Context
+            .ModelGitHubIssues
+            .Where(x =>
+                x.Number == issueKey.Number &&
+                x.Organization == issueKey.Organization &&
+                x.Repository == issueKey.Repository);
 
         public async Task<ModelTestRun> EnsureTestRunAsync(ModelBuild modelBuild, int attempt, DotNetTestRun testRun, Dictionary<HelixInfo, HelixLogInfo> helixMap)
         {

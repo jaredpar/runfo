@@ -81,6 +81,9 @@ namespace DevOps.Util.DotNet.Triage
             modelBuilder.Entity<ModelGitHubIssue>()
                 .HasIndex(x => new { x.Organization, x.Repository, x.Number, x.ModelBuildId })
                 .IsUnique();
+
+            modelBuilder.Entity<ModelGitHubIssue>()
+                .HasIndex(x => new { x.Number, x.Organization, x.Repository });
         }
     }
 
@@ -447,7 +450,8 @@ namespace DevOps.Util.DotNet.Triage
 
         public int Number { get; set; }
 
-        public int ModelBuildId { get; set; }
+        [Column(TypeName="nvarchar(100)")]
+        public string ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
     }

@@ -9,6 +9,7 @@ using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Bcpg.OpenPgp;
 
 namespace DevOps.Status.Pages.View
@@ -16,6 +17,8 @@ namespace DevOps.Status.Pages.View
     public class BuildModel : PageModel
     {
         public TriageContextUtil TriageContextUtil { get; }
+        public IGitHubClientFactory GitHubClientFactory { get; }
+        public ILogger Logger { get; }
 
         [BindProperty(SupportsGet = true)]
         public int? Number { get; set; }
@@ -32,16 +35,18 @@ namespace DevOps.Status.Pages.View
         public List<GitHubIssueKey> GitHubIssues { get; set; } = new List<GitHubIssueKey>();
         public string? GitHubIssueAddErrorMessage { get; set; }
 
-        public BuildModel(TriageContextUtil triageContextUtil)
+        public BuildModel(TriageContextUtil triageContextUtil, IGitHubClientFactory gitHubClientFactory, ILogger<BuildModel> logger)
         {
             TriageContextUtil = triageContextUtil;
+            GitHubClientFactory = gitHubClientFactory;
+            Logger = logger;
         }
 
-        public async Task OnGet()
+        public async Task<IActionResult> OnGet()
         {
             if (!(Number is { } number))
             {
-                return;
+                return Page();
             }
 
             var buildKey = GetBuildKey(number);
@@ -52,6 +57,7 @@ namespace DevOps.Status.Pages.View
             var modelBuild = await PopulateBuildInfo();
             await PopulateTimeline();
             await PopulateTests();
+            return Page();
 
             async Task<ModelBuild?> PopulateBuildInfo()
             {
@@ -132,12 +138,11 @@ namespace DevOps.Status.Pages.View
             }
         }
 
-        public async Task OnPost(int buildNumber, string gitHubIssueUri)
+        public async Task<IActionResult> OnPost(int buildNumber, string gitHubIssueUri)
         {
             if (!GitHubIssueKey.TryCreateFromUri(gitHubIssueUri, out var issueKey))
             {
-                await OnError("Not a valid GitHub Issue Url");
-                return;
+                return await OnError("Not a valid GitHub Issue Url");
             }
 
             var buildKey = GetBuildKey(buildNumber);
@@ -160,21 +165,23 @@ namespace DevOps.Status.Pages.View
             {
                 if (ex.IsUniqueKeyViolation())
                 {
-                    await OnError("Duplicate issue detected");
-                    return;
+                    return await OnError("Duplicate issue detected");
                 }
 
                 throw;
             }
 
-            Number = buildNumber;
-            await OnGet();
+            var trackingGitHubUtil = new TrackingGitHubUtil(GitHubClientFactory, TriageContextUtil.Context, SiteLinkUtil.Published, Logger);
+            await trackingGitHubUtil.UpdateAssociatedGitHubIssueAsync(issueKey);
 
-            async Task OnError(string message)
+            Number = buildNumber;
+            return await OnGet();
+
+            async Task<IActionResult> OnError(string message)
             {
                 GitHubIssueAddErrorMessage = message;
                 Number = buildNumber;
-                await OnGet();
+                return await OnGet();
             }
         }
 

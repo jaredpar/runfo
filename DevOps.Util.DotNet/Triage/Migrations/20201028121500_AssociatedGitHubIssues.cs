@@ -2,7 +2,7 @@
 
 namespace DevOps.Util.DotNet.Triage.Migrations
 {
-    public partial class IncludeGitHubIssues : Migration
+    public partial class AssociatedGitHubIssues : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -56,15 +56,14 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                     Organization = table.Column<string>(type: "nvarchar(100)", nullable: false),
                     Repository = table.Column<string>(type: "nvarchar(100)", nullable: false),
                     Number = table.Column<int>(nullable: false),
-                    ModelBuildId = table.Column<int>(nullable: false),
-                    ModelBuildId1 = table.Column<string>(nullable: true)
+                    ModelBuildId = table.Column<string>(type: "nvarchar(100)", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ModelGitHubIssues", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ModelGitHubIssues_ModelBuilds_ModelBuildId1",
-                        column: x => x.ModelBuildId1,
+                        name: "FK_ModelGitHubIssues_ModelBuilds_ModelBuildId",
+                        column: x => x.ModelBuildId,
                         principalTable: "ModelBuilds",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -76,15 +75,21 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                 column: "ModelGitHubIssueId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ModelGitHubIssues_ModelBuildId1",
+                name: "IX_ModelGitHubIssues_ModelBuildId",
                 table: "ModelGitHubIssues",
-                column: "ModelBuildId1");
+                column: "ModelBuildId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ModelGitHubIssues_Number_Organization_Repository",
+                table: "ModelGitHubIssues",
+                columns: new[] { "Number", "Organization", "Repository" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ModelGitHubIssues_Organization_Repository_Number_ModelBuildId",
                 table: "ModelGitHubIssues",
                 columns: new[] { "Organization", "Repository", "Number", "ModelBuildId" },
-                unique: true);
+                unique: true,
+                filter: "[ModelBuildId] IS NOT NULL");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_ModelTrackingIssues_ModelGitHubIssues_ModelGitHubIssueId",

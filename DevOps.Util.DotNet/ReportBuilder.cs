@@ -228,6 +228,24 @@ namespace DevOps.Util.DotNet
             }
         }
 
+        public string BuildManual(IEnumerable<(BuildInfo BuildInfo, DateTime? QueueTime)> results)
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine("|Build|Kind|Start Time|");
+            builder.AppendLine("|---|---|---|");
+            foreach (var tuple in results)
+            {
+                AppendBuildLink(builder, tuple.BuildInfo);
+                builder.Append('|');
+                AppendBuildKind(builder, tuple.BuildInfo);
+                builder.Append('|');
+                builder.Append(tuple.QueueTime?.ToString("yyyy-dd-MM"));
+                builder.Append('|');
+                builder.AppendLine();
+            }
+            return builder.ToString();
+        }
+
         private static string GetHelixColumnName(HelixLogKind kind) => kind.GetDisplayName();
 
         private static string GetHelixKindValueName(HelixLogKind kind) => kind.GetDisplayFileName();

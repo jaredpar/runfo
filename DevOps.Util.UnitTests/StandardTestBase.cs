@@ -100,13 +100,27 @@ namespace DevOps.Util.UnitTests
                 GitHubRepository = GetPartOrNull(parts, 2),
                 AzureOrganization = def.AzureOrganization,
                 AzureProject = def.AzureProject,
-                QueueTime = dt is object ? DateTime.Parse(dt) : (DateTime?)null,
+                QueueTime = dt is object ? DateTime.ParseExact(dt, "yyyy-MM-dd", null) : (DateTime?)null,
                 BuildResult = br is object ? Enum.Parse<BuildResult>(br) : (BuildResult?)null,
                 ModelBuildDefinition = def,
             };
 
             Context.ModelBuilds.Add(build);
             return build;
+        }
+
+        public ModelGitHubIssue AddGitHubIssue(GitHubIssueKey issueKey, ModelBuild build)
+        {
+            var issue = new ModelGitHubIssue()
+            {
+                Organization = issueKey.Organization,
+                Repository = issueKey.Repository,
+                Number = issueKey.Number,
+                ModelBuild = build,
+            };
+
+            Context.ModelGitHubIssues.Add(issue);
+            return issue;
         }
 
         public ModelGitHubIssue AddGitHubIssue(string data, ModelBuild build)

@@ -47,7 +47,7 @@ Build Result Summary
 |0|0|0|
 ";
 
-            var report = await TrackingGitHubUtil.GetReportAsync(tracking, includeMarkers: false);
+            var report = await TrackingGitHubUtil.GetTrackingIssueReport(tracking, includeMarkers: false);
             Assert.Equal(expected.TrimNewlines(), report.TrimNewlines());
         }
 
@@ -94,7 +94,7 @@ Build Result Summary
 
 ";
 
-            var report = await TrackingGitHubUtil.GetReportAsync(tracking, includeMarkers: false, baseTime: new DateTime(year: 2020, month: 08, day: 1));
+            var report = await TrackingGitHubUtil.GetTrackingIssueReport(tracking, includeMarkers: false, baseTime: new DateTime(year: 2020, month: 08, day: 1));
             Assert.Equal(expected.TrimNewlines(), report.TrimNewlines());
 
             void AddTestData(int buildNumber, string dateStr)
@@ -106,5 +106,33 @@ Build Result Summary
             }
         }
 
+        [Fact]
+        public async Task AssociatedIssueReport()
+        {
+            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var issueKey = new GitHubIssueKey("dotnet", "test", 13);
+
+            for (int i = 0; i < 5; i++)
+            {
+                AddGitHubIssue(issueKey, AddBuild($"|||2020-10-0{i + 1}", def));
+                await Context.SaveChangesAsync();
+            }
+
+            var expected = @"
+<!-- runfo report start -->
+|Build|Kind|Start Time|
+|---|---|---|
+[0](https://dev.azure.com/dnceng/public/_build/results?buildId=0)|Rolling|2020-01-10|
+[1](https://dev.azure.com/dnceng/public/_build/results?buildId=1)|Rolling|2020-02-10|
+[2](https://dev.azure.com/dnceng/public/_build/results?buildId=2)|Rolling|2020-03-10|
+[3](https://dev.azure.com/dnceng/public/_build/results?buildId=3)|Rolling|2020-04-10|
+[4](https://dev.azure.com/dnceng/public/_build/results?buildId=4)|Rolling|2020-05-10|
+
+<!-- runfo report end -->
+";
+
+            var report = await TrackingGitHubUtil.GetAssociatedIssueReportAsync(issueKey);
+            Assert.Equal(expected.TrimNewlines(), report.TrimNewlines());
+        }
     }
 }

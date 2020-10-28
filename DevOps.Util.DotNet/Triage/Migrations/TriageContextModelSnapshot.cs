@@ -143,10 +143,7 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                         .HasColumnType("int")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-                    b.Property<int>("ModelBuildId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ModelBuildId1")
+                    b.Property<string>("ModelBuildId")
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("Number")
@@ -162,10 +159,13 @@ namespace DevOps.Util.DotNet.Triage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ModelBuildId1");
+                    b.HasIndex("ModelBuildId");
+
+                    b.HasIndex("Number", "Organization", "Repository");
 
                     b.HasIndex("Organization", "Repository", "Number", "ModelBuildId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[ModelBuildId] IS NOT NULL");
 
                     b.ToTable("ModelGitHubIssues");
                 });
@@ -455,7 +455,7 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                 {
                     b.HasOne("DevOps.Util.DotNet.Triage.ModelBuild", "ModelBuild")
                         .WithMany("ModelGitHubIssues")
-                        .HasForeignKey("ModelBuildId1");
+                        .HasForeignKey("ModelBuildId");
                 });
 
             modelBuilder.Entity("DevOps.Util.DotNet.Triage.ModelOsxDeprovisionRetry", b =>
