@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DevOps.Util.DotNet.Triage.Migrations
 {
     [DbContext(typeof(TriageContext))]
-    [Migration("20201027234141_IncludeGitHubIssues")]
+    [Migration("20201028002428_IncludeGitHubIssues")]
     partial class IncludeGitHubIssues
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -169,7 +169,7 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                     b.HasIndex("Organization", "Repository", "Number", "ModelBuildId")
                         .IsUnique();
 
-                    b.ToTable("ModelGitHubIssue");
+                    b.ToTable("ModelGitHubIssues");
                 });
 
             modelBuilder.Entity("DevOps.Util.DotNet.Triage.ModelOsxDeprovisionRetry", b =>

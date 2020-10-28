@@ -48,7 +48,7 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                 oldNullable: true);
 
             migrationBuilder.CreateTable(
-                name: "ModelGitHubIssue",
+                name: "ModelGitHubIssues",
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
@@ -61,9 +61,9 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ModelGitHubIssue", x => x.Id);
+                    table.PrimaryKey("PK_ModelGitHubIssues", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ModelGitHubIssue_ModelBuilds_ModelBuildId1",
+                        name: "FK_ModelGitHubIssues_ModelBuilds_ModelBuildId1",
                         column: x => x.ModelBuildId1,
                         principalTable: "ModelBuilds",
                         principalColumn: "Id",
@@ -76,21 +76,21 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                 column: "ModelGitHubIssueId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ModelGitHubIssue_ModelBuildId1",
-                table: "ModelGitHubIssue",
+                name: "IX_ModelGitHubIssues_ModelBuildId1",
+                table: "ModelGitHubIssues",
                 column: "ModelBuildId1");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ModelGitHubIssue_Organization_Repository_Number_ModelBuildId",
-                table: "ModelGitHubIssue",
+                name: "IX_ModelGitHubIssues_Organization_Repository_Number_ModelBuildId",
+                table: "ModelGitHubIssues",
                 columns: new[] { "Organization", "Repository", "Number", "ModelBuildId" },
                 unique: true);
 
             migrationBuilder.AddForeignKey(
-                name: "FK_ModelTrackingIssues_ModelGitHubIssue_ModelGitHubIssueId",
+                name: "FK_ModelTrackingIssues_ModelGitHubIssues_ModelGitHubIssueId",
                 table: "ModelTrackingIssues",
                 column: "ModelGitHubIssueId",
-                principalTable: "ModelGitHubIssue",
+                principalTable: "ModelGitHubIssues",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Restrict);
         }
@@ -98,11 +98,11 @@ namespace DevOps.Util.DotNet.Triage.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(
-                name: "FK_ModelTrackingIssues_ModelGitHubIssue_ModelGitHubIssueId",
+                name: "FK_ModelTrackingIssues_ModelGitHubIssues_ModelGitHubIssueId",
                 table: "ModelTrackingIssues");
 
             migrationBuilder.DropTable(
-                name: "ModelGitHubIssue");
+                name: "ModelGitHubIssues");
 
             migrationBuilder.DropIndex(
                 name: "IX_ModelTrackingIssues_ModelGitHubIssueId",

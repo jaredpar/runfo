@@ -167,7 +167,7 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                     b.HasIndex("Organization", "Repository", "Number", "ModelBuildId")
                         .IsUnique();
 
-                    b.ToTable("ModelGitHubIssue");
+                    b.ToTable("ModelGitHubIssues");
                 });
 
             modelBuilder.Entity("DevOps.Util.DotNet.Triage.ModelOsxDeprovisionRetry", b =>

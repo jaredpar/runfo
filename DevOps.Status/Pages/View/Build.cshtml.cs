@@ -29,6 +29,8 @@ namespace DevOps.Status.Pages.View
         public GitHubPullRequestKey? PullRequestKey { get; set; }
         public TimelineIssuesDisplay TimelineIssuesDisplay { get; set; } = TimelineIssuesDisplay.Empty;
         public TestResultsDisplay TestResultsDisplay { get; set; } = TestResultsDisplay.Empty;
+        public List<GitHubIssueKey> GitHubIssues { get; set; } = new List<GitHubIssueKey>();
+        public string? GitHubIssueAddErrorMessage { get; set; }
 
         public BuildModel(TriageContextUtil triageContextUtil)
         {
@@ -42,9 +44,9 @@ namespace DevOps.Status.Pages.View
                 return;
             }
 
-            var organization = DotNetUtil.AzureOrganization;
-            var project = DotNetUtil.DefaultAzureProject;
-            var buildKey = new BuildKey(organization, project, number);
+            var buildKey = GetBuildKey(number);
+            var project = buildKey.Project;
+            var organization = buildKey.Organization;
             var buildId = TriageContextUtil.GetModelBuildId(buildKey);
 
             var modelBuild = await PopulateBuildInfo();
@@ -56,6 +58,7 @@ namespace DevOps.Status.Pages.View
                 var modelBuild = await TriageContextUtil
                     .GetModelBuildQuery(buildKey)
                     .Include(x => x.ModelBuildDefinition)
+                    .Include(x => x.ModelGitHubIssues)
                     .FirstOrDefaultAsync();
                 if (modelBuild is null)
                 {
@@ -68,6 +71,8 @@ namespace DevOps.Status.Pages.View
                 RepositoryUri = $"https://{modelBuild.GitHubOrganization}/{modelBuild.GitHubRepository}";
                 DefinitionName = modelBuild.ModelBuildDefinition.DefinitionName;
                 TargetBranch = modelBuild.GitHubTargetBranch;
+                GitHubIssues.Clear();
+                GitHubIssues.AddRange(modelBuild.ModelGitHubIssues.Select(x => x.GetGitHubIssueKey()));
 
                 if (modelBuild.PullRequestNumber is { } prNumber)
                 {
@@ -126,5 +131,53 @@ namespace DevOps.Status.Pages.View
                 }
             }
         }
+
+        public async Task OnPost(int buildNumber, string gitHubIssueUri)
+        {
+            if (!GitHubIssueKey.TryCreateFromUri(gitHubIssueUri, out var issueKey))
+            {
+                await OnError("Not a valid GitHub Issue Url");
+                return;
+            }
+
+            var buildKey = GetBuildKey(buildNumber);
+            var modelBuild = await TriageContextUtil.GetModelBuildAsync(buildKey);
+            var modelGitHubIssue = new ModelGitHubIssue()
+            {
+                Organization = issueKey.Organization,
+                Repository = issueKey.Repository,
+                Number = issueKey.Number,
+                ModelBuild = modelBuild,
+            };
+
+            TriageContextUtil.Context.ModelGitHubIssues.Add(modelGitHubIssue);
+
+            try
+            {
+                await TriageContextUtil.Context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                if (ex.IsUniqueKeyViolation())
+                {
+                    await OnError("Duplicate issue detected");
+                    return;
+                }
+
+                throw;
+            }
+
+            Number = buildNumber;
+            await OnGet();
+
+            async Task OnError(string message)
+            {
+                GitHubIssueAddErrorMessage = message;
+                Number = buildNumber;
+                await OnGet();
+            }
+        }
+
+        private static BuildKey GetBuildKey(int buildNumber) => new BuildKey(DotNetUtil.AzureOrganization, DotNetUtil.DefaultAzureProject, buildNumber);
     }
 }

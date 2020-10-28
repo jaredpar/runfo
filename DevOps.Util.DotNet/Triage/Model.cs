@@ -31,6 +31,8 @@ namespace DevOps.Util.DotNet.Triage
 
         public DbSet<ModelTrackingIssueResult> ModelTrackingIssueResults { get; set; }
 
+        public DbSet<ModelGitHubIssue> ModelGitHubIssues { get; set; }
+
         public TriageContext(DbContextOptions<TriageContext> options)
             : base(options)
         {
