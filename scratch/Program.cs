@@ -137,7 +137,42 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await PopulateTestResultsWithNewData(15, 200);
+            await MigrateTrackingToAssociatedIssues();
+            // await PopulateTestResultsWithNewData(15, 200);
+        }
+
+        /// <summary>
+        /// Now that builds have associated issues need to migrate all of the existing tracking issues 
+        /// to associated issues
+        /// </summary>
+        /// <returns></returns>
+        internal async Task MigrateTrackingToAssociatedIssues()
+        {
+            var list = await TriageContext
+                .ModelTrackingIssueResults
+                .Where(x => x.IsPresent && x.ModelTrackingIssue.GitHubIssueNumber.HasValue)
+                .Include(x => x.ModelTrackingIssue)
+                .Include(x => x.ModelBuildAttempt)
+                .ThenInclude(x => x.ModelBuild)
+                .ToListAsync();
+            var set = new HashSet<(BuildKey, GitHubIssueKey)>();
+
+            foreach (var result in list)
+            {
+                var buildKey = result.ModelBuildAttempt.ModelBuild.GetBuildKey();
+                var issueKey = result.ModelTrackingIssue.GetGitHubIssueKey()!.Value;
+                if (issueKey.IssueUri.Contains("jaredpar"))
+                {
+                    continue;
+                }
+
+                if (set.Add((buildKey, issueKey)))
+                {
+                    Console.WriteLine($"{buildKey.BuildUri} - {issueKey.IssueUri}");
+                    var modelBuild = await TriageContextUtil.GetModelBuildAsync(buildKey);
+                    await TriageContextUtil.EnsureGitHubIssueAsync(modelBuild, issueKey, saveChanges: true);
+                }
+            }
         }
 
         internal async Task PopulateTestResultsWithNewData(int definitionId, int limit)

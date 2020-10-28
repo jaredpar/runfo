@@ -180,6 +180,9 @@ namespace DevOps.Status.Pages.View
                 }
             }
 
+            var util = new TrackingGitHubUtil(GitHubClientFactory, TriageContextUtil.Context, SiteLinkUtil.Published, Logger);
+            await util.UpdateAssociatedGitHubIssueAsync(issueKey);
+
             return await OnGet();
 
             async Task<IActionResult> OnError(string message)
