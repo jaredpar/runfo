@@ -1,4 +1,5 @@
 ﻿@page
+@using DevOps.Status.Util
 @model DevOps.Status.Pages.View.BuildModel
 @{
 }
@@ -11,7 +12,7 @@
         <input class="col-sm-10 form-control" type="text" id="numberId" asp-for="Number" placeholder="100" />
     </div>
 
-  <button class="btn btn-primary">Display</button>
+    <button class="btn btn-primary">Display</button>
 </form>
 
 @if (Model.Number is { } number)
@@ -47,6 +48,61 @@
         <dd class="col-sm-9">@Model.BuildResult</dd>
 
     </dl>
+
+    <div>
+        <h3>Associated Issues</h3>
+        <p>GitHub Issues that are linked to the result of this build.</p>
+        @if (Model.GitHubIssues.Count > 0)
+        {
+            <div class="container">
+                @foreach (var gitHubIssueKey in Model.GitHubIssues)
+                {
+                    <div class="row">
+                        <div class="col-10"><a href="@gitHubIssueKey.IssueUri">@gitHubIssueKey.IssueUri</a></div>
+                        @if (User.GetGitHubIdentity()?.IsAuthenticated == true)
+                        {
+                            <div class="col-1">
+                            <form method="post">
+                                <input type="hidden" name="formAction" value="removeIssue" />
+                                <input type="hidden" name="gitHubIssueUri" value="@gitHubIssueKey.IssueUri" />
+                                <button class="close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </form>
+                            </div>
+                        }
+
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="font-italic">No associated issues</p>
+        }
+
+        @if (User.GetGitHubIdentity()?.IsAuthenticated == true)
+        {
+            <div class="mt-2">
+                <form method="post">
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label" for="numberId">New Issue Url</label>
+                        <input class="col-sm-8 form-control" type="text" name="gitHubIssueUri" value="https://github/dotnet/" />
+                        <input type="hidden" name="formAction" value="addIssue" />
+                        <button class="col-sm-1 ml-2 btn btn-primary">Associate</button>
+                    </div>
+                </form>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.GitHubIssueAddErrorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                <p>Error adding issue: @Model.GitHubIssueAddErrorMessage</p>
+                <p>Make sure to use a compatible issue URL like https://github.com/dotnet/roslyn/issues/48954 </p>
+            </div>
+        }
+    </div>
 
     <div>
         <h3>Timeline Issues</h3>

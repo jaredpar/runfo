@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Octokit;
 
@@ -158,7 +159,6 @@ namespace DevOps.Util.DotNet.Triage
 
         #endregion
 
-
         #region ModelTrackingIssue
 
         public static GitHubIssueKey? GetGitHubIssueKey(this ModelTrackingIssue modelTrackingIssue)
@@ -175,6 +175,13 @@ namespace DevOps.Util.DotNet.Triage
 
             return null;
         }
+
+        #endregion
+
+        #region ModelGitHubIssue
+
+        public static GitHubIssueKey GetGitHubIssueKey(this ModelGitHubIssue modelGitHubIssue) =>
+            new GitHubIssueKey(modelGitHubIssue.Organization, modelGitHubIssue.Repository, modelGitHubIssue.Number);
 
         #endregion
 
@@ -228,6 +235,34 @@ namespace DevOps.Util.DotNet.Triage
                 match.Groups[1].Value,
                 match.Groups[2].Value,
                 issue.Number);
+        }
+
+        /// <summary>
+        /// Determine if this exception is thrown because of a unique key violation
+        /// </summary>
+        /// <remarks>
+        /// Solution derived from https://entityframework.net/knowledge-base/31515776/how-can-i-catch-uniquekey-violation-exceptions-with-ef6-and-sql-server-
+        /// </remarks>
+        public static bool IsUniqueKeyViolation(this DbUpdateException ex)
+        {
+            var current = ex.InnerException;
+            while (current is { })
+            {
+                if (current is SqlException sqlException)
+                {
+                    switch (sqlException.Number)
+                    {
+                        case 2627:  // Unique constraint error
+                        case 547:   // Constraint check violation
+                        case 2601:  // Duplicated key row error
+                            return true;
+                    }
+                }
+
+                current = current.InnerException;
+            }
+
+            return false;
         }
 
         #endregion

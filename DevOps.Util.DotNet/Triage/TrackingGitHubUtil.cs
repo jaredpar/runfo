@@ -1,6 +1,9 @@
+using DevOps.Util;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Octokit;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -8,18 +11,13 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using DevOps.Util;
-using DevOps.Util.DotNet;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
-using Microsoft.Extensions.Logging;
-using Octokit;
 
 namespace DevOps.Util.DotNet.Triage
 {
     /// <summary>
     /// This class is responsible for making the updates to GitHub based on the stored state 
     /// of the model
+    /// TODO: The name of this type is no longer accurate as it updates associated and tracking issues
     /// </summary>
     public sealed class TrackingGitHubUtil
     {
@@ -50,13 +48,13 @@ namespace DevOps.Util.DotNet.Triage
             Logger = logger;
         }
 
-        public async Task UpdateGithubIssuesAsync()
+        public async Task UpdateTrackingGitHubIssuesAsync()
         {
             foreach (var modelTrackingIssue in Context.ModelTrackingIssues.Where(x => x.IsActive))
             {
                 try
                 {
-                    await UpdateGitHubIssueAsync(modelTrackingIssue).ConfigureAwait(false);
+                    await UpdateTrackingGitHubIssueAsync(modelTrackingIssue).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -65,34 +63,53 @@ namespace DevOps.Util.DotNet.Triage
             }
         }
 
-        public async Task UpdateGitHubIssueAsync(int modelTrackingIssueId)
+        public async Task UpdateTrackingGitHubIssueAsync(int modelTrackingIssueId)
         {
             var modelTrackingIssue = await Context
                 .ModelTrackingIssues
                 .Where(x => x.Id == modelTrackingIssueId)
                 .SingleAsync().ConfigureAwait(false);
-            await UpdateGitHubIssueAsync(modelTrackingIssue).ConfigureAwait(false);
+            await UpdateTrackingGitHubIssueAsync(modelTrackingIssue).ConfigureAwait(false);
         }
 
-        public async Task UpdateGitHubIssueAsync(ModelTrackingIssue modelTrackingIssue)
+        public async Task UpdateTrackingGitHubIssueAsync(ModelTrackingIssue modelTrackingIssue)
         {
             if (modelTrackingIssue.GetGitHubIssueKey() is { } issueKey)
             {
-                await UpdateGitHubIssueAsync(modelTrackingIssue, issueKey).ConfigureAwait(false);
+                await UpdateTrackingGitHubIssueAsync(modelTrackingIssue, issueKey).ConfigureAwait(false);
             }
         }
 
-        private async Task UpdateGitHubIssueAsync(ModelTrackingIssue modelTrackingIssue, GitHubIssueKey issueKey)
+        /// <summary>
+        /// Update the GitHub issue with the associated builds
+        /// </summary>
+        public async Task<bool> UpdateAssociatedGitHubIssueAsync(GitHubIssueKey issueKey)
         {
             IGitHubClient? gitHubClient = await TryCreateForIssue(issueKey).ConfigureAwait(false);
             if (gitHubClient is null)
             {
-                return;
+                return false;
             }
 
-            var report = await GetReportAsync(modelTrackingIssue).ConfigureAwait(false);
+            await EnsureGitHubIssueHasMarkers(gitHubClient, issueKey).ConfigureAwait(false);
+            var report = await GetAssociatedIssueReportAsync(issueKey).ConfigureAwait(false);
+            var succeeded = await UpdateGitHubIssueReport(gitHubClient, issueKey, report);
+            Logger.LogInformation($"Updated {issueKey.IssueUri}");
+            return true;
+        }
+
+        private async Task<bool> UpdateTrackingGitHubIssueAsync(ModelTrackingIssue modelTrackingIssue, GitHubIssueKey issueKey)
+        {
+            IGitHubClient? gitHubClient = await TryCreateForIssue(issueKey).ConfigureAwait(false);
+            if (gitHubClient is null)
+            {
+                return false;
+            }
+
+            var report = await GetTrackingIssueReport(modelTrackingIssue).ConfigureAwait(false);
             var succeeded = await UpdateGitHubIssueReport(gitHubClient, issueKey, report).ConfigureAwait(false);
             Logger.LogInformation($"Updated {issueKey.IssueUri}");
+            return succeeded;
         }
 
         private async Task<bool> UpdateGitHubIssueReport(IGitHubClient gitHubClient, GitHubIssueKey issueKey, string reportBody)
@@ -121,7 +138,7 @@ namespace DevOps.Util.DotNet.Triage
             return false;
         }
 
-        private async Task<IGitHubClient?> TryCreateForIssue(GitHubIssueKey issueKey)
+        public async Task<IGitHubClient?> TryCreateForIssue(GitHubIssueKey issueKey)
         {
             try
             {
@@ -250,7 +267,7 @@ namespace DevOps.Util.DotNet.Triage
             return builder.ToString();
         }
 
-        public async Task<string> GetReportAsync(
+        public async Task<string> GetTrackingIssueReport(
             ModelTrackingIssue modelTrackingIssue,
             int limit = DefaultReportLimit,
             bool includeMarkers = true,
@@ -404,6 +421,36 @@ namespace DevOps.Util.DotNet.Triage
                     (HelixLogInfo?)(new HelixLogInfo(helixLogKind, x.HelixLogUri)))),
                 new[] { helixLogKind },
                 markdown: true);
+        }
+
+        /// <summary>
+        /// Get the report for builds that are associated with the given GitHub Issue Key
+        /// </summary>
+        public async Task<string> GetAssociatedIssueReportAsync(GitHubIssueKey issueKey)
+        {
+            var query = TriageContextUtil
+                .GetModelGitHubIssuesQuery(issueKey)
+                .Select(x => new
+                {
+                    x.ModelBuild.AzureOrganization,
+                    x.ModelBuild.AzureProject,
+                    x.ModelBuild.BuildNumber,
+                    x.ModelBuild.QueueTime,
+                    x.ModelBuild.PullRequestNumber,
+                    x.ModelBuild.GitHubOrganization,
+                    x.ModelBuild.GitHubRepository,
+                    x.ModelBuild.GitHubTargetBranch,
+                });
+            var builds = await query.ToListAsync().ConfigureAwait(false);
+            var results = builds
+                .Select(x => (new BuildInfo(
+                    x.AzureOrganization,
+                    x.AzureProject,
+                    x.BuildNumber,
+                    new GitHubBuildInfo(x.GitHubOrganization, x.GitHubRepository, x.PullRequestNumber, x.GitHubTargetBranch)),
+                    x.QueueTime));
+            var report = ReportBuilder.BuildManual(results);
+            return WrapInStartEndMarkers(report);
         }
 
         private void AppendHeader(StringBuilder builder, ModelTrackingIssue modelTrackingIssue)

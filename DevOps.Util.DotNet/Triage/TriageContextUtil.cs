@@ -57,7 +57,6 @@ namespace DevOps.Util.DotNet.Triage
             return ModelBuildKind.Rolling;
         }
 
-
         public async Task<ModelBuildDefinition> EnsureBuildDefinitionAsync(DefinitionInfo definitionInfo)
         {
             var buildDefinition = Context.ModelBuildDefinitions
@@ -268,6 +267,39 @@ namespace DevOps.Util.DotNet.Triage
             await Context.SaveChangesAsync().ConfigureAwait(false);
             return modelBuildAttempt;
         }
+
+        public async Task<ModelGitHubIssue> EnsureGitHubIssueAsync(ModelBuild modelBuild, GitHubIssueKey issueKey, bool saveChanges)
+        {
+            var query = GetModelBuildQuery(modelBuild.GetBuildKey())
+                .SelectMany(x => x.ModelGitHubIssues)
+                .Where(x =>
+                    x.Number == issueKey.Number &&
+                    x.Organization == issueKey.Organization &&
+                    x.Repository == issueKey.Repository);
+            var modelGitHubIssue = await query.SingleOrDefaultAsync().ConfigureAwait(false);
+            if (modelGitHubIssue is object)
+            {
+                return modelGitHubIssue;
+            }
+
+            modelGitHubIssue = new ModelGitHubIssue()
+            {
+                Organization = issueKey.Organization,
+                Repository = issueKey.Repository,
+                Number = issueKey.Number,
+                ModelBuild = modelBuild,
+            };
+
+            Context.ModelGitHubIssues.Add(modelGitHubIssue);
+
+            if (saveChanges)
+            {
+                await Context.SaveChangesAsync().ConfigureAwait(false);
+            }
+
+            return modelGitHubIssue;
+        }
+
         public IQueryable<ModelBuild> GetModelBuildQuery(BuildKey buildKey)
         {
             var id = GetModelBuildId(buildKey);
@@ -336,6 +368,13 @@ namespace DevOps.Util.DotNet.Triage
                 .FirstOrDefaultAsync()
                 .ConfigureAwait(false);
         }
+
+        public IQueryable<ModelGitHubIssue> GetModelGitHubIssuesQuery(GitHubIssueKey issueKey) => Context
+            .ModelGitHubIssues
+            .Where(x =>
+                x.Number == issueKey.Number &&
+                x.Organization == issueKey.Organization &&
+                x.Repository == issueKey.Repository);
 
         public async Task<ModelTestRun> EnsureTestRunAsync(ModelBuild modelBuild, int attempt, DotNetTestRun testRun, Dictionary<HelixInfo, HelixLogInfo> helixMap)
         {

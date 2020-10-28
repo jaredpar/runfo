@@ -9,6 +9,7 @@ using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Bcpg.OpenPgp;
 
 namespace DevOps.Status.Pages.View
@@ -16,6 +17,8 @@ namespace DevOps.Status.Pages.View
     public class BuildModel : PageModel
     {
         public TriageContextUtil TriageContextUtil { get; }
+        public IGitHubClientFactory GitHubClientFactory { get; }
+        public ILogger Logger { get; }
 
         [BindProperty(SupportsGet = true)]
         public int? Number { get; set; }
@@ -29,33 +32,39 @@ namespace DevOps.Status.Pages.View
         public GitHubPullRequestKey? PullRequestKey { get; set; }
         public TimelineIssuesDisplay TimelineIssuesDisplay { get; set; } = TimelineIssuesDisplay.Empty;
         public TestResultsDisplay TestResultsDisplay { get; set; } = TestResultsDisplay.Empty;
+        public List<GitHubIssueKey> GitHubIssues { get; set; } = new List<GitHubIssueKey>();
+        public string? GitHubIssueAddErrorMessage { get; set; }
 
-        public BuildModel(TriageContextUtil triageContextUtil)
+        public BuildModel(TriageContextUtil triageContextUtil, IGitHubClientFactory gitHubClientFactory, ILogger<BuildModel> logger)
         {
             TriageContextUtil = triageContextUtil;
+            GitHubClientFactory = gitHubClientFactory;
+            Logger = logger;
         }
 
-        public async Task OnGet()
+        public async Task<IActionResult> OnGet()
         {
             if (!(Number is { } number))
             {
-                return;
+                return Page();
             }
 
-            var organization = DotNetUtil.AzureOrganization;
-            var project = DotNetUtil.DefaultAzureProject;
-            var buildKey = new BuildKey(organization, project, number);
+            var buildKey = GetBuildKey(number);
+            var project = buildKey.Project;
+            var organization = buildKey.Organization;
             var buildId = TriageContextUtil.GetModelBuildId(buildKey);
 
             var modelBuild = await PopulateBuildInfo();
             await PopulateTimeline();
             await PopulateTests();
+            return Page();
 
             async Task<ModelBuild?> PopulateBuildInfo()
             {
                 var modelBuild = await TriageContextUtil
                     .GetModelBuildQuery(buildKey)
                     .Include(x => x.ModelBuildDefinition)
+                    .Include(x => x.ModelGitHubIssues)
                     .FirstOrDefaultAsync();
                 if (modelBuild is null)
                 {
@@ -68,6 +77,8 @@ namespace DevOps.Status.Pages.View
                 RepositoryUri = $"https://{modelBuild.GitHubOrganization}/{modelBuild.GitHubRepository}";
                 DefinitionName = modelBuild.ModelBuildDefinition.DefinitionName;
                 TargetBranch = modelBuild.GitHubTargetBranch;
+                GitHubIssues.Clear();
+                GitHubIssues.AddRange(modelBuild.ModelGitHubIssues.Select(x => x.GetGitHubIssueKey()));
 
                 if (modelBuild.PullRequestNumber is { } prNumber)
                 {
@@ -126,5 +137,58 @@ namespace DevOps.Status.Pages.View
                 }
             }
         }
+
+        public async Task<IActionResult> OnPost(string gitHubIssueUri, string formAction)
+        {
+            if (!GitHubIssueKey.TryCreateFromUri(gitHubIssueUri, out var issueKey))
+            {
+                return await OnError("Not a valid GitHub Issue Url");
+            }
+
+            var buildKey = GetBuildKey(Number!.Value);
+
+            if (formAction == "addIssue")
+            {
+                try
+                {
+                    var modelBuild = await TriageContextUtil.GetModelBuildAsync(buildKey);
+                    await TriageContextUtil.EnsureGitHubIssueAsync(modelBuild, issueKey, saveChanges: true);
+                }
+                catch (DbUpdateException ex)
+                {
+                    if (!ex.IsUniqueKeyViolation())
+                    {
+                        throw;
+                    }
+                }
+            }
+            else
+            {
+                var query = TriageContextUtil
+                    .GetModelBuildQuery(buildKey)
+                    .SelectMany(x => x.ModelGitHubIssues)
+                    .Where(x =>
+                        x.Organization == issueKey.Organization &&
+                        x.Repository == issueKey.Repository &&
+                        x.Number == issueKey.Number);
+
+                var modelGitHubIssue = await query.FirstOrDefaultAsync();
+                if (modelGitHubIssue is object)
+                {
+                    TriageContextUtil.Context.ModelGitHubIssues.Remove(modelGitHubIssue);
+                    await TriageContextUtil.Context.SaveChangesAsync();
+                }
+            }
+
+            return await OnGet();
+
+            async Task<IActionResult> OnError(string message)
+            {
+                GitHubIssueAddErrorMessage = message;
+                return await OnGet();
+            }
+        }
+
+        private static BuildKey GetBuildKey(int buildNumber) => new BuildKey(DotNetUtil.AzureOrganization, DotNetUtil.DefaultAzureProject, buildNumber);
     }
 }

@@ -18,6 +18,7 @@ namespace DevOps.Util.UnitTests
         [InlineData("kind:pr", "kind:pr")]
         [InlineData("kind:mpr", "kind:mpr")]
         [InlineData("repository:roslyn kind:mpr", "repository:roslyn kind:mpr")]
+        [InlineData("issues:false kind:rolling result:failed", "kind:rolling result:failed issues:false")]
         public void BuildsRoundTrip(string toParse, string userQuery)
         {
             var options = new SearchBuildsRequest();
