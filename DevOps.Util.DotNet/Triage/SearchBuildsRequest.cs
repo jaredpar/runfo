@@ -22,6 +22,7 @@ namespace DevOps.Util.DotNet.Triage
         public DateRequestValue? Queued { get; set; }
         public StringRequestValue? TargetBranch { get; set; }
         public BuildResultRequestValue? Result { get; set; }
+        public bool? HasIssues { get; set; }
 
         public bool HasDefinition => !string.IsNullOrEmpty(Definition);
 
@@ -175,6 +176,18 @@ namespace DevOps.Util.DotNet.Triage
                 };
             }
 
+            if (HasIssues is { } hasIssues)
+            {
+                if (hasIssues)
+                {
+                    query = query.Where(convertPredicateFunc(x => x.ModelGitHubIssues.Any()));
+                }
+                else
+                {
+                    query = query.Where(convertPredicateFunc(x => !x.ModelGitHubIssues.Any()));
+                }
+            }
+
             return query;
         }
 
@@ -221,6 +234,11 @@ namespace DevOps.Util.DotNet.Triage
                 Append($"targetBranch:{targetBranch.GetQueryValue(StringRelationalKind.Contains)}");
             }
 
+            if (HasIssues is { } hasIssues)
+            {
+                Append($"issues:{hasIssues.ToString().ToLower()}");
+            }
+
             return builder.ToString();
 
             void Append(string message)
@@ -263,6 +281,9 @@ namespace DevOps.Util.DotNet.Triage
                         break;
                     case "result":
                         Result = BuildResultRequestValue.Parse(tuple.Value, EqualsKind.Equals);
+                        break;
+                    case "issues":
+                        HasIssues = bool.Parse(tuple.Value);
                         break;
                     default:
                         throw new Exception($"Invalid option {tuple.Name}");

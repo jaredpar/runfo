@@ -26,7 +26,9 @@ namespace DevOps.Util.UnitTests
         public TestableLogger TestableLogger { get; set; }
         public TestableGitHubClientFactory TestableGitHubClientFactory { get; set; }
         public TestableGitHubClient TestableGitHubClient => TestableGitHubClientFactory.TestableGitHubClient;
+        private int BuildCount { get; set; }
         private int TestRunCount { get; set; }
+        private int GitHubIssueCount { get; set; }
 
         public StandardTestBase()
         {
@@ -86,7 +88,7 @@ namespace DevOps.Util.UnitTests
         public ModelBuild AddBuild(string data, ModelBuildDefinition def)
         {
             var parts = data.Split("|");
-            var number = int.Parse(parts[0]);
+            var number = GetPartOrNull(parts, 0) is { } part ? int.Parse(part) : BuildCount++;
             var dt = GetPartOrNull(parts, 3);
             var br = GetPartOrNull(parts, 4);
 
@@ -94,8 +96,8 @@ namespace DevOps.Util.UnitTests
             {
                 Id = TriageContextUtil.GetModelBuildId(new BuildKey(def.AzureOrganization, def.AzureProject, number)),
                 BuildNumber = number,
-                GitHubOrganization = parts.Length > 1 ? parts[1] : null,
-                GitHubRepository = parts.Length > 2 ? parts[2] : null,
+                GitHubOrganization = GetPartOrNull(parts, 1),
+                GitHubRepository = GetPartOrNull(parts, 2),
                 AzureOrganization = def.AzureOrganization,
                 AzureProject = def.AzureProject,
                 QueueTime = dt is object ? DateTime.Parse(dt) : (DateTime?)null,
@@ -105,6 +107,22 @@ namespace DevOps.Util.UnitTests
 
             Context.ModelBuilds.Add(build);
             return build;
+        }
+
+        public ModelGitHubIssue AddGitHubIssue(string data, ModelBuild build)
+        {
+            var parts = data.Split("|");
+
+            var issue = new ModelGitHubIssue()
+            {
+                Organization = GetPartOrNull(parts, 0) ?? DotNetUtil.GitHubOrganization,
+                Repository = GetPartOrNull(parts, 1) ?? "roslyn",
+                Number = GetPartOrNull(parts, 2) is { } part ? int.Parse(part) : GitHubIssueCount++,
+                ModelBuild = build,
+            };
+
+            Context.ModelGitHubIssues.Add(issue);
+            return issue;
         }
 
         public ModelBuildDefinition AddBuildDefinition(string data)

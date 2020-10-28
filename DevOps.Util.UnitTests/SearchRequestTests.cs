@@ -35,6 +35,34 @@ namespace DevOps.Util.UnitTests
         }
 
         [Fact]
+        public async Task BuildIssuesSearches()
+        {
+            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var build1 = AddBuild("1", def);
+            var build2 = AddBuild("2", def);
+            await Test(2, "issues:false");
+            await Test(0, "issues:true");
+
+            AddGitHubIssue("", build1);
+            await Test(1, "issues:false");
+            await Test(1, "issues:true");
+
+            AddGitHubIssue("", build2);
+            await Test(0, "issues:false");
+            await Test(2, "issues:true");
+
+            async Task Test(int count, string value)
+            {
+                await Context.SaveChangesAsync();
+                var request = new SearchBuildsRequest();
+                request.ParseQueryString(value);
+                var query = request.Filter(Context.ModelBuilds);
+                var queryCount = await query.CountAsync();
+                Assert.Equal(count, queryCount);
+            }
+        }
+
+        [Fact]
         public async Task TestResultSearchMessage()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
