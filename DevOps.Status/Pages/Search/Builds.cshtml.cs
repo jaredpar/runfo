@@ -54,7 +54,7 @@ namespace DevOps.Status.Pages.Search
 
         public async Task OnGet()
         {
-            const int PageSize = 25;
+            const int pageSize = 25;
             if (string.IsNullOrEmpty(Query))
             {
                 Query = new SearchBuildsRequest()
@@ -81,9 +81,9 @@ namespace DevOps.Status.Pages.Search
                     { "q", Query },
                 },
                 PageNumber,
-                TotalBuildCount / PageSize);
+                TotalBuildCount / pageSize);
 
-            var skipCount = PageNumber * PageSize;
+            var skipCount = PageNumber * pageSize;
             List<ModelBuild> results;
             try
             {
@@ -92,7 +92,7 @@ namespace DevOps.Status.Pages.Search
                     .OrderByDescending(x => x.BuildNumber)
                     .Include(x => x.ModelBuildDefinition)
                     .Skip(skipCount)
-                    .Take(PageSize)
+                    .Take(pageSize)
                     .ToListAsync();
             }
             catch (SqlException ex) when (ex.IsTimeoutViolation())

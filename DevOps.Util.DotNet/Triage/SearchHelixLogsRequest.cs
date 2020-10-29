@@ -13,7 +13,7 @@ namespace DevOps.Util.DotNet.Triage
 {
     public class SearchHelixLogsRequest : ISearchRequest
     {
-        public const int DefaultLimit = 100;
+        public const int DefaultLimit = 5_000; 
 
         public List<HelixLogKind> HelixLogKinds { get; set; } = new List<HelixLogKind>();
         public string? Text { get; set; }
@@ -40,7 +40,7 @@ namespace DevOps.Util.DotNet.Triage
 
             if (!string.IsNullOrEmpty(Text))
             {
-                Append($"text:{Text}");
+                Append($"text:\"{Text}\"");
             }
 
             if (Limit != DefaultLimit)
