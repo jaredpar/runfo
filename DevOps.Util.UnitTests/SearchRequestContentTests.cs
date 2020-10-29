@@ -50,5 +50,17 @@ namespace DevOps.Util.UnitTests
             options.ParseQueryString(toParse);
             Assert.Equal(userQuery, options.GetQueryString());
         }
+
+
+        [Theory]
+        [InlineData("text:\"error\"", "text:\"error\"")]
+        [InlineData("text:error", "text:\"error\"")]
+        [InlineData("text:\"error\" logKind:console", "logKind:console text:\"error\"")]
+        public void HelixLogsRoundTrip(string toParse, string userQuery)
+        {
+            var options = new SearchHelixLogsRequest();
+            options.ParseQueryString(toParse);
+            Assert.Equal(userQuery, options.GetQueryString());
+        }
     }
 }

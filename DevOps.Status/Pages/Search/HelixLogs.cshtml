@@ -17,10 +17,10 @@
     <partial name="../Shared/_SearchQuerySyntaxErrorDisplay" model="@Model.ErrorMessage" />
 }
 
-@if (Model.HelixLogs.Count > 0)
+@if (Model.DidSearch)
 {
-    <h3>Results</h3>
-    <table class="table">
+    <h3>@Model.BuildResultText</h3>
+    <table class="table table-bordered">
         <thead>
             <tr>
                 <th scope="col">Build</th>
@@ -39,4 +39,7 @@
             }
         </tbody>
     </table>
+
+    <partial name="../Shared/_PaginationDisplay" model="@Model.PaginationDisplay" />
 }
+
