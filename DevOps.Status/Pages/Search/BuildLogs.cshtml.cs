@@ -11,6 +11,7 @@ using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevOps.Status.Pages.Search
@@ -77,15 +78,24 @@ namespace DevOps.Status.Pages.Search
 
             ErrorMessage = null;
 
-            var buildInfos = (await buildsRequest
-                .Filter(TriageContextUtil.Context.ModelBuilds)
-                .OrderByDescending(x => x.BuildNumber)
-                .Include(x => x.ModelBuildDefinition)
-                .ToListAsync()).Select(x => x.GetBuildResultInfo()).ToList();
+            List<BuildResultInfo> buildInfos;
+            try
+            {
+                buildInfos = (await buildsRequest
+                    .Filter(TriageContextUtil.Context.ModelBuilds)
+                    .OrderByDescending(x => x.BuildNumber)
+                    .Include(x => x.ModelBuildDefinition)
+                    .ToListAsync()).Select(x => x.GetBuildResultInfo()).ToList();
+            }
+            catch (SqlException ex) when (ex.IsTimeoutViolation())
+            {
+                ErrorMessage = "Timeout fetching data from server";
+                return;
+            }
+
             BuildCount = buildInfos.Count;
 
             var queryUtil = await DotNetQueryUtilFactory.CreateDotNetQueryUtilForUserAsync();
-
             var errorBuilder = new StringBuilder();
             var results = await queryUtil.SearchBuildLogsAsync(buildInfos, logsRequest, ex => errorBuilder.AppendLine(ex.Message));
             foreach (var result in results)

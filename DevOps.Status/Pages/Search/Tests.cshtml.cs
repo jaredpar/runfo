@@ -11,6 +11,7 @@ using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -73,51 +74,59 @@ namespace DevOps.Status.Pages.Search
                 return Page();
             }
 
-            IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults
-                .Include(x => x.ModelTestRun)
-                .Include(x => x.ModelBuild);
-            query = buildsRequest.Filter(query);
-            query = testsRequest.Filter(query);
-            var results = await query
-                .OrderByDescending(x => x.ModelBuild.BuildNumber)
-                .Skip(PageNumber * PageSize)
-                .Take(PageSize + 1)
-                .ToListAsync();
-
-            var count = 0;
-            var isBuildKindFiltered =
-                buildsRequest.BuildType is { } bt &&
-                !(bt is { BuildType: ModelBuildKind.All, Kind: EqualsKind.Equals });
-
-            foreach (var group in results.GroupBy(x => x.TestFullName).OrderByDescending(x => x.Count()))
+            try
             {
-                count++;
+                IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults
+                    .Include(x => x.ModelTestRun)
+                    .Include(x => x.ModelBuild);
+                query = buildsRequest.Filter(query);
+                query = testsRequest.Filter(query);
+                var results = await query
+                    .OrderByDescending(x => x.ModelBuild.BuildNumber)
+                    .Skip(PageNumber * PageSize)
+                    .Take(PageSize + 1)
+                    .ToListAsync();
 
-                testsRequest.Name = group.Key;
-                var firstBuild = group.FirstOrDefault()?.ModelBuild;
-                var testInfo = new TestInfo()
+                var count = 0;
+                var isBuildKindFiltered =
+                    buildsRequest.BuildType is { } bt &&
+                    !(bt is { BuildType: ModelBuildKind.All, Kind: EqualsKind.Equals });
+
+                foreach (var group in results.GroupBy(x => x.TestFullName).OrderByDescending(x => x.Count()))
                 {
-                    TestName = group.Key,
-                    CollapseName = $"collapse{count}",
-                    TestNameQuery = testsRequest.GetQueryString(),
-                    BuildDefinition = buildsRequest.Definition,
-                    GitHubOrganization = firstBuild?.GitHubOrganization,
-                    GitHubRepository = firstBuild?.GitHubRepository,
-                    TestResultsDisplay = new TestResultsDisplay(group)
+                    count++;
+
+                    testsRequest.Name = group.Key;
+                    var firstBuild = group.FirstOrDefault()?.ModelBuild;
+                    var testInfo = new TestInfo()
                     {
-                        IncludeBuildColumn = true,
-                        IncludeBuildKindColumn = !isBuildKindFiltered,
-                        IncludeErrorMessageColumn = true,
-                    }
-                };
+                        TestName = group.Key,
+                        CollapseName = $"collapse{count}",
+                        TestNameQuery = testsRequest.GetQueryString(),
+                        BuildDefinition = buildsRequest.Definition,
+                        GitHubOrganization = firstBuild?.GitHubOrganization,
+                        GitHubRepository = firstBuild?.GitHubRepository,
+                        TestResultsDisplay = new TestResultsDisplay(group)
+                        {
+                            IncludeBuildColumn = true,
+                            IncludeBuildKindColumn = !isBuildKindFiltered,
+                            IncludeErrorMessageColumn = true,
+                        }
+                    };
 
-                TestInfos.Add(testInfo);
+                    TestInfos.Add(testInfo);
+                }
+
+                BuildCount = results.GroupBy(x => x.ModelBuild.BuildNumber).Count();
+                PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
+                NextPageNumber = results.Count > PageSize ? PageNumber + 1 : (int?)null;
+                return Page();
             }
-
-            BuildCount = results.GroupBy(x => x.ModelBuild.BuildNumber).Count();
-            PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
-            NextPageNumber = results.Count > PageSize ? PageNumber + 1 : (int?)null;
-            return Page();
+            catch (SqlException ex) when (ex.IsTimeoutViolation())
+            {
+                ErrorMessage = "Timeout querying data. Please refine the search to be smaller. Consider shrinking build set or using shorter test names";
+                return Page();
+            }
         }
     }
 }

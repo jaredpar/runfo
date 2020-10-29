@@ -10,6 +10,7 @@ using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevOps.Status.Pages.Search
@@ -73,37 +74,44 @@ namespace DevOps.Status.Pages.Search
                 return;
             }
 
-            IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults.Where(x => x.IsHelixTestResult);
-            query = buildsRequest.Filter(query);
-            query = query
-                .Take(100)
-                .Include(x => x.ModelBuild);
-
-            var modelResults = await query.ToListAsync();
-            var toQuery = modelResults
-                .Select(x => (x.ModelBuild.GetBuildInfo(), x.GetHelixLogInfo()))
-                .Where(x => x.Item2 is object);
-
-            var helixServer = new HelixServer();
-            var errorBuilder = new StringBuilder();
-            var results = await helixServer.SearchHelixLogsAsync(
-                toQuery!,
-                logsRequest,
-                ex => errorBuilder.AppendLine(ex.Message));
-            foreach (var result in results)
+            try
             {
-                HelixLogs.Add(new HelixLogData()
+                IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults.Where(x => x.IsHelixTestResult);
+                query = buildsRequest.Filter(query);
+                query = query
+                    .Take(100)
+                    .Include(x => x.ModelBuild);
+
+                var modelResults = await query.ToListAsync();
+                var toQuery = modelResults
+                    .Select(x => (x.ModelBuild.GetBuildInfo(), x.GetHelixLogInfo()))
+                    .Where(x => x.Item2 is object);
+
+                var helixServer = new HelixServer();
+                var errorBuilder = new StringBuilder();
+                var results = await helixServer.SearchHelixLogsAsync(
+                    toQuery!,
+                    logsRequest,
+                    ex => errorBuilder.AppendLine(ex.Message));
+                foreach (var result in results)
                 {
-                    BuildNumber = result.BuildInfo.Number,
-                    Line = result.Line,
-                    HelixLogKind = result.HelixLogKind.GetDisplayFileName(),
-                    HelixLogUri = result.HelixLogUri,
-                });
-            }
+                    HelixLogs.Add(new HelixLogData()
+                    {
+                        BuildNumber = result.BuildInfo.Number,
+                        Line = result.Line,
+                        HelixLogKind = result.HelixLogKind.GetDisplayFileName(),
+                        HelixLogUri = result.HelixLogUri,
+                    });
+                }
 
-            if (errorBuilder.Length > 0)
+                if (errorBuilder.Length > 0)
+                {
+                    ErrorMessage = errorBuilder.ToString();
+                }
+            }
+            catch (SqlException ex) when (ex.IsTimeoutViolation())
             {
-                ErrorMessage = errorBuilder.ToString();
+                ErrorMessage = "Timeout fetching data from the server";
             }
         }
     }

@@ -9,6 +9,7 @@ using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -83,13 +84,22 @@ namespace DevOps.Status.Pages.Search
                 TotalBuildCount / PageSize);
 
             var skipCount = PageNumber * PageSize;
-            var results = await request
-                .Filter(TriageContext.ModelBuilds)
-                .OrderByDescending(x => x.BuildNumber)
-                .Include(x => x.ModelBuildDefinition)
-                .Skip(skipCount)
-                .Take(PageSize)
-                .ToListAsync();
+            List<ModelBuild> results;
+            try
+            {
+                results = await request
+                    .Filter(TriageContext.ModelBuilds)
+                    .OrderByDescending(x => x.BuildNumber)
+                    .Include(x => x.ModelBuildDefinition)
+                    .Skip(skipCount)
+                    .Take(PageSize)
+                    .ToListAsync();
+            }
+            catch (SqlException ex) when (ex.IsTimeoutViolation())
+            {
+                ErrorMessage = "Timeout fetching data from the server";
+                return;
+            }
 
             Builds = results
                 .Select(x =>
