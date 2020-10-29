@@ -19,6 +19,7 @@ namespace DevOps.Util.DotNet.Triage
 {
     public sealed class TrackingIssueUtil
     {
+        internal HelixServer HelixServer { get; }
         internal DotNetQueryUtil QueryUtil { get; }
         internal TriageContextUtil TriageContextUtil { get; }
         private ILogger Logger { get; }
@@ -27,10 +28,12 @@ namespace DevOps.Util.DotNet.Triage
         internal DevOpsServer Server => QueryUtil.Server;
 
         public TrackingIssueUtil(
+            HelixServer helixServer,
             DotNetQueryUtil queryUtil,
             TriageContextUtil triageContextUtil,
             ILogger logger)
         {
+            HelixServer = helixServer;
             QueryUtil = queryUtil;
             TriageContextUtil = triageContextUtil;
             Logger = logger;
@@ -241,8 +244,7 @@ namespace DevOps.Util.DotNet.Triage
                 Limit = 100,
             };
 
-            var helixServer = new HelixServer();
-            var results = await helixServer.SearchHelixLogsAsync(
+            var results = await HelixServer.SearchHelixLogsAsync(
                 helixLogInfos,
                 request,
                 onError: x => Logger.LogWarning(x.Message)).ConfigureAwait(false);

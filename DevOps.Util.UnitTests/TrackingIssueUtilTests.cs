@@ -20,7 +20,7 @@ namespace DevOps.Util.UnitTests
 
         public TrackingIssueUtilTests()
         {
-            TrackingIssueUtil = new TrackingIssueUtil(QueryUtil, TriageContextUtil, TestableLogger);
+            TrackingIssueUtil = new TrackingIssueUtil(HelixServer, QueryUtil, TriageContextUtil, TestableLogger);
         }
 
         [Fact]

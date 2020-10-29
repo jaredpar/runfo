@@ -22,6 +22,7 @@ namespace DevOps.Util.UnitTests
         public TriageContextUtil TriageContextUtil { get; }
         public DevOpsServer Server { get; set; }
         public DotNetQueryUtil QueryUtil { get; set; }
+        public HelixServer HelixServer { get; set; }
         public TestableHttpMessageHandler TestableHttpMessageHandler { get; set; }
         public TestableLogger TestableLogger { get; set; }
         public TestableGitHubClientFactory TestableGitHubClientFactory { get; set; }
@@ -41,7 +42,10 @@ namespace DevOps.Util.UnitTests
             TestableHttpMessageHandler = new TestableHttpMessageHandler();
             TestableLogger = new TestableLogger();
             TestableGitHubClientFactory = new TestableGitHubClientFactory();
-            Server = new DevOpsServer("random", httpClient: new HttpClient(TestableHttpMessageHandler));
+
+            var httpClient = new HttpClient(TestableHttpMessageHandler);
+            Server = new DevOpsServer("random", httpClient: httpClient);
+            HelixServer = new HelixServer(httpClient: httpClient);
             QueryUtil = new DotNetQueryUtil(Server);
 
             Context.Database.EnsureDeleted();
@@ -239,7 +243,7 @@ namespace DevOps.Util.UnitTests
 
         public async Task TriageAll()
         {
-            var util = new TrackingIssueUtil(QueryUtil, TriageContextUtil, TestableLogger);
+            var util = new TrackingIssueUtil(HelixServer, QueryUtil, TriageContextUtil, TestableLogger);
             foreach (var modelBuildAttempt in await Context.ModelBuildAttempts.Include(x => x.ModelBuild).ToListAsync())
             {
                 await util.TriageAsync(modelBuildAttempt.GetBuildAttemptKey());
