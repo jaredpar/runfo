@@ -19,6 +19,25 @@ namespace DevOps.Util.DotNet.Triage
         public string? Text { get; set; }
         public int Limit { get; set; } = DefaultLimit;
 
+        public IQueryable<ModelTestResult> Filter(IQueryable<ModelTestResult> query)
+        {
+            query = query.Where(x => x.IsHelixTestResult);
+
+            foreach (var kind in HelixLogKinds)
+            {
+                query = kind switch
+                {
+                    HelixLogKind.Console => query.Where(x => x.HelixConsoleUri != null),
+                    HelixLogKind.RunClient => query.Where(x => x.HelixRunClientUri != null),
+                    HelixLogKind.TestResults => query.Where(x => x.HelixTestResultsUri != null),
+                    HelixLogKind.CoreDump => query,
+                    _ => throw new Exception($"Invalid kind '{kind}'"),
+                };
+            }
+
+            return query;
+        }
+
         public string GetQueryString()
         {
             var builder = new StringBuilder();

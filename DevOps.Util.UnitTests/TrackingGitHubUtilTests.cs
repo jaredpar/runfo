@@ -149,5 +149,45 @@ Build Result Summary
             var report = await TrackingGitHubUtil.GetAssociatedIssueReportAsync(issueKey);
             Assert.Equal(expected.TrimNewlines(), report.TrimNewlines());
         }
+
+        [Theory]
+        [InlineData(HelixLogKind.Console, "Console", "console.log")]
+        [InlineData(HelixLogKind.RunClient, "Run Client", "runclient.py")]
+        [InlineData(HelixLogKind.TestResults, "Test Results", "test results")]
+        public async Task SimpleHelixLogsReport(HelixLogKind kind, string columnText, string fileName)
+        {
+            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            AddTestData(1, "2020-08-01");
+            AddTestData(2, "2020-08-01");
+            var tracking = AddTrackingIssue(
+                TrackingKind.HelixLogs,
+                title: "Helix Log",
+                helixLogsRequest: new SearchHelixLogsRequest()
+                {
+                    HelixLogKinds = { kind },
+                    Text = "data",
+                });
+
+            await Context.SaveChangesAsync();
+            await TriageAll();
+
+            var expected = @$"
+|Build|Kind|{columnText}|
+|---|---|---|
+|[2](https://dev.azure.com/dnceng/public/_build/results?buildId=2)|Rolling|[{fileName}](https://localhost/runfo/1/{kind})|
+|[1](https://dev.azure.com/dnceng/public/_build/results?buildId=1)|Rolling|[{fileName}](https://localhost/runfo/0/{kind})|
+";
+
+            var report = await TrackingGitHubUtil.GetTrackingIssueReport(tracking, includeMarkers: false, baseTime: new DateTime(year: 2020, month: 08, day: 1));
+            Assert.Equal(expected.TrimNewlines(), report.TrimNewlines());
+
+            void AddTestData(int buildNumber, string dateStr)
+            {
+                var attempt = AddAttempt(1, AddBuild($"{buildNumber}|dotnet|roslyn|{dateStr}", def));
+                var testRun = AddTestRun("windows", attempt.ModelBuild);
+                var testResult = AddTestResult("Util.Test1", testRun);
+                AddHelixLog(testResult, kind, "The log data");
+            }
+        }
     }
 }

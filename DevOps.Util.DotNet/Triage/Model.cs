@@ -74,6 +74,10 @@ namespace DevOps.Util.DotNet.Triage
                 .Property(x => x.TrackingKind)
                 .HasConversion<string>();
 
+            modelBuilder.Entity<ModelTrackingIssueMatch>()
+                .Property(x => x.HelixLogKind)
+                .HasConversion<string>();
+
             modelBuilder.Entity<ModelTrackingIssueResult>()
                 .HasIndex(x => new { x.ModelTrackingIssueId, x.ModelBuildAttemptId })
                 .IsUnique();
@@ -314,8 +318,12 @@ namespace DevOps.Util.DotNet.Triage
 
         Timeline,
 
+        HelixLogs,
+
+        [Obsolete("Use HelixLogs")]
         HelixConsole,
 
+        [Obsolete("Use HelixLogs")]
         HelixRunClient,
     }
 
@@ -406,6 +414,8 @@ namespace DevOps.Util.DotNet.Triage
         public int? ModelTimelineIssueId { get; set; }
 
         public ModelTimelineIssue ModelTimelineIssue { get; set; }
+
+        public HelixLogKind HelixLogKind { get; set; }
 
         public string HelixLogUri { get; set; }
     }

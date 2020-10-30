@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using Octokit;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -107,6 +108,44 @@ namespace DevOps.Status.Pages.Tracking
                 }
             }
 
+            switch (TrackingKind)
+            {
+#pragma warning disable 618
+                case TrackingKind.HelixConsole:
+                case TrackingKind.HelixRunClient:
+                    ErrorMessage = $"'{TrackingKind}' is deprecated. Please use {TrackingKind.HelixLogs}";
+                    return Page();
+                case TrackingKind.HelixLogs:
+                    {
+                        if (TryParseQueryString<SearchHelixLogsRequest>(out var request))
+                        {
+                            if (request.HelixLogKinds.Count == 0)
+                            {
+                                ErrorMessage = "Need to specify at least one log kind to search";
+                                return Page();
+                            }
+                        }
+                        else
+                        {
+                            return Page();
+                        }
+                    }
+                    break;
+                case TrackingKind.Test:
+                    if (!TryParseQueryString<SearchTestsRequest>(out _))
+                    {
+                        return Page();
+                    }
+                    break;
+
+                case TrackingKind.Timeline:
+                    if (!TryParseQueryString<SearchTimelinesRequest>(out _))
+                    {
+                        return Page();
+                    }
+                    break;
+            }
+
             GitHubIssueKey? issueKey = null;
             if (!string.IsNullOrEmpty(GitHubIssueUri))
             {
@@ -200,6 +239,22 @@ namespace DevOps.Status.Pages.Tracking
 
                 var issue = await gitHubClient.Issue.Create(GitHubOrganization, GitHubRepository, newIssue);
                 return issue.GetIssueKey();
+            }
+
+            bool TryParseQueryString<T>(out T value)
+                where T : ISearchRequest, new()
+            {
+                value = new T();
+                try
+                {
+                    value.ParseQueryString(SearchText ?? "");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    ErrorMessage = ex.ToString();
+                    return false;
+                }
             }
         }
     }

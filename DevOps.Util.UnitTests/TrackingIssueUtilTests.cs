@@ -151,9 +151,10 @@ namespace DevOps.Util.UnitTests
         }
 
         [Theory]
-        [InlineData(HelixLogKind.Console, TrackingKind.HelixConsole)]
-        [InlineData(HelixLogKind.RunClient, TrackingKind.HelixRunClient)]
-        public async Task SimpleHelixLogTrackingIssue(HelixLogKind kind, TrackingKind trackingKind)
+        [InlineData(HelixLogKind.Console)]
+        [InlineData(HelixLogKind.RunClient)]
+        [InlineData(HelixLogKind.TestResults)]
+        public async Task SimpleHelixLogTrackingIssue(HelixLogKind kind)
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
             var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
@@ -164,7 +165,7 @@ namespace DevOps.Util.UnitTests
             AddHelixLog(testResult2, kind, "the tree grew");
 
             var tracking1 = AddTrackingIssue(
-                trackingKind,
+                TrackingKind.HelixLogs,
                 helixLogsRequest: new SearchHelixLogsRequest()
                 {
                     HelixLogKinds = { kind },
@@ -173,7 +174,7 @@ namespace DevOps.Util.UnitTests
             await TestSearch(tracking1, matchCount: 2, isPresent: true);
 
             var tracking2 = AddTrackingIssue(
-                trackingKind,
+                TrackingKind.HelixLogs,
                 helixLogsRequest: new SearchHelixLogsRequest()
                 {
                     HelixLogKinds = { kind },
@@ -182,7 +183,7 @@ namespace DevOps.Util.UnitTests
             await TestSearch(tracking2, matchCount: 1, isPresent: true);
 
             var tracking3 = AddTrackingIssue(
-                trackingKind,
+                TrackingKind.HelixLogs,
                 helixLogsRequest: new SearchHelixLogsRequest()
                 {
                     HelixLogKinds = { kind },
