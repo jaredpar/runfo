@@ -151,6 +151,11 @@ namespace Scratch
             var builder = new StringBuilder();
             await foreach( var build in DevOpsServer.EnumerateBuildsAsync("internal", new[] { 679 }, queryOrder: BuildQueryOrder.QueueTimeDescending))
             {
+                if (build.GetTargetBranch() != "master")
+                {
+                    continue;
+                }
+
                 var timeline = await DevOpsServer.GetTimelineAsync(build);
                 if (timeline is null)
                 {
@@ -158,7 +163,10 @@ namespace Scratch
                 }
 
                 var record = timeline.Records.FirstOrDefault(x => x.Name == "Publish Using Darc");
-                if (record is null || record.StartTime is null || record.FinishTime is null || record.Result != TaskResult.Succeeded)
+                if (record is null || 
+                    record.StartTime is null || 
+                    record.FinishTime is null || 
+                    record.Result != TaskResult.Succeeded)
                 {
                     continue;
                 }

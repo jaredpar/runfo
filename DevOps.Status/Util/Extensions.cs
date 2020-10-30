@@ -85,7 +85,6 @@ namespace DevOps.Status.Util
                     x.Id
                 });
 
-            var count = 0;
             var attempts = await query.ToListAsync();
             foreach (var attempt in attempts)
             {
