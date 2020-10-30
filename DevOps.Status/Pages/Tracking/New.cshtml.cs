@@ -207,21 +207,32 @@ namespace DevOps.Status.Pages.Tracking
 
             async Task InitialTriageAsync(ModelTrackingIssue modelTrackingIssue)
             {
-                // Picking how many days to triage here. If there is no definition then there will be 
-                // a _lot_ more builds in the first day alone so just triage that far.
-                var days = modelBuildDefinition is object ? 3 : 1;
-                var request = new SearchBuildsRequest()
+                if (modelBuildDefinition is object)
                 {
-                    Definition = modelBuildDefinition?.DefinitionId.ToString() ?? null,
-                    Queued = new DateRequestValue(days)
-                };
-                await FunctionQueueUtil.QueueTriageBuildQuery(TriageContextUtil, modelTrackingIssue, request);
+                    // The initial triage is only done for tracking issues that have definitions 
+                    // associated with. Lacking a definition we end up querying all builds and that 
+                    // can produce a *lot* of data. Hard to find a good formula that is performant
+                    // there hence we limit to only builds with definitions.
+                    var request = new SearchBuildsRequest()
+                    {
+                        Definition = modelBuildDefinition?.DefinitionId.ToString() ?? null,
+                        Queued = new DateRequestValue(7, RelationalKind.GreaterThan),
+                        Result = new BuildResultRequestValue(BuildResult.Succeeded, EqualsKind.NotEquals),
+                    };
 
-                // Issues are bulk updated on a 15 minute cycle. This is a new issue though so want to make sure that
-                // the user sees progress soon. Schedule two manual updates in the near future on this so the issue 
-                // gets rolling then it will fall into the 15 minute bulk cycle.
-                await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, TimeSpan.FromSeconds(30));
-                await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, TimeSpan.FromMinutes(2));
+                    await FunctionQueueUtil.QueueTriageBuildQuery(TriageContextUtil, modelTrackingIssue, request);
+
+                    // Issues are bulk updated on a 15 minute cycle. This is a new issue though so want to make sure that
+                    // the user sees progress soon. Schedule two manual updates in the near future on this so the issue 
+                    // gets rolling then it will fall into the 15 minute bulk cycle.
+                    await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, TimeSpan.FromSeconds(30));
+                    await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, TimeSpan.FromMinutes(2));
+                }
+                else
+                {
+                    await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, TimeSpan.FromMinutes(0));
+
+                }
             }
 
             async Task<GitHubIssueKey> GetOrCreateGitHubIssueAsync(IGitHubClient gitHubClient)

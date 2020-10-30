@@ -141,7 +141,38 @@ namespace Scratch
         {
             // await MigrateTrackingToAssociatedIssues();
             // await PopulateTestResultsWithNewData(15, 200);
-            await TestTrackingIssueUtil(buildNumber: 865837, modelTrackingIssueId: 75);
+            // await TestTrackingIssueUtil(buildNumber: 865837, modelTrackingIssueId: 75);
+            await DumpDarcPublishData();
+        }
+
+        internal async Task DumpDarcPublishData()
+        {
+            int count = 0;
+            var builder = new StringBuilder();
+            await foreach( var build in DevOpsServer.EnumerateBuildsAsync("internal", new[] { 679 }, queryOrder: BuildQueryOrder.QueueTimeDescending))
+            {
+                var timeline = await DevOpsServer.GetTimelineAsync(build);
+                if (timeline is null)
+                {
+                    continue;
+                }
+
+                var record = timeline.Records.FirstOrDefault(x => x.Name == "Publish Using Darc");
+                if (record is null || record.StartTime is null || record.FinishTime is null || record.Result != TaskResult.Succeeded)
+                {
+                    continue;
+                }
+
+                var time = DevOpsUtil.ConvertFromRestTime(record.FinishTime) - DevOpsUtil.ConvertFromRestTime(record.StartTime);
+                builder.AppendLine($"{build.GetBuildKey().BuildUri} - {time:hh\\:mm\\:ss}");
+                if (++count > 100)
+                {
+                    break;
+
+                }
+            }
+
+            File.WriteAllText(@"p:\temp\data.txt", builder.ToString());
         }
 
         internal async Task TestTrackingIssueUtil(int buildNumber, int modelTrackingIssueId)
