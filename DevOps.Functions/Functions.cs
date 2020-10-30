@@ -31,6 +31,7 @@ namespace DevOps.Functions
         public TriageContext Context { get; }
         public TriageContextUtil TriageContextUtil { get; }
         public DevOpsServer Server { get; }
+        public HelixServer HelixServer { get; }
         public GitHubClientFactory GitHubClientFactory { get; }
         public SiteLinkUtil SiteLinkUtil { get; }
 
@@ -41,6 +42,7 @@ namespace DevOps.Functions
             TriageContextUtil = new TriageContextUtil(context);
             GitHubClientFactory = gitHubClientFactory;
             SiteLinkUtil = SiteLinkUtil.Published;
+            HelixServer = new HelixServer();
         }
 
         [FunctionName("status")]
@@ -151,7 +153,7 @@ namespace DevOps.Functions
             {
                 logger.LogInformation($"Triaging issue {trackingIssueId} against build attempt {buildAttemptKey}");
                 var queryUtil = new DotNetQueryUtil(Server);
-                var util = new TrackingIssueUtil(queryUtil, TriageContextUtil, logger);
+                var util = new TrackingIssueUtil(HelixServer, queryUtil, TriageContextUtil, logger);
                 await util.TriageAsync(buildAttemptKey, trackingIssueId);
             }
             else

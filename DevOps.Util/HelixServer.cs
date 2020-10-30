@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -15,11 +16,11 @@ namespace DevOps.Util
         private readonly DevOpsHttpClient _client;
         private readonly AuthorizationToken _token;
 
-        public HelixServer(string? token = null)
+        public HelixServer(string? token = null, HttpClient? httpClient = null)
         {
             _token = string.IsNullOrEmpty(token) ?
                 default : new AuthorizationToken(AuthorizationKind.PersonalAccessToken, token);
-            _client = new DevOpsHttpClient();
+            _client = new DevOpsHttpClient(httpClient: httpClient);
         }
 
         public async ValueTask GetHelixPayloads(string jobId, List<string> workItems, string downloadDir)

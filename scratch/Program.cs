@@ -84,6 +84,7 @@ namespace Scratch
         public TriageContextUtil TriageContextUtil { get; set; }
         public IGitHubClientFactory GitHubClientFactory { get; set; }
         public DotNetQueryUtil DotNetQueryUtil { get; set; }
+        public HelixServer HelixServer { get; set; }
         public BlobStorageUtil BlobStorageUtil { get; set; }
         public FunctionQueueUtil FunctionQueueUtil { get; set; }
 
@@ -122,6 +123,7 @@ namespace Scratch
                 DevOpsServer,
                 new CachingAzureUtil(BlobStorageUtil, DevOpsServer));
             FunctionQueueUtil = new FunctionQueueUtil(configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
+            HelixServer = new HelixServer();
         }
 
         internal static IConfiguration CreateConfiguration()
@@ -137,9 +139,57 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await MigrateTrackingToAssociatedIssues();
+            // await MigrateTrackingToAssociatedIssues();
             // await PopulateTestResultsWithNewData(15, 200);
+            // await TestTrackingIssueUtil(buildNumber: 865837, modelTrackingIssueId: 75);
+            await DumpDarcPublishData();
         }
+
+        internal async Task DumpDarcPublishData()
+        {
+            int count = 0;
+            var builder = new StringBuilder();
+            await foreach( var build in DevOpsServer.EnumerateBuildsAsync("internal", new[] { 679 }, queryOrder: BuildQueryOrder.QueueTimeDescending))
+            {
+                if (build.GetTargetBranch() != "master")
+                {
+                    continue;
+                }
+
+                var timeline = await DevOpsServer.GetTimelineAsync(build);
+                if (timeline is null)
+                {
+                    continue;
+                }
+
+                var record = timeline.Records.FirstOrDefault(x => x.Name == "Publish Using Darc");
+                if (record is null || 
+                    record.StartTime is null || 
+                    record.FinishTime is null || 
+                    record.Result != TaskResult.Succeeded)
+                {
+                    continue;
+                }
+
+                var time = DevOpsUtil.ConvertFromRestTime(record.FinishTime) - DevOpsUtil.ConvertFromRestTime(record.StartTime);
+                builder.AppendLine($"{build.GetBuildKey().BuildUri} - {time:hh\\:mm\\:ss}");
+                if (++count > 100)
+                {
+                    break;
+
+                }
+            }
+
+            File.WriteAllText(@"p:\temp\data.txt", builder.ToString());
+        }
+
+        internal async Task TestTrackingIssueUtil(int buildNumber, int modelTrackingIssueId)
+        {
+            var trackingIssueUtil = new TrackingIssueUtil(HelixServer, DotNetQueryUtil, TriageContextUtil, CreateLogger());
+            var buildKey = new BuildKey(DotNetUtil.AzureOrganization, DotNetUtil.DefaultAzureProject, buildNumber);
+            await trackingIssueUtil.TriageAsync(buildKey, modelTrackingIssueId);
+        }
+
 
         /// <summary>
         /// Now that builds have associated issues need to migrate all of the existing tracking issues 
@@ -249,9 +299,8 @@ namespace Scratch
 
         internal async Task DumpingTestData()
         {
-
             var logger = CreateLogger();
-            var trackingUtil = new TrackingIssueUtil(DotNetQueryUtil, TriageContextUtil, logger);
+            var trackingUtil = new TrackingIssueUtil(HelixServer, DotNetQueryUtil, TriageContextUtil, logger);
 
             // await DumpOutcomes(27335328);
             var thatBuild = await DevOpsServer.GetBuildAsync("public", 855241);
@@ -465,7 +514,7 @@ namespace Scratch
             foreach (var build in results)
             {
                 Console.WriteLine($"Triaging {build.GetBuildKey().BuildUri}");
-                var util = new TrackingIssueUtil(DotNetQueryUtil, TriageContextUtil, CreateLogger());
+                var util = new TrackingIssueUtil(HelixServer, DotNetQueryUtil, TriageContextUtil, CreateLogger());
                 await util.TriageAsync(build.GetBuildKey(), issue.Id);
             }
 
@@ -475,7 +524,7 @@ namespace Scratch
         internal async Task PopulateDb()
         {
             var logger = CreateLogger();
-            var trackingUtil = new TrackingIssueUtil(DotNetQueryUtil, TriageContextUtil, logger);
+            var trackingUtil = new TrackingIssueUtil(HelixServer, DotNetQueryUtil, TriageContextUtil, logger);
             var builds = await DotNetQueryUtil.ListBuildsAsync(count: 20, definitions: new[] { 15 });
             foreach (var build in builds)
             {

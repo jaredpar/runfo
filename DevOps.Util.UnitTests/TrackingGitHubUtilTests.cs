@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace DevOps.Util.UnitTests
 {
@@ -17,7 +18,8 @@ namespace DevOps.Util.UnitTests
     {
         public TrackingGitHubUtil TrackingGitHubUtil { get; }
 
-        public TrackingGitHubUtilTests()
+        public TrackingGitHubUtilTests(ITestOutputHelper testOutputHelper)
+            : base(testOutputHelper)
         {
             TrackingGitHubUtil = new TrackingGitHubUtil(TestableGitHubClientFactory, Context, new SiteLinkUtil("localhost"), TestableLogger);
         }
@@ -28,7 +30,13 @@ namespace DevOps.Util.UnitTests
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
             var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
             var timeline = AddTimelineIssue("windows|dog", attempt);
-            var tracking = AddTrackingIssue("Timeline|dog|Dog Search");
+            var tracking = AddTrackingIssue(
+                TrackingKind.Timeline,
+                title: "Dog Search",
+                timelinesRequest: new SearchTimelinesRequest()
+                {
+                    Text = "dog",
+                });
             var match = AddTrackingMatch(tracking, attempt, timelineIssue: timeline);
             var result = AddTrackingResult(tracking, attempt);
             await Context.SaveChangesAsync();
@@ -62,7 +70,14 @@ Build Result Summary
             AddTestData(5, "2020-07-29");
             AddTestData(6, "2020-07-29");
             AddTestData(7, "2020-07-05");
-            var tracking = AddTrackingIssue("Test|Util|Test Search");
+            var tracking = AddTrackingIssue(
+                TrackingKind.Test,
+                title: "Test Search",
+                testsRequest: new SearchTestsRequest()
+                {
+                    Name = "Util",
+                });
+
             await Context.SaveChangesAsync();
             await TriageAll();
 
@@ -133,6 +148,46 @@ Build Result Summary
 
             var report = await TrackingGitHubUtil.GetAssociatedIssueReportAsync(issueKey);
             Assert.Equal(expected.TrimNewlines(), report.TrimNewlines());
+        }
+
+        [Theory]
+        [InlineData(HelixLogKind.Console, "Console", "console.log")]
+        [InlineData(HelixLogKind.RunClient, "Run Client", "runclient.py")]
+        [InlineData(HelixLogKind.TestResults, "Test Results", "test results")]
+        public async Task SimpleHelixLogsReport(HelixLogKind kind, string columnText, string fileName)
+        {
+            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            AddTestData(1, "2020-08-01");
+            AddTestData(2, "2020-08-01");
+            var tracking = AddTrackingIssue(
+                TrackingKind.HelixLogs,
+                title: "Helix Log",
+                helixLogsRequest: new SearchHelixLogsRequest()
+                {
+                    HelixLogKinds = { kind },
+                    Text = "data",
+                });
+
+            await Context.SaveChangesAsync();
+            await TriageAll();
+
+            var expected = @$"
+|Build|Kind|{columnText}|
+|---|---|---|
+|[2](https://dev.azure.com/dnceng/public/_build/results?buildId=2)|Rolling|[{fileName}](https://localhost/runfo/1/{kind})|
+|[1](https://dev.azure.com/dnceng/public/_build/results?buildId=1)|Rolling|[{fileName}](https://localhost/runfo/0/{kind})|
+";
+
+            var report = await TrackingGitHubUtil.GetTrackingIssueReport(tracking, includeMarkers: false, baseTime: new DateTime(year: 2020, month: 08, day: 1));
+            Assert.Equal(expected.TrimNewlines(), report.TrimNewlines());
+
+            void AddTestData(int buildNumber, string dateStr)
+            {
+                var attempt = AddAttempt(1, AddBuild($"{buildNumber}|dotnet|roslyn|{dateStr}", def));
+                var testRun = AddTestRun("windows", attempt.ModelBuild);
+                var testResult = AddTestResult("Util.Test1", testRun);
+                AddHelixLog(testResult, kind, "The log data");
+            }
         }
     }
 }

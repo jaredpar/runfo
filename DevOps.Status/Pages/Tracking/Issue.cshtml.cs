@@ -181,6 +181,11 @@ namespace DevOps.Status.Pages.Tracking
                 };
 
                 request.ParseQueryString(string.IsNullOrEmpty(PopulateBuildsQuery) ? "started:~7" : PopulateBuildsQuery);
+                if (!request.HasDefinition)
+                {
+                    ErrorMessage = "Need to filter build results to a definition";
+                    return Page();
+                }
 
                 await FunctionQueueUtil.QueueTriageBuildQuery(TriageContextUtil, modelTrackingIssue, request);
                 await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, delay: TimeSpan.FromMinutes(1));

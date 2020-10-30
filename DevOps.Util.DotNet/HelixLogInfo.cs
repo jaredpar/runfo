@@ -84,6 +84,38 @@ namespace DevOps.Util.DotNet
             HelixLogKind.TestResults => TestResultsUri,
             _ => throw new InvalidOperationException($"Invalid enum value {kind}")
         };
+
+        public HelixLogInfo SetUri(HelixLogKind kind, string uri)
+        {
+            var runClientUri = RunClientUri;
+            var consoleUri = ConsoleUri;
+            var coreDumpUri = CoreDumpUri;
+            var testResultsUri = TestResultsUri;
+
+            switch (kind)
+            {
+                case HelixLogKind.Console:
+                    consoleUri = uri;
+                    break;
+                case HelixLogKind.CoreDump:
+                    coreDumpUri = uri;
+                    break;
+                case HelixLogKind.RunClient:
+                    runClientUri = uri;
+                    break;
+                case HelixLogKind.TestResults:
+                    testResultsUri = uri;
+                    break;
+                default:
+                    throw new Exception($"Invalid kind '{kind}'");
+            }
+
+            return new HelixLogInfo(
+                runClientUri: runClientUri,
+                consoleUri: consoleUri,
+                coreDumpUri: coreDumpUri,
+                testResultsUri: testResultsUri);
+        }
     }
 
 }

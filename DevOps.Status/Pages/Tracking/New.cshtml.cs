@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using Octokit;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -107,6 +108,44 @@ namespace DevOps.Status.Pages.Tracking
                 }
             }
 
+            switch (TrackingKind)
+            {
+#pragma warning disable 618
+                case TrackingKind.HelixConsole:
+                case TrackingKind.HelixRunClient:
+                    ErrorMessage = $"'{TrackingKind}' is deprecated. Please use {TrackingKind.HelixLogs}";
+                    return Page();
+                case TrackingKind.HelixLogs:
+                    {
+                        if (TryParseQueryString<SearchHelixLogsRequest>(out var request))
+                        {
+                            if (request.HelixLogKinds.Count == 0)
+                            {
+                                ErrorMessage = "Need to specify at least one log kind to search";
+                                return Page();
+                            }
+                        }
+                        else
+                        {
+                            return Page();
+                        }
+                    }
+                    break;
+                case TrackingKind.Test:
+                    if (!TryParseQueryString<SearchTestsRequest>(out _))
+                    {
+                        return Page();
+                    }
+                    break;
+
+                case TrackingKind.Timeline:
+                    if (!TryParseQueryString<SearchTimelinesRequest>(out _))
+                    {
+                        return Page();
+                    }
+                    break;
+            }
+
             GitHubIssueKey? issueKey = null;
             if (!string.IsNullOrEmpty(GitHubIssueUri))
             {
@@ -168,21 +207,32 @@ namespace DevOps.Status.Pages.Tracking
 
             async Task InitialTriageAsync(ModelTrackingIssue modelTrackingIssue)
             {
-                // Picking how many days to triage here. If there is no definition then there will be 
-                // a _lot_ more builds in the first day alone so just triage that far.
-                var days = modelBuildDefinition is object ? 3 : 1;
-                var request = new SearchBuildsRequest()
+                if (modelBuildDefinition is object)
                 {
-                    Definition = modelBuildDefinition?.DefinitionId.ToString() ?? null,
-                    Queued = new DateRequestValue(days)
-                };
-                await FunctionQueueUtil.QueueTriageBuildQuery(TriageContextUtil, modelTrackingIssue, request);
+                    // The initial triage is only done for tracking issues that have definitions 
+                    // associated with. Lacking a definition we end up querying all builds and that 
+                    // can produce a *lot* of data. Hard to find a good formula that is performant
+                    // there hence we limit to only builds with definitions.
+                    var request = new SearchBuildsRequest()
+                    {
+                        Definition = modelBuildDefinition?.DefinitionId.ToString() ?? null,
+                        Queued = new DateRequestValue(7, RelationalKind.GreaterThan),
+                        Result = new BuildResultRequestValue(BuildResult.Succeeded, EqualsKind.NotEquals),
+                    };
 
-                // Issues are bulk updated on a 15 minute cycle. This is a new issue though so want to make sure that
-                // the user sees progress soon. Schedule two manual updates in the near future on this so the issue 
-                // gets rolling then it will fall into the 15 minute bulk cycle.
-                await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, TimeSpan.FromSeconds(30));
-                await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, TimeSpan.FromMinutes(2));
+                    await FunctionQueueUtil.QueueTriageBuildQuery(TriageContextUtil, modelTrackingIssue, request);
+
+                    // Issues are bulk updated on a 15 minute cycle. This is a new issue though so want to make sure that
+                    // the user sees progress soon. Schedule two manual updates in the near future on this so the issue 
+                    // gets rolling then it will fall into the 15 minute bulk cycle.
+                    await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, TimeSpan.FromSeconds(30));
+                    await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, TimeSpan.FromMinutes(2));
+                }
+                else
+                {
+                    await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, TimeSpan.FromMinutes(0));
+
+                }
             }
 
             async Task<GitHubIssueKey> GetOrCreateGitHubIssueAsync(IGitHubClient gitHubClient)
@@ -200,6 +250,22 @@ namespace DevOps.Status.Pages.Tracking
 
                 var issue = await gitHubClient.Issue.Create(GitHubOrganization, GitHubRepository, newIssue);
                 return issue.GetIssueKey();
+            }
+
+            bool TryParseQueryString<T>(out T value)
+                where T : ISearchRequest, new()
+            {
+                value = new T();
+                try
+                {
+                    value.ParseQueryString(SearchText ?? "");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    ErrorMessage = ex.ToString();
+                    return false;
+                }
             }
         }
     }

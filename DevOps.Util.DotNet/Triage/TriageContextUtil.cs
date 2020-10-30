@@ -560,14 +560,21 @@ namespace DevOps.Util.DotNet.Triage
                             .Filter(query)
                             .Select(x => x.ModelBuild);
                     }
-                case TrackingKind.HelixConsole:
-                case TrackingKind.HelixRunClient:
+                case TrackingKind.HelixLogs:
                     {
                         var query = buildsRequest.Filter(Context.ModelTestResults);
-                        return query
-                            .Where(x => x.IsHelixTestResult)
+                        var request = new SearchHelixLogsRequest();
+                        request.ParseQueryString(modelTrackingIssue.SearchQuery);
+                        return request
+                            .Filter(query)
                             .Select(x => x.ModelBuild);
                     }
+#pragma warning disable 618
+                    // TODO: delete once these types are removed from the DB
+                case TrackingKind.HelixConsole:
+                case TrackingKind.HelixRunClient:
+                    throw null!;
+#pragma warning restore 618
                 default:
                     throw new InvalidOperationException($"Invalid kind {modelTrackingIssue.TrackingKind}");
             }

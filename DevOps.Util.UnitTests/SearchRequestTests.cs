@@ -5,11 +5,18 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace DevOps.Util.UnitTests
 {
     public class SearchRequestTests : StandardTestBase
     {
+        public SearchRequestTests(ITestOutputHelper testOutputHelper)
+            : base(testOutputHelper)
+        {
+
+        }
+
         [Fact]
         public async Task BuildResultSearches()
         {

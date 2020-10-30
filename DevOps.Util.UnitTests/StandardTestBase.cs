@@ -12,6 +12,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace DevOps.Util.UnitTests
 {
@@ -22,6 +23,7 @@ namespace DevOps.Util.UnitTests
         public TriageContextUtil TriageContextUtil { get; }
         public DevOpsServer Server { get; set; }
         public DotNetQueryUtil QueryUtil { get; set; }
+        public HelixServer HelixServer { get; set; }
         public TestableHttpMessageHandler TestableHttpMessageHandler { get; set; }
         public TestableLogger TestableLogger { get; set; }
         public TestableGitHubClientFactory TestableGitHubClientFactory { get; set; }
@@ -29,8 +31,9 @@ namespace DevOps.Util.UnitTests
         private int BuildCount { get; set; }
         private int TestRunCount { get; set; }
         private int GitHubIssueCount { get; set; }
+        private int HelixLogCount { get; set; }
 
-        public StandardTestBase()
+        public StandardTestBase(ITestOutputHelper testOutputHelper)
         {
             Connection = CreateInMemoryDatabase();
             var options = new DbContextOptionsBuilder<TriageContext>()
@@ -39,9 +42,12 @@ namespace DevOps.Util.UnitTests
             Context = new TriageContext(options);
             TriageContextUtil = new TriageContextUtil(Context);
             TestableHttpMessageHandler = new TestableHttpMessageHandler();
-            TestableLogger = new TestableLogger();
+            TestableLogger = new TestableLogger(testOutputHelper);
             TestableGitHubClientFactory = new TestableGitHubClientFactory();
-            Server = new DevOpsServer("random", httpClient: new HttpClient(TestableHttpMessageHandler));
+
+            var httpClient = new HttpClient(TestableHttpMessageHandler);
+            Server = new DevOpsServer("random", httpClient: httpClient);
+            HelixServer = new HelixServer(httpClient: httpClient);
             QueryUtil = new DotNetQueryUtil(Server);
 
             Context.Database.EnsureDeleted();
@@ -153,17 +159,29 @@ namespace DevOps.Util.UnitTests
             return def;
         }
 
-        public ModelTrackingIssue AddTrackingIssue(string data, ModelBuildDefinition? definition = null)
+        public ModelTrackingIssue AddTrackingIssue(
+            TrackingKind trackingKind,
+            string? title = null,
+            SearchTestsRequest? testsRequest = null,
+            SearchTimelinesRequest? timelinesRequest = null,
+            SearchBuildLogsRequest? buildLogsRequest = null,
+            SearchHelixLogsRequest? helixLogsRequest = null,
+            ModelBuildDefinition? definition = null)
         {
-            var parts = data.Split("|");
+            var query = testsRequest?.GetQueryString();
+            query ??= timelinesRequest?.GetQueryString();
+            query ??= buildLogsRequest?.GetQueryString();
+            query ??= helixLogsRequest?.GetQueryString();
+
             var trackingIssue = new ModelTrackingIssue()
             {
-                TrackingKind = (TrackingKind)Enum.Parse(typeof(TrackingKind), parts[0]),
-                SearchQuery = parts[1],
+                TrackingKind = trackingKind,
+                SearchQuery = query,
                 IsActive = true,
                 ModelBuildDefinition = definition,
-                IssueTitle = GetPartOrNull(parts, 2) ?? "Tracking Issue",
+                IssueTitle = title ?? $"Tracking Issue {trackingKind}",
             };
+
             Context.ModelTrackingIssues.Add(trackingIssue);
             return trackingIssue;
         }
@@ -199,6 +217,13 @@ namespace DevOps.Util.UnitTests
             };
             Context.ModelTestResults.Add(testResult);
             return testResult;
+        }
+
+        public void AddHelixLog(ModelTestResult testResult, HelixLogKind kind, string content)
+        {
+            var uri = $"https://localhost/runfo/{HelixLogCount++}/{kind}";
+            testResult.SetHelixLogUri(kind, uri);
+            TestableHttpMessageHandler.AddRaw(uri, content);
         }
 
         public ModelTrackingIssueMatch AddTrackingMatch(
@@ -239,7 +264,7 @@ namespace DevOps.Util.UnitTests
 
         public async Task TriageAll()
         {
-            var util = new TrackingIssueUtil(QueryUtil, TriageContextUtil, TestableLogger);
+            var util = new TrackingIssueUtil(HelixServer, QueryUtil, TriageContextUtil, TestableLogger);
             foreach (var modelBuildAttempt in await Context.ModelBuildAttempts.Include(x => x.ModelBuild).ToListAsync())
             {
                 await util.TriageAsync(modelBuildAttempt.GetBuildAttemptKey());
