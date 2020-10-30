@@ -97,6 +97,28 @@ namespace DevOps.Util.DotNet.Triage
                 testResultsUri: modelTestResult.HelixTestResultsUri);
         }
 
+        public static void SetHelixLogUri(this ModelTestResult modelTestResult, HelixLogKind kind, string uri)
+        {
+            modelTestResult.IsHelixTestResult = true;
+            switch (kind)
+            {
+                case HelixLogKind.Console:
+                    modelTestResult.HelixConsoleUri = uri;
+                    break;
+                case HelixLogKind.CoreDump:
+                    modelTestResult.HelixCoreDumpUri = uri;
+                    break;
+                case HelixLogKind.RunClient:
+                    modelTestResult.HelixRunClientUri = uri;
+                    break;
+                case HelixLogKind.TestResults:
+                    modelTestResult.HelixTestResultsUri = uri;
+                    break;
+                default:
+                    throw new Exception($"Invalid kind '{kind}'");
+            }
+        }
+
         #endregion
 
         #region HelixServer

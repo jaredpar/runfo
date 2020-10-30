@@ -120,10 +120,10 @@ namespace DevOps.Util.DotNet.Triage
                     isPresent = await TriageTimelineAsync(modelBuildAttempt, modelTrackingIssue).ConfigureAwait(false);
                     break;
                 case TrackingKind.HelixConsole:
-                    isPresent = await TriageHelixAsync(modelBuildAttempt, modelTrackingIssue, HelixLogKind.Console).ConfigureAwait(false);
+                    isPresent = await TriageHelixLogsAsync(modelBuildAttempt, modelTrackingIssue, HelixLogKind.Console).ConfigureAwait(false);
                     break;
                 case TrackingKind.HelixRunClient:
-                    isPresent = await TriageHelixAsync(modelBuildAttempt, modelTrackingIssue, HelixLogKind.RunClient).ConfigureAwait(false);
+                    isPresent = await TriageHelixLogsAsync(modelBuildAttempt, modelTrackingIssue, HelixLogKind.RunClient).ConfigureAwait(false);
                     break;
                 default:
                     throw new Exception($"Unknown value {modelTrackingIssue.TrackingKind}");
@@ -220,14 +220,21 @@ namespace DevOps.Util.DotNet.Triage
             return any;
         }
 
-        private async Task<bool> TriageHelixAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue, HelixLogKind helixLogKind)
+        private async Task<bool> TriageHelixLogsAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue, HelixLogKind helixLogKind)
         {
             Debug.Assert(modelBuildAttempt.ModelBuild is object);
             Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
             Debug.Assert(modelTrackingIssue.IsActive);
             Debug.Assert(modelTrackingIssue.SearchQuery is object);
 
-            var textRegex = DotNetQueryUtil.CreateSearchRegex(modelTrackingIssue.SearchQuery);
+            var request = new SearchHelixLogsRequest()
+            {
+                Limit = 100,
+            };
+            request.ParseQueryString(modelTrackingIssue.SearchQuery);
+            request.HelixLogKinds.Clear();
+            request.HelixLogKinds.Add(helixLogKind);
+
             var query = Context
                 .ModelTestResults
                 .Where(x => x.IsHelixTestResult && x.ModelBuild.Id == modelBuildAttempt.ModelBuild.Id && x.ModelTestRun.Attempt == modelBuildAttempt.Attempt);
@@ -237,12 +244,6 @@ namespace DevOps.Util.DotNet.Triage
                 .Select(x => x.GetHelixLogInfo())
                 .SelectNotNull()
                 .Select(x => (buildInfo, x));
-            var request = new SearchHelixLogsRequest()
-            {
-                Text = modelTrackingIssue.SearchQuery,
-                HelixLogKinds = new List<HelixLogKind>(new[] { helixLogKind }),
-                Limit = 100,
-            };
 
             var results = await HelixServer.SearchHelixLogsAsync(
                 helixLogInfos,

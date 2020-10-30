@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace DevOps.Util.UnitTests
 {
@@ -17,7 +18,8 @@ namespace DevOps.Util.UnitTests
     {
         public TrackingGitHubUtil TrackingGitHubUtil { get; }
 
-        public TrackingGitHubUtilTests()
+        public TrackingGitHubUtilTests(ITestOutputHelper testOutputHelper)
+            : base(testOutputHelper)
         {
             TrackingGitHubUtil = new TrackingGitHubUtil(TestableGitHubClientFactory, Context, new SiteLinkUtil("localhost"), TestableLogger);
         }
@@ -28,7 +30,13 @@ namespace DevOps.Util.UnitTests
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
             var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
             var timeline = AddTimelineIssue("windows|dog", attempt);
-            var tracking = AddTrackingIssue("Timeline|dog|Dog Search");
+            var tracking = AddTrackingIssue(
+                TrackingKind.Timeline,
+                title: "Dog Search",
+                timelinesRequest: new SearchTimelinesRequest()
+                {
+                    Text = "dog",
+                });
             var match = AddTrackingMatch(tracking, attempt, timelineIssue: timeline);
             var result = AddTrackingResult(tracking, attempt);
             await Context.SaveChangesAsync();
@@ -62,7 +70,14 @@ Build Result Summary
             AddTestData(5, "2020-07-29");
             AddTestData(6, "2020-07-29");
             AddTestData(7, "2020-07-05");
-            var tracking = AddTrackingIssue("Test|Util|Test Search");
+            var tracking = AddTrackingIssue(
+                TrackingKind.Test,
+                title: "Test Search",
+                testsRequest: new SearchTestsRequest()
+                {
+                    Name = "Util",
+                });
+
             await Context.SaveChangesAsync();
             await TriageAll();
 

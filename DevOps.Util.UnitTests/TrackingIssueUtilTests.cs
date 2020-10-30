@@ -11,6 +11,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace DevOps.Util.UnitTests
 {
@@ -18,7 +19,8 @@ namespace DevOps.Util.UnitTests
     {
         public TrackingIssueUtil TrackingIssueUtil { get; }
 
-        public TrackingIssueUtilTests()
+        public TrackingIssueUtilTests(ITestOutputHelper testOutputHelper)
+            : base(testOutputHelper)
         {
             TrackingIssueUtil = new TrackingIssueUtil(HelixServer, QueryUtil, TriageContextUtil, TestableLogger);
         }
@@ -29,7 +31,9 @@ namespace DevOps.Util.UnitTests
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
             var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
             var timeline = AddTimelineIssue("windows|dog", attempt);
-            var tracking = AddTrackingIssue("Timeline|#dog");
+            var tracking = AddTrackingIssue(
+                TrackingKind.Timeline,
+                timelinesRequest: new SearchTimelinesRequest() { Text = "#dog" });
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt);
@@ -50,7 +54,10 @@ namespace DevOps.Util.UnitTests
             var timeline1 = AddTimelineIssue("windows|dog", attempt1);
             var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def2));
             var timeline2 = AddTimelineIssue("windows|dog", attempt2);
-            var tracking = AddTrackingIssue("Timeline|#dog", def2);
+            var tracking = AddTrackingIssue(
+                TrackingKind.Timeline,
+                timelinesRequest: new SearchTimelinesRequest() { Text = "#dog" },
+                definition: def2);
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt1);
@@ -66,7 +73,9 @@ namespace DevOps.Util.UnitTests
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
             var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
             var timeline = AddTimelineIssue("windows|dog", attempt);
-            var tracking = AddTrackingIssue("Timeline|#dog");
+            var tracking = AddTrackingIssue(
+                TrackingKind.Timeline,
+                timelinesRequest: new SearchTimelinesRequest() { Text = "#dog" });
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt);
@@ -85,7 +94,9 @@ namespace DevOps.Util.UnitTests
             var testRun = AddTestRun("windows", attempt.ModelBuild);
             var testResult1 = AddTestResult("Util.Test1", testRun);
             var testResult2 = AddTestResult("Util.Test2", testRun);
-            var tracking = AddTrackingIssue($"Test|{search}");
+            var tracking = AddTrackingIssue(
+                TrackingKind.Test,
+                testsRequest: new SearchTestsRequest() { Name = search });
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt);
@@ -106,7 +117,10 @@ namespace DevOps.Util.UnitTests
             var timeline1 = AddTimelineIssue("windows|dog", attempt1);
             var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def2));
             var timeline2 = AddTimelineIssue("windows|dog", attempt2);
-            var tracking = AddTrackingIssue("Timeline|#dog", def2);
+            var tracking = AddTrackingIssue(
+                TrackingKind.Timeline,
+                timelinesRequest: new SearchTimelinesRequest() { Text = "#dog" },
+                definition: def2);
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt1.GetBuildAttemptKey(), tracking.Id);
@@ -125,13 +139,67 @@ namespace DevOps.Util.UnitTests
             var timeline1 = AddTimelineIssue("windows|dog", attempt1);
             var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def2));
             var timeline2 = AddTimelineIssue("windows|dog", attempt2);
-            var tracking = AddTrackingIssue("Timeline|#dog");
+            var tracking = AddTrackingIssue(
+                TrackingKind.Timeline,
+                timelinesRequest: new SearchTimelinesRequest() { Text = "#dog" });
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt1.GetBuildAttemptKey(), tracking.Id);
             await TrackingIssueUtil.TriageAsync(attempt2.GetBuildAttemptKey(), tracking.Id);
             var results = await Context.ModelTrackingIssueResults.ToListAsync();
             Assert.Equal(2, results.Count);
+        }
+
+        [Theory]
+        [InlineData(HelixLogKind.Console, TrackingKind.HelixConsole)]
+        [InlineData(HelixLogKind.RunClient, TrackingKind.HelixRunClient)]
+        public async Task SimpleHelixLogTrackingIssue(HelixLogKind kind, TrackingKind trackingKind)
+        {
+            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
+            var testRun = AddTestRun("windows", attempt.ModelBuild);
+            var testResult1 = AddTestResult("Util.Test1", testRun);
+            AddHelixLog(testResult1, kind, "the dog fetched the ball");
+            var testResult2 = AddTestResult("Util.Test2", testRun);
+            AddHelixLog(testResult2, kind, "the tree grew");
+
+            var tracking1 = AddTrackingIssue(
+                trackingKind,
+                helixLogsRequest: new SearchHelixLogsRequest()
+                {
+                    HelixLogKinds = { kind },
+                    Text = "the",
+                });
+            await TestSearch(tracking1, matchCount: 2, isPresent: true);
+
+            var tracking2 = AddTrackingIssue(
+                trackingKind,
+                helixLogsRequest: new SearchHelixLogsRequest()
+                {
+                    HelixLogKinds = { kind },
+                    Text = "dog",
+                });
+            await TestSearch(tracking2, matchCount: 1, isPresent: true);
+
+            var tracking3 = AddTrackingIssue(
+                trackingKind,
+                helixLogsRequest: new SearchHelixLogsRequest()
+                {
+                    HelixLogKinds = { kind },
+                    Text = "fish",
+                });
+            await TestSearch(tracking3, matchCount: 0, isPresent: false);
+
+            async Task TestSearch(ModelTrackingIssue issue, int matchCount, bool isPresent)
+            {
+                await Context.SaveChangesAsync();
+                await TrackingIssueUtil.TriageAsync(attempt, issue);
+                var matches = await Context.ModelTrackingIssueMatches.Where(x => x.ModelTrackingIssueId == issue.Id).ToListAsync();
+                Assert.Equal(matchCount, matches.Count);
+                var result = await Context.ModelTrackingIssueResults.Where(x => x.ModelTrackingIssueId == issue.Id).SingleAsync();
+                Assert.Equal(isPresent, result.IsPresent);
+            }
+
         }
     }
 }
