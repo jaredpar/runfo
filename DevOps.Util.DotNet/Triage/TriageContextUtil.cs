@@ -129,6 +129,8 @@ namespace DevOps.Util.DotNet.Triage
                 QueueTime = buildInfo.QueueTime,
                 BuildNumber = buildInfo.Number,
                 BuildResult = buildInfo.BuildResult,
+                DefinitionName = buildInfo.DefinitionName,
+                DefinitionId = buildInfo.DefinitionInfo.Id,
             };
             Context.ModelBuilds.Add(modelBuild);
             Context.SaveChanges();
@@ -467,9 +469,7 @@ namespace DevOps.Util.DotNet.Triage
 
             // Need to always include ModelBuildDefinition at this point because the GetBuildKey function
             // depends on that being there.
-            IQueryable<ModelBuild> query = Context
-                .ModelBuilds
-                .Include(x => x.ModelBuildDefinition);
+            IQueryable<ModelBuild> query = Context.ModelBuilds;
 
             query = descendingOrder
                 ? query.OrderByDescending(x => x.BuildNumber)
@@ -477,11 +477,11 @@ namespace DevOps.Util.DotNet.Triage
 
             if (definitionId is { } d)
             {
-                query = query.Where(x => x.ModelBuildDefinition.DefinitionId == definitionId);
+                query = query.Where(x => x.DefinitionId == definitionId);
             }
             else if (definitionName is object)
             {
-                query = query.Where(x => EF.Functions.Like(definitionName, x.ModelBuildDefinition.DefinitionName));
+                query = query.Where(x => x.DefinitionName == definitionName);
             }
 
             if (gitHubOrganization is object)

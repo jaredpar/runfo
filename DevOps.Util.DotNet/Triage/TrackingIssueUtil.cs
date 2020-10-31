@@ -70,17 +70,16 @@ namespace DevOps.Util.DotNet.Triage
 
         public async Task TriageAsync(ModelBuildAttempt modelBuildAttempt)
         {
-            if (modelBuildAttempt.ModelBuild is null ||
-                modelBuildAttempt.ModelBuild.ModelBuildDefinition is null)
+            if (modelBuildAttempt.ModelBuild is null)
             {
-                throw new Exception("The attempt must include the build and definition");
+                throw new Exception("The attempt must include the build");
             }
 
             Logger.LogInformation($"Triaging {modelBuildAttempt.ModelBuild.GetBuildResultInfo().BuildUri}");
 
             var trackingIssues = await (Context
                 .ModelTrackingIssues
-                .Where(x => x.IsActive && (x.ModelBuildDefinition == null || x.ModelBuildDefinition.Id == modelBuildAttempt.ModelBuild.ModelBuildDefinition.Id))
+                .Where(x => x.IsActive && (x.ModelBuildDefinition == null || x.ModelBuildDefinition.Id == modelBuildAttempt.ModelBuild.ModelBuildDefinitionId))
                 .ToListAsync()).ConfigureAwait(false);
 
             foreach (var trackingIssue in trackingIssues)
@@ -91,10 +90,9 @@ namespace DevOps.Util.DotNet.Triage
 
         public async Task TriageAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue)
         {
-            if (modelBuildAttempt.ModelBuild is null ||
-                modelBuildAttempt.ModelBuild.ModelBuildDefinition is null)
+            if (modelBuildAttempt.ModelBuild is null)
             {
-                throw new Exception("The attempt must include the build and definition");
+                throw new Exception("The attempt must include the build");
             }
 
             if (modelTrackingIssue.ModelBuildDefinitionId is { } definitionId &&
@@ -164,7 +162,6 @@ namespace DevOps.Util.DotNet.Triage
         private async Task<bool> TriageTestAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue)
         {
             Debug.Assert(modelBuildAttempt.ModelBuild is object);
-            Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
             Debug.Assert(modelTrackingIssue.IsActive);
             Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Test);
             Debug.Assert(modelTrackingIssue.SearchQuery is object);
@@ -198,7 +195,6 @@ namespace DevOps.Util.DotNet.Triage
         private async Task<bool> TriageTimelineAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue)
         {
             Debug.Assert(modelBuildAttempt.ModelBuild is object);
-            Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
             Debug.Assert(modelTrackingIssue.IsActive);
             Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Timeline);
             Debug.Assert(modelTrackingIssue.SearchQuery is object);
@@ -229,7 +225,6 @@ namespace DevOps.Util.DotNet.Triage
         private async Task<bool> TriageHelixLogsAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue)
         {
             Debug.Assert(modelBuildAttempt.ModelBuild is object);
-            Debug.Assert(modelBuildAttempt.ModelBuild.ModelBuildDefinition is object);
             Debug.Assert(modelTrackingIssue.IsActive);
             Debug.Assert(modelTrackingIssue.SearchQuery is object);
 
@@ -275,7 +270,6 @@ namespace DevOps.Util.DotNet.Triage
         private Task<ModelBuildAttempt> GetModelBuildAttemptAsync(BuildAttemptKey attemptKey) => TriageContextUtil
             .GetModelBuildAttemptQuery(attemptKey)
             .Include(x => x.ModelBuild)
-            .ThenInclude(x => x.ModelBuildDefinition)
             .SingleAsync();
     }
 }

@@ -109,6 +109,8 @@ namespace DevOps.Util.UnitTests
                 QueueTime = dt is object ? DateTime.ParseExact(dt, "yyyy-MM-dd", null) : (DateTime?)null,
                 BuildResult = br is object ? Enum.Parse<BuildResult>(br) : (BuildResult?)null,
                 ModelBuildDefinition = def,
+                DefinitionId = def.DefinitionId,
+                DefinitionName = def.DefinitionName,
             };
 
             Context.ModelBuilds.Add(build);

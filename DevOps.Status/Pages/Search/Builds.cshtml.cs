@@ -90,7 +90,6 @@ namespace DevOps.Status.Pages.Search
                 results = await request
                     .Filter(TriageContext.ModelBuilds)
                     .OrderByDescending(x => x.BuildNumber)
-                    .Include(x => x.ModelBuildDefinition)
                     .Skip(skipCount)
                     .Take(pageSize)
                     .ToListAsync();
@@ -114,7 +113,7 @@ namespace DevOps.Status.Pages.Search
                         Kind = buildInfo.PullRequestKey.HasValue ? "Pull Request" : "Rolling",
                         PullRequestKey = buildInfo.PullRequestKey,
                         BuildUri = buildInfo.BuildUri,
-                        Definition = x.ModelBuildDefinition.DefinitionName,
+                        Definition = buildInfo.DefinitionName,
                         DefinitionUri = buildInfo.DefinitionInfo.DefinitionUri,
                         TargetBranch = buildInfo.GitHubBuildInfo?.TargetBranch,
                         Queued = DateTimeUtil.ConvertDateTime(buildInfo.QueueTime)?.ToString("yyyy-MM-dd hh:mm tt"),

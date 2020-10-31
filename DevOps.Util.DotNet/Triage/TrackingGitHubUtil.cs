@@ -303,10 +303,10 @@ namespace DevOps.Util.DotNet.Triage
                 .Where(x => x.ModelTrackingIssueId == modelTrackingIssue.Id)
                 .Select(x => new
                 {
-                    AzureOrganization = x.ModelBuildAttempt.ModelBuild.ModelBuildDefinition.AzureOrganization,
-                    AzureProject = x.ModelBuildAttempt.ModelBuild.ModelBuildDefinition.AzureProject,
-                    DefinitionId = x.ModelBuildAttempt.ModelBuild.ModelBuildDefinition.DefinitionId,
-                    DefinitionName = x.ModelBuildAttempt.ModelBuild.ModelBuildDefinition.DefinitionName,
+                    AzureOrganization = x.ModelBuildAttempt.ModelBuild.AzureOrganization,
+                    AzureProject = x.ModelBuildAttempt.ModelBuild.AzureProject,
+                    DefinitionId = x.ModelBuildAttempt.ModelBuild.DefinitionId,
+                    DefinitionName = x.ModelBuildAttempt.ModelBuild.DefinitionName,
                     GitHubOrganization = x.ModelBuildAttempt.ModelBuild.GitHubOrganization,
                     GitHubRepository = x.ModelBuildAttempt.ModelBuild.GitHubRepository,
                     GitHubPullRequestNumber = x.ModelBuildAttempt.ModelBuild.PullRequestNumber,
@@ -356,10 +356,10 @@ namespace DevOps.Util.DotNet.Triage
                 .Take(limit)
                 .Select(x => new
                 {
-                    AzureOrganization = x.ModelBuildAttempt.ModelBuild.ModelBuildDefinition.AzureOrganization,
-                    AzureProject = x.ModelBuildAttempt.ModelBuild.ModelBuildDefinition.AzureProject,
-                    DefinitionId = x.ModelBuildAttempt.ModelBuild.ModelBuildDefinition.DefinitionId,
-                    DefinitionName = x.ModelBuildAttempt.ModelBuild.ModelBuildDefinition.DefinitionName,
+                    AzureOrganization = x.ModelBuildAttempt.ModelBuild.AzureOrganization,
+                    AzureProject = x.ModelBuildAttempt.ModelBuild.AzureProject,
+                    DefinitionId = x.ModelBuildAttempt.ModelBuild.DefinitionId,
+                    DefinitionName = x.ModelBuildAttempt.ModelBuild.DefinitionName,
                     GitHubOrganization = x.ModelBuildAttempt.ModelBuild.GitHubOrganization,
                     GitHubRepository = x.ModelBuildAttempt.ModelBuild.GitHubRepository,
                     GitHubPullRequestNumber = x.ModelBuildAttempt.ModelBuild.PullRequestNumber,

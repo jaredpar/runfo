@@ -35,8 +35,8 @@ namespace DevOps.Util.DotNet.Triage
                 modelBuild.AzureOrganization,
                 modelBuild.AzureProject,
                 modelBuild.BuildNumber,
-                modelBuild.ModelBuildDefinition.DefinitionId,
-                modelBuild.ModelBuildDefinition.DefinitionName,
+                modelBuild.DefinitionId,
+                modelBuild.DefinitionName,
                 GetGitHubBuildInfo(modelBuild));
 
         public static BuildResultInfo GetBuildResultInfo(this ModelBuild modelBuild) =>

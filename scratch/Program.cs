@@ -142,7 +142,8 @@ namespace Scratch
             // await MigrateTrackingToAssociatedIssues();
             // await PopulateTestResultsWithNewData(15, 200);
             // await TestTrackingIssueUtil(buildNumber: 865837, modelTrackingIssueId: 75);
-            await DumpDarcPublishData();
+            // await DumpDarcPublishData();
+            await PopulateDb(count: 100, definitionId: 686, includeTests: false, includeTriage: false);
         }
 
         internal async Task DumpDarcPublishData()
@@ -521,11 +522,11 @@ namespace Scratch
             await FunctionQueueUtil.QueueUpdateIssueAsync(issue, delay: null);
         }
 
-        internal async Task PopulateDb()
+        internal async Task PopulateDb(int count, int definitionId, bool includeTests, bool includeTriage)
         {
             var logger = CreateLogger();
             var trackingUtil = new TrackingIssueUtil(HelixServer, DotNetQueryUtil, TriageContextUtil, logger);
-            var builds = await DotNetQueryUtil.ListBuildsAsync(count: 20, definitions: new[] { 15 });
+            var builds = await DotNetQueryUtil.ListBuildsAsync(count: count, definitions: new[] { definitionId });
             foreach (var build in builds)
             {
                 try
@@ -533,9 +534,13 @@ namespace Scratch
                     var uri = build.GetBuildResultInfo().BuildUri;
                     Console.WriteLine($"Getting data for {uri}");
                     var modelDataUtil = new ModelDataUtil(DotNetQueryUtil, TriageContextUtil, logger);
-                    var buildAttemptKey = await modelDataUtil.EnsureModelInfoAsync(build, includeTests: true);
-                    Console.WriteLine($"Triaging {uri}");
-                    await trackingUtil.TriageAsync(buildAttemptKey);
+                    var buildAttemptKey = await modelDataUtil.EnsureModelInfoAsync(build, includeTests: includeTests);
+
+                    if (includeTriage)
+                    {
+                        Console.WriteLine($"Triaging {uri}");
+                        await trackingUtil.TriageAsync(buildAttemptKey);
+                    }
                 }
                 catch (Exception ex)
                 {

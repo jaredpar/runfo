@@ -36,7 +36,6 @@ namespace DevOps.Status.Controllers
                 var builds = await searchBuildsRequest
                     .Filter(TriageContextUtil.Context.ModelBuilds)
                     .OrderByDescending(x => x.BuildNumber)
-                    .Include(x => x.ModelBuildDefinition)
                     .Take(100)
                     .ToListAsync();
                 var list = builds
