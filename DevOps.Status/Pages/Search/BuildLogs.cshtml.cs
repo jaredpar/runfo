@@ -84,7 +84,7 @@ namespace DevOps.Status.Pages.Search
                 buildInfos = (await buildsRequest
                     .Filter(TriageContextUtil.Context.ModelBuilds)
                     .OrderByDescending(x => x.BuildNumber)
-                    .ToListAsync()).Select(x => x.GetBuildResultInfo()).ToList();
+                    .ToBuildResultInfoListAsync();
             }
             catch (SqlException ex) when (ex.IsTimeoutViolation())
             {
