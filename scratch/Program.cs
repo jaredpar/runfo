@@ -143,7 +143,49 @@ namespace Scratch
             // await PopulateTestResultsWithNewData(15, 200);
             // await TestTrackingIssueUtil(buildNumber: 865837, modelTrackingIssueId: 75);
             // await DumpDarcPublishData();
-            await PopulateDb(count: 100, definitionId: 686, includeTests: false, includeTriage: false);
+            // await PopulateDb(count: 100, definitionId: 686, includeTests: false, includeTriage: false);
+            await PopulateDefinitionColumns();
+        }
+
+        /// <summary>
+        /// This is a function to populate all of the <see cref="ModelBuildDefinition.DefinitionName"/> columns that
+        /// existed before the data was de-normalized.
+        /// </summary>
+        /// <returns></returns>
+        internal async Task PopulateDefinitionColumns()
+        {
+            var total = await TriageContext
+                    .ModelBuilds
+                    .Where(x => x.DefinitionName == "")
+                    .CountAsync();
+
+            Console.WriteLine($"Total {total:N0}");
+            var count = 0;
+            var increment = 500;
+            while (true)
+            {
+                Console.WriteLine($"Completed {count:N0} Remaining {(total - count):N0}");
+                var builds = await TriageContext
+                    .ModelBuilds
+                    .Where(x => x.DefinitionName == "")
+                    .Include(x => x.ModelBuildDefinition)
+                    .Take(increment)
+                    .ToListAsync();
+
+                if (builds.Count == 0)
+                {
+                    break;
+                }
+
+                foreach (var build in builds)
+                {
+                    build.DefinitionName = build.ModelBuildDefinition.DefinitionName;
+                    build.DefinitionId = build.ModelBuildDefinition.DefinitionId;
+                }
+
+                await TriageContext.SaveChangesAsync();
+                count += increment;
+            }
         }
 
         internal async Task DumpDarcPublishData()

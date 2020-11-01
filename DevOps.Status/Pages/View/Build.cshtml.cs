@@ -130,7 +130,7 @@ namespace DevOps.Status.Pages.View
                 {
                     TestResultsDisplay.BuildsRequest = new SearchBuildsRequest()
                     {
-                        Definition = modelBuild.ModelBuildDefinition.DefinitionName,
+                        Definition = modelBuild.DefinitionName,
                         Started = new DateRequestValue(dayQuery: 7)
                     };
                 }

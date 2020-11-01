@@ -57,6 +57,12 @@ namespace DevOps.Util.DotNet.Triage
         public static ModelBuildKind GetModelBuildKind(this ModelBuild modelBuild) =>
             TriageContextUtil.GetModelBuildKind(modelBuild.IsMergedPullRequest, modelBuild.PullRequestNumber);
 
+        public static DefinitionKey GetDefinitionKey(this ModelBuild modelBuild) =>
+            new DefinitionKey(
+                modelBuild.AzureOrganization,
+                modelBuild.AzureProject,
+                modelBuild.DefinitionId);
+
         #endregion
 
         #region ModelBuildAttempt
