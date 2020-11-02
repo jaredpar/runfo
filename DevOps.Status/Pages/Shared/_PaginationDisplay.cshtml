@@ -21,7 +21,27 @@
 
         @if (Model.TotalPageCount is { } count)
         {
-            @for (var i = 0; i < count; i++)
+            int window = 8;
+            int start = Model.PageNumber - window;
+            int end = Model.PageNumber + window;
+            if (start < 0)
+            {
+                end += -start;
+                start = 0;
+            }
+
+            if (end > count)
+            {
+                start = Math.Max(0, start - (end - count));
+                end = count;
+            }
+
+            @if (start != 0)
+            {
+                <li class="page-item disabled"><a class="page-link">...</a></li>
+            }
+
+            @for (var i = start; i < end; i++)
             {
                 @if (i == Model.PageNumber)
                 {
@@ -43,6 +63,11 @@
                            asp-route-pageNumber="@i">@i</a>
                     </li>
                 }
+            }
+
+            @if (end != count)
+            {
+                <li class="page-item disabled"><a class="page-link">...</a></li>
             }
         }
 

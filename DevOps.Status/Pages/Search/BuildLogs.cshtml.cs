@@ -81,7 +81,7 @@ namespace DevOps.Status.Pages.Search
             List<BuildResultInfo> buildInfos;
             try
             {
-                buildInfos = (await buildsRequest
+                buildInfos = await buildsRequest
                     .Filter(TriageContextUtil.Context.ModelBuilds)
                     .OrderByDescending(x => x.BuildNumber)
                     .ToBuildResultInfoListAsync();
