@@ -63,7 +63,6 @@ namespace DevOps.Status.Pages.View
             {
                 var modelBuild = await TriageContextUtil
                     .GetModelBuildQuery(buildKey)
-                    .Include(x => x.ModelBuildDefinition)
                     .Include(x => x.ModelGitHubIssues)
                     .FirstOrDefaultAsync();
                 if (modelBuild is null)
@@ -75,7 +74,7 @@ namespace DevOps.Status.Pages.View
                 BuildResult = modelBuild.BuildResult ?? BuildResult.None;
                 Repository = $"{modelBuild.GitHubOrganization}/{modelBuild.GitHubRepository}";
                 RepositoryUri = $"https://{modelBuild.GitHubOrganization}/{modelBuild.GitHubRepository}";
-                DefinitionName = modelBuild.ModelBuildDefinition.DefinitionName;
+                DefinitionName = modelBuild.DefinitionName;
                 TargetBranch = modelBuild.GitHubTargetBranch;
                 GitHubIssues.Clear();
                 GitHubIssues.AddRange(modelBuild.ModelGitHubIssues.Select(x => x.GetGitHubIssueKey()));
@@ -131,7 +130,7 @@ namespace DevOps.Status.Pages.View
                 {
                     TestResultsDisplay.BuildsRequest = new SearchBuildsRequest()
                     {
-                        Definition = modelBuild.ModelBuildDefinition.DefinitionName,
+                        Definition = modelBuild.DefinitionName,
                         Started = new DateRequestValue(dayQuery: 7)
                     };
                 }

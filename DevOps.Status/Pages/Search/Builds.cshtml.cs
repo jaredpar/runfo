@@ -84,16 +84,15 @@ namespace DevOps.Status.Pages.Search
                 TotalBuildCount / pageSize);
 
             var skipCount = PageNumber * pageSize;
-            List<ModelBuild> results;
+            List<BuildResultInfo> results;
             try
             {
                 results = await request
                     .Filter(TriageContext.ModelBuilds)
                     .OrderByDescending(x => x.BuildNumber)
-                    .Include(x => x.ModelBuildDefinition)
                     .Skip(skipCount)
                     .Take(pageSize)
-                    .ToListAsync();
+                    .ToBuildResultInfoListAsync();
             }
             catch (SqlException ex) when (ex.IsTimeoutViolation())
             {
@@ -104,20 +103,18 @@ namespace DevOps.Status.Pages.Search
             Builds = results
                 .Select(x =>
                 {
-                    var buildInfo = x.GetBuildResultInfo();
-                    var buildResult = x.BuildResult ?? BuildResult.None;
                     return new BuildData()
                     {
-                        BuildResult = buildResult,
-                        Result = buildResult.ToString(),
-                        BuildNumber = buildInfo.Number,
-                        Kind = buildInfo.PullRequestKey.HasValue ? "Pull Request" : "Rolling",
-                        PullRequestKey = buildInfo.PullRequestKey,
-                        BuildUri = buildInfo.BuildUri,
-                        Definition = x.ModelBuildDefinition.DefinitionName,
-                        DefinitionUri = buildInfo.DefinitionInfo.DefinitionUri,
-                        TargetBranch = buildInfo.GitHubBuildInfo?.TargetBranch,
-                        Queued = DateTimeUtil.ConvertDateTime(buildInfo.QueueTime)?.ToString("yyyy-MM-dd hh:mm tt"),
+                        BuildResult = x.BuildResult,
+                        Result = x.BuildResult.ToString(),
+                        BuildNumber = x.Number,
+                        Kind = x.PullRequestKey.HasValue ? "Pull Request" : "Rolling",
+                        PullRequestKey = x.PullRequestKey,
+                        BuildUri = x.BuildUri,
+                        Definition = x.DefinitionName,
+                        DefinitionUri = x.DefinitionInfo.DefinitionUri,
+                        TargetBranch = x.GitHubBuildInfo?.TargetBranch,
+                        Queued = DateTimeUtil.ConvertDateTime(x.QueueTime)?.ToString("yyyy-MM-dd hh:mm tt"),
                     };
                 })
                 .ToList();

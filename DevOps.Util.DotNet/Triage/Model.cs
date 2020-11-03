@@ -49,6 +49,28 @@ namespace DevOps.Util.DotNet.Triage
                 .Property(x => x.BuildResult)
                 .HasConversion<string>();
 
+            modelBuilder.Entity<ModelBuild>()
+                .Property(x => x.DefinitionName)
+                .HasDefaultValue("");
+
+            modelBuilder.Entity<ModelBuild>()
+                .HasIndex(x => x.StartTime);
+
+            modelBuilder.Entity<ModelBuild>()
+                .HasIndex(x => x.DefinitionId);
+
+            modelBuilder.Entity<ModelBuild>()
+                .HasIndex(x => x.DefinitionName);
+
+            modelBuilder.Entity<ModelBuild>()
+                .HasIndex(x => x.BuildResult);
+
+            modelBuilder.Entity<ModelBuild>()
+                .HasIndex(x => new { x.StartTime, x.DefinitionName });
+
+            modelBuilder.Entity<ModelBuild>()
+                .HasIndex(x => new { x.StartTime, x.DefinitionId });
+
             modelBuilder.Entity<ModelBuildAttempt>()
                 .HasIndex(x => new { x.Attempt, x.ModelBuildId })
                 .IsUnique();
@@ -96,6 +118,8 @@ namespace DevOps.Util.DotNet.Triage
         public const string GitHubRepositoryTypeName = "nvarchar(100)";
 
         public const string GitHubOrganizationTypeName = "nvarchar(100)";
+
+        public const string BuildDefinitionNameTypeName = "nvarchar(100)";
     }
 
     public class ModelBuildDefinition
@@ -106,6 +130,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public string AzureProject { get; set; }
 
+        [Column(TypeName=ModelConstants.BuildDefinitionNameTypeName)]
         public string DefinitionName { get; set; }
 
         public int DefinitionId { get; set; }
@@ -163,6 +188,18 @@ namespace DevOps.Util.DotNet.Triage
         /// </summary>
         [Column(TypeName="smalldatetime")]
         public DateTime? FinishTime { get; set; }
+
+        /// <summary>
+        /// De-normalized <see cref="ModelBuildDefinition.DefinitionName"/>
+        /// </summary>
+        [Column(TypeName=ModelConstants.BuildDefinitionNameTypeName)]
+        [Required]
+        public string DefinitionName { get; set; }
+
+        /// <summary>
+        /// De-normalized <see cref="ModelBuildDefinition.DefinitionId"/>
+        /// </summary>
+        public int DefinitionId { get; set; }
 
         public int ModelBuildDefinitionId { get; set; }
 

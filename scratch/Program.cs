@@ -142,7 +142,51 @@ namespace Scratch
             // await MigrateTrackingToAssociatedIssues();
             // await PopulateTestResultsWithNewData(15, 200);
             // await TestTrackingIssueUtil(buildNumber: 865837, modelTrackingIssueId: 75);
-            await DumpDarcPublishData();
+            // await DumpDarcPublishData();
+            // await PopulateDb(count: 100, definitionId: 686, includeTests: false, includeTriage: false);
+            // await PopulateDefinitionColumns();
+            await PopulateModelTrackingIssue("started:~2 result:failed", 85);
+        }
+
+        /// <summary>
+        /// This is a function to populate all of the <see cref="ModelBuildDefinition.DefinitionName"/> columns that
+        /// existed before the data was de-normalized.
+        /// </summary>
+        /// <returns></returns>
+        internal async Task PopulateDefinitionColumns()
+        {
+            var total = await TriageContext
+                    .ModelBuilds
+                    .Where(x => x.DefinitionName == "")
+                    .CountAsync();
+
+            Console.WriteLine($"Total {total:N0}");
+            var count = 0;
+            var increment = 500;
+            while (true)
+            {
+                Console.WriteLine($"Completed {count:N0} Remaining {(total - count):N0}");
+                var builds = await TriageContext
+                    .ModelBuilds
+                    .Where(x => x.DefinitionName == "")
+                    .Include(x => x.ModelBuildDefinition)
+                    .Take(increment)
+                    .ToListAsync();
+
+                if (builds.Count == 0)
+                {
+                    break;
+                }
+
+                foreach (var build in builds)
+                {
+                    build.DefinitionName = build.ModelBuildDefinition.DefinitionName;
+                    build.DefinitionId = build.ModelBuildDefinition.DefinitionId;
+                }
+
+                await TriageContext.SaveChangesAsync();
+                count += increment;
+            }
         }
 
         internal async Task DumpDarcPublishData()
@@ -181,6 +225,30 @@ namespace Scratch
             }
 
             File.WriteAllText(@"p:\temp\data.txt", builder.ToString());
+        }
+
+        internal async Task PopulateModelTrackingIssue(string buildQuery, int modelTrackingIssueId)
+        {
+            var request = new SearchBuildsRequest();
+            request.ParseQueryString(buildQuery);
+
+            var query = request.Filter(TriageContext.ModelBuilds)
+                .Include(x => x.ModelBuildAttempts);
+            var logger = CreateLogger();
+
+            foreach (var modelBuild in await query.ToListAsync())
+            {
+                foreach (var attempt in modelBuild.ModelBuildAttempts)
+                {
+                    Console.WriteLine($"Triage {attempt.GetBuildAttemptKey().BuildUri}");
+                    var trackingIssueUtil = new TrackingIssueUtil(HelixServer, DotNetQueryUtil, TriageContextUtil, logger);
+                    await trackingIssueUtil.TriageAsync(attempt.GetBuildAttemptKey(), modelTrackingIssueId);
+                }
+            }
+
+            await FunctionQueueUtil.QueueUpdateIssueAsync(
+                await TriageContext.ModelTrackingIssues.SingleAsync(x => x.Id == modelTrackingIssueId),
+                delay: null);
         }
 
         internal async Task TestTrackingIssueUtil(int buildNumber, int modelTrackingIssueId)
@@ -521,11 +589,11 @@ namespace Scratch
             await FunctionQueueUtil.QueueUpdateIssueAsync(issue, delay: null);
         }
 
-        internal async Task PopulateDb()
+        internal async Task PopulateDb(int count, int definitionId, bool includeTests, bool includeTriage)
         {
             var logger = CreateLogger();
             var trackingUtil = new TrackingIssueUtil(HelixServer, DotNetQueryUtil, TriageContextUtil, logger);
-            var builds = await DotNetQueryUtil.ListBuildsAsync(count: 20, definitions: new[] { 15 });
+            var builds = await DotNetQueryUtil.ListBuildsAsync(count: count, definitions: new[] { definitionId });
             foreach (var build in builds)
             {
                 try
@@ -533,9 +601,13 @@ namespace Scratch
                     var uri = build.GetBuildResultInfo().BuildUri;
                     Console.WriteLine($"Getting data for {uri}");
                     var modelDataUtil = new ModelDataUtil(DotNetQueryUtil, TriageContextUtil, logger);
-                    var buildAttemptKey = await modelDataUtil.EnsureModelInfoAsync(build, includeTests: true);
-                    Console.WriteLine($"Triaging {uri}");
-                    await trackingUtil.TriageAsync(buildAttemptKey);
+                    var buildAttemptKey = await modelDataUtil.EnsureModelInfoAsync(build, includeTests: includeTests);
+
+                    if (includeTriage)
+                    {
+                        Console.WriteLine($"Triaging {uri}");
+                        await trackingUtil.TriageAsync(buildAttemptKey);
+                    }
                 }
                 catch (Exception ex)
                 {

@@ -87,11 +87,11 @@ namespace DevOps.Util.DotNet.Triage
 
             if (definitionId is { } d)
             {
-                query = query.Where(convertPredicateFunc(x => x.ModelBuildDefinition.DefinitionId == definitionId));
+                query = query.Where(convertPredicateFunc(x => x.DefinitionId == definitionId));
             }
             else if (definitionName is object)
             {
-                query = query.Where(convertPredicateFunc(x => x.ModelBuildDefinition.DefinitionName == definitionName));
+                query = query.Where(convertPredicateFunc(x => x.DefinitionName == definitionName));
             }
 
             if (gitHubOrganization is object)

@@ -10,6 +10,7 @@ using DevOps.Util.DotNet;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Octokit;
+using Org.BouncyCastle.Math.EC.Rfc7748;
 
 namespace DevOps.Util.DotNet.Triage
 {
@@ -35,8 +36,8 @@ namespace DevOps.Util.DotNet.Triage
                 modelBuild.AzureOrganization,
                 modelBuild.AzureProject,
                 modelBuild.BuildNumber,
-                modelBuild.ModelBuildDefinition.DefinitionId,
-                modelBuild.ModelBuildDefinition.DefinitionName,
+                modelBuild.DefinitionId,
+                modelBuild.DefinitionName,
                 GetGitHubBuildInfo(modelBuild));
 
         public static BuildResultInfo GetBuildResultInfo(this ModelBuild modelBuild) =>
@@ -56,6 +57,12 @@ namespace DevOps.Util.DotNet.Triage
 
         public static ModelBuildKind GetModelBuildKind(this ModelBuild modelBuild) =>
             TriageContextUtil.GetModelBuildKind(modelBuild.IsMergedPullRequest, modelBuild.PullRequestNumber);
+
+        public static DefinitionKey GetDefinitionKey(this ModelBuild modelBuild) =>
+            new DefinitionKey(
+                modelBuild.AzureOrganization,
+                modelBuild.AzureProject,
+                modelBuild.DefinitionId);
 
         #endregion
 
@@ -274,6 +281,49 @@ namespace DevOps.Util.DotNet.Triage
         #endregion
 
         #region Misc
+
+        public static async Task<List<BuildResultInfo>> ToBuildResultInfoListAsync(this IQueryable<ModelBuild> query, BuildResult defaultBuildResult = BuildResult.None )
+        {
+            var results = await query
+                .Select(x => new
+                {
+                    x.AzureOrganization,
+                    x.AzureProject,
+                    x.GitHubOrganization,
+                    x.GitHubRepository,
+                    x.GitHubTargetBranch,
+                    x.PullRequestNumber,
+                    x.BuildNumber,
+                    x.BuildResult,
+                    x.DefinitionName,
+                    x.DefinitionId,
+                    x.QueueTime,
+                    x.StartTime,
+                    x.FinishTime,
+                })
+                .ToListAsync()
+                .ConfigureAwait(false);
+
+            var list = new List<BuildResultInfo>(results.Count);
+            foreach (var result in results)
+            {
+                var buildInfo = new BuildResultInfo(
+                    new BuildAndDefinitionInfo(
+                        result.AzureOrganization,
+                        result.AzureProject,
+                        result.BuildNumber,
+                        result.DefinitionId,
+                        result.DefinitionName,
+                        new GitHubBuildInfo(result.GitHubOrganization, result.GitHubRepository, result.PullRequestNumber, result.GitHubTargetBranch)),
+                    result.QueueTime,
+                    result.StartTime,
+                    result.FinishTime,
+                    result.BuildResult ?? defaultBuildResult);
+                list.Add(buildInfo);
+            }
+
+            return list;
+        }
 
         public static string GetDisplayString(this ModelBuildKind kind) => kind switch
         {
