@@ -144,7 +144,8 @@ namespace Scratch
             // await TestTrackingIssueUtil(buildNumber: 865837, modelTrackingIssueId: 75);
             // await DumpDarcPublishData();
             // await PopulateDb(count: 100, definitionId: 686, includeTests: false, includeTriage: false);
-            await PopulateDefinitionColumns();
+            // await PopulateDefinitionColumns();
+            await PopulateModelTrackingIssue("started:~2 result:failed", 85);
         }
 
         /// <summary>
@@ -224,6 +225,30 @@ namespace Scratch
             }
 
             File.WriteAllText(@"p:\temp\data.txt", builder.ToString());
+        }
+
+        internal async Task PopulateModelTrackingIssue(string buildQuery, int modelTrackingIssueId)
+        {
+            var request = new SearchBuildsRequest();
+            request.ParseQueryString(buildQuery);
+
+            var query = request.Filter(TriageContext.ModelBuilds)
+                .Include(x => x.ModelBuildAttempts);
+            var logger = CreateLogger();
+
+            foreach (var modelBuild in await query.ToListAsync())
+            {
+                foreach (var attempt in modelBuild.ModelBuildAttempts)
+                {
+                    Console.WriteLine($"Triage {attempt.GetBuildAttemptKey().BuildUri}");
+                    var trackingIssueUtil = new TrackingIssueUtil(HelixServer, DotNetQueryUtil, TriageContextUtil, logger);
+                    await trackingIssueUtil.TriageAsync(attempt.GetBuildAttemptKey(), modelTrackingIssueId);
+                }
+            }
+
+            await FunctionQueueUtil.QueueUpdateIssueAsync(
+                await TriageContext.ModelTrackingIssues.SingleAsync(x => x.Id == modelTrackingIssueId),
+                delay: null);
         }
 
         internal async Task TestTrackingIssueUtil(int buildNumber, int modelTrackingIssueId)
