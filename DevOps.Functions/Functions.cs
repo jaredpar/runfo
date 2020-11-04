@@ -70,7 +70,7 @@ namespace DevOps.Functions
         /// </summary>
         [FunctionName("build")]
         public async Task<IActionResult> OnBuild(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
+            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
             [Queue(QueueNameBuildComplete, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> completeCollector,
             ILogger logger)
         {
@@ -265,7 +265,7 @@ namespace DevOps.Functions
 
         [FunctionName("webhook-github")]
         public async Task<IActionResult> OnGitHubEvent(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest request,
+            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest request,
             [Queue(QueueNamePullRequestMerged, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> collector,
             ILogger logger)
         {
