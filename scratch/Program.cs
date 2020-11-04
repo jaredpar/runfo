@@ -76,7 +76,7 @@ namespace Scratch
     }
 
     internal sealed class ScratchUtil
-    { 
+    {
         public static string DefaultOrganization { get; set; } = "dnceng";
 
         public DevOpsServer DevOpsServer { get; set; }
@@ -132,7 +132,7 @@ namespace Scratch
                 .AddUserSecrets<Program>()
                 .AddEnvironmentVariables()
                 .Build();
-                return config;
+            return config;
         }
 
         internal static ILogger CreateLogger() => LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Scratch");
@@ -145,7 +145,39 @@ namespace Scratch
             // await DumpDarcPublishData();
             // await PopulateDb(count: 100, definitionId: 686, includeTests: false, includeTriage: false);
             // await PopulateDefinitionColumns();
-            await PopulateModelTrackingIssue("started:~2 result:failed", 85);
+            // await PopulateModelTrackingIssue("started:~2 result:failed", 85);
+            await RetriesWork();
+        }
+
+        internal async Task RetriesWork()
+        {
+            var definitions = new string[] { "runtime", "aspnetcore-ci", "roslyn" };
+            var date = DateTime.Now - TimeSpan.FromDays(14);
+            var builds = await TriageContext
+                .ModelBuilds
+                .Where(x => x.StartTime > date && x.IsMergedPullRequest)
+                .Include(x => x.ModelBuildAttempts)
+                .Select(x => new
+                {
+                    x.DefinitionName,
+                    x.BuildResult,
+                    AttemptCount = x.ModelBuildAttempts.Count()
+                })
+                .ToListAsync();
+
+            var builder = new StringBuilder();
+            builder.AppendLine("Build Definition,Pass on Attempt 1,Pass on any Attempt");
+            foreach (var group in builds.GroupBy(x => x.DefinitionName))
+            {
+                double firstAttemptCount = group.Count(x => IsAnySuccess(x.BuildResult) && x.AttemptCount == 1);
+                double anyAttemptCount = group.Count(x => IsAnySuccess(x.BuildResult) && x.AttemptCount >= 1);
+                double total = group.Count();
+                builder.AppendLine($"{group.Key},{(firstAttemptCount / total):P1},{(anyAttemptCount / total):P1}");
+            }
+
+            static bool IsAnySuccess(BuildResult? result) => result is BuildResult.Succeeded or BuildResult.PartiallySucceeded;
+
+            File.WriteAllText(@"p:\temp\data.csv", builder.ToString());
         }
 
         /// <summary>
