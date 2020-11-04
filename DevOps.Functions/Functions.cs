@@ -114,6 +114,12 @@ namespace DevOps.Functions
             }
 
             logger.LogInformation($"Gathering data for build {buildInfoMessage.ProjectName} {buildInfoMessage.BuildNumber}");
+            if (buildInfoMessage.ProjectName != "public")
+            {
+                logger.LogError($"Asked to gather data from {buildInfoMessage.ProjectName} which is not 'public'");
+                return;
+            }
+
             var build = await Server.GetBuildAsync(buildInfoMessage.ProjectName!, buildInfoMessage.BuildNumber);
             var queryUtil = new DotNetQueryUtil(Server);
             var modelDataUtil = new ModelDataUtil(queryUtil, TriageContextUtil, logger);
