@@ -77,6 +77,13 @@ namespace DevOps.Util.DotNet.Function
         }
     }
 
+    public sealed class TriageTrackingIssueRangeMessage
+    {
+        public int? ModelTrackingIssueId { get; set; }
+
+        public BuildAttemptMessage[]? BuildAttemptMessages { get; set; }
+    }
+
     public sealed class TriageTrackingIssueMessage
     {
         public BuildAttemptMessage? BuildAttemptMessage { get; set; }

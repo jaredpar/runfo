@@ -1,6 +1,6 @@
 ﻿@page "/search-doc"
 
-<h1>Build Search</h1>
+<h1><a id="build" href="#build" class="text-reset">Build Search</a></h1>
 
 <p>These are the various ways in which you can restrict the set of builds that are searched. This is used in both build searches as well as timeline and tests queries</p>
 
@@ -34,15 +34,15 @@
         </tr>
         <tr>
             <td class="font-weight-bold">started:2020-09-15</td>
-            <td>Filter to builds starting after the specified date</td>
+            <td>Filter to builds starting after the <a href="#date-query" class="text-reset">specified date</a></td>
         </tr>
         <tr>
             <td class="font-weight-bold">finished:2020-09-15</td>
-            <td>Filter to builds finished after the specified date</td>
+            <td>Filter to builds finished after the <a href="#date-query" class="text-reset">specified date</a></td>
         </tr>
         <tr>
             <td class="font-weight-bold">queued:2020-09-15</td>
-            <td>Filter to builds finished after the specified date</td>
+            <td>Filter to builds finished after the <a href="#date-query" class="text-reset">specified date</a></td>
         </tr>
         <tr>
             <td class="font-weight-bold">issues:false</td>
@@ -51,7 +51,7 @@
     </tbody>
 </table>
 
-<h1>Timeline Search</h1>
+<h1 class="mt-2"><a id="timeline" href="#timeline" class="text-reset">Timeline Search</a></h1>
 
 <p>These are the various ways in which you can restrict the timeline issues returned</p>
 
@@ -78,7 +78,7 @@
     </tbody>
 </table>
 
-<h1>Tests Search</h1>
+<h1 class="mt-2"><a id="test" href="#test" class="text-reset">Tests Search</a></h1>
 
 <p>These are the various ways in which you can restrict the tests returned</p>
 
@@ -105,7 +105,7 @@
     </tbody>
 </table>
 
-<h1>Build Log Search</h1>
+<h1 class="mt-2"><a id="build-log" href="#build-log" class="text-reset">Build Log Search</a></h1>
 
 <p>These are the various ways in which you can restrict the set of log files</p>
 
@@ -132,26 +132,7 @@
     </tbody>
 </table>
 
-<h1>Tracking Issue Search</h1>
-
-<p>These are the various ways in which you can restrict the set of tracking issues</p>
-
-<table class="table table-striped table-bordered">
-    <thead>
-        <tr>
-            <th class="column">Qualifier</th>
-            <th class="column">Example</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td class="font-weight-bold">definition:roslyn-ci</td>
-            <td>Filter to tracking issues against Roslyn</td>
-        </tr>
-    </tbody>
-</table>
-
-<h1>Helix Log Search</h1>
+<h1 class="mt-2"><a id="helix-log" href="#helix-log" class="text-reset">Helix Log Search</a></h1>
 
 <p>These are the various ways in which you can restrict the set of log files</p>
 
@@ -178,9 +159,27 @@
     </tbody>
 </table>
 
+<h1 class="mt-2"><a id="tracking" href="#timeline" class="text-reset">Tracking Issue Search</a></h1>
+
+<p>These are the various ways in which you can restrict the set of tracking issues</p>
+
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th class="column">Qualifier</th>
+            <th class="column">Example</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td class="font-weight-bold">definition:roslyn-ci</td>
+            <td>Filter to tracking issues against Roslyn</td>
+        </tr>
+    </tbody>
+</table>
 
 
-<h1>Date Queries</h1>
+<h1 class="mt-2"><a id="date-query" href="#date-query" class="text-reset">Date Queries</a></h1>
 
 <p>All date queries such as started and finished can be configured in the following ways</p>
 
@@ -194,15 +193,15 @@
     <tbody>
         <tr>
             <td class="font-weight-bold">started:YYYY-MM-DD</td>
-            <td>Filter to builds after the specified date</td>
+            <td>Filter to builds after the <a href="#date-query" class="text-reset">specified date</a></td>
         </tr>
         <tr>
             <td class="font-weight-bold">started:>YYYY-MM-DD</td>
-            <td>Filter to builds after the specified date</td>
+            <td>Filter to builds after the <a href="#date-query" class="text-reset">specified date</a></td>
         </tr>
         <tr>
             <td class="font-weight-bold">started:&lt;YYYY-MM-DD</td>
-            <td>Filter to builds before the specified date</td>
+            <td>Filter to builds before the <a href="#date-query" class="text-reset">specified date</a></td>
         </tr>
         <tr>
             <td class="font-weight-bold">started:~1</td>

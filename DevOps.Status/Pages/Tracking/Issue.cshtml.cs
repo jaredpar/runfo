@@ -56,6 +56,7 @@ namespace DevOps.Status.Pages.Tracking
         public string? GitHubIssueUri { get; set; }
         [BindProperty]
         public string? PopulateBuildsQuery { get; set; }
+        public int? PopulateCount { get; set; }
         public HitCountInfo HitCount { get; set; }
         public List<Result> Results { get; set; } = new List<Result>();
         public int ModelTrackingIssueId { get; set; }
@@ -84,7 +85,7 @@ namespace DevOps.Status.Pages.Tracking
             IsActive = issue.IsActive;
             Definition = issue.ModelBuildDefinition?.DefinitionName;
 
-            const int pageSize = 20;
+            const int pageSize = 10;
             var totalPages = await Context.ModelTrackingIssueMatches
                 .Where(x => x.ModelTrackingIssueId == issue.Id)
                 .CountAsync() / pageSize;
@@ -164,7 +165,7 @@ namespace DevOps.Status.Pages.Tracking
                     catch (Exception ex)
                     {
                         ErrorMessage = $"Cannot close GitHub issue {ex.Message}";
-                        return Page();
+                        return await OnGetCoreAsync();
                     }
                 }
 
@@ -184,20 +185,24 @@ namespace DevOps.Status.Pages.Tracking
                 if (!request.HasDefinition)
                 {
                     ErrorMessage = "Need to filter build results to a definition";
-                    return Page();
+                    return await OnGetCoreAsync();
                 }
 
-                await FunctionQueueUtil.QueueTriageBuildQuery(TriageContextUtil, modelTrackingIssue, request);
+                PopulateCount = await FunctionQueueUtil.QueueTriageBuildAttempts(TriageContextUtil, modelTrackingIssue, request);
                 await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, delay: TimeSpan.FromMinutes(1));
-                await OnGetAsync(id);
-                return Page();
+                return await OnGetCoreAsync();
             }
 
             async Task<IActionResult> UpdateAsync()
             {
                 modelTrackingIssue.IssueTitle = IssueTitle;
                 await Context.SaveChangesAsync();
-                await OnGetAsync(id);
+                return await OnGetCoreAsync();
+            }
+
+            async Task<IActionResult> OnGetCoreAsync()
+            {
+                await OnGetAsync(id, PaginationDisplay?.PageNumber ?? 0);
                 return Page();
             }
         }
