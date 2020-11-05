@@ -45,6 +45,14 @@
     </div>
 </form>
 
+
+@if (Model.PopulateCount is { } populateCount)
+{
+    <div class="alert alert-success">
+        <p>Queued @populateCount build attempts for triaging against this issue.</p>
+    </div>
+}
+
 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
 {
     <div class="alert alert-danger" role="alert">
@@ -96,7 +104,10 @@
     </tbody>
 </table>
 
-<partial name="../Shared/_PaginationDisplay" model="@Model.PaginationDisplay" />
+@if (Model.PaginationDisplay is { } display)
+{
+    <partial name="../Shared/_PaginationDisplay" model="@display" />
+}
 
 @if (Model.IsActive)
 {

@@ -3,6 +3,7 @@ using DevOps.Util.DotNet.Triage;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static DevOps.Util.DotNet.Function.FunctionConstants;
@@ -26,11 +27,15 @@ namespace DevOps.Util.DotNet.Function
             await queue.SendMessageEncodedAsync(text).ConfigureAwait(false);
         }
 
-        public async Task QueueTriageBuildAttemptAsync(BuildAttemptKey attemptKey, ModelTrackingIssue modelTrackingIssue)
+        public async Task QueueTriageBuildAttemptsAsync(ModelTrackingIssue modelTrackingIssue, IEnumerable<BuildAttemptKey> attemptKeys)
         {
-            var message = new TriageTrackingIssueMessage(attemptKey, modelTrackingIssue.Id);
+            var message = new TriageTrackingIssueRangeMessage()
+            {
+                ModelTrackingIssueId = modelTrackingIssue.Id,
+                BuildAttemptMessages = attemptKeys.Select(x => new BuildAttemptMessage(x)).ToArray(),
+            };
             var text = JsonConvert.SerializeObject(message);
-            var queue = new QueueClient(_connectionString, QueueNameTriageTrackingIssue);
+            var queue = new QueueClient(_connectionString, QueueNameTriageTrackingIssueRange);
             await queue.SendMessageEncodedAsync(text).ConfigureAwait(false);
         }
 

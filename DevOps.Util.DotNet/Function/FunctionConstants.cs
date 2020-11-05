@@ -11,6 +11,7 @@ namespace DevOps.Util.DotNet.Function
         public const string QueueNameTriageBuildAttempt = "triage-build-attempt";
         public const string QueueNameTriageBuild = "triage-build";
         public const string QueueNameTriageTrackingIssue = "triage-tracking-issue";
+        public const string QueueNameTriageTrackingIssueRange = "triage-tracking-issue-range";
         public const string QueueNamePullRequestMerged = "pull-request-merged";
         public const string QueueNameIssueUpdateManual = "issue-update-manual";
     }

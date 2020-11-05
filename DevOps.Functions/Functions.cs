@@ -23,6 +23,7 @@ using static DevOps.Util.DotNet.Function.FunctionConstants;
 using System.Diagnostics;
 using DevOps.Util.DotNet.Function;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 
 namespace DevOps.Functions
 {
@@ -165,6 +166,38 @@ namespace DevOps.Functions
             else
             {
                 logger.LogError($"Message not a valid build attempt key: {message}");
+            }
+        }
+
+        /// <summary>
+        /// This function will triage a tracking issue against a build attempt
+        /// </summary>
+        [FunctionName("triage-tracking-issue-range")]
+        public async Task TriageTrackingIssueRangeAsync(
+            [QueueTrigger(QueueNameTriageTrackingIssueRange, Connection = ConfigurationAzureBlobConnectionString)] string message,
+            [Queue(QueueNameTriageTrackingIssue, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> triageCollector,
+            ILogger logger)
+        {
+            var rangeMessage = JsonConvert.DeserializeObject<TriageTrackingIssueRangeMessage>(message);
+            if (rangeMessage.ModelTrackingIssueId is { } issueId && rangeMessage.BuildAttemptMessages is { } attemptMessages)
+            {
+                var list = new List<Task>();
+                foreach (var attemptMessage in attemptMessages)
+                {
+                    var triageMessage = new TriageTrackingIssueMessage()
+                    {
+                        ModelTrackingIssueId = issueId,
+                        BuildAttemptMessage = attemptMessage
+                    };
+                    var text = JsonConvert.SerializeObject(triageMessage);
+                    list.Add(triageCollector.AddAsync(text));
+                }
+
+                await Task.WhenAll(list);
+            }
+            else
+            {
+                logger.LogError($"Invalid message: {message}");
             }
         }
 
