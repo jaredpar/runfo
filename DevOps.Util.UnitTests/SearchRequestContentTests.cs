@@ -42,6 +42,9 @@ namespace DevOps.Util.UnitTests
         [InlineData("text:\"error\"", "text:\"error\"")]
         [InlineData("text:\"error and space\"", "text:\"error and space\"")]
         [InlineData("text:\"error and space\"   ", "text:\"error and space\"")]
+        [InlineData("displayName:Installer   ", "displayName:\"Installer\"")]
+        [InlineData("taskName:Installer   ", "taskName:\"Installer\"")]
+        [InlineData("taskName:Task displayName:Display", "displayName:\"Display\" taskName:\"Task\"")]
         [InlineData("error", "text:\"error\"")]
         [InlineData("text:error", "text:\"error\"")]
         public void TimelineRoundTrip(string toParse, string userQuery)

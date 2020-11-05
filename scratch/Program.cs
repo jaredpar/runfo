@@ -104,7 +104,7 @@ namespace Scratch
 
             var builder = new DbContextOptionsBuilder<TriageContext>();
             builder.UseSqlServer(configuration[DotNetConstants.ConfigurationSqlConnectionString]);
-            // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+            builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
             TriageContext = new TriageContext(builder.Options);
             TriageContextUtil = new TriageContextUtil(TriageContext);
 
@@ -139,11 +139,26 @@ namespace Scratch
 
         internal async Task Scratch()
         {
+            var buildRequest = new SearchBuildsRequest();
+            buildRequest.ParseQueryString("definition:runtime started:~3");
+            var timelineRequest = new SearchTimelinesRequest()
+            {
+                Text = "Error",
+                TaskName = "CmdLine",
+            };
+
+            var query = timelineRequest.Filter(buildRequest.Filter(TriageContext.ModelTimelineIssues));
+            var results = await query.ToListAsync();
+                
+
+
+
+
             // await MigrateTrackingToAssociatedIssues();
             // await PopulateTestResultsWithNewData(15, 200);
             // await TestTrackingIssueUtil(buildNumber: 865837, modelTrackingIssueId: 75);
             // await DumpDarcPublishData();
-            // await PopulateDb(count: 100, definitionId: 686, includeTests: false, includeTriage: false);
+            await PopulateDb(count: 100, definitionId: 686, includeTests: false, includeTriage: false);
             // await PopulateDefinitionColumns();
             // await PopulateModelTrackingIssue("started:~2 result:failed", 85);
             await RetriesWork();
@@ -175,7 +190,7 @@ namespace Scratch
                 builder.AppendLine($"{group.Key},{(firstAttemptCount / total):P1},{(anyAttemptCount / total):P1}");
             }
 
-            static bool IsAnySuccess(BuildResult? result) => result is BuildResult.Succeeded or BuildResult.PartiallySucceeded;
+            static bool IsAnySuccess(BuildResult? result) => result is { } r && (r == BuildResult.Succeeded || r == BuildResult.PartiallySucceeded);
 
             File.WriteAllText(@"p:\temp\data.csv", builder.ToString());
         }

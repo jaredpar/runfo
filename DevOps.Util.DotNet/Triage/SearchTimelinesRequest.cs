@@ -21,6 +21,8 @@ namespace DevOps.Util.DotNet.Triage
 
         public string? Text { get; set; }
         public string? JobName { get; set; }
+        public string? DisplayName { get; set; }
+        public string? TaskName { get; set; }
         public IssueType? Type { get; set; }
 
         public IQueryable<ModelTimelineIssue> Filter(IQueryable<ModelTimelineIssue> query)
@@ -33,6 +35,16 @@ namespace DevOps.Util.DotNet.Triage
             if (!string.IsNullOrEmpty(JobName))
             {
                 query = query.Where(x => x.JobName.Contains(JobName));
+            }
+
+            if (!string.IsNullOrEmpty(TaskName))
+            {
+                query = query.Where(x => x.TaskName.Contains(TaskName));
+            }
+
+            if (!string.IsNullOrEmpty(DisplayName))
+            {
+                query = query.Where(x => x.RecordName.Contains(DisplayName));
             }
 
             // Keep this in sync with logic in SearchTestsRequest
@@ -73,6 +85,16 @@ namespace DevOps.Util.DotNet.Triage
                 Append($"jobName:\"{JobName}\"");
             }
 
+            if (!string.IsNullOrEmpty(DisplayName))
+            {
+                Append($"displayName:\"{DisplayName}\"");
+            }
+
+            if (!string.IsNullOrEmpty(TaskName))
+            {
+                Append($"taskName:\"{TaskName}\"");
+            }
+
             if (Type is { } type)
             {
                 Append($"type:{type}");
@@ -108,6 +130,12 @@ namespace DevOps.Util.DotNet.Triage
                         break;
                     case "jobname":
                         JobName = tuple.Value.Trim('"');
+                        break;
+                    case "displayname":
+                        DisplayName = tuple.Value.Trim('"');
+                        break;
+                    case "taskname":
+                        TaskName = tuple.Value.Trim('"');
                         break;
                     case "type":
                         Type = tuple.Value.ToLower() switch
