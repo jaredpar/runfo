@@ -439,7 +439,7 @@ namespace DevOps.Util
         public TaskResult Result { get; set; }
         public string ResultCode { get; set; }
         public string StartTime { get; set; }
-        public TaskReference Task { get; set; }
+        public TaskReference? Task { get; set; }
         public string Url { get; set; }
         public int WarningCount { get; set; }
         public string WorkerName { get; set; }

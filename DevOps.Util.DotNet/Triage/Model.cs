@@ -115,10 +115,8 @@ namespace DevOps.Util.DotNet.Triage
 
     public static class ModelConstants
     {
-        public const string GitHubRepositoryTypeName = "nvarchar(100)";
-
         public const string GitHubOrganizationTypeName = "nvarchar(100)";
-
+        public const string GitHubRepositoryTypeName = "nvarchar(100)";
         public const string BuildDefinitionNameTypeName = "nvarchar(100)";
     }
 
@@ -265,6 +263,9 @@ namespace DevOps.Util.DotNet.Triage
         public string JobName { get; set; }
 
         public string RecordName { get; set; }
+
+        [Column(TypeName = "nvarchar(100)")]
+        public string TaskName { get; set; }
 
         public string RecordId { get; set; }
 

@@ -223,6 +223,7 @@ namespace DevOps.Util.DotNet.Triage
                         Attempt = attempt,
                         JobName = job.Name,
                         RecordName = record.Name,
+                        TaskName = record.Task?.Name ?? "",
                         RecordId = record.Id,
                         Message = issue.Message,
                         ModelBuild = modelBuild,
