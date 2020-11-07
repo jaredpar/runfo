@@ -110,11 +110,11 @@ namespace DevOps.Util.DotNet.Triage
 
     public readonly struct DateRequestValue : IRequestValue<RelationalKind>
     {
-        public DateTimeOffset DateTime { get; }
+        public DateTime DateTime { get; }
         public RelationalKind Kind { get; }
         public int? DayQuery { get; }
 
-        public DateRequestValue(DateTimeOffset dateTime, RelationalKind kind)
+        public DateRequestValue(DateTime dateTime, RelationalKind kind)
         {
             DateTime = dateTime;
             Kind = kind;
@@ -123,7 +123,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public DateRequestValue(int dayQuery, RelationalKind kind = RelationalKind.GreaterThan)
         {
-            DateTime = System.DateTimeOffset.UtcNow - TimeSpan.FromDays(dayQuery);
+            DateTime = System.DateTime.UtcNow - TimeSpan.FromDays(dayQuery);
             Kind = kind;
             DayQuery = dayQuery;
         }
@@ -157,7 +157,7 @@ namespace DevOps.Util.DotNet.Triage
 
             var dt = System.DateTime.ParseExact(data, "yyyy-M-d", CultureInfo.InvariantCulture);
             dt = System.DateTime.SpecifyKind(dt, DateTimeKind.Local);
-            return new DateRequestValue(new DateTimeOffset(dt.ToUniversalTime()), kind);
+            return new DateRequestValue(dt.ToUniversalTime(), kind);
         }
     }
 
