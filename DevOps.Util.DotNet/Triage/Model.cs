@@ -115,17 +115,22 @@ namespace DevOps.Util.DotNet.Triage
 
     public static class ModelConstants
     {
+        public const string ModelBuildIdTypeName = "nvarchar(100)";
+        public const string BuildDefinitionNameTypeName = "nvarchar(100)";
         public const string GitHubOrganizationTypeName = "nvarchar(100)";
         public const string GitHubRepositoryTypeName = "nvarchar(100)";
-        public const string BuildDefinitionNameTypeName = "nvarchar(100)";
+        public const string AzureOrganizationTypeName = "nvarchar(100)";
+        public const string AzureProjectTypeName = "nvarchar(100)";
     }
 
     public class ModelBuildDefinition
     {
         public int Id { get; set; }
 
+        [Column(TypeName=ModelConstants.AzureOrganizationTypeName)]
         public string AzureOrganization { get; set; }
 
+        [Column(TypeName=ModelConstants.AzureProjectTypeName)]
         public string AzureProject { get; set; }
 
         [Column(TypeName=ModelConstants.BuildDefinitionNameTypeName)]
@@ -136,13 +141,15 @@ namespace DevOps.Util.DotNet.Triage
 
     public class ModelBuild
     {
-        [Column(TypeName="nvarchar(100)")]
+        [Column(TypeName=ModelConstants.ModelBuildIdTypeName)]
         public string Id { get; set; }
 
         public int BuildNumber { get; set; }
 
+        [Column(TypeName=ModelConstants.AzureOrganizationTypeName)]
         public string AzureOrganization { get; set; }
 
+        [Column(TypeName=ModelConstants.AzureOrganizationTypeName)]
         public string AzureProject { get; set; }
 
         [Column(TypeName=ModelConstants.GitHubOrganizationTypeName)]
@@ -160,6 +167,7 @@ namespace DevOps.Util.DotNet.Triage
         /// It is possible for this to be null. There are some types of builds for which there is not a logical target
         /// branch
         /// </summary>
+        [Column(TypeName="nvarchar(100)")]
         public string GitHubTargetBranch { get; set; }
 
         public bool IsMergedPullRequest { get; set; }
@@ -220,7 +228,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public int JobFailedCount { get; set; }
 
-        [Column(TypeName="nvarchar(100)")]
+        [Column(TypeName=ModelConstants.ModelBuildIdTypeName)]
         public string ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
@@ -242,7 +250,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public BuildResult BuildResult { get; set; }
 
-        [Column(TypeName="nvarchar(100)")]
+        [Column(TypeName=ModelConstants.ModelBuildIdTypeName)]
         public string ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
@@ -274,7 +282,7 @@ namespace DevOps.Util.DotNet.Triage
         [Column(TypeName = "nvarchar(12)")]
         public IssueType IssueType { get; set; }
 
-        [Column(TypeName = "nvarchar(100)")]
+        [Column(TypeName=ModelConstants.ModelBuildIdTypeName)]
         public string ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
@@ -288,8 +296,10 @@ namespace DevOps.Util.DotNet.Triage
     {
         public int Id { get; set; }
 
+        [Column(TypeName=ModelConstants.AzureOrganizationTypeName)]
         public string AzureOrganization { get; set; }
 
+        [Column(TypeName=ModelConstants.AzureOrganizationTypeName)]
         public string AzureProject { get; set; }
 
         public int TestRunId { get; set; }
@@ -298,7 +308,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public string Name { get; set; }
 
-        [Column(TypeName = "nvarchar(100)")]
+        [Column(TypeName=ModelConstants.ModelBuildIdTypeName)]
         public string ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
@@ -342,7 +352,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public ModelTestRun ModelTestRun { get; set; }
 
-        [Column(TypeName = "nvarchar(100)")]
+        [Column(TypeName=ModelConstants.ModelBuildIdTypeName)]
         public string ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
@@ -494,7 +504,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public int Number { get; set; }
 
-        [Column(TypeName="nvarchar(100)")]
+        [Column(TypeName=ModelConstants.ModelBuildIdTypeName)]
         public string ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }

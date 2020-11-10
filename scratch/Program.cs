@@ -58,7 +58,7 @@ namespace Scratch
                     ? "Using sql dev"
                     : "Using sql production";
                 Console.WriteLine(message);
-                builder.UseSqlServer(connectionString);
+                builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(10).TotalSeconds));
             }
         }
     }
