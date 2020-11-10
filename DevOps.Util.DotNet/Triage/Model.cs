@@ -268,13 +268,16 @@ namespace DevOps.Util.DotNet.Triage
 
         public int Attempt { get; set; }
 
+        [Column(TypeName = "nvarchar(200)")]
         public string JobName { get; set; }
 
+        [Column(TypeName = "nvarchar(200)")]
         public string RecordName { get; set; }
 
         [Column(TypeName = "nvarchar(100)")]
         public string TaskName { get; set; }
 
+        [Column(TypeName = "nvarchar(100)")]
         public string RecordId { get; set; }
 
         public string Message { get; set; }
