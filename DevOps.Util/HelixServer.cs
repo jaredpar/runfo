@@ -15,9 +15,11 @@ namespace DevOps.Util
     {
         private readonly DevOpsHttpClient _client;
         private readonly AuthorizationToken _token;
+        private readonly string _helixBaseUri;
 
-        public HelixServer(string? token = null, HttpClient? httpClient = null)
+        public HelixServer(string? helixBaseUri = null, string? token = null, HttpClient? httpClient = null)
         {
+            _helixBaseUri = string.IsNullOrEmpty(helixBaseUri) ? "https://helix.dot.net/" : helixBaseUri;
             _token = string.IsNullOrEmpty(token) ?
                 default : new AuthorizationToken(AuthorizationKind.PersonalAccessToken, token);
             _client = new DevOpsHttpClient(httpClient: httpClient);
@@ -30,13 +32,13 @@ namespace DevOps.Util
                 downloadDir = Path.Combine(Environment.CurrentDirectory, downloadDir);
             }
 
-            IHelixApi helixApi = _token.IsNone ? ApiFactory.GetAnonymous() : ApiFactory.GetAuthenticated(_token.Token);
+            IHelixApi helixApi = _token.IsNone ? ApiFactory.GetAnonymous(_helixBaseUri) : ApiFactory.GetAuthenticated(_helixBaseUri, _token.Token);
             JobDetails jobDetails = await helixApi.Job.DetailsAsync(jobId).ConfigureAwait(false);
             string? jobListFile = jobDetails.JobList;
 
             if (string.IsNullOrEmpty(jobListFile))
             {
-                throw new ArgumentException($"Couldn't find job list for job {jobId}, if it is an internal job, please use a helix access token from https://helix.dot.net/Account/Tokens");
+                throw new ArgumentException($"Couldn't find job list for job {jobId}, if it is an internal job, please use a helix access token from {_helixBaseUri}Account/Tokens");
             }
 
             using MemoryStream memoryStream = await _client.DownloadFileAsync(jobListFile).ConfigureAwait(false);
