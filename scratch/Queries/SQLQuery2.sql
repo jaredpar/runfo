@@ -89,3 +89,4 @@ ORDER BY [t].[BuildNumber] DESC
 -- DROP INDEX IX_Manual_ModelBuilds_StartTime ON ModelBuilds
 -- CREATE INDEX IX_Manual_ModelBuildDefinitions_DefinitionId ON ModelBuildDefinitions (DefinitionId)
 -- CREATE INDEX IX_Manual_ModelBuildDefinitions_DefinitionName ON ModelBuildDefinitions (DefinitionName)
+

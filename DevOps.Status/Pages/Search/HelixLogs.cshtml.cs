@@ -52,7 +52,7 @@ namespace DevOps.Status.Pages.Search
 
         public async Task OnGet()
         {
-            const int pageSize = 50;
+            const int pageSize = 10;
 
             ErrorMessage = null;
 
@@ -95,23 +95,33 @@ namespace DevOps.Status.Pages.Search
 
             try
             {
-                IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults.Where(x => x.IsHelixTestResult);
+                IQueryable<ModelBuild> query = TriageContextUtil.Context.ModelBuilds;
                 query = buildsRequest.Filter(query);
                 var totalBuildCount = await query.CountAsync();
 
-                var modelResults = await query
+                var modelBuildInfoList = await query
                     .Skip(PageNumber * pageSize)
                     .Take(pageSize)
                     .Select(x => new
                     {
-                        x.ModelBuild.BuildNumber,
-                        x.ModelBuild.AzureOrganization,
-                        x.ModelBuild.AzureProject,
-                        x.ModelBuild.StartTime,
-                        x.ModelBuild.GitHubOrganization,
-                        x.ModelBuild.GitHubRepository,
-                        x.ModelBuild.GitHubTargetBranch,
-                        x.ModelBuild.PullRequestNumber,
+                        x.Id,
+                        x.BuildNumber,
+                        x.AzureOrganization,
+                        x.AzureProject,
+                        x.StartTime,
+                        x.GitHubOrganization,
+                        x.GitHubRepository,
+                        x.GitHubTargetBranch,
+                        x.PullRequestNumber,
+                    })
+                    .ToListAsync();
+
+                var modelBuildIds = modelBuildInfoList.Select(x => x.Id).ToList();
+                var modelResults = await TriageContextUtil.Context.ModelTestResults
+                    .Where(x => modelBuildIds.Contains(x.ModelBuildId))
+                    .Select(x => new
+                    {
+                        x.ModelBuildId,
                         x.HelixConsoleUri,
                         x.HelixCoreDumpUri,
                         x.HelixRunClientUri,
@@ -120,14 +130,18 @@ namespace DevOps.Status.Pages.Search
                     .ToListAsync();
 
                 var toQuery = modelResults
-                    .Select(x => (
-                        new BuildInfo(x.AzureOrganization, x.AzureProject, x.BuildNumber,
-                            new GitHubBuildInfo(x.GitHubOrganization, x.GitHubRepository, x.PullRequestNumber, x.GitHubTargetBranch)),
-                        new HelixLogInfo(
-                            runClientUri: x.HelixRunClientUri,
-                            consoleUri: x.HelixConsoleUri,
-                            coreDumpUri: x.HelixCoreDumpUri,
-                            testResultsUri: x.HelixTestResultsUri)));
+                    .Select(x =>
+                    {
+                        var b = modelBuildInfoList.First(b => b.Id == x.ModelBuildId);
+                        return
+                            (new BuildInfo(b.AzureOrganization, b.AzureProject, b.BuildNumber,
+                                new GitHubBuildInfo(b.GitHubOrganization, b.GitHubRepository, b.PullRequestNumber, b.GitHubTargetBranch)),
+                                new HelixLogInfo(
+                                    runClientUri: x.HelixRunClientUri,
+                                    consoleUri: x.HelixConsoleUri,
+                                    coreDumpUri: x.HelixCoreDumpUri,
+                                    testResultsUri: x.HelixTestResultsUri));
+                    });
 
                 var helixServer = new HelixServer();
                 var errorBuilder = new StringBuilder();
@@ -160,7 +174,7 @@ namespace DevOps.Status.Pages.Search
                     },
                     PageNumber,
                     totalBuildCount / pageSize);
-                BuildResultText = $"Results for {PageNumber * pageSize}-{(PageNumber * pageSize) + pageSize} of {totalBuildCount} builds";
+                BuildResultText = $"Results for builds {PageNumber * pageSize}-{(PageNumber * pageSize) + pageSize} of {totalBuildCount}";
                 DidSearch = true;
             }
             catch (SqlException ex) when (ex.IsTimeoutViolation())

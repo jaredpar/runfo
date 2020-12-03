@@ -85,25 +85,6 @@ namespace DevOps.Util.DotNet.Triage
                 throw new Exception($"Cannot specify {nameof(definitionId)} and {nameof(definitionName)}");
             }
 
-            if (definitionId is { } d)
-            {
-                query = query.Where(convertPredicateFunc(x => x.DefinitionId == definitionId));
-            }
-            else if (definitionName is object)
-            {
-                query = query.Where(convertPredicateFunc(x => x.DefinitionName == definitionName));
-            }
-
-            if (gitHubOrganization is object)
-            {
-                query = query.Where(convertPredicateFunc(x => x.GitHubOrganization == gitHubOrganization));
-            }
-
-            if (gitHubRepository is object)
-            {
-                query = query.Where(convertPredicateFunc(x => x.GitHubRepository == gitHubRepository));
-            }
-
             if (Queued is { } queued)
             {
                 query = queued.Kind switch
@@ -133,6 +114,29 @@ namespace DevOps.Util.DotNet.Triage
                     _ => query
                 };
             }
+
+            // It's important that the definition predicates occur after the time predicates because that matches the way 
+            // the indexes are setup on the builds table. Flipping this will cause the queries to miss the index
+
+            if (definitionId is { } d)
+            {
+                query = query.Where(convertPredicateFunc(x => x.DefinitionId == definitionId));
+            }
+            else if (definitionName is object)
+            {
+                query = query.Where(convertPredicateFunc(x => x.DefinitionName == definitionName));
+            }
+
+            if (gitHubOrganization is object)
+            {
+                query = query.Where(convertPredicateFunc(x => x.GitHubOrganization == gitHubOrganization));
+            }
+
+            if (gitHubRepository is object)
+            {
+                query = query.Where(convertPredicateFunc(x => x.GitHubRepository == gitHubRepository));
+            }
+
 
             if (TargetBranch is { } targetBranch)
             {
