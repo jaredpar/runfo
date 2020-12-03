@@ -4,14 +4,16 @@ using DevOps.Util.DotNet.Triage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace DevOps.Util.DotNet.Triage.Migrations
 {
     [DbContext(typeof(TriageContext))]
-    partial class TriageContextModelSnapshot : ModelSnapshot
+    [Migration("20201110160512_BuildStringTypes")]
+    partial class BuildStringTypes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -321,7 +323,7 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                         .HasDefaultValue("Warning");
 
                     b.Property<string>("JobName")
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Message")
                         .HasColumnType("nvarchar(max)");
@@ -333,10 +335,10 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("RecordId")
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("RecordName")
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TaskName")
                         .HasColumnType("nvarchar(100)");
