@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata.Ecma335;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -71,9 +72,12 @@ namespace DevOps.Util.DotNet
         public string JobName { get; }
         public TimelineRecord Record { get; }
         public BuildLogReference BuildLogReference { get; }
-        public string Line { get; }
+        public string? Line { get; }
 
-        public SearchBuildLogsResult(BuildResultInfo buildInfo, string jobName, TimelineRecord record, BuildLogReference buildLogReference, string line)
+        [MemberNotNullWhen(true, nameof(Line))]
+        public bool IsMatch => Line is object;
+
+        public SearchBuildLogsResult(BuildResultInfo buildInfo, string jobName, TimelineRecord record, BuildLogReference buildLogReference, string? line = null)
         {
             BuildInfo = buildInfo;
             JobName = jobName;
@@ -243,13 +247,13 @@ namespace DevOps.Util.DotNet
             var nameRegex = CreateSearchRegex(request.LogName);
             var textRegex = CreateSearchRegex(request.Text);
 
+            var logSet = new HashSet<string>();
             var list = new List<(BuildResultInfo BuildInfo, TimelineTree Tree, TimelineRecord TimelineRecord, BuildLogReference BuildLogReference)>();
             foreach (var buildInfo in builds)
             {
                 try
                 {
-                    var timeline = await Server.GetTimelineAsync(buildInfo.Project, buildInfo.Number).ConfigureAwait(false);
-                    if (timeline is object)
+                    foreach (var timeline in await Server.GetTimelineAttemptsAsync(buildInfo.Project, buildInfo.Number))
                     {
                         var tree = TimelineTree.Create(timeline);
                         var records = timeline.Records.Where(r => nameRegex is null || nameRegex.IsMatch(r.Name));
@@ -284,21 +288,20 @@ namespace DevOps.Util.DotNet
                         : null;
                     return (Query: x, Line: line);
                 });
+
             var results = new List<SearchBuildLogsResult>();
             foreach (var task in resultTasks)
             {
                 try
                 {
                     var result = await task.ConfigureAwait(false);
-                    if (result.Line is object)
+                    string jobName = "";
+                    if (result.Query.Tree.TryGetJob(result.Query.TimelineRecord, out var jobRecord))
                     {
-                        string jobName = "";
-                        if (result.Query.Tree.TryGetJob(result.Query.TimelineRecord, out var jobRecord))
-                        {
-                            jobName = jobRecord.Name;
-                        }    
-                        results.Add(new SearchBuildLogsResult(result.Query.BuildInfo, jobName, result.Query.TimelineRecord, result.Query.BuildLogReference, result.Line));
-                    }
+                        jobName = jobRecord.Name;
+                    }    
+
+                    results.Add(new SearchBuildLogsResult(result.Query.BuildInfo, jobName, result.Query.TimelineRecord, result.Query.BuildLogReference, result.Line));
                 }
                 catch (Exception ex)
                 {
@@ -320,6 +323,11 @@ namespace DevOps.Util.DotNet
             if (stream is null)
             {
                 yield break;
+            }
+
+            await foreach (var match in SearchFileAsync(stream, regex, onError))
+            {
+                yield return match;
             }
         }
 

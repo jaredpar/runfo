@@ -139,6 +139,22 @@ namespace Scratch
 
         internal async Task Scratch()
         {
+
+            var buildInfo = (await DevOpsServer.GetBuildAsync("public", 906787)).GetBuildResultInfo();
+            var results = await DotNetQueryUtil.SearchBuildLogsAsync(
+                new[] { buildInfo },
+                new SearchBuildLogsRequest()
+                {
+                    LogName = "Test_Windows_CoreClr_Release",
+                    Text = "Internal CLR"
+                },
+                ex => Console.WriteLine(ex));
+
+            Console.WriteLine(results.Count(x =>  x.IsMatch));
+            Console.WriteLine(results.Count);
+
+/*
+
             var buildRequest = new SearchBuildsRequest();
             buildRequest.ParseQueryString("definition:runtime started:~3");
             var timelineRequest = new SearchTimelinesRequest()
@@ -162,6 +178,7 @@ namespace Scratch
             // await PopulateDefinitionColumns();
             // await PopulateModelTrackingIssue("started:~2 result:failed", 85);
             await RetriesWork();
+*/
         }
 
         internal async Task RetriesWork()
