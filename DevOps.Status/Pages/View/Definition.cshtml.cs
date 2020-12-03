@@ -13,30 +13,13 @@ namespace DevOps.Status.Pages.View
 {
     public class DefinitionModel : PageModel
     {
-        public class JobData
-        {
-            public string? JobName { get; set; }
-            public int RollingFailureCount { get; set; }
-            public int MergedPullRequestFailureCount { get; set; }
-            public int TotalFailureCount { get; set; }
-            public string? JobPageBuildQuery { get; set; }
-            public string? JobPageTimelineQuery { get; set; }
-        }
+        public record BuildInfo(string Title, string RollingRate, string MergedPullRequestRate, string TotalRate);
+        public record DefinitionInfo( ModelBuildDefinition ModelBuildDefinition, BuildInfo[] BuildInfos);
 
         public TriageContextUtil TriageContextUtil { get; }
-        [BindProperty(SupportsGet = true)]
-        public string? Definition { get; set; }
-        [BindProperty(SupportsGet = true, Name = "q")]
-        public string? Query { get; set; }
-        public string? ErrorMessage { get; set; }
-        public bool HasResults { get; set; }
-        public bool IncludeMergedPullRequestData { get; set; }
-        public int BuildCount { get; set; }
-        public string? RollingPassRate { get; set; }
-        public string? MergedPullRequestPassRate { get; set; }
-        public string? TotalPassRate { get; set; }
-        public int? JobLimitHit { get; set; }
-        public List<JobData> JobDataList { get; set; } = new List<JobData>();
+        [BindProperty(SupportsGet = true, Name = "id")]
+        public int? DefinitionId { get; set; }
+        public DefinitionInfo? Definition { get; set; }
 
         public DefinitionModel(TriageContextUtil triageContextUtil)
         {
@@ -45,7 +28,64 @@ namespace DevOps.Status.Pages.View
 
         public async Task OnGet()
         {
+            if (DefinitionId is { } definitionId)
+            {
+                var modelBuildDefiniton = await TriageContextUtil.Context
+                    .ModelBuildDefinitions
+                    .Where(x => x.DefinitionId == definitionId)
+                    .SingleAsync();
+
+                var now = DateTime.UtcNow;
+                var limit = now - TimeSpan.FromDays(21);
+                var buildsRequest = new SearchBuildsRequest()
+                {
+                    Definition = definitionId.ToString(),
+                    Started = new DateRequestValue(limit, RelationalKind.GreaterThan),
+                    BuildType = new BuildTypeRequestValue(ModelBuildKind.PullRequest, EqualsKind.NotEquals)
+                };
+
+                var builds = await buildsRequest
+                    .Filter(TriageContextUtil.Context.ModelBuilds)
+                    .Select(x => new
+                    {
+                        x.BuildResult,
+                        x.IsMergedPullRequest,
+                        x.PullRequestNumber,
+                        x.StartTime,
+                    })
+                    .ToListAsync();
+
+                Definition = new DefinitionInfo(
+                    modelBuildDefiniton,
+                    new[]
+                    {
+                        GetForDate(now - TimeSpan.FromDays(7), "7 days"),
+                        GetForDate(now - TimeSpan.FromDays(14), "14 days"),
+                        GetForDate(now - TimeSpan.FromDays(21), "21 days"),
+                    });
+
+                BuildInfo GetForDate(DateTime limit, string title)
+                {
+                    var filtered = builds.Where(x => x.StartTime >= limit).ToList();
+                    double count = filtered.Count;
+                    var rolling = filtered.Where(x => x.PullRequestNumber is null).Select(x => x.BuildResult);
+                    var mpr = filtered.Where(x => x.IsMergedPullRequest).Select(x => x.BuildResult);
+                    var total = filtered.Where(x => x.IsMergedPullRequest || x.PullRequestNumber is null).Select(x => x.BuildResult);
+
+                    return new BuildInfo(title, GetRate(rolling), GetRate(mpr), GetRate(total));
+                    string GetRate(IEnumerable<BuildResult?> e)
+                    {
+                        double totalCount = e.Count();
+                        double passedCount = e.Count(x => x is BuildResult.Succeeded or BuildResult.PartiallySucceeded);
+                        return (passedCount / totalCount).ToString("P2");
+                    }
+
+                }
+            }
+
+            /*
             ErrorMessage = null;
+
             if (string.IsNullOrEmpty(Query))
             {
                 Query = new SearchBuildsRequest()
@@ -165,8 +205,7 @@ namespace DevOps.Status.Pages.View
 
                 JobDataList.Sort((x, y) => y.TotalFailureCount - x.TotalFailureCount);
             }
-
-            static bool IsSuccess(BuildResult result) => result == BuildResult.Succeeded || result == BuildResult.PartiallySucceeded;
+            */
         }
 
         private Task<ModelBuildDefinition?> FindDefinitionAsync(string definition)
