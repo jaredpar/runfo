@@ -21,9 +21,9 @@
     <partial name="../Shared/_SearchQuerySyntaxErrorDisplay" model="@Model.ErrorMessage" />
 }
 
-@if (Model.BuildCount is { } count)
+@if (Model.DidSearch)
 {
-    <p>Builds searched: @count</p>
+    <p>@Model.SearchStatus</p>
 
     <h3>Results</h3>
     <table class="table">
@@ -36,15 +36,46 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var buildLogData in Model.BuildLogs)
+            @foreach (var buildLogData in Model.BuildLogDatas.Where(x => x.IsMatch))
             {
                 <tr>
                     <td><a asp-page="/view/build" asp-route-number="@buildLogData.BuildNumber">@buildLogData.BuildNumber</a></td>
                     <td>@buildLogData.JobName</td>
-                    <td><a href="@buildLogData.BuildLogUri">Build Log</a></td>
+                    <td><a target="_blank" href="@buildLogData.BuildLogReference.Url">Build Log</a></td>
                     <td>@buildLogData.Line</td>
                 </tr>
             }
         </tbody>
     </table>
+
+    <partial name="../Shared/_PaginationDisplay" model="@Model.PaginationDisplay" />
+
+    <p>
+      <a data-toggle="collapse" href="#all-results" role="button">Show all @Model.BuildLogDatas.Count logs searched</a>
+    </p>
+    <div class="collapse multi-collapse" id="all-results">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th scope="col">Build</th>
+                    <th scope="col">Job</th>
+                    <th scope="col">Log Name</th>
+                    <th scope="col">Log File</th>
+                    <th scope="col">Match</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var buildLogData in Model.BuildLogDatas)
+                {
+                    <tr>
+                        <td><a asp-page="/view/build" asp-route-number="@buildLogData.BuildNumber">@buildLogData.BuildNumber</a></td>
+                        <td>@buildLogData.JobName</td>
+                        <td>@buildLogData.RecordName</td>
+                        <td><a target="_blank" href="@buildLogData.BuildLogReference.Url">Build Log</a></td>
+                        <td>@buildLogData.IsMatch</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }

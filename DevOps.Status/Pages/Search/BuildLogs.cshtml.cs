@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Claims;
@@ -18,24 +19,29 @@ namespace DevOps.Status.Pages.Search
 {
     public class BuildLogsModel : PageModel
     {
-        public sealed class BuildLogData
+        public record BuildLogData(BuildResultInfo BuildResultInfo, string? Line, string? JobName, string RecordName, BuildLogReference BuildLogReference)
         {
-            public int BuildNumber { get; set; }
-            public string? Line { get; set; }
-            public string? JobName { get; set; }
-            public string? BuildLogUri { get; set; }
+            public int BuildNumber => BuildResultInfo.Number;
+            [MemberNotNullWhen(true, nameof(Line))]
+            public bool IsMatch => Line is object;
         }
 
-        public List<BuildLogData> BuildLogs { get; } = new List<BuildLogData>();
-        public int? BuildCount { get; set; }
         public string? ErrorMessage { get; set; }
         public string? AzureDevOpsEmail { get; set; }
-
         [BindProperty(SupportsGet = true, Name = "bq")]
         public string? BuildQuery { get; set; }
-
         [BindProperty(SupportsGet = true, Name = "lq")]
         public string? LogQuery { get; set; }
+
+        // Build Search Information
+        public List<BuildLogData> BuildLogDatas { get; } = new List<BuildLogData>();
+        public string? SearchStatus { get; set; }
+        public bool DidSearch { get; set; }
+
+        // Pagination
+        [BindProperty(SupportsGet = true, Name = "pageNumber")]
+        public int PageNumber { get; set; }
+        public PaginationDisplay? PaginationDisplay { get; set; }
 
         public TriageContextUtil TriageContextUtil { get; }
         public DotNetQueryUtilFactory DotNetQueryUtilFactory { get; }
@@ -48,6 +54,8 @@ namespace DevOps.Status.Pages.Search
 
         public async Task OnGet()
         {
+            const int pageSize = 25;
+
             if (User.GetVsoIdentity() is { } identity)
             {
                 AzureDevOpsEmail = identity.FindFirst(ClaimTypes.Email)?.Value;
@@ -79,11 +87,16 @@ namespace DevOps.Status.Pages.Search
             ErrorMessage = null;
 
             List<BuildResultInfo> buildInfos;
+            int totalBuildCount;
             try
             {
-                buildInfos = await buildsRequest
-                    .Filter(TriageContextUtil.Context.ModelBuilds)
+                var query = buildsRequest.Filter(TriageContextUtil.Context.ModelBuilds);
+                totalBuildCount = await query.CountAsync();
+
+                buildInfos = await query
                     .OrderByDescending(x => x.BuildNumber)
+                    .Skip(pageSize * PageNumber)
+                    .Take(pageSize)
                     .ToBuildResultInfoListAsync();
             }
             catch (SqlException ex) when (ex.IsTimeoutViolation())
@@ -92,22 +105,25 @@ namespace DevOps.Status.Pages.Search
                 return;
             }
 
-            BuildCount = buildInfos.Count;
-
             var queryUtil = await DotNetQueryUtilFactory.CreateDotNetQueryUtilForUserAsync();
             var errorBuilder = new StringBuilder();
             var results = await queryUtil.SearchBuildLogsAsync(buildInfos, logsRequest, ex => errorBuilder.AppendLine(ex.Message));
-            foreach (var result in results)
+            foreach (var result in results.OrderByDescending(x => x.BuildInfo.Number))
             {
-                BuildLogs.Add(new BuildLogData()
-                {
-                    BuildNumber = result.BuildInfo.Number,
-                    Line = result.Line,
-                    JobName = result.JobName,
-                    BuildLogUri = result.BuildLogReference.Url,
-                });
+                BuildLogDatas.Add(new BuildLogData(result.BuildInfo, result.Line, result.JobName, result.Record.Name, result.BuildLogReference));
             }
 
+            PaginationDisplay = new PaginationDisplay(
+                "/Search/BuildLogs",
+                new Dictionary<string, string>()
+                {
+                    { "bq", BuildQuery },
+                    { "lq", LogQuery ?? ""},
+                },
+                PageNumber,
+                totalBuildCount / pageSize);
+            SearchStatus = $"Results for builds {PageNumber * pageSize}-{(PageNumber * pageSize) + pageSize} of {totalBuildCount}";
+            DidSearch = true;
             if (errorBuilder.Length > 0)
             {
                 ErrorMessage = errorBuilder.ToString();

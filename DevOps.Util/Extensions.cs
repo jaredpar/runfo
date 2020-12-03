@@ -284,6 +284,36 @@ namespace DevOps.Util
             }
         }
 
+        public static async Task<List<Timeline>> GetTimelineAttemptsAsync(this DevOpsServer server, string project, int buildNumber)
+        {
+            var timeline = await server.GetTimelineAsync(project, buildNumber).ConfigureAwait(false);
+            if (timeline is null)
+            {
+                return new List<Timeline>();
+            }
+
+            var list = new List<Timeline>();
+            list.Add(timeline);
+            var attempt = timeline.GetAttempt();
+            if (attempt == 1)
+            {
+                return list;
+            }
+
+            do
+            {
+                --attempt;
+                timeline = await server.GetTimelineAttemptAsync(project, buildNumber, attempt).ConfigureAwait(false);
+                if (timeline is object)
+                {
+                    list.Add(timeline);
+                }
+
+            } while (attempt > 1);
+
+            return list;
+        }
+
         public static Task<string> GetYamlAsync(this DevOpsServer server, string project, int buildNumber) =>
             server.GetBuildLogAsync(project, buildNumber, logId: 1);
 
