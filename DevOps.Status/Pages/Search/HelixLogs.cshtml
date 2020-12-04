@@ -29,11 +29,11 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var helixLogData in Model.HelixLogs)
+            @foreach (var helixLogData in Model.HelixLogs.Where(x => x.IsMatch))
             {
                 <tr>
                     <td><a asp-page="/view/build" asp-route-number="@helixLogData.BuildNumber">@helixLogData.BuildNumber</a></td>
-                    <td><a href="@helixLogData.HelixLogUri">@helixLogData.HelixLogKind</a></td>
+                    <td><a target="_blank" href="@helixLogData.HelixLogUri">@helixLogData.HelixLogKind</a></td>
                     <td>@helixLogData.Line</td>
                 </tr>
             }
@@ -41,5 +41,29 @@
     </table>
 
     <partial name="../Shared/_PaginationDisplay" model="@Model.PaginationDisplay" />
+
+    <p>
+      <a data-toggle="collapse" href="#all-results" role="button">Show all @Model.HelixLogs.Count logs searched</a>
+    </p>
+    <div class="collapse multi-collapse" id="all-results">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th scope="col">Build</th>
+                    <th scope="col">Log File</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var helixLogData in Model.HelixLogs)
+                {
+                    <tr>
+                        <td><a asp-page="/view/build" asp-route-number="@helixLogData.BuildNumber">@helixLogData.BuildNumber</a></td>
+                        <td><a target="_blank" href="@helixLogData.HelixLogUri">@helixLogData.HelixLogKind</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
+
 

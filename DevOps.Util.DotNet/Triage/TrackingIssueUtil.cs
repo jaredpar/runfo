@@ -252,7 +252,7 @@ namespace DevOps.Util.DotNet.Triage
                 request,
                 onError: x => Logger.LogWarning(x.Message)).ConfigureAwait(false);
             var any = false;
-            foreach (var result in results)
+            foreach (var result in results.Where(x => x.IsMatch))
             {
                 any = true;
                 var modelMatch = new ModelTrackingIssueMatch()

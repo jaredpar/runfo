@@ -92,9 +92,12 @@ namespace DevOps.Util.DotNet
         public BuildInfo BuildInfo { get; }
         public HelixLogKind HelixLogKind { get;  }
         public string HelixLogUri { get; }
-        public string Line { get; }
+        public string? Line { get; }
 
-        public SearchHelixLogsResult(BuildInfo buildInfo, HelixLogKind helixLogKind, string helixLogUri, string line)
+        [MemberNotNullWhen(true, nameof(Line))]
+        public bool IsMatch => Line is object;
+
+        public SearchHelixLogsResult(BuildInfo buildInfo, HelixLogKind helixLogKind, string helixLogUri, string? line = null)
         {
             BuildInfo = buildInfo;
             HelixLogKind = helixLogKind;
