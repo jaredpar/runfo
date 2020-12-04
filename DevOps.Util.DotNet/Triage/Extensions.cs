@@ -172,10 +172,7 @@ namespace DevOps.Util.DotNet.Triage
                 try
                 {
                     var result = await task.ConfigureAwait(false);
-                    if (result.Line is object)
-                    {
-                        results.Add(new SearchHelixLogsResult(result.Query.BuildInfo, result.Query.Kind, result.Query.Uri!, result.Line));
-                    }
+                    results.Add(new SearchHelixLogsResult(result.Query.BuildInfo, result.Query.Kind, result.Query.Uri!, result.Line));
                 }
                 catch (Exception ex)
                 {

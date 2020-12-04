@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
@@ -18,12 +19,11 @@ namespace DevOps.Status.Pages.Search
 {
     public class HelixLogsModel : PageModel
     {
-        public sealed class HelixLogData
+        public record HelixLogData(BuildInfo BuildInfo, string? Line, string HelixLogKind, string HelixLogUri)
         {
-            public int BuildNumber { get; set; }
-            public string? Line { get; set; }
-            public string? HelixLogKind { get; set; }
-            public string? HelixLogUri { get; set; }
+            public int BuildNumber => BuildInfo.Number;
+            [MemberNotNullWhen(true, nameof(Line))]
+            public bool IsMatch => Line is object;
         }
 
         // Results
@@ -52,7 +52,7 @@ namespace DevOps.Status.Pages.Search
 
         public async Task OnGet()
         {
-            const int pageSize = 10;
+            const int pageSize = 25;
 
             ErrorMessage = null;
 
@@ -151,13 +151,7 @@ namespace DevOps.Status.Pages.Search
                     ex => errorBuilder.AppendLine(ex.Message));
                 foreach (var result in results)
                 {
-                    HelixLogs.Add(new HelixLogData()
-                    {
-                        BuildNumber = result.BuildInfo.Number,
-                        Line = result.Line,
-                        HelixLogKind = result.HelixLogKind.GetDisplayFileName(),
-                        HelixLogUri = result.HelixLogUri,
-                    });
+                    HelixLogs.Add(new HelixLogData(result.BuildInfo, result.Line, result.HelixLogKind.GetDisplayFileName(), result.HelixLogUri));
                 }
 
                 if (errorBuilder.Length > 0)
