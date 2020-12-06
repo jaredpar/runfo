@@ -55,7 +55,7 @@ namespace Scratch
                 var configuration = ScratchUtil.CreateConfiguration();
                 var connectionString = configuration[DotNetConstants.ConfigurationSqlConnectionString];
                 var message = connectionString.Contains("triage-scratch-dev")
-                    ? "Using sql dev"
+                    ? "Using sql developer"
                     : "Using sql production";
                 Console.WriteLine(message);
                 builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds));
@@ -103,8 +103,13 @@ namespace Scratch
             DevOpsServer = new DevOpsServer(organization, new AuthorizationToken(AuthorizationKind.PersonalAccessToken, azureToken));
 
             var builder = new DbContextOptionsBuilder<TriageContext>();
-            builder.UseSqlServer(configuration[DotNetConstants.ConfigurationSqlConnectionString]);
-            builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+            var connectionString = configuration[DotNetConstants.ConfigurationSqlConnectionString];
+            var message = connectionString.Contains("triage-scratch-dev")
+                ? "Using sql developer"
+                : "Using sql production";
+            builder.UseSqlServer(connectionString);
+
+            // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
             TriageContext = new TriageContext(builder.Options);
             TriageContextUtil = new TriageContextUtil(TriageContext);
 
@@ -139,7 +144,9 @@ namespace Scratch
 
         internal async Task Scratch()
         {
+            await PopulateDb(count: 100, definitionId: 686, includeTests: false, includeTriage: false);
 
+            /*
             var buildInfo = (await DevOpsServer.GetBuildAsync("public", 906787)).GetBuildResultInfo();
             var results = await DotNetQueryUtil.SearchBuildLogsAsync(
                 new[] { buildInfo },
@@ -152,6 +159,7 @@ namespace Scratch
 
             Console.WriteLine(results.Count(x =>  x.IsMatch));
             Console.WriteLine(results.Count);
+            */
 
 /*
 

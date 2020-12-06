@@ -89,8 +89,8 @@ namespace DevOps.Util.DotNet.Triage
             {
                 query = queued.Kind switch
                 {
-                    RelationalKind.GreaterThan => query.Where(convertPredicateFunc(x => x.QueueTime >= queued.DateTime)),
-                    RelationalKind.LessThan => query.Where(convertPredicateFunc(x => x.QueueTime <= queued.DateTime)),
+                    RelationalKind.GreaterThan => query.Where(convertPredicateFunc(x => x.QueueTime >= queued.DateTime.Date)),
+                    RelationalKind.LessThan => query.Where(convertPredicateFunc(x => x.QueueTime <= queued.DateTime.Date)),
                     _ => query
                 };
             }
@@ -99,8 +99,8 @@ namespace DevOps.Util.DotNet.Triage
             {
                 query = started.Kind switch
                 {
-                    RelationalKind.GreaterThan => query.Where(convertPredicateFunc(x => x.StartTime >= started.DateTime)),
-                    RelationalKind.LessThan => query.Where(convertPredicateFunc(x => x.StartTime <= started.DateTime)),
+                    RelationalKind.GreaterThan => query.Where(convertPredicateFunc(x => x.StartTime >= started.DateTime.Date)),
+                    RelationalKind.LessThan => query.Where(convertPredicateFunc(x => x.StartTime <= started.DateTime.Date)),
                     _ => query
                 };
             }
@@ -109,8 +109,8 @@ namespace DevOps.Util.DotNet.Triage
             {
                 query = finished.Kind switch
                 {
-                    RelationalKind.GreaterThan => query.Where(convertPredicateFunc(x => x.FinishTime >= finished.DateTime)),
-                    RelationalKind.LessThan => query.Where(convertPredicateFunc(x => x.FinishTime <= finished.DateTime)),
+                    RelationalKind.GreaterThan => query.Where(convertPredicateFunc(x => x.FinishTime >= finished.DateTime.Date)),
+                    RelationalKind.LessThan => query.Where(convertPredicateFunc(x => x.FinishTime <= finished.DateTime.Date)),
                     _ => query
                 };
             }

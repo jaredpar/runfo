@@ -6,6 +6,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using DevOps.Util.DotNet;
 using Microsoft.EntityFrameworkCore;
+using Org.BouncyCastle.Math.EC.Rfc7748;
 
 namespace DevOps.Util.DotNet.Triage
 {
@@ -91,6 +92,10 @@ namespace DevOps.Util.DotNet.Triage
                 .Property(x => x.IssueType)
                 .HasConversion<string>()
                 .HasDefaultValue(IssueType.Warning);
+
+            modelBuilder.Entity<ModelTimelineIssue>()
+                .HasIndex(x => x.ModelBuildId)
+                .IncludeProperties(x => new { x.JobName, x.TaskName, x.RecordName, x.IssueType, x.Attempt, x.Message });
 
             modelBuilder.Entity<ModelTrackingIssue>()
                 .Property(x => x.TrackingKind)

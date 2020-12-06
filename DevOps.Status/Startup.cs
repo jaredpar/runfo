@@ -74,6 +74,7 @@ namespace DevOps.Status
                 var connectionString = Configuration[DotNetConstants.ConfigurationSqlConnectionString];
 #if DEBUG
                 options.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+                options.EnableSensitiveDataLogging();
 #endif
                 options.UseSqlServer(connectionString);
             });
