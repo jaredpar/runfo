@@ -26,8 +26,9 @@ namespace DevOps.Util.DotNet
             TestOutcome.Aborted
         };
 
-        // TODO: This should all be moved back to runfo at this point. These libraries should be using the real names
-        // at this point
+        // TODO: move this from being a static list to one that we create at start up time.
+        // Many of the optimizations in SearchBuildRequests depends on the IDs being known. All the indexes
+        // are based on it.
         public static readonly (string BuildName, string Project, int DefinitionId)[] BuildDefinitions = new[]
             {
                 ("runtime", "public", 686),

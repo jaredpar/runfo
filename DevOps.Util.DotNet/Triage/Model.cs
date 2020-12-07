@@ -67,10 +67,12 @@ namespace DevOps.Util.DotNet.Triage
                 .HasIndex(x => x.BuildResult);
 
             modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => new { x.StartTime, x.DefinitionName });
+                .HasIndex(x => new { x.StartTime, x.DefinitionId })
+                .IncludeProperties(x => new { x.BuildNumber, x.BuildResult, x.PullRequestNumber, x.GitHubRepository });
 
             modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => new { x.StartTime, x.DefinitionId });
+                .HasIndex(x => new { x.DefinitionId, x.StartTime })
+                .IncludeProperties(x => new { x.BuildNumber, x.BuildResult, x.PullRequestNumber, x.GitHubRepository });
 
             modelBuilder.Entity<ModelBuildAttempt>()
                 .HasIndex(x => new { x.Attempt, x.ModelBuildId })
