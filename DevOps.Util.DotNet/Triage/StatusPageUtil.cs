@@ -67,9 +67,11 @@ namespace DevOps.Util.DotNet.Triage
             header.AppendLine("## Overview");
             header.AppendLine("Please use these queries to discover issues");
 
-            await BuildOne("Blocking CI", "blocking-clean-ci", DotNetUtil.GetDefinitionKeyFromFriendlyName("runtime")).ConfigureAwait(false);
-            await BuildOne("Blocking Official Build", "blocking-official-build", DotNetUtil.GetDefinitionKeyFromFriendlyName("runtime-official")).ConfigureAwait(false);
-            await BuildOne("Blocking CI Optional", "blocking-clean-ci-optional", DotNetUtil.GetDefinitionKeyFromFriendlyName("runtime"));
+            var runtimeDefinition = await TriageContextUtil.GetModelBuildDefinitionAsync(id: 686).ConfigureAwait(false);
+            var runtimeDefinitionKey = runtimeDefinition.GetDefinitionKey();
+
+            await BuildOne("Blocking CI", "blocking-clean-ci", runtimeDefinitionKey);
+            await BuildOne("Blocking CI Optional", "blocking-clean-ci-optional", runtimeDefinitionKey);
             await BuildOne("Blocking Outerloop", "blocking-outerloop", null);
 
             // Blank line to move past the table 

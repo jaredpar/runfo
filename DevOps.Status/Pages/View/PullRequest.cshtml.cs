@@ -47,14 +47,14 @@ namespace DevOps.Status.Pages.View
                 return;
             }
 
-            var gitHubClient = await GitHubClientFactory.CreateForAppAsync(DotNetUtil.GitHubOrganization, Repository);
-            PullRequest = await gitHubClient.PullRequest.Get(DotNetUtil.GitHubOrganization, Repository, Number.Value);
+            var gitHubClient = await GitHubClientFactory.CreateForAppAsync(DotNetConstants.GitHubOrganization, Repository);
+            PullRequest = await gitHubClient.PullRequest.Get(DotNetConstants.GitHubOrganization, Repository, Number.Value);
 
             var builds = await TriageContext
                 .ModelBuilds
                 .Include(x => x.ModelBuildDefinition)
                 .Where(x =>
-                    x.GitHubOrganization == DotNetUtil.GitHubOrganization &&
+                    x.GitHubOrganization == DotNetConstants.GitHubOrganization &&
                     x.GitHubRepository == Repository &&
                     x.PullRequestNumber == Number)
                 .OrderByDescending(x => x.BuildNumber)

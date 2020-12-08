@@ -63,7 +63,7 @@ namespace DevOps.Status
             services.AddScoped<BlobStorageUtil>(_ =>
             {
                 return new BlobStorageUtil(
-                    DotNetUtil.AzureOrganization,
+                    DotNetConstants.AzureOrganization,
                     Configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
             });
 

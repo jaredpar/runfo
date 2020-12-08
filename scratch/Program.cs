@@ -142,6 +142,15 @@ namespace Scratch
 
         internal static ILogger CreateLogger() => LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Scratch");
 
+        internal int GetDefinitionId(string definitionName) => definitionName switch
+        {
+            "runtime" => 686,
+            "roslny" => 15,
+            "coreclr" => 655,
+            "sdk" => 136,
+            _ => throw new Exception($"Unrecognized name: {definitionName}"),
+        };
+
         internal async Task Scratch()
         {
             var builds = new SearchBuildsRequest();
@@ -354,7 +363,7 @@ namespace Scratch
         internal async Task TestTrackingIssueUtil(int buildNumber, int modelTrackingIssueId)
         {
             var trackingIssueUtil = new TrackingIssueUtil(HelixServer, DotNetQueryUtil, TriageContextUtil, CreateLogger());
-            var buildKey = new BuildKey(DotNetUtil.AzureOrganization, DotNetUtil.DefaultAzureProject, buildNumber);
+            var buildKey = new BuildKey(DotNetConstants.AzureOrganization, DotNetConstants.DefaultAzureProject, buildNumber);
             await trackingIssueUtil.TriageAsync(buildKey, modelTrackingIssueId);
         }
 
@@ -422,7 +431,7 @@ namespace Scratch
                     foreach (var group in modelTestResults.GroupBy(x => x.ModelTestRunId))
                     {
                         var modelTestRun = group.First().ModelTestRun;
-                        foreach (var testCaseResult in await DevOpsServer.ListTestResultsAsync(buildInfo.Project, modelTestRun.TestRunId, DotNetUtil.FailedTestOutcomes, includeSubResults: true))
+                        foreach (var testCaseResult in await DevOpsServer.ListTestResultsAsync(buildInfo.Project, modelTestRun.TestRunId, DevOpsUtil.FailedTestOutcomes, includeSubResults: true))
                         {
                             var modelTestResult = modelTestResults.FirstOrDefault(x => x.TestFullName == testCaseResult.TestCaseTitle);
                             if (modelTestResult is object)
@@ -510,7 +519,7 @@ namespace Scratch
             { 
                 foreach (var testRun in await DevOpsServer.ListTestRunsAsync("public", build.Id, detail: ResultDetail.SubResults))
                 {
-                    var testCaseResults = await DevOpsServer.ListTestResultsAsync("public", testRun.Id, DotNetUtil.FailedTestOutcomes, includeSubResults: true);
+                    var testCaseResults = await DevOpsServer.ListTestResultsAsync("public", testRun.Id, DevOpsUtil.FailedTestOutcomes, includeSubResults: true);
                     foreach (var testCaseResult in testCaseResults)
                     {
                         Console.WriteLine($"{testCaseResult.TestCaseTitle} - {testCaseResult.ErrorMessage}");
@@ -796,7 +805,7 @@ namespace Scratch
         internal async Task PopulateTimelines()
         {
             var triageContextUtil = new TriageContextUtil(TriageContext);
-            foreach (var build in await DotNetQueryUtil.ListBuildsAsync(definition: "runtime", includePullRequests: true))
+            foreach (var build in await DotNetQueryUtil.ListBuildsAsync(definitionId: 686, includePullRequests: true))
             {
                 var buildInfo = build.GetBuildResultInfo();
                 try
@@ -877,7 +886,7 @@ namespace Scratch
             var server = DevOpsServer;
             var queryUtil = DotNetQueryUtil;
 
-            foreach (var build in await queryUtil.ListBuildsAsync(definition: "roslyn", count: 100, branch: "master", before: "2020/4/22"))
+            foreach (var build in await queryUtil.ListBuildsAsync(definitionId: GetDefinitionId("roslyn"), count: 100, branch: "master", before: "2020/4/22"))
             {
                 var buildInfo = build.GetBuildResultInfo();
                 try
@@ -961,7 +970,7 @@ namespace Scratch
             var server = DevOpsServer;
             var queryUtil = DotNetQueryUtil;
 
-            foreach (var build in await queryUtil.ListBuildsAsync(definition: "runtime", count: 30, includePullRequests: true))
+            foreach (var build in await queryUtil.ListBuildsAsync(definitionId: 686, count: 30, includePullRequests: true))
             {
                 var timeline = await server.GetTimelineAsync(build.Project.Name, build.Id);
                 if (timeline is null)
@@ -986,7 +995,7 @@ namespace Scratch
             var testFailCount = 0;
             var otherFailCount = 0;
 
-            foreach (var build in await queryUtil.ListBuildsAsync(definition: "runtime", count: 100))
+            foreach (var build in await queryUtil.ListBuildsAsync(definitionId: 686, count: 100))
             {
                 try
                 {
@@ -1042,7 +1051,7 @@ namespace Scratch
             var queryUtil = DotNetQueryUtil;
 
             Console.WriteLine("Build Uri,Pull Request,Minutes");
-            foreach (var build in await queryUtil.ListBuildsAsync(definition: "runtime", count: 100, includePullRequests: true))
+            foreach (var build in await queryUtil.ListBuildsAsync(definitionId: 686, count: 100, includePullRequests: true))
             {
                 try
                 {

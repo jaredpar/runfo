@@ -82,7 +82,7 @@ namespace DevOps.Util.DotNet
                         }
                     }
 
-                    bool IsFailedOutcome(string outcome) => DotNetUtil.FailedTestOutcomes.Any(x => comparer.Equals(x.ToString(), outcome));
+                    bool IsFailedOutcome(string outcome) => DevOpsUtil.FailedTestOutcomes.Any(x => comparer.Equals(x.ToString(), outcome));
                 }
             }
 

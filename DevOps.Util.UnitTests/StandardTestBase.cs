@@ -137,7 +137,7 @@ namespace DevOps.Util.UnitTests
 
             var issue = new ModelGitHubIssue()
             {
-                Organization = GetPartOrNull(parts, 0) ?? DotNetUtil.GitHubOrganization,
+                Organization = GetPartOrNull(parts, 0) ?? DotNetConstants.GitHubOrganization,
                 Repository = GetPartOrNull(parts, 1) ?? "roslyn",
                 Number = GetPartOrNull(parts, 2) is { } part ? int.Parse(part) : GitHubIssueCount++,
                 ModelBuild = build,

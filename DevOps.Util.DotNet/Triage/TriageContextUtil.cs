@@ -343,6 +343,16 @@ namespace DevOps.Util.DotNet.Triage
         public Task<ModelTestRun> GetModelTestRunAsync(BuildKey buildKey, int testRunId) =>
             GetModelTestRunQuery(buildKey, testRunId).SingleAsync()!;
 
+        public IQueryable<ModelBuildDefinition> GetModelBuildDefinitionQueryAsync(int id) => Context
+            .ModelBuildDefinitions
+            .Where(x => x.DefinitionId == id);
+
+        public Task<ModelBuildDefinition?> FindModelBuildDefinitionAsync(int id) =>
+            GetModelBuildDefinitionQueryAsync(id).FirstOrDefaultAsync()!;
+
+        public Task<ModelBuildDefinition> GetModelBuildDefinitionAsync(int id) =>
+            GetModelBuildDefinitionQueryAsync(id).SingleOrDefaultAsync();
+
         public async Task<ModelBuildDefinition?> FindModelBuildDefinitionAsync(string nameOrId)
         {
             if (int.TryParse(nameOrId, out var id))
@@ -354,20 +364,9 @@ namespace DevOps.Util.DotNet.Triage
                     .ConfigureAwait(false);
             }
 
-            var modelBuildDefinition = await Context
-                .ModelBuildDefinitions
-                .Where(x => x.DefinitionName == nameOrId)
-                .FirstOrDefaultAsync()
-                .ConfigureAwait(false);
-
-            if (modelBuildDefinition is object)
-            {
-                return modelBuildDefinition;
-            }
-
             return await Context
                 .ModelBuildDefinitions
-                .Where(x => EF.Functions.Like(x.DefinitionName, nameOrId))
+                .Where(x => x.DefinitionName == nameOrId)
                 .FirstOrDefaultAsync()
                 .ConfigureAwait(false);
         }

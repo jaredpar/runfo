@@ -131,7 +131,7 @@ namespace DevOps.Util.DotNet
                 return;
             }
 
-            if (outcomes is null || outcomes.Any(x => !DotNetUtil.FailedTestOutcomes.Contains(x)))
+            if (outcomes is null || outcomes.Any(x => !DevOpsUtil.FailedTestOutcomes.Contains(x)))
             {
                 // Only store failed outcems
                 return;

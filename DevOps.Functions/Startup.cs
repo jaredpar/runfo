@@ -28,7 +28,7 @@ namespace DevOps.Functions
             builder.Services.AddDbContext<TriageContext>(options => options.UseSqlServer(connectionString));
             builder.Services.AddScoped<DevOpsServer>(_ =>
                 new DevOpsServer(
-                    DotNetUtil.AzureOrganization,
+                    DotNetConstants.AzureOrganization,
                     new AuthorizationToken(AuthorizationKind.PersonalAccessToken, azdoToken)));
             builder.Services.AddScoped<GitHubClientFactory>(_ =>
             {

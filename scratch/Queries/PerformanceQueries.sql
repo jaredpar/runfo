@@ -2,6 +2,19 @@
 /*SELECT COUNT(*) FROM ModelTimelineIssues*/
 SELECT * FROM ModelTestResults
 
+/* Search for timeline issues by definition name not id */
+exec sp_executesql N'SELECT [m1].[BuildNumber], [t].[Message], [t].[JobName], [t].[IssueType], [t].[Attempt]
+FROM (
+    SELECT [m].[Id], [m].[Attempt], [m].[IssueType], [m].[JobName], [m].[Message], [m].[ModelBuildAttemptId], [m].[ModelBuildId], [m].[RecordId], [m].[RecordName], [m].[TaskName], [m0].[BuildNumber]
+    FROM [ModelTimelineIssues] AS [m]
+    LEFT JOIN [ModelBuilds] AS [m0] ON [m].[ModelBuildId] = [m0].[Id]
+    WHERE ([m0].[StartTime] >= @__started_DateTime_Date_0) AND ([m0].[DefinitionName] = @__definitionName_1)
+    ORDER BY [m0].[BuildNumber] DESC
+    OFFSET @__p_2 ROWS FETCH NEXT @__p_3 ROWS ONLY
+) AS [t]
+LEFT JOIN [ModelBuilds] AS [m1] ON [t].[ModelBuildId] = [m1].[Id]
+ORDER BY [t].[BuildNumber] DESC',N'@__started_DateTime_Date_0 datetime,@__definitionName_1 nvarchar(100),@__p_2 int,@__p_3 int',@__started_DateTime_Date_0='2020-12-01 00:00:00',@__definitionName_1=N'runtime',@__p_2=0,@__p_3=25
+
 /* Search for timeline issues by text */
 SELECT [m1].[BuildNumber], [t].[Message], [t].[JobName], [t].[IssueType], [t].[Attempt]
 FROM (

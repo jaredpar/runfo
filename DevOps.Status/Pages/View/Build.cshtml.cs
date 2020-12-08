@@ -191,6 +191,6 @@ namespace DevOps.Status.Pages.View
             }
         }
 
-        private static BuildKey GetBuildKey(int buildNumber) => new BuildKey(DotNetUtil.AzureOrganization, DotNetUtil.DefaultAzureProject, buildNumber);
+        private static BuildKey GetBuildKey(int buildNumber) => new BuildKey(DotNetConstants.AzureOrganization, DotNetConstants.DefaultAzureProject, buildNumber);
     }
 }
