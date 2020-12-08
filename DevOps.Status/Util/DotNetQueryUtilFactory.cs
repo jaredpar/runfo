@@ -27,17 +27,17 @@ namespace DevOps.Status.Util
         {
             var accessToken = await HttpContextAccessor.HttpContext.GetTokenAsync(VisualStudioAuthenticationDefaults.AuthenticationScheme, "access_token");
             var token = new AuthorizationToken(AuthorizationKind.BearerToken, accessToken);
-            return new DevOpsServer(DotNetUtil.AzureOrganization, token);
+            return new DevOpsServer(DotNetConstants.AzureOrganization, token);
         }
 
         public DevOpsServer CreateDevOpsServerForApp()
         {
             var azdoToken = Configuration[DotNetConstants.ConfigurationAppAzureToken];
             var token = new AuthorizationToken(AuthorizationKind.PersonalAccessToken, azdoToken);
-            return new DevOpsServer(DotNetUtil.AzureOrganization, token);
+            return new DevOpsServer(DotNetConstants.AzureOrganization, token);
         }
 
-        public DevOpsServer CreateDevOpsServerForAnonymous() => new DevOpsServer(DotNetUtil.AzureOrganization);
+        public DevOpsServer CreateDevOpsServerForAnonymous() => new DevOpsServer(DotNetConstants.AzureOrganization);
 
         public async Task<DotNetQueryUtil> CreateDotNetQueryUtilForUserAsync() => CreateForServer(await CreateDevOpsServerForUserAsync());
 

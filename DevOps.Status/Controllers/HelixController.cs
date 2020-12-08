@@ -54,7 +54,7 @@ namespace DevOps.Status.Controllers
 
             var queryUtil = await QueryUtilFactory.CreateDotNetQueryUtilForUserAsync();
             var build = await queryUtil.Server.GetBuildAsync(project, buildNumber);
-            var workItems = await queryUtil.ListHelixWorkItemsAsync(build, DotNetUtil.FailedTestOutcomes);
+            var workItems = await queryUtil.ListHelixWorkItemsAsync(build, DevOpsUtil.FailedTestOutcomes);
             var list = new List<HelixWorkItemRestInfo>();
             foreach (var workItem in workItems)
             {

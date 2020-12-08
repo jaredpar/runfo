@@ -30,17 +30,9 @@ namespace DevOps.Util.DotNet.Triage
         {
             get
             {
-                if (!string.IsNullOrEmpty(Definition))
+                if (!string.IsNullOrEmpty(Definition) && int.TryParse(Definition, out int id))
                 {
-                    if (DotNetUtil.TryGetDefinitionId(Definition, out var _, out var id))
-                    {
-                        return id;
-                    }
-
-                    if (int.TryParse(Definition, out id))
-                    {
-                        return id;
-                    }
+                    return id;
                 }
 
                 return null;
@@ -78,7 +70,7 @@ namespace DevOps.Util.DotNet.Triage
                 : Repository.ToLower();
             string? gitHubOrganization = gitHubRepository is null
                 ? null
-                : DotNetUtil.GitHubOrganization;
+                : DotNetConstants.GitHubOrganization;
 
             if (definitionId is object && definitionName is object)
             {
@@ -136,7 +128,6 @@ namespace DevOps.Util.DotNet.Triage
             {
                 query = query.Where(convertPredicateFunc(x => x.GitHubRepository == gitHubRepository));
             }
-
 
             if (TargetBranch is { } targetBranch)
             {

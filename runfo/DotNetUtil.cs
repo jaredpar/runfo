@@ -9,8 +9,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Threading.Tasks;
 using Octokit;
+using DevOps.Util.DotNet;
 
-namespace DevOps.Util.DotNet
+namespace Runfo
 {
     public static class DotNetUtil
     {

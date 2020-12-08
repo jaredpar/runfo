@@ -105,7 +105,7 @@ namespace DevOps.Util.DotNet.Triage
                     var dotNetTestRun = await QueryUtil.GetDotNetTestRunAsync(
                         build,
                         testRun,
-                        DotNetUtil.FailedTestOutcomes,
+                        DevOpsUtil.FailedTestOutcomes,
                         includeSubResults: true,
                         onError: ex => Logger.LogWarning($"Error fetching test data {ex.Message}")).ConfigureAwait(false);
                     if (dotNetTestRun.TestCaseResults.Count > maxTestCaseResultCount)

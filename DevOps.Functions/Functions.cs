@@ -351,7 +351,7 @@ namespace DevOps.Functions
                 Server,
                 TriageContextUtil,
                 prKey,
-                DotNetUtil.DefaultAzureProject);
+                DotNetConstants.DefaultAzureProject);
         }
     }
 }

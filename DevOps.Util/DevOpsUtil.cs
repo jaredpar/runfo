@@ -15,6 +15,12 @@ namespace DevOps.Util
 {
     public static class DevOpsUtil
     {
+        public static TestOutcome[] FailedTestOutcomes => new[]
+        {
+            TestOutcome.Failed,
+            TestOutcome.Aborted
+        };
+
         public static BuildKey GetBuildKey(Build build)
         {
             var organization = GetOrganization(build);

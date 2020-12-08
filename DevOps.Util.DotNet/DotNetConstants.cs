@@ -18,5 +18,10 @@ namespace DevOps.Util.DotNet
         public const string ConfigurationVsoClientId = "VsoClientId";
         public const string ConfigurationVsoClientSecret = "VsoClientSecret";
         public const string ConfigurationAzureBlobConnectionString = "AzureWebJobsStorage";
+
+        public static string GitHubOrganization => "dotnet";
+        public static string AzureOrganization => "dnceng";
+        public static string DefaultAzureProject => "public";
+
     }
 }

@@ -402,7 +402,7 @@ namespace DevOps.Util.DotNet
         public Task<List<Build>> ListBuildsAsync(
             int count = 50,
             string? project = null,
-            string? definition = null,
+            int? definitionId = null,
             string? repositoryName = null,
             string? branch = null,
             bool includePullRequests = false,
@@ -412,18 +412,7 @@ namespace DevOps.Util.DotNet
             string? repositoryId = null;
             if (repositoryName is object)
             {
-                repositoryId = $"{DotNetUtil.GitHubOrganization}/{repositoryName}";
-            }
-
-            int[]? definitions = null;
-            if (definition is object)
-            {
-                if (!DotNetUtil.TryGetDefinitionId(definition, out _, out var definitionId))
-                {
-                    throw new Exception($"Invalid definition name {definition}");
-                }
-
-                definitions = new[] { definitionId };
+                repositoryId = $"{DotNetConstants.GitHubOrganization}/{repositoryName}";
             }
 
             DateTimeOffset? beforeDateTimeOffset = null;
@@ -438,10 +427,12 @@ namespace DevOps.Util.DotNet
                 afterDateTimeOffset = DateTimeOffset.Parse(after);
             }
 
+            var definitionIds = definitionId is { } id ? new[] { id } : Array.Empty<int>();
+
             return ListBuildsAsync(
                 count: count,
                 project: project,
-                definitions: definitions,
+                definitions: definitionIds,
                 repositoryId: repositoryId,
                 branch: branch,
                 includePullRequests: includePullRequests,
@@ -459,7 +450,7 @@ namespace DevOps.Util.DotNet
             DateTimeOffset? before = null,
             DateTimeOffset? after = null)
         {
-            project ??= DotNetUtil.DefaultAzureProject;
+            project ??= DotNetConstants.DefaultAzureProject;
 
             // When doing before / after comparisons always use QueueTime. The StartTime parameter
             // in REST refers to when the latest build attempt started, not the original. Using that
