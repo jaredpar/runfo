@@ -23,7 +23,7 @@ namespace DevOps.Util.DotNet.Triage
         {
             if (!string.IsNullOrEmpty(JobName))
             {
-                query = query.Where(x => x.ModelTestRun.Name.Contains(JobName));
+                query = query.Where(x => x.JobName.Contains(JobName));
             }
 
             if (!string.IsNullOrEmpty(Name))

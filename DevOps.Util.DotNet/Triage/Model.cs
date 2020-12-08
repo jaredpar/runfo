@@ -339,6 +339,16 @@ namespace DevOps.Util.DotNet.Triage
 
         public string TestFullName { get; set; }
 
+        [NotMapped]
+        public string TestRunName
+        {
+            get => JobName;
+            set => JobName = value;
+        }
+
+        /// <summary>
+        /// The ModelTestRun.Name
+        /// </summary>
         [Column(TypeName=ModelConstants.JobNameTypeName)]
         public string JobName { get; set; }
 

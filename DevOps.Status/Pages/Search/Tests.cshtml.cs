@@ -77,7 +77,6 @@ namespace DevOps.Status.Pages.Search
             try
             {
                 IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults
-                    .Include(x => x.ModelTestRun)
                     .Include(x => x.ModelBuild);
                 query = buildsRequest.Filter(query);
                 query = testsRequest.Filter(query);

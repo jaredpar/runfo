@@ -408,6 +408,7 @@ namespace DevOps.Util.DotNet.Triage
                     Outcome = testCaseResult.Outcome,
                     ModelTestRun = modelTestRun,
                     ModelBuild = modelBuild,
+                    JobName = modelTestRun.Name,
                     ErrorMessage = testCaseResult.ErrorMessage,
                     IsSubResultContainer = testCaseResult.SubResults?.Length > 0,
                     IsSubResult = false,
