@@ -90,6 +90,14 @@ namespace DevOps.Util.DotNet.Triage
                 .Property(x => x.Attempt)
                 .HasDefaultValue(1);
 
+            modelBuilder.Entity<ModelTestResult>()
+                .HasIndex(x => x.ModelBuildId)
+                .IncludeProperties(x => new { x.TestFullName, x.JobName, x.IsHelixTestResult });
+
+            modelBuilder.Entity<ModelTestResult>()
+                .Property(x => x.JobName)
+                .HasDefaultValue("");
+
             modelBuilder.Entity<ModelTimelineIssue>()
                 .Property(x => x.IssueType)
                 .HasConversion<string>()
@@ -128,6 +136,7 @@ namespace DevOps.Util.DotNet.Triage
         public const string GitHubRepositoryTypeName = "nvarchar(100)";
         public const string AzureOrganizationTypeName = "nvarchar(100)";
         public const string AzureProjectTypeName = "nvarchar(100)";
+        public const string JobNameTypeName = "nvarchar(200)";
     }
 
     public class ModelBuildDefinition
@@ -329,6 +338,19 @@ namespace DevOps.Util.DotNet.Triage
         public int Id { get; set; }
 
         public string TestFullName { get; set; }
+
+        [NotMapped]
+        public string TestRunName
+        {
+            get => JobName;
+            set => JobName = value;
+        }
+
+        /// <summary>
+        /// The ModelTestRun.Name
+        /// </summary>
+        [Column(TypeName=ModelConstants.JobNameTypeName)]
+        public string JobName { get; set; }
 
         public string Outcome { get; set; }
 

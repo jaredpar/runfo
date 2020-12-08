@@ -144,7 +144,35 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await PopulateDb(count: 100, definitionId: 686, includeTests: false, includeTriage: false);
+            var builds = new SearchBuildsRequest();
+            builds.ParseQueryString("started:~21 definition:runtime");
+
+
+            int page = 100;
+            int count = 0;
+            do
+            {
+                Console.WriteLine($"Processing at {page * count}");
+                var all = await builds.Filter(TriageContext.ModelTestResults)
+                    .Where(x => x.JobName == "")
+                    .Include(x => x.ModelTestRun)
+                    .OrderByDescending(x => x.ModelBuild.BuildNumber)
+                    .Skip(count * page)
+                    .Take(page)
+                    .ToListAsync();
+                count++;
+
+                foreach (var item in all)
+                {
+                    item.JobName = item.ModelTestRun.Name;
+                }
+
+                await TriageContext.SaveChangesAsync();
+            }
+            while (true);
+
+
+            // await PopulateDb(count: 100, definitionId: 686, includeTests: true, includeTriage: false);
 
             /*
             var buildInfo = (await DevOpsServer.GetBuildAsync("public", 906787)).GetBuildResultInfo();
