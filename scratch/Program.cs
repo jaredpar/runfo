@@ -144,7 +144,7 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await PopulateDb(count: 100, definitionId: 686, includeTests: false, includeTriage: false);
+            await PopulateDb(count: 100, definitionId: 686, includeTests: true, includeTriage: false);
 
             /*
             var buildInfo = (await DevOpsServer.GetBuildAsync("public", 906787)).GetBuildResultInfo();
