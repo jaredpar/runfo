@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +14,7 @@ namespace DevOps.Status.Pages.View
 {
     public class DefinitionModel : PageModel
     {
-        public record BuildInfo(
+        public record BuildResultInfo(
             string Title,
             string RollingRate,
             SearchBuildsRequest RollingRequest,
@@ -21,264 +22,199 @@ namespace DevOps.Status.Pages.View
             SearchBuildsRequest MergedPullRequestRequest,
             string TotalRate,
             SearchBuildsRequest TotalRequest);
-        public record DefinitionInfo(ModelBuildDefinition ModelBuildDefinition, DefinitionKey DefinitionKey, BuildInfo[] BuildInfos);
-        public record IssueInfo(GitHubIssueKey IssueKey, List<int> BuildNumbers);
+        public record DefinitionDisplayInfo(ModelBuildDefinition ModelBuildDefinition, DefinitionKey DefinitionKey, BuildResultInfo[] BuildResultInfo);
+        public record BuildDisplayInfo(int Number, string Kind);
+        public record IssueInfo(GitHubIssueKey IssueKey, List<BuildDisplayInfo> BuildNumbers);
 
         public TriageContextUtil TriageContextUtil { get; }
+
+        // Data for a given definition
         [BindProperty(SupportsGet = true, Name = "id")]
         public int? DefinitionId { get; set; }
-        public DefinitionInfo? Definition { get; set; }
+        public DefinitionDisplayInfo? Definition { get; set; }
         [BindProperty(SupportsGet = true, Name = "targetBranch")]
         public string? TargetBranch { get; set; }
         public List<IssueInfo> IssueInfos { get; set; } = new List<IssueInfo>();
+
+        // Data for definition list
+        [BindProperty(SupportsGet = true)]
+        public string? SearchDefinitionName { get; set; }
+        public List<DefinitionInfo> DefinitionInfos { get; set; } = new List<DefinitionInfo>();
+        public int DefinitionInfosTotalCount { get; set; }
+        public PaginationDisplay? PaginationDisplayDefinitionKeys { get; set; }
+        [BindProperty(SupportsGet = true, Name = "pageNumber")]
+        public int PageNumber { get; set; }
 
         public DefinitionModel(TriageContextUtil triageContextUtil)
         {
             TriageContextUtil = triageContextUtil;
         }
 
-        public async Task OnGet()
+        public Task OnGet() => DefinitionId is { } definitionId
+            ? OnGetDefinition(definitionId)
+            : OnGetSearch(SearchDefinitionName ?? "");
+
+        private async Task OnGetDefinition(int definitionId)
         {
-            if (DefinitionId is { } definitionId)
+            TargetBranch ??= "master";
+            var modelBuildDefiniton = await TriageContextUtil.Context
+                .ModelBuildDefinitions
+                .Where(x => x.DefinitionId == definitionId)
+                .SingleAsync();
+            var now = DateTime.UtcNow;
+
+            await GenerateBuildPassInfo();
+            await GenerateIssueInfoList();
+
+            async Task GenerateBuildPassInfo()
             {
-                TargetBranch ??= "master";
-                var modelBuildDefiniton = await TriageContextUtil.Context
-                    .ModelBuildDefinitions
-                    .Where(x => x.DefinitionId == definitionId)
-                    .SingleAsync();
-                var now = DateTime.UtcNow;
-
-                await GenerateBuildPassInfo();
-                await GenerateIssueInfoList();
-
-                async Task GenerateBuildPassInfo()
+                var limit = now - TimeSpan.FromDays(21);
+                var buildsRequest = new SearchBuildsRequest()
                 {
-                    var limit = now - TimeSpan.FromDays(21);
-                    var buildsRequest = new SearchBuildsRequest()
-                    {
-                        Definition = definitionId.ToString(),
-                        Started = new DateRequestValue(limit, RelationalKind.GreaterThan),
-                        BuildType = new BuildTypeRequestValue(ModelBuildKind.PullRequest, EqualsKind.NotEquals),
-                        TargetBranch = new StringRequestValue(TargetBranch, StringRelationalKind.Equals),
-                    };
+                    Definition = definitionId.ToString(),
+                    Started = new DateRequestValue(limit, RelationalKind.GreaterThan),
+                    BuildType = new BuildTypeRequestValue(ModelBuildKind.PullRequest, EqualsKind.NotEquals),
+                    TargetBranch = new StringRequestValue(TargetBranch, StringRelationalKind.Equals),
+                };
 
-                    var builds = await buildsRequest
-                        .Filter(TriageContextUtil.Context.ModelBuilds)
-                        .Select(x => new
-                        {
-                            x.BuildResult,
-                            x.IsMergedPullRequest,
-                            x.PullRequestNumber,
-                            x.StartTime,
-                        })
-                        .ToListAsync();
-
-                    Definition = new DefinitionInfo(
-                        modelBuildDefiniton,
-                        modelBuildDefiniton.GetDefinitionKey(),
-                        new[]
-                        {
-                            GetForDate(7),
-                            GetForDate(14),
-                            GetForDate(21),
-                        });
-
-                    BuildInfo GetForDate(int days)
-                    {
-                        var limit = now - TimeSpan.FromDays(days);
-                        var title = $"{days} days";
-
-                        var filtered = builds.Where(x => x.StartTime >= limit).ToList();
-                        double count = filtered.Count;
-                        var rolling = filtered.Where(x => x.PullRequestNumber is null).Select(x => x.BuildResult);
-                        var mpr = filtered.Where(x => x.IsMergedPullRequest).Select(x => x.BuildResult);
-                        var total = filtered.Where(x => x.IsMergedPullRequest || x.PullRequestNumber is null).Select(x => x.BuildResult);
-
-                        return new BuildInfo(
-                            title,
-                            GetRate(rolling),
-                            new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:rolling targetBranch:{TargetBranch}"),
-                            GetRate(mpr),
-                            new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:mpr targetBranch:{TargetBranch}"),
-                            GetRate(total),
-                            new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:!pr targetBranch:{TargetBranch}"));
-                        string GetRate(IEnumerable<BuildResult?> e)
-                        {
-                            double totalCount = e.Count();
-                            double passedCount = e.Count(x => x is BuildResult.Succeeded or BuildResult.PartiallySucceeded);
-                            return (passedCount / totalCount).ToString("P2");
-                        }
-                    }
-                }
-
-                async Task GenerateIssueInfoList()
-                {
-                    var buildsRequest = new SearchBuildsRequest()
-                    {
-                        Definition = definitionId.ToString(),
-                        Started = new DateRequestValue(now - TimeSpan.FromDays(21), RelationalKind.GreaterThan),
-                        TargetBranch = new StringRequestValue(TargetBranch, StringRelationalKind.Equals),
-                    };
-
-                    var results = await buildsRequest
-                        .Filter(TriageContextUtil.Context.ModelBuilds)
-                        .SelectMany(x => x.ModelGitHubIssues)
-                        .Select(x => new
-                        {
-                            x.ModelBuild.BuildNumber,
-                            GitHubOrganiation = x.Organization,
-                            GitHubRepository = x.Repository,
-                            GitHubIssueNumber = x.Number
-                        })
-                        .ToListAsync();
-                    foreach (var group in results
-                        .Select(x => (new GitHubIssueKey(x.GitHubOrganiation, x.GitHubRepository, x.GitHubIssueNumber), x.BuildNumber))
-                        .GroupBy(x => x.Item1))
-                    {
-                        IssueInfos.Add(new IssueInfo(
-                            group.Key,
-                            group.Select(x => x.BuildNumber).OrderByDescending(x => x).ToList()));
-                    }
-
-                    IssueInfos.Sort((x, y) => -(x.BuildNumbers.Count.CompareTo(y.BuildNumbers.Count)));
-                }
-            }
-
-            /*
-            ErrorMessage = null;
-
-            if (string.IsNullOrEmpty(Query))
-            {
-                Query = new SearchBuildsRequest()
-                {
-                    Started = new DateRequestValue(dayQuery: 5),
-                    BuildType = new BuildTypeRequestValue(ModelBuildKind.PullRequest, EqualsKind.NotEquals, "pr"),
-                }.GetQueryString();
-            }
-
-            if (string.IsNullOrEmpty(Definition))
-            {
-                Definition = "roslyn-ci";
-                return;
-            }
-
-            var modelBuildDefinition = await FindDefinitionAsync(Definition);
-            if (modelBuildDefinition is null)
-            {
-                ErrorMessage = $"Could not find definition for {Definition}";
-                return;
-            }
-
-            var searchBuildsRequest = new SearchBuildsRequest();
-            searchBuildsRequest.ParseQueryString(Query);
-            searchBuildsRequest.Definition = null;
-
-            await PopulateBuildInfoAsync();
-            await PopulateJobData();
-
-            HasResults = true;
-
-            async Task PopulateBuildInfoAsync()
-            {
-                var buildQuery = TriageContextUtil.Context.ModelBuilds
-                    .Where(x => x.ModelBuildDefinitionId == modelBuildDefinition.Id && x.BuildResult.HasValue);
-                var builds = await searchBuildsRequest.Filter(buildQuery)
+                var builds = await buildsRequest
+                    .Filter(TriageContextUtil.Context.ModelBuilds)
                     .Select(x => new
                     {
                         x.BuildResult,
                         x.IsMergedPullRequest,
                         x.PullRequestNumber,
+                        x.StartTime,
                     })
                     .ToListAsync();
 
-                BuildCount = builds.Count;
-                RollingPassRate = GetPassRate(ModelBuildKind.Rolling);
-                MergedPullRequestPassRate = GetPassRate(ModelBuildKind.MergedPullRequest);
-
-                var totalPassRate = (double)(builds.Count(x => IsSuccess(x.BuildResult!.Value))) / builds.Count;
-                TotalPassRate = totalPassRate.ToString("P2");
-
-                string? GetPassRate(ModelBuildKind kind)
-                {
-                    var filtered = builds
-                        .Where(x => TriageContextUtil.GetModelBuildKind(x.IsMergedPullRequest, x.PullRequestNumber) == kind)
-                        .ToList();
-                    if (filtered.Count == 0)
+                Definition = new DefinitionDisplayInfo(
+                    modelBuildDefiniton,
+                    modelBuildDefiniton.GetDefinitionKey(),
+                    new[]
                     {
-                        return null;
-                    }
+                        GetForDate(7),
+                        GetForDate(14),
+                        GetForDate(21),
+                    });
 
-                    var count = filtered.Count(x => IsSuccess(x.BuildResult!.Value));
-                    var rate = (double)count / filtered.Count;
-                    return rate.ToString("P2");
+                BuildResultInfo GetForDate(int days)
+                {
+                    var limit = now - TimeSpan.FromDays(days);
+                    var title = $"{days} days";
+
+                    var filtered = builds.Where(x => x.StartTime >= limit).ToList();
+                    double count = filtered.Count;
+                    var rolling = filtered.Where(x => x.PullRequestNumber is null).Select(x => x.BuildResult);
+                    var mpr = filtered.Where(x => x.IsMergedPullRequest).Select(x => x.BuildResult);
+                    var total = filtered.Where(x => x.IsMergedPullRequest || x.PullRequestNumber is null).Select(x => x.BuildResult);
+
+                    return new BuildResultInfo(
+                        title,
+                        GetRate(rolling),
+                        new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:rolling targetBranch:{TargetBranch}"),
+                        GetRate(mpr),
+                        new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:mpr targetBranch:{TargetBranch}"),
+                        GetRate(total),
+                        new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:!pr targetBranch:{TargetBranch}"));
+                    string GetRate(IEnumerable<BuildResult?> e)
+                    {
+                        double totalCount = e.Count();
+                        double passedCount = e.Count(x => x is BuildResult.Succeeded or BuildResult.PartiallySucceeded);
+                        return (passedCount / totalCount).ToString("P2");
+                    }
                 }
             }
 
-            async Task PopulateJobData()
+            async Task GenerateIssueInfoList()
             {
-                IQueryable<ModelTimelineIssue> query = TriageContextUtil.Context
-                    .ModelTimelineIssues
-                    .Where(x => x.IssueType == IssueType.Error && x.ModelBuild.ModelBuildDefinitionId == modelBuildDefinition.Id && x.ModelBuild.BuildResult.HasValue);
-                query = searchBuildsRequest.Filter(query);
-                const int limit = 1_000;
-                var issues = await query
+                var buildsRequest = new SearchBuildsRequest()
+                {
+                    Definition = definitionId.ToString(),
+                    Started = new DateRequestValue(now - TimeSpan.FromDays(21), RelationalKind.GreaterThan),
+                    TargetBranch = new StringRequestValue(TargetBranch, StringRelationalKind.Equals),
+                };
+
+                var results = await buildsRequest
+                    .Filter(TriageContextUtil.Context.ModelBuilds)
+                    .SelectMany(x => x.ModelGitHubIssues)
                     .Select(x => new
                     {
-                        x.JobName,
-                        x.ModelBuild.BuildResult,
+                        x.ModelBuild.BuildNumber,
+                        x.ModelBuild.PullRequestNumber,
                         x.ModelBuild.IsMergedPullRequest,
-                        x.ModelBuild.PullRequestNumber
+                        GitHubOrganization = x.Organization,
+                        GitHubRepository = x.Repository,
+                        GitHubIssueNumber = x.Number
                     })
-                    .Take(limit)
                     .ToListAsync();
-                if (issues.Count == limit)
+                foreach (var group in results.GroupBy(x => new GitHubIssueKey(x.GitHubOrganization, x.GitHubRepository, x.GitHubIssueNumber)))
                 {
-                    JobLimitHit = limit;
+                    IssueInfos.Add(new IssueInfo(
+                        group.Key,
+                        group.Select(x => new BuildDisplayInfo(x.BuildNumber, GetKind(x.PullRequestNumber, x.IsMergedPullRequest))).OrderByDescending(x => x.Number).ToList()));
+
+                    static string GetKind(int? prNumber, bool isMergedPullRequest) => (prNumber, isMergedPullRequest) switch
+                    {
+                        (_, true) => "Merged Pull Request",
+                        ({ }, false) => "Pull Request",
+                        _ => "Rolling",
+                    };
                 }
 
-                searchBuildsRequest.Definition = Definition;
-                foreach (var group in issues.GroupBy(x => x.JobName))
-                {
-                    var request = new SearchTimelinesRequest()
-                    {
-                        JobName = group.Key,
-                        Type = IssueType.Error
-                    };
-
-                    var data = new JobData()
-                    {
-                        JobName = group.Key,
-                        MergedPullRequestFailureCount = GetFailureCount(ModelBuildKind.MergedPullRequest),
-                        RollingFailureCount = GetFailureCount(ModelBuildKind.Rolling),
-                        TotalFailureCount = GetFailureCount(null),
-                        JobPageBuildQuery = searchBuildsRequest.GetQueryString(),
-                        JobPageTimelineQuery = request.GetQueryString(),
-                    };
-
-                    JobDataList.Add(data);
-
-                    int GetFailureCount(ModelBuildKind? kind) =>
-                        kind is { } k
-                            ? group.Where(x => TriageContextUtil.GetModelBuildKind(x.IsMergedPullRequest, x.PullRequestNumber) == k).Count()
-                            : group.Count();
-                }
-                searchBuildsRequest.Definition = null;
-
-                JobDataList.Sort((x, y) => y.TotalFailureCount - x.TotalFailureCount);
+                IssueInfos.Sort((x, y) => -(x.BuildNumbers.Count.CompareTo(y.BuildNumbers.Count)));
             }
-            */
         }
 
-        private Task<ModelBuildDefinition?> FindDefinitionAsync(string definition)
+        private async Task OnGetSearch(string definitionName)
         {
-            if (int.TryParse(definition, out int id))
+            int pageSize = 25;
+            IQueryable<ModelBuildDefinition> query;
+            if (string.IsNullOrEmpty(definitionName))
             {
-                return TriageContextUtil.Context.ModelBuildDefinitions.Where(x => x.DefinitionId == id).FirstOrDefaultAsync();
+                query = TriageContextUtil
+                    .Context
+                    .ModelBuildDefinitions;
             }
             else
             {
-                return TriageContextUtil.Context.ModelBuildDefinitions.Where(x => x.DefinitionName == definition).FirstOrDefaultAsync();
+                query = TriageContextUtil
+                    .Context
+                    .ModelBuildDefinitions
+                    .Where(x => x.DefinitionName.Contains(definitionName));
             }
+
+            DefinitionInfosTotalCount = await query.CountAsync();
+            var results = await query
+                .OrderBy(x => x.DefinitionName)
+                .Select(x => new
+                {
+                    x.DefinitionName,
+                    x.DefinitionId,
+                    x.AzureOrganization,
+                    x.AzureProject
+                })
+                .Skip(PageNumber * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            foreach (var result in results)
+            {
+                DefinitionInfos.Add(new DefinitionInfo(
+                    result.AzureOrganization,
+                    result.AzureProject,
+                    result.DefinitionId,
+                    result.DefinitionName));
+            }
+
+            PaginationDisplayDefinitionKeys = new PaginationDisplay(
+                "/View/Definition",
+                new Dictionary<string, string>()
+                {
+                    { nameof(SearchDefinitionName), definitionName },
+                },
+                PageNumber,
+                DefinitionInfosTotalCount / pageSize);
         }
     }
 }
