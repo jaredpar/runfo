@@ -137,7 +137,7 @@ namespace DevOps.Status.Pages.View
                     {
                         IssueInfos.Add(new IssueInfo(
                             group.Key,
-                            group.Select(x => x.BuildNumber).ToList()));
+                            group.Select(x => x.BuildNumber).OrderByDescending(x => x).ToList()));
                     }
 
                     IssueInfos.Sort((x, y) => -(x.BuildNumbers.Count.CompareTo(y.BuildNumbers.Count)));
