@@ -39,6 +39,16 @@ namespace DevOps.Util.DotNet.Triage
             }
         }
 
+        public SearchBuildsRequest()
+        {
+
+        }
+
+        public SearchBuildsRequest(string query)
+        {
+            ParseQueryString(query);
+        }
+
         public IQueryable<ModelTimelineIssue> Filter(IQueryable<ModelTimelineIssue> query) =>
             Filter(
                 query,

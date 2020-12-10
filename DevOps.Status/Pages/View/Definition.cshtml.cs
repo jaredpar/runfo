@@ -13,13 +13,22 @@ namespace DevOps.Status.Pages.View
 {
     public class DefinitionModel : PageModel
     {
-        public record BuildInfo(string Title, string RollingRate, string MergedPullRequestRate, string TotalRate);
-        public record DefinitionInfo( ModelBuildDefinition ModelBuildDefinition, BuildInfo[] BuildInfos);
+        public record BuildInfo(
+            string Title,
+            string RollingRate,
+            SearchBuildsRequest RollingRequest,
+            string MergedPullRequestRate,
+            SearchBuildsRequest MergedPullRequestRequest,
+            string TotalRate,
+            SearchBuildsRequest TotalRequest);
+        public record DefinitionInfo(ModelBuildDefinition ModelBuildDefinition, DefinitionKey DefinitionKey, BuildInfo[] BuildInfos);
 
         public TriageContextUtil TriageContextUtil { get; }
         [BindProperty(SupportsGet = true, Name = "id")]
         public int? DefinitionId { get; set; }
         public DefinitionInfo? Definition { get; set; }
+        [BindProperty(SupportsGet = true, Name = "targetBranch")]
+        public string? TargetBranch { get; set; }
 
         public DefinitionModel(TriageContextUtil triageContextUtil)
         {
@@ -30,6 +39,7 @@ namespace DevOps.Status.Pages.View
         {
             if (DefinitionId is { } definitionId)
             {
+                TargetBranch ??= "master";
                 var modelBuildDefiniton = await TriageContextUtil.Context
                     .ModelBuildDefinitions
                     .Where(x => x.DefinitionId == definitionId)
@@ -41,7 +51,8 @@ namespace DevOps.Status.Pages.View
                 {
                     Definition = definitionId.ToString(),
                     Started = new DateRequestValue(limit, RelationalKind.GreaterThan),
-                    BuildType = new BuildTypeRequestValue(ModelBuildKind.PullRequest, EqualsKind.NotEquals)
+                    BuildType = new BuildTypeRequestValue(ModelBuildKind.PullRequest, EqualsKind.NotEquals),
+                    TargetBranch = new StringRequestValue(TargetBranch, StringRelationalKind.Equals),
                 };
 
                 var builds = await buildsRequest
@@ -57,22 +68,33 @@ namespace DevOps.Status.Pages.View
 
                 Definition = new DefinitionInfo(
                     modelBuildDefiniton,
+                    modelBuildDefiniton.GetDefinitionKey(),
                     new[]
                     {
-                        GetForDate(now - TimeSpan.FromDays(7), "7 days"),
-                        GetForDate(now - TimeSpan.FromDays(14), "14 days"),
-                        GetForDate(now - TimeSpan.FromDays(21), "21 days"),
+                        GetForDate(7),
+                        GetForDate(14),
+                        GetForDate(21),
                     });
 
-                BuildInfo GetForDate(DateTime limit, string title)
+                BuildInfo GetForDate(int days)
                 {
+                    var limit = now - TimeSpan.FromDays(days);
+                    var title = $"{days} days";
+
                     var filtered = builds.Where(x => x.StartTime >= limit).ToList();
                     double count = filtered.Count;
                     var rolling = filtered.Where(x => x.PullRequestNumber is null).Select(x => x.BuildResult);
                     var mpr = filtered.Where(x => x.IsMergedPullRequest).Select(x => x.BuildResult);
                     var total = filtered.Where(x => x.IsMergedPullRequest || x.PullRequestNumber is null).Select(x => x.BuildResult);
 
-                    return new BuildInfo(title, GetRate(rolling), GetRate(mpr), GetRate(total));
+                    return new BuildInfo(
+                        title,
+                        GetRate(rolling),
+                        new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:rolling targetBranch:{TargetBranch}"),
+                        GetRate(mpr),
+                        new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:mpr targetBranch:{TargetBranch}"),
+                        GetRate(total),
+                        new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:!pr targetBranch:{TargetBranch}"));
                     string GetRate(IEnumerable<BuildResult?> e)
                     {
                         double totalCount = e.Count();
