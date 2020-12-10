@@ -153,6 +153,9 @@ namespace Scratch
 
         internal async Task Scratch()
         {
+            await PopulateModelBuildDefinitionTable();
+
+            /*
             var builds = new SearchBuildsRequest();
             builds.ParseQueryString("started:~21 definition:runtime");
 
@@ -179,6 +182,7 @@ namespace Scratch
                 await TriageContext.SaveChangesAsync();
             }
             while (true);
+            */
 
 
             // await PopulateDb(count: 100, definitionId: 686, includeTests: true, includeTriage: false);
@@ -696,6 +700,16 @@ namespace Scratch
             }
 
             await FunctionQueueUtil.QueueUpdateIssueAsync(issue, delay: null);
+        }
+
+        internal async Task PopulateModelBuildDefinitionTable()
+        {
+            var definitions = await DevOpsServer.ListDefinitionsAsync("public");
+            foreach (var definition in definitions)
+            {
+                Console.WriteLine(definition.Name);
+                await TriageContextUtil.EnsureBuildDefinitionAsync(definition.GetDefinitionInfo(DevOpsServer.Organization));
+            }
         }
 
         internal async Task PopulateDb(int count, int definitionId, bool includeTests, bool includeTriage)

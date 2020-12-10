@@ -1,83 +1,107 @@
-﻿@page
+﻿@page "{id:int?}"
 @model DevOps.Status.Pages.View.DefinitionModel
 @{
 }
 
-<h1>Defintion</h1>
-
-<form method="get">
-    <div class="form-group row">
-        <label class="col-sm-2 col-form-label" for="numberId">Definition</label>
-        <input class="col-sm-10 form-control" type="text" asp-for="Definition" />
-    </div>
-
-    <div class="form-group row">
-        <label class="col-sm-2 col-form-label" for="numberId">Build Query</label>
-        <input class="col-sm-10 form-control" type="text" name="q" value="@Model.Query"/>
-    </div>
-
-  <button class="btn btn-primary">Display</button>
-</form>
-
-@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+@if (Model.Definition is { } definition)
 {
-    <div class="alert alert-danger" role="alert">
-      @Model.ErrorMessage
+    <h1>Defintion: <a target="_blank" href=@definition.DefinitionKey.DefinitionUri>@definition.ModelBuildDefinition.DefinitionName</a></h1>
+
+    <div class="mt-2">
+        <form method="get">
+            <div class="form-group row">
+                <label class="col-sm-2 col-form-label" for="numberId">Target Branch</label>
+                <input class="col-sm-10 form-control" type="text" value="@Model.TargetBranch">
+            </div>
+            <button class="btn btn-primary">View</button>
+        </form>
+    </div>
+
+    <div class="mt-2">
+        <h2>Build Pass Information</h2>
+
+        <table class="table table-striped table-bordered mt-2">
+            <thead>
+                <tr>
+                    <th scope="col">Days</th>
+                    <th scope="col">Rolling</th>
+                    <th scope="col">Merged Pull Requests</th>
+                    <th scope="col">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var buildInfo in definition.BuildResultInfo)
+                {
+                    <tr>
+                        <td>@buildInfo.Title</td>
+                        <td><a asp-page="/search/builds" asp-route-q="@buildInfo.RollingRequest.GetQueryString()">@buildInfo.RollingRate</a></td>
+                        <td><a asp-page="/search/builds" asp-route-q="@buildInfo.MergedPullRequestRequest.GetQueryString()">@buildInfo.MergedPullRequestRate</a></td>
+                        <td><a asp-page="/search/builds" asp-route-q="@buildInfo.TotalRequest.GetQueryString()">@buildInfo.TotalRate</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-2">
+        <h2>Issues Encountered</h2>
+        <p>Issues impacting builds over last 21 days</p>
+
+        <ul class="list-group">
+            @for (int i = 0; i < Model.IssueInfos.Count; i++)
+            {
+                var issueInfo = Model.IssueInfos[i];
+                var target = $"issue-id-{i}";
+                <li class="list-group-item">
+                    <a href="#@target" class="badge badge-primary" data-toggle="collapse">@issueInfo.BuildNumbers.Count Builds</a>
+                    <a class="ml-2" target="_blank" href="@issueInfo.IssueKey.IssueUri">@issueInfo.IssueKey.IssueUri</a>
+                    <div class="collapse" id=@target>
+                        <ul class="list-group">
+                            @foreach (var buildDisplayInfo in issueInfo.BuildNumbers)
+                            {
+                                <li class="list-group-item"><a asp-page="/view/build" asp-route-number="@buildDisplayInfo.Number">@buildDisplayInfo.Number</a> @buildDisplayInfo.Kind</li>
+                            }
+                        </ul>
+                    </div>
+                </li>
+            }
+        </ul>
     </div>
 }
-
-@if (Model.HasResults)
+else
 {
-    <h2>Build Pass Information</h2>
-    <div>
-        <p>Total Builds: @Model.BuildCount</p>
-        @if (Model.IncludeMergedPullRequestData)
-        {
-            <p>Merged Pull Request Pass Rate: @Model.MergedPullRequestPassRate</p>
-        }
-        <p>Rolling Pass Rate: @Model.RollingPassRate</p>
-        <p>Total Pass Rate: @Model.TotalPassRate</p>
+    <h1>Defintions</h1>
+
+    <div class="mt-2">
+        <form method="get">
+            <div class="form-group row">
+                <label class="col-sm-2 col-form-label" for="numberId">Definition Name</label>
+                <input class="col-sm-10 form-control" type="text" asp-for="SearchDefinitionName" />
+            </div>
+            <button class="btn btn-primary">Search</button>
+        </form>
     </div>
 
-    <h2>Job Failure Count</h2>
+    <h1>Results @Model.DefinitionInfosTotalCount.ToString("N0")</h1>
 
-    @if (Model.JobLimitHit is { } limit)
-    {
-        <div>
-            <p>Limited to first @limit.ToString("N0") failures</p>
-        </div>
-    }
-
-    <table class="table table-striped table-bordered">
+    <table class="table table-striped table-bordered mt-2">
         <thead>
             <tr>
-                <th scope="col">Job Name</th>
-                @if (Model.IncludeMergedPullRequestData)
-                {
-                    <th>Merged Pull Requests</th>
-                }
-                <th scope="col">Rolling</th>
-                <th scope="col">Total</th>
+                <th scope="col">Name</th>
+                <th scope="col">Id</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var jobData in Model.JobDataList)
+            @foreach (var definitionInfo in Model.DefinitionInfos)
             {
                 <tr>
-                    <td>
-                        <a asp-page="/Search/Timelines" 
-                           asp-route-tq="@jobData.JobPageTimelineQuery"
-                           asp-route-bq="@jobData.JobPageBuildQuery">@jobData.JobName</a>
-                    </td>
-                    @if (Model.IncludeMergedPullRequestData)
-                    {
-                        <td>@jobData.MergedPullRequestFailureCount</td>
-                    }
-                    <td>@jobData.RollingFailureCount</td>
-                    <td>@jobData.TotalFailureCount</td>
+                    <td><a asp-page="/view/definition" asp-route-id="@definitionInfo.Id">@definitionInfo.Name</a></td>
+                    <td><a asp-page="/view/definition" asp-route-id="@definitionInfo.Id">@definitionInfo.Id</a></td>
                 </tr>
             }
         </tbody>
     </table>
+
+    <partial name="../Shared/_PaginationDisplay" model="@Model.PaginationDisplayDefinitionKeys" />
 }
 

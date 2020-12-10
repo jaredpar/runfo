@@ -85,6 +85,16 @@ namespace DevOps.Util
 
         #endregion
 
+        #region DefinitionReference
+
+        public static DefinitionKey GetDefinitionKey(this DefinitionReference def, string organization) =>
+            new DefinitionKey(organization, def.Project.Name, def.Id);
+
+        public static DefinitionInfo GetDefinitionInfo(this DefinitionReference def, string organization) =>
+            new DefinitionInfo(GetDefinitionKey(def, organization), def.Name);
+
+        #endregion
+
         #region Build
 
         public static BuildKey GetBuildKey(this Build build) => DevOpsUtil.GetBuildKey(build);
