@@ -22,6 +22,7 @@ namespace DevOps.Status.Pages.View
             string TotalRate,
             SearchBuildsRequest TotalRequest);
         public record DefinitionInfo(ModelBuildDefinition ModelBuildDefinition, DefinitionKey DefinitionKey, BuildInfo[] BuildInfos);
+        public record IssueInfo(GitHubIssueKey IssueKey, List<int> BuildNumbers);
 
         public TriageContextUtil TriageContextUtil { get; }
         [BindProperty(SupportsGet = true, Name = "id")]
@@ -29,6 +30,7 @@ namespace DevOps.Status.Pages.View
         public DefinitionInfo? Definition { get; set; }
         [BindProperty(SupportsGet = true, Name = "targetBranch")]
         public string? TargetBranch { get; set; }
+        public List<IssueInfo> IssueInfos { get; set; } = new List<IssueInfo>();
 
         public DefinitionModel(TriageContextUtil triageContextUtil)
         {
@@ -44,64 +46,101 @@ namespace DevOps.Status.Pages.View
                     .ModelBuildDefinitions
                     .Where(x => x.DefinitionId == definitionId)
                     .SingleAsync();
-
                 var now = DateTime.UtcNow;
-                var limit = now - TimeSpan.FromDays(21);
-                var buildsRequest = new SearchBuildsRequest()
+
+                await GenerateBuildPassInfo();
+                await GenerateIssueInfoList();
+
+                async Task GenerateBuildPassInfo()
                 {
-                    Definition = definitionId.ToString(),
-                    Started = new DateRequestValue(limit, RelationalKind.GreaterThan),
-                    BuildType = new BuildTypeRequestValue(ModelBuildKind.PullRequest, EqualsKind.NotEquals),
-                    TargetBranch = new StringRequestValue(TargetBranch, StringRelationalKind.Equals),
-                };
-
-                var builds = await buildsRequest
-                    .Filter(TriageContextUtil.Context.ModelBuilds)
-                    .Select(x => new
+                    var limit = now - TimeSpan.FromDays(21);
+                    var buildsRequest = new SearchBuildsRequest()
                     {
-                        x.BuildResult,
-                        x.IsMergedPullRequest,
-                        x.PullRequestNumber,
-                        x.StartTime,
-                    })
-                    .ToListAsync();
+                        Definition = definitionId.ToString(),
+                        Started = new DateRequestValue(limit, RelationalKind.GreaterThan),
+                        BuildType = new BuildTypeRequestValue(ModelBuildKind.PullRequest, EqualsKind.NotEquals),
+                        TargetBranch = new StringRequestValue(TargetBranch, StringRelationalKind.Equals),
+                    };
 
-                Definition = new DefinitionInfo(
-                    modelBuildDefiniton,
-                    modelBuildDefiniton.GetDefinitionKey(),
-                    new[]
+                    var builds = await buildsRequest
+                        .Filter(TriageContextUtil.Context.ModelBuilds)
+                        .Select(x => new
+                        {
+                            x.BuildResult,
+                            x.IsMergedPullRequest,
+                            x.PullRequestNumber,
+                            x.StartTime,
+                        })
+                        .ToListAsync();
+
+                    Definition = new DefinitionInfo(
+                        modelBuildDefiniton,
+                        modelBuildDefiniton.GetDefinitionKey(),
+                        new[]
+                        {
+                            GetForDate(7),
+                            GetForDate(14),
+                            GetForDate(21),
+                        });
+
+                    BuildInfo GetForDate(int days)
                     {
-                        GetForDate(7),
-                        GetForDate(14),
-                        GetForDate(21),
-                    });
+                        var limit = now - TimeSpan.FromDays(days);
+                        var title = $"{days} days";
 
-                BuildInfo GetForDate(int days)
+                        var filtered = builds.Where(x => x.StartTime >= limit).ToList();
+                        double count = filtered.Count;
+                        var rolling = filtered.Where(x => x.PullRequestNumber is null).Select(x => x.BuildResult);
+                        var mpr = filtered.Where(x => x.IsMergedPullRequest).Select(x => x.BuildResult);
+                        var total = filtered.Where(x => x.IsMergedPullRequest || x.PullRequestNumber is null).Select(x => x.BuildResult);
+
+                        return new BuildInfo(
+                            title,
+                            GetRate(rolling),
+                            new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:rolling targetBranch:{TargetBranch}"),
+                            GetRate(mpr),
+                            new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:mpr targetBranch:{TargetBranch}"),
+                            GetRate(total),
+                            new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:!pr targetBranch:{TargetBranch}"));
+                        string GetRate(IEnumerable<BuildResult?> e)
+                        {
+                            double totalCount = e.Count();
+                            double passedCount = e.Count(x => x is BuildResult.Succeeded or BuildResult.PartiallySucceeded);
+                            return (passedCount / totalCount).ToString("P2");
+                        }
+                    }
+                }
+
+                async Task GenerateIssueInfoList()
                 {
-                    var limit = now - TimeSpan.FromDays(days);
-                    var title = $"{days} days";
-
-                    var filtered = builds.Where(x => x.StartTime >= limit).ToList();
-                    double count = filtered.Count;
-                    var rolling = filtered.Where(x => x.PullRequestNumber is null).Select(x => x.BuildResult);
-                    var mpr = filtered.Where(x => x.IsMergedPullRequest).Select(x => x.BuildResult);
-                    var total = filtered.Where(x => x.IsMergedPullRequest || x.PullRequestNumber is null).Select(x => x.BuildResult);
-
-                    return new BuildInfo(
-                        title,
-                        GetRate(rolling),
-                        new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:rolling targetBranch:{TargetBranch}"),
-                        GetRate(mpr),
-                        new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:mpr targetBranch:{TargetBranch}"),
-                        GetRate(total),
-                        new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:!pr targetBranch:{TargetBranch}"));
-                    string GetRate(IEnumerable<BuildResult?> e)
+                    var buildsRequest = new SearchBuildsRequest()
                     {
-                        double totalCount = e.Count();
-                        double passedCount = e.Count(x => x is BuildResult.Succeeded or BuildResult.PartiallySucceeded);
-                        return (passedCount / totalCount).ToString("P2");
+                        Definition = definitionId.ToString(),
+                        Started = new DateRequestValue(now - TimeSpan.FromDays(21), RelationalKind.GreaterThan),
+                        TargetBranch = new StringRequestValue(TargetBranch, StringRelationalKind.Equals),
+                    };
+
+                    var results = await buildsRequest
+                        .Filter(TriageContextUtil.Context.ModelBuilds)
+                        .SelectMany(x => x.ModelGitHubIssues)
+                        .Select(x => new
+                        {
+                            x.ModelBuild.BuildNumber,
+                            GitHubOrganiation = x.Organization,
+                            GitHubRepository = x.Repository,
+                            GitHubIssueNumber = x.Number
+                        })
+                        .ToListAsync();
+                    foreach (var group in results
+                        .Select(x => (new GitHubIssueKey(x.GitHubOrganiation, x.GitHubRepository, x.GitHubIssueNumber), x.BuildNumber))
+                        .GroupBy(x => x.Item1))
+                    {
+                        IssueInfos.Add(new IssueInfo(
+                            group.Key,
+                            group.Select(x => x.BuildNumber).ToList()));
                     }
 
+                    IssueInfos.Sort((x, y) => -(x.BuildNumbers.Count.CompareTo(y.BuildNumbers.Count)));
                 }
             }
 

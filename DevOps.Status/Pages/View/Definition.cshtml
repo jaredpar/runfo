@@ -42,6 +42,35 @@
             </tbody>
         </table>
     </div>
+
+    <div class="mt-2">
+        <h2>Issues Encountered</h2>
+        <p>Issues impacting builds over last 21 days</p>
+
+        <div id="issue-accordion" class="mt-2">
+            <ul>
+                @for (int i = 0; i < Model.IssueInfos.Count; i++)
+                {
+                    var issueInfo = Model.IssueInfos[i];
+                    var target = $"issue-id-{i}";
+
+                    <li>
+                        <p>
+                          <a target="_blank" href="@issueInfo.IssueKey.IssueUri">@issueInfo.IssueKey.IssueUri</a> (<a data-toggle="collapse" href="#@target" role="button">@issueInfo.BuildNumbers.Count builds</a>)
+                        </p>
+                        <div class="collapse multi-collapse" id=@target>
+                            <ul>
+                                @foreach (var buildNumber in issueInfo.BuildNumbers)
+                                {
+                                    <li><a asp-page="/view/build" asp-route-number="@buildNumber">@buildNumber</a></li>
+                                }
+                            </ul>
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
 }
 else
 {
