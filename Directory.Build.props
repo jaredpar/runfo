@@ -1,7 +1,13 @@
 <Project>
   <PropertyGroup>
+    <CscToolPath>p:\runfo</CscToolPath>
+    <CscToolExe>csc.cmd</CscToolExe>
+    <UseSharedCompilation>false</UseSharedCompilation>
     <RepoPath>$(MSBuildThisFileDirectory)</RepoPath>
     <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>embedded</DebugType>
+    <Configuration>Release</Configuration>
   </PropertyGroup>
 </Project>
