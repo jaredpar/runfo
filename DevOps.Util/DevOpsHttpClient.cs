@@ -52,7 +52,7 @@ namespace DevOps.Util
         internal async Task DownloadFileAsync(string uri, Stream destinationStream)
         {
             var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
-            using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
+            using var response = await HttpClient.SendAsync(message, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             await response.Content.CopyToAsync(destinationStream).ConfigureAwait(false);
         }
@@ -61,7 +61,7 @@ namespace DevOps.Util
         {
             var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/zip"));
-            using var response = await HttpClient.SendAsync(message).ConfigureAwait(false);
+            using var response = await HttpClient.SendAsync(message, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             await response.Content.CopyToAsync(destinationStream).ConfigureAwait(false);
         }
