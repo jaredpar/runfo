@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -49,25 +50,75 @@ namespace DevOps.Util
             HttpClient = httpClient ?? new HttpClient();
         }
 
-        internal async Task DownloadFileAsync(string uri, Stream destinationStream)
+        private async Task DownloadWithProgress(HttpResponseMessage response, Stream destinationStream)
+        {
+            Console.Write($"Downloading...");
+            using Stream contentStream = await response.Content.ReadAsStreamAsync();
+
+            long totalRead = 0L;
+            long totalReads = 0L;
+            byte[] buffer = new byte[8192];
+            const double mbdividend = 1000000.0;
+            double sizeInMbs = long.Parse(response.Content.Headers.GetValues("Content-Length").First()) / mbdividend;
+
+            while (true)
+            {
+                int read = await contentStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
+                if (read == 0)
+                {
+                    break;
+                }
+                await destinationStream.WriteAsync(buffer, 0, read).ConfigureAwait(false);
+                totalRead += read;
+                totalReads += 1;
+
+                if (totalReads % 500 == 0)
+                {
+                    Console.Write($"\rDownloading... {totalRead / mbdividend:0,0.00}/{sizeInMbs:0,0.00}MBs");
+                }
+            }
+            Console.Write($"\r{new string(' ', Console.BufferWidth)}\b\r"); // clear status line from console.
+        }
+
+        internal async Task DownloadFileAsync(string uri, Stream destinationStream, bool showProgress = false)
         {
             var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
             using var response = await HttpClient.SendAsync(message, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
-            await response.Content.CopyToAsync(destinationStream).ConfigureAwait(false);
+
+            if (!showProgress)
+            {
+                await response.Content.CopyToAsync(destinationStream).ConfigureAwait(false);
+            }
+            else
+            {
+                await DownloadWithProgress(response, destinationStream).ConfigureAwait(false);
+            }
+
         }
 
-        internal async Task DownloadZipFileAsync(string uri, Stream destinationStream)
+        internal Task DownloadFileAsync(string uri, string destinationFilePath, bool showProgress = false) =>
+            WithFileStream(destinationFilePath, fileStream => DownloadFileAsync(uri, fileStream, showProgress));
+
+        internal async Task DownloadZipFileAsync(string uri, Stream destinationStream, bool showProgress = false)
         {
             var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/zip"));
             using var response = await HttpClient.SendAsync(message, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
-            await response.Content.CopyToAsync(destinationStream).ConfigureAwait(false);
+
+            if (!showProgress)
+            {
+                await response.Content.CopyToAsync(destinationStream).ConfigureAwait(false);
+            }
+            else
+            {
+                await DownloadWithProgress(response, destinationStream).ConfigureAwait(false);
+            }
         }
 
-        internal Task DownloadZipFileAsync(string uri, string destinationFilePath) =>
-            WithFileStream(destinationFilePath, fileStream => DownloadZipFileAsync(uri, fileStream));
+        internal Task DownloadZipFileAsync(string uri, string destinationFilePath, bool showProgress = false) =>
+            WithFileStream(destinationFilePath, fileStream => DownloadZipFileAsync(uri, fileStream, showProgress));
 
         internal async Task WithFileStream(string destinationFilePath, Func<FileStream, Task> func)
         {

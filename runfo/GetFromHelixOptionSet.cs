@@ -14,11 +14,14 @@ namespace Runfo
 
         internal string? Token { get; set; }
 
+        internal bool IgnoreDumps { get; set; }
+
         internal GetFromHelixOptionSet()
         {
             Add("j|jobid=", "helix job id to download items from.", j => JobId = j);
             Add("o|output=", "output directory to download to.", d => DownloadDir = d);
-            Add("w|workitems=", "comma separated list of workitems to download.\nAccepted values:\nempty: download only correlation payload.\nlist: separated by comma.\nall: download all workitems.", w => WorkItems = w.Split(",").ToList());
+            Add("n|no-dumps", "don't download dump files if any.", nd => IgnoreDumps = nd is object);
+            Add("w|workitems=", "Accepted values:\n empty: first workitem.\n list: workitem name(s) separated by comma.\n all: download all workitems.", w => WorkItems = w.Split(",").ToList());
         }
     }
 }

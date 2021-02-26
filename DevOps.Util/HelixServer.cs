@@ -25,7 +25,7 @@ namespace DevOps.Util
             _client = new DevOpsHttpClient(httpClient: httpClient);
         }
 
-        public async ValueTask GetHelixPayloads(string jobId, List<string> workItems, string downloadDir)
+        public async ValueTask GetHelixPayloads(string jobId, List<string> workItems, string downloadDir, bool ignoreDumps)
         {
             if (!Path.IsPathFullyQualified(downloadDir))
             {
@@ -62,38 +62,62 @@ namespace DevOps.Util
                     string fileName = uri.Segments[^1];
                     string destinationFile = Path.Combine(correlationDir, fileName);
                     Console.WriteLine($"Payload {fileName} => {destinationFile}");
-                    await _client.DownloadZipFileAsync(url, destinationFile).ConfigureAwait(false);
+                    await _client.DownloadZipFileAsync(url, destinationFile, showProgress: true).ConfigureAwait(false);
                 }
 
-                if (workItems.Count > 0)
+                string workItemsDir = Path.Combine(downloadDir, "workitems");
+                Directory.CreateDirectory(workItemsDir);
+
+                bool downloadAll = false;
+                bool downloadFirst = workItems.Count == 0;
+
+                if (!downloadFirst && workItems[0] == "all")
                 {
-                    string workItemsDir = Path.Combine(downloadDir, "workitems");
-                    Directory.CreateDirectory(workItemsDir);
-                    bool downloadAll = false;
-
-                    if (workItems[0] == "all")
-                    {
-                        downloadAll = true;
-                    }
-
-                    foreach (WorkItemInfo workItemInfo in workItemsInfo)
-                    {
-                        if (!downloadAll && !workItems.Contains(workItemInfo.WorkItemId ?? string.Empty))
-                            continue;
-
-                        if (string.IsNullOrEmpty(workItemInfo.PayloadUri))
-                            continue;
-
-                        string fileName = Path.Combine(workItemsDir, $"{workItemInfo.WorkItemId}.zip");
-
-                        Console.WriteLine($"WorkItem {workItemInfo.WorkItemId} => {fileName}");
-
-                        await _client.DownloadZipFileAsync(workItemInfo.PayloadUri, fileName).ConfigureAwait(false);
-                    }
+                    downloadAll = true;
                 }
-                else
+
+                foreach (WorkItemInfo workItemInfo in workItemsInfo)
                 {
-                    throw new ArgumentException("No workitems specified");
+                    if (!downloadFirst && !downloadAll && !workItems.Contains(workItemInfo.WorkItemId ?? string.Empty))
+                        continue;
+
+                    if (string.IsNullOrEmpty(workItemInfo.PayloadUri))
+                        continue;
+
+                    await DownloadWorkitemFiles(workItemInfo.WorkItemId!, workItemInfo.PayloadUri).ConfigureAwait(false);
+
+                    // if no workitems specified, download the first one,
+                    // usefull to download any workitem and inspect the payload structure for debugging
+                    if (downloadFirst)
+                        return;
+                }
+
+                async Task DownloadWorkitemFiles(string workItemId, string payloadUri)
+                {
+                    string itemDir = Path.Combine(workItemsDir, workItemId);
+                    Directory.CreateDirectory(itemDir);
+
+                    Console.WriteLine();
+                    Console.WriteLine($"------ Downloading files for: {workItemId} -------");
+                    Console.WriteLine();
+
+                    string fileName = Path.Combine(workItemsDir, itemDir, $"{workItemId}.zip");
+
+                    Console.WriteLine($"WorkItem {workItemId} => {fileName}");
+
+                    await _client.DownloadZipFileAsync(payloadUri, fileName, showProgress: true).ConfigureAwait(false);
+
+                    IEnumerable<UploadedFile> workitemFiles = await helixApi.WorkItem.ListFilesAsync(workItemId, jobId);
+                    foreach (var file in workitemFiles)
+                    {
+                        if (ignoreDumps && file.Name.StartsWith("core.") || file.Name.EndsWith(".dmp"))
+                            continue;
+
+                        string destFile = Path.Combine(itemDir, file.Name);
+
+                        Console.WriteLine($"{file.Name} => {destFile}");
+                        await _client.DownloadFileAsync(file.Link, destFile, showProgress: true).ConfigureAwait(false);
+                    }
                 }
             }
         }
