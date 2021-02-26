@@ -110,7 +110,7 @@ namespace DevOps.Util
                     IEnumerable<UploadedFile> workitemFiles = await helixApi.WorkItem.ListFilesAsync(workItemId, jobId);
                     foreach (var file in workitemFiles)
                     {
-                        if (ignoreDumps && file.Name.StartsWith("core.") || file.Name.EndsWith(".dmp"))
+                        if (ignoreDumps && (file.Name.StartsWith("core.") || file.Name.EndsWith(".dmp")))
                             continue;
 
                         string destFile = Path.Combine(itemDir, file.Name);
