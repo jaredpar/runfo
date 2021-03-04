@@ -50,10 +50,12 @@ namespace DevOps.Util
             HttpClient = httpClient ?? new HttpClient();
         }
 
-        private async Task DownloadWithProgress(HttpResponseMessage response, Stream destinationStream)
+        private async Task DownloadWithProgress(HttpResponseMessage response, Stream destinationStream, TextWriter textWriter)
         {
-            Console.Write($"Downloading...");
-            using Stream contentStream = await response.Content.ReadAsStreamAsync();
+            string output = "Downloading...";
+            textWriter.Write(output);
+            int lastLineLength = output.Length;
+            using Stream contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
             long totalRead = 0L;
             long totalReads = 0L;
@@ -74,13 +76,15 @@ namespace DevOps.Util
 
                 if (totalReads % 500 == 0)
                 {
-                    Console.Write($"\rDownloading... {totalRead / mbdividend:0,0.00}/{sizeInMbs:0,0.00}MBs");
+                    output = $"\rDownloading... {totalRead / mbdividend:0,0.00}/{sizeInMbs:0,0.00}MBs";
+                    lastLineLength = output.Length;
+                    textWriter.Write(output);
                 }
             }
-            Console.Write($"\r{new string(' ', Console.BufferWidth)}\b\r"); // clear status line from console.
+            textWriter.Write($"\r{new string(' ', lastLineLength)}\b\r"); // clear status line in text writer.
         }
 
-        internal async Task DownloadFileAsync(string uri, Stream destinationStream, bool showProgress = false)
+        internal async Task DownloadFileAsync(string uri, Stream destinationStream, bool showProgress = false, TextWriter? writer = null)
         {
             var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
             using var response = await HttpClient.SendAsync(message, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
@@ -92,15 +96,18 @@ namespace DevOps.Util
             }
             else
             {
-                await DownloadWithProgress(response, destinationStream).ConfigureAwait(false);
+                if (writer == null)
+                    throw new ArgumentNullException(nameof(writer), $"Should not be null when {nameof(showProgress)} is true.");
+
+                await DownloadWithProgress(response, destinationStream, writer).ConfigureAwait(false);
             }
 
         }
 
-        internal Task DownloadFileAsync(string uri, string destinationFilePath, bool showProgress = false) =>
-            WithFileStream(destinationFilePath, fileStream => DownloadFileAsync(uri, fileStream, showProgress));
+        internal Task DownloadFileAsync(string uri, string destinationFilePath, bool showProgress = false, TextWriter? writer = null) =>
+            WithFileStream(destinationFilePath, fileStream => DownloadFileAsync(uri, fileStream, showProgress, writer));
 
-        internal async Task DownloadZipFileAsync(string uri, Stream destinationStream, bool showProgress = false)
+        internal async Task DownloadZipFileAsync(string uri, Stream destinationStream, bool showProgress = false, TextWriter? writer = null)
         {
             var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/zip"));
@@ -113,12 +120,15 @@ namespace DevOps.Util
             }
             else
             {
-                await DownloadWithProgress(response, destinationStream).ConfigureAwait(false);
+                if (writer == null)
+                    throw new ArgumentNullException(nameof(writer), $"Should not be null when {nameof(showProgress)} is true.");
+
+                await DownloadWithProgress(response, destinationStream, writer).ConfigureAwait(false);
             }
         }
 
-        internal Task DownloadZipFileAsync(string uri, string destinationFilePath, bool showProgress = false) =>
-            WithFileStream(destinationFilePath, fileStream => DownloadZipFileAsync(uri, fileStream, showProgress));
+        internal Task DownloadZipFileAsync(string uri, string destinationFilePath, bool showProgress = false, TextWriter? writer = null) =>
+            WithFileStream(destinationFilePath, fileStream => DownloadZipFileAsync(uri, fileStream, showProgress, writer));
 
         internal async Task WithFileStream(string destinationFilePath, Func<FileStream, Task> func)
         {

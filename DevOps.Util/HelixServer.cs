@@ -62,7 +62,7 @@ namespace DevOps.Util
                     string fileName = uri.Segments[^1];
                     string destinationFile = Path.Combine(correlationDir, fileName);
                     Console.WriteLine($"Payload {fileName} => {destinationFile}");
-                    await _client.DownloadZipFileAsync(url, destinationFile, showProgress: true).ConfigureAwait(false);
+                    await _client.DownloadZipFileAsync(url, destinationFile, showProgress: true, writer: Console.Out).ConfigureAwait(false);
                 }
 
                 string workItemsDir = Path.Combine(downloadDir, "workitems");
@@ -105,18 +105,18 @@ namespace DevOps.Util
 
                     Console.WriteLine($"WorkItem {workItemId} => {fileName}");
 
-                    await _client.DownloadZipFileAsync(payloadUri, fileName, showProgress: true).ConfigureAwait(false);
+                    await _client.DownloadZipFileAsync(payloadUri, fileName, showProgress: true, writer: Console.Out).ConfigureAwait(false);
 
                     IEnumerable<UploadedFile> workitemFiles = await helixApi.WorkItem.ListFilesAsync(workItemId, jobId);
                     foreach (var file in workitemFiles)
                     {
-                        if (ignoreDumps && (file.Name.StartsWith("core.") || file.Name.EndsWith(".dmp")))
+                        if (ignoreDumps && (file.Name.StartsWith("core.", StringComparison.OrdinalIgnoreCase) || file.Name.EndsWith(".dmp", StringComparison.OrdinalIgnoreCase)))
                             continue;
 
                         string destFile = Path.Combine(itemDir, file.Name);
 
                         Console.WriteLine($"{file.Name} => {destFile}");
-                        await _client.DownloadFileAsync(file.Link, destFile, showProgress: true).ConfigureAwait(false);
+                        await _client.DownloadFileAsync(file.Link, destFile, showProgress: true, writer: Console.Out).ConfigureAwait(false);
                     }
                 }
             }
