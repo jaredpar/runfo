@@ -50,7 +50,7 @@ namespace DevOps.Util.DotNet.Function
         /// <summary>
         /// This will collect and delete builds that are past the data retention deadline
         /// </summary>
-        public async Task DeleteOldBuilds(TriageContext triageContext, int deleteMax = 25, int saveBatchSize = 10)
+        public async Task DeleteOldBuilds(TriageContext triageContext, int deleteMax = 25)
         {
             var limitDays = 120;
             var limit = DateTime.UtcNow - TimeSpan.FromDays(limitDays);
@@ -62,7 +62,6 @@ namespace DevOps.Util.DotNet.Function
                 .Take(deleteMax)
                 .ToListAsync()
                 .ConfigureAwait(false);
-            var count = 0;
             foreach (var modelBuild in modelBuilds)
             {
                 if (modelBuild.AzureProject is object)
@@ -79,18 +78,9 @@ namespace DevOps.Util.DotNet.Function
                 await RemoveRange(triageContext.ModelGitHubIssues.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
                 await RemoveRange(triageContext.ModelTrackingIssueMatches.Where(x => x.ModelBuildAttempt.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
                 await RemoveRange(triageContext.ModelTrackingIssueResults.Where(x => x.ModelBuildAttempt.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
-
-                count++;
-                if (count % saveBatchSize == 0)
-                {
-                    Logger.LogInformation("Batch Save");
-                    await triageContext.SaveChangesAsync().ConfigureAwait(false);
-                }
+                await triageContext.SaveChangesAsync().ConfigureAwait(false);
             }
 
-            Logger.LogInformation("Last Save");
-            await triageContext.SaveChangesAsync().ConfigureAwait(false);
-            
             async Task RemoveRange<TEntity>(IQueryable<TEntity> queryable) where TEntity : class
             {
                 var list = await queryable.ToListAsync().ConfigureAwait(false);
