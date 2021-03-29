@@ -360,7 +360,7 @@ namespace DevOps.Functions
             ILogger logger)
         {
             var functionUtil = new FunctionUtil(logger);
-            await functionUtil.DeleteOldBuilds(TriageContextUtil.Context);
+            await functionUtil.DeleteOldBuilds(TriageContextUtil.Context, deleteMax: 100);
         }
     }
 }

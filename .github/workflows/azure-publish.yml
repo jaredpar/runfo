@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/azure/functions-action
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy Azure Functions
+name: Publish Azure Assets
 
 on:
   push:
@@ -39,10 +39,7 @@ jobs:
         publish-profile: ${{ secrets.AzureAppService_PublishProfile_d880beb4d5a24b5f896e5e8987c41cee }}
   
     - name: 'Build WebApp'
-      run: dotnet build --configuration Release
-
-    - name: 'Publish WebApp Locally'
-      run: dotnet publish --configuration Release --output ./artifacts/webapp
+      run: dotnet publish  DevOps.Status/DevOps.Status.csproj --configuration Release --output ./artifacts/webapp
 
     - name: 'Publish WebApp to Azure'
       id: deploy-to-webapp
@@ -51,4 +48,4 @@ jobs:
         app-name: 'runfo'
         slot-name: 'production'
         publish-profile: ${{ secrets.AzureAppService_PublishProfile_20c71607d35440a982abc5c3456af5e7 }}
-        package: 'artifact/webapp'
+        package: 'artifacts/webapp'
