@@ -82,6 +82,10 @@ namespace DevOps.Util.DotNet.Triage
                 .HasIndex(x => new { x.DefinitionName, x.StartTime })
                 .IncludeProperties(x => new { x.BuildNumber, x.BuildResult, x.PullRequestNumber, x.GitHubRepository });
 
+            modelBuilder.Entity<ModelBuild>()
+                .HasIndex(x => new { x.DefinitionId, x.PullRequestNumber, x.StartTime })
+                .IncludeProperties(x => new { x.BuildNumber, x.BuildResult, x.GitHubRepository });
+
             modelBuilder.Entity<ModelBuildAttempt>()
                 .HasIndex(x => new { x.Attempt, x.ModelBuildId })
                 .IsUnique();
@@ -115,6 +119,9 @@ namespace DevOps.Util.DotNet.Triage
                 .HasIndex(x => x.ModelBuildId)
                 .IncludeProperties(x => new { x.JobName, x.TaskName, x.RecordName, x.IssueType, x.Attempt, x.Message });
 
+            modelBuilder.Entity<ModelTimelineIssue>()
+                .HasIndex(x => new { x.Attempt, x.ModelBuildId });
+
             modelBuilder.Entity<ModelTrackingIssue>()
                 .Property(x => x.TrackingKind)
                 .HasConversion<string>();
@@ -122,6 +129,9 @@ namespace DevOps.Util.DotNet.Triage
             modelBuilder.Entity<ModelTrackingIssueMatch>()
                 .Property(x => x.HelixLogKind)
                 .HasConversion<string>();
+
+            modelBuilder.Entity<ModelTrackingIssueMatch>()
+                .HasIndex(x => x.ModelTrackingIssueId);
 
             modelBuilder.Entity<ModelTrackingIssueResult>()
                 .HasIndex(x => new { x.ModelTrackingIssueId, x.ModelBuildAttemptId })
