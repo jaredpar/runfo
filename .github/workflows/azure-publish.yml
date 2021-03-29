@@ -26,19 +26,29 @@ jobs:
       with:
         dotnet-version: 5.0.100
 
-    - name: 'Build'
-      shell: pwsh
-      run: |
-        pushd './DevOps.Functions'
-        dotnet build --configuration Release --output ./output
-        popd
+    - name: 'Build Functions'
+      run: dotnet build DevOps.Functions/DevOps.Functions.csproj --configuration Release --output ./artifacts/func
 
-    - name: 'Run Azure Functions Action'
+    - name: 'Publish Function to Azure'
       uses: Azure/functions-action@v1
       id: fa
       with:
         app-name: 'runfo-func'
         slot-name: 'production'
-        package: 'DevOps.Functions/output'
+        package: 'artifacts/func'
         publish-profile: ${{ secrets.AzureAppService_PublishProfile_d880beb4d5a24b5f896e5e8987c41cee }}
   
+    - name: 'Build WebApp'
+      run: dotnet build --configuration Release
+
+    - name: 'Publish WebApp Locally'
+      run: dotnet publish --configuration Release --output ./artifacts/webapp
+
+    - name: 'Publish WebApp to Azure'
+      id: deploy-to-webapp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'runfo'
+        slot-name: 'production'
+        publish-profile: ${{ secrets.AzureAppService_PublishProfile_20c71607d35440a982abc5c3456af5e7 }}
+        package: 'artifact/webapp'
