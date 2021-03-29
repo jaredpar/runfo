@@ -344,7 +344,7 @@ namespace DevOps.Functions
             [QueueTrigger(QueueNamePullRequestMerged, Connection = ConfigurationAzureBlobConnectionString)] string message,
             ILogger logger)
         {
-            var functionUtil = new FunctionUtil();
+            var functionUtil = new FunctionUtil(logger);
             var prMessage = JsonConvert.DeserializeObject<PullRequestMergedMessage>(message);
             var prKey = new GitHubPullRequestKey(prMessage.Organization!, prMessage.Repository!, prMessage.PullRequestNumber);
             await functionUtil.OnPullRequestMergedAsync(
@@ -352,6 +352,15 @@ namespace DevOps.Functions
                 TriageContextUtil,
                 prKey,
                 DotNetConstants.DefaultAzureProject);
+        }
+
+        [FunctionName("delete-old-builds")]
+        public async Task DeleteOldBuilds(
+            [TimerTrigger("0 */5 * * * *")] TimerInfo timerInfo,
+            ILogger logger)
+        {
+            var functionUtil = new FunctionUtil(logger);
+            await functionUtil.DeleteOldBuilds(TriageContextUtil.Context);
         }
     }
 }

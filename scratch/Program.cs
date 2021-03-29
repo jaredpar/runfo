@@ -107,7 +107,8 @@ namespace Scratch
             var message = connectionString.Contains("triage-scratch-dev")
                 ? "Using sql developer"
                 : "Using sql production";
-            builder.UseSqlServer(connectionString);
+            builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(5).TotalSeconds));
+                //builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds));
 
             // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
             TriageContext = new TriageContext(builder.Options);
@@ -153,7 +154,8 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await PopulateModelBuildDefinitionTable();
+            await DeleteOldBuilds();
+            // await PopulateModelBuildDefinitionTable();
 
             /*
             var builds = new SearchBuildsRequest();
@@ -228,6 +230,31 @@ namespace Scratch
             // await PopulateModelTrackingIssue("started:~2 result:failed", 85);
             await RetriesWork();
 */
+        }
+
+        internal async Task DeleteOldBuilds()
+        {
+            var functionUtil = new FunctionUtil(CreateLogger());
+
+            var data = await GetCounts();
+            for (int i = 0; i < 100; i++)
+            {
+                await functionUtil.DeleteOldBuilds(TriageContext, deleteMax: 100);
+                var newData = await GetCounts();
+                Console.WriteLine($"Builds {newData.BuildCount} (-{data.BuildCount - newData.BuildCount})");
+                Console.WriteLine($"Test Runs {newData.TestRunCount} (-{data.TestRunCount - newData.TestRunCount})");
+                Console.WriteLine($"Test Results {newData.TestCount} (-{data.TestCount - newData.TestCount})");
+                await Task.Delay(TimeSpan.FromSeconds(2));
+                data = newData;
+            }
+
+            async Task<(int BuildCount, int TestRunCount, int TestCount)> GetCounts()
+            {
+                var buildCount = await TriageContext.ModelBuilds.CountAsync();
+                var testRunsCount = 0;// await TriageContext.ModelTestRuns.CountAsync();
+                var testCount = 0; // await TriageContext.ModelTestResults.CountAsync();
+                return (buildCount, testRunsCount, testCount);
+            }
         }
 
         internal async Task RetriesWork()

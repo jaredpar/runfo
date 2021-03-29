@@ -10,6 +10,27 @@ ORDER BY [m0].[BuildNumber] DESC
 OFFSET 0 ROWS FETCH NEXT 25 ROWS ONLY
 */
 
+SELECT COUNT(*)
+FROM ModelBuilds
+WHERE AzureProject is NULL
+
+SELECT COUNT(*)
+FROM ModelTestRuns
+WHERE ModelBuildId is NULL
+
+SELECT TOP 10 b.BuildNumber, b.GitHubOrganization, b.GitHubRepository, b.StartTime
+FROM ModelTestRuns as r
+LEFT JOIN ModelBuilds as b ON b.Id = r.ModelBuildId
+WHERE b.StartTime IS NOT NULl
+ORDER BY b.StartTime 
+
+
+SELECT TOP 10
+FROM ModelTestResults
+ORDER BY 
+WHERE ModelBuildId = ''
+
+
 SELECT TOP 100 *
 FROM ModelBuilds
 WHERE AzureOrganization is NULL
