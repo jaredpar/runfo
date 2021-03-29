@@ -107,7 +107,8 @@ namespace Scratch
             var message = connectionString.Contains("triage-scratch-dev")
                 ? "Using sql developer"
                 : "Using sql production";
-            builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(5).TotalSeconds));
+            builder.UseSqlServer(connectionString);
+            //builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(5).TotalSeconds));
                 //builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds));
 
             // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));

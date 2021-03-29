@@ -69,16 +69,38 @@ namespace DevOps.Util.DotNet.Function
                     Logger.LogInformation($"Deleting {modelBuild.GetBuildKey()} ran at {modelBuild.StartTime}");
                 }
 
+                // These tables have a lot of indexes against them and delete can be slow, enough so 
+                // that it will timeout the Sql Connection if we attempt to delete all entries at 
+                // a single time. To compensate we delete them in smaller batches.
+                await RemoveBatch(() => triageContext.ModelTimelineIssues.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
+                await RemoveBatch(() => triageContext.ModelTestRuns.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
+                await RemoveBatch(() => triageContext.ModelTestResults.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
+                await RemoveBatch(() => triageContext.ModelTrackingIssueMatches.Where(x => x.ModelBuildAttempt.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
+
                 triageContext.Remove(modelBuild);
                 await RemoveRange(triageContext.ModelOsxDeprovisionRetry.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
                 await RemoveRange(triageContext.ModelBuildAttempts.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
-                await RemoveRange(triageContext.ModelTimelineIssues.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
-                await RemoveRange(triageContext.ModelTestRuns.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
-                await RemoveRange(triageContext.ModelTestResults.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
                 await RemoveRange(triageContext.ModelGitHubIssues.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
                 await RemoveRange(triageContext.ModelTrackingIssueMatches.Where(x => x.ModelBuildAttempt.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
                 await RemoveRange(triageContext.ModelTrackingIssueResults.Where(x => x.ModelBuildAttempt.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
                 await triageContext.SaveChangesAsync().ConfigureAwait(false);
+
+                async Task RemoveBatch<TEntity>(Func<IQueryable<TEntity>> func) where TEntity : class
+                {
+                    do
+                    {
+                        var list = await func().Take(50).ToListAsync().ConfigureAwait(false);
+                        if (list.Count == 0)
+                        {
+                            break;
+                        }
+
+                        Logger.LogInformation($"Deleting {list.Count} {typeof(TEntity).Name}");
+                        triageContext.RemoveRange(list);
+                        await triageContext.SaveChangesAsync().ConfigureAwait(false);
+
+                    } while (true);
+                }
             }
 
             async Task RemoveRange<TEntity>(IQueryable<TEntity> queryable) where TEntity : class
