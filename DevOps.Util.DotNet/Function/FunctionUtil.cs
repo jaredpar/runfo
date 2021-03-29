@@ -75,12 +75,12 @@ namespace DevOps.Util.DotNet.Function
                 await RemoveBatch(() => triageContext.ModelTimelineIssues.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
                 await RemoveBatch(() => triageContext.ModelTestRuns.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
                 await RemoveBatch(() => triageContext.ModelTestResults.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
-                await RemoveBatch(() => triageContext.ModelTrackingIssueMatches.Where(x => x.ModelBuildAttempt.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
 
                 triageContext.Remove(modelBuild);
                 await RemoveRange(triageContext.ModelOsxDeprovisionRetry.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
                 await RemoveRange(triageContext.ModelBuildAttempts.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
                 await RemoveRange(triageContext.ModelGitHubIssues.Where(x => x.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
+                await RemoveRange(triageContext.ModelTrackingIssueMatches.Where(x => x.ModelBuildAttempt.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
                 await RemoveRange(triageContext.ModelTrackingIssueMatches.Where(x => x.ModelBuildAttempt.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
                 await RemoveRange(triageContext.ModelTrackingIssueResults.Where(x => x.ModelBuildAttempt.ModelBuildId == modelBuild.Id)).ConfigureAwait(false);
                 await triageContext.SaveChangesAsync().ConfigureAwait(false);
