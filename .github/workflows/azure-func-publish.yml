@@ -1,17 +1,13 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/azure/functions-action
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy dotnet core app to Azure Function App - runfo-func
+name: Build and deploy Azure Functions
 
 on:
   push:
     branches:
       - main
   workflow_dispatch:
-
-env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # set this to the path to your web app project, defaults to the repository root
-  DOTNET_VERSION: '3.1.301'  # set this to the dotnet version to use
 
 jobs:
   build-and-deploy:
@@ -20,15 +16,20 @@ jobs:
     - name: 'Checkout GitHub Action'
       uses: actions/checkout@v2
 
-    - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
+    - name: Setup .NET Core 3.1
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
+        dotnet-version: 3.1.101
 
-    - name: 'Resolve Project Dependencies Using Dotnet'
+    - name: Setup .NET Core 5.0
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.100
+
+    - name: 'Build'
       shell: pwsh
       run: |
-        pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
+        pushd './DevOps.Functions'
         dotnet build --configuration Release --output ./output
         popd
 
@@ -38,6 +39,6 @@ jobs:
       with:
         app-name: 'runfo-func'
         slot-name: 'production'
-        package: '${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/output'
+        package: 'DevOps.Functions/output'
         publish-profile: ${{ secrets.AzureAppService_PublishProfile_d880beb4d5a24b5f896e5e8987c41cee }}
   
