@@ -4,14 +4,16 @@ using DevOps.Util.DotNet.Triage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace DevOps.Util.DotNet.Triage.Migrations
 {
     [DbContext(typeof(TriageContext))]
-    partial class TriageContextModelSnapshot : ModelSnapshot
+    [Migration("20210331154929_CascadeDelete")]
+    partial class CascadeDelete
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -502,8 +504,7 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                 {
                     b.HasOne("DevOps.Util.DotNet.Triage.ModelBuild", "ModelBuild")
                         .WithMany()
-                        .HasForeignKey("ModelBuildId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .HasForeignKey("ModelBuildId");
                 });
 
             modelBuilder.Entity("DevOps.Util.DotNet.Triage.ModelTestResult", b =>
@@ -516,7 +517,7 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                     b.HasOne("DevOps.Util.DotNet.Triage.ModelTestRun", "ModelTestRun")
                         .WithMany()
                         .HasForeignKey("ModelTestRunId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -524,8 +525,7 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                 {
                     b.HasOne("DevOps.Util.DotNet.Triage.ModelBuild", "ModelBuild")
                         .WithMany()
-                        .HasForeignKey("ModelBuildId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .HasForeignKey("ModelBuildId");
                 });
 
             modelBuilder.Entity("DevOps.Util.DotNet.Triage.ModelTimelineIssue", b =>

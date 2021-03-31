@@ -72,7 +72,6 @@ namespace DevOps.Util.UnitTests
                 JobName = parts[0],
                 Message = parts[1],
                 RecordName = parts.Length > 2 ? parts[2] : null,
-                ModelBuildAttempt = attempt,
                 ModelBuild = attempt.ModelBuild,
             };
             Context.ModelTimelineIssues.Add(issue);
