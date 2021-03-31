@@ -104,6 +104,10 @@ namespace DevOps.Util.DotNet.Triage
                 .IsUnique();
 
             modelBuilder.Entity<ModelTestRun>()
+                .HasIndex(x => x.ModelBuildId)
+                .IncludeProperties(x => new { x.AzureOrganization, x.AzureProject, x.TestRunId, x.Name });
+
+            modelBuilder.Entity<ModelTestRun>()
                 .Property(x => x.Attempt)
                 .HasDefaultValue(1);
 
@@ -140,7 +144,7 @@ namespace DevOps.Util.DotNet.Triage
                 .IncludeProperties(x => new { x.JobName, x.TaskName, x.RecordName, x.IssueType, x.Attempt, x.Message });
 
             modelBuilder.Entity<ModelTimelineIssue>()
-                .HasIndex(x => new { x.Attempt, x.ModelBuildId });
+                .HasIndex(x => new { x.ModelBuildId, x.Attempt });
 
             modelBuilder.Entity<ModelTimelineIssue>()
                 .HasOne(x => x.ModelBuild)

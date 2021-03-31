@@ -154,21 +154,34 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            var date = DateTime.Now - TimeSpan.FromDays(14);
-            var builds = await TriageContext
+            var limitDays = 90;
+            var limit = DateTime.UtcNow - TimeSpan.FromDays(limitDays);
+
+            var modelBuilds = await TriageContext
                 .ModelBuilds
-                .Include(x => x.ModelTestResults)
-                .Include(x => x.ModelTimelineIssues)
-                .Where(x => x.StartTime > date)
-                .ToListAsync();
-            foreach (var build in builds)
+                .Where(x => x.StartTime < limit)
+                .OrderByDescending(x => x.StartTime)
+                .ToListAsync()
+                .ConfigureAwait(false);
+            int count = 0;
+            foreach (var build in modelBuilds)
             {
-                Console.WriteLine(build.GetBuildKey());
-                Console.WriteLine($"Test Results {build.ModelTestResults.Count}");
-                Console.WriteLine($"Timeline Issues {build.ModelTestResults.Count}");
-                TriageContext.Remove(build);
-                await TriageContext.SaveChangesAsync();
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                try
+                {
+                    Console.WriteLine(build.GetBuildKey());
+                    TriageContext.Remove(build);
+                    count++;
+                    if (count == 100)
+                    {
+                        count = 0;
+                        Console.WriteLine("Saving");
+                        await TriageContext.SaveChangesAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
             }
 
             // await PopulateDb(count: 25, definitionId: 15, includeTests: true, includeTriage: false);
