@@ -107,8 +107,8 @@ namespace Scratch
             var message = connectionString.Contains("triage-scratch-dev")
                 ? "Using sql developer"
                 : "Using sql production";
-            builder.UseSqlServer(connectionString);
-            //builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(5).TotalSeconds));
+            //`builder.UseSqlServer(connectionString);
+            builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(5).TotalSeconds));
                 //builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds));
 
             // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
@@ -137,7 +137,6 @@ namespace Scratch
         {
             var config = new ConfigurationBuilder()
                 .AddUserSecrets<Program>()
-                .AddEnvironmentVariables()
                 .Build();
             return config;
         }
@@ -155,7 +154,25 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await DeleteOldBuilds();
+            var date = DateTime.Now - TimeSpan.FromDays(14);
+            var builds = await TriageContext
+                .ModelBuilds
+                .Include(x => x.ModelTestResults)
+                .Include(x => x.ModelTimelineIssues)
+                .Where(x => x.StartTime > date)
+                .ToListAsync();
+            foreach (var build in builds)
+            {
+                Console.WriteLine(build.GetBuildKey());
+                Console.WriteLine($"Test Results {build.ModelTestResults.Count}");
+                Console.WriteLine($"Timeline Issues {build.ModelTestResults.Count}");
+                TriageContext.Remove(build);
+                await TriageContext.SaveChangesAsync();
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
+
+            // await PopulateDb(count: 25, definitionId: 15, includeTests: true, includeTriage: false);
+            //await DeleteOldBuilds();
             // await PopulateModelBuildDefinitionTable();
 
             /*
@@ -187,8 +204,6 @@ namespace Scratch
             while (true);
             */
 
-
-            // await PopulateDb(count: 100, definitionId: 686, includeTests: true, includeTriage: false);
 
             /*
             var buildInfo = (await DevOpsServer.GetBuildAsync("public", 906787)).GetBuildResultInfo();

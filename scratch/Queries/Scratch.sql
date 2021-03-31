@@ -10,6 +10,20 @@ ORDER BY [m0].[BuildNumber] DESC
 OFFSET 0 ROWS FETCH NEXT 25 ROWS ONLY
 */
 
+/* Show all foreign keys including cascade actions */
+ SELECT
+    f.name constraint_name
+   ,OBJECT_NAME(f.parent_object_id) referencing_table_name
+   ,COL_NAME(fc.parent_object_id, fc.parent_column_id) referencing_column_name
+   ,OBJECT_NAME (f.referenced_object_id) referenced_table_name
+   ,COL_NAME(fc.referenced_object_id, fc.referenced_column_id) referenced_column_name
+   ,delete_referential_action_desc
+   ,update_referential_action_desc
+FROM sys.foreign_keys AS f
+INNER JOIN sys.foreign_key_columns AS fc
+   ON f.object_id = fc.constraint_object_id
+ORDER BY f.name
+
 SELECT COUNT(*)
 FROM ModelBuilds
 WHERE AzureProject is NULL
@@ -23,6 +37,42 @@ FROM ModelTestRuns as r
 LEFT JOIN ModelBuilds as b ON b.Id = r.ModelBuildId
 WHERE b.StartTime IS NOT NULl
 ORDER BY b.StartTime 
+
+SELECT COUNT(r.Id)
+FROM ModelTestRuns as r
+LEFT JOIN ModelBuilds as b ON r.ModelBuildId = b.Id
+WHERE b.StartTime < '2020-11-01'
+
+SELECT COUNT(Id)
+FROM ModelBuilds
+WHERE StartTIme < '2020-11-01'
+
+/* Delete Time */
+SELECT COUNT(*)
+FROM ModelTestResults m
+WHERE m.ModelBuildId IN (
+	SELECT Id 
+	FROM ModelBuilds
+	WHERE StartTime < '2020-12-01')
+
+DELETE m
+FROM ModelTestResults m
+WHERE m.ModelBuildId IN (
+	SELECT Id 
+	FROM ModelBuilds
+	WHERE StartTime < '2020-12-01')
+
+DELETE m
+FROM ModelTrackingIssueMatches m
+WHERE m.ModelBuildAttemptId IN (
+	SELECT Id 
+	FROM ModelBuildAttempts
+	WHERE StartTime < '2020-12-15')
+
+SELECT COUNT(m.Id)
+FROM ModelTestResults m
+LEFT JOIN ModelBuilds as b ON m.ModelBuildId = b.Id
+WHERE b.StartTime < '2020-11-01'
 
 
 SELECT TOP 10

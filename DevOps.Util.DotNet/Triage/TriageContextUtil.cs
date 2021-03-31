@@ -228,7 +228,6 @@ namespace DevOps.Util.DotNet.Triage
                         Message = issue.Message,
                         ModelBuild = modelBuild,
                         IssueType = issue.Type,
-                        ModelBuildAttempt = modelBuildAttempt,
                     };
                     Context.ModelTimelineIssues.Add(timelineIssue);
                 }
