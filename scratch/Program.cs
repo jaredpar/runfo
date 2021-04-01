@@ -154,6 +154,8 @@ namespace Scratch
 
         internal async Task Scratch()
         {
+            await PopulateDb(count: 200, definitionId: 15, includeTests: true, includeTriage: false);
+            /*
             var limitDays = 90;
             var limit = DateTime.UtcNow - TimeSpan.FromDays(limitDays);
 
@@ -184,7 +186,6 @@ namespace Scratch
                 }
             }
 
-            // await PopulateDb(count: 25, definitionId: 15, includeTests: true, includeTriage: false);
             //await DeleteOldBuilds();
             // await PopulateModelBuildDefinitionTable();
 

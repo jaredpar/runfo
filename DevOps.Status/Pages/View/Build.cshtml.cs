@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using DevOps.Status.Util;
@@ -52,11 +53,15 @@ namespace DevOps.Status.Pages.View
             var buildKey = GetBuildKey(number);
             var project = buildKey.Project;
             var organization = buildKey.Organization;
-            var buildId = TriageContextUtil.GetModelBuildId(buildKey);
+            var buildId = TriageContextUtil.GetModelBuildNameKey(buildKey);
 
             var modelBuild = await PopulateBuildInfo();
-            await PopulateTimeline();
-            await PopulateTests();
+            if (modelBuild is object)
+            {
+                await PopulateTimeline();
+                await PopulateTests();
+            }
+
             return Page();
 
             async Task<ModelBuild?> PopulateBuildInfo()
@@ -81,6 +86,8 @@ namespace DevOps.Status.Pages.View
 
                 if (modelBuild.PullRequestNumber is { } prNumber)
                 {
+                    Debug.Assert(modelBuild.GitHubOrganization is object);
+                    Debug.Assert(modelBuild.GitHubRepository is object);
                     PullRequestKey = new GitHubPullRequestKey(
                         modelBuild.GitHubOrganization,
                         modelBuild.GitHubRepository,
@@ -95,7 +102,7 @@ namespace DevOps.Status.Pages.View
                 var query = TriageContextUtil
                     .Context
                     .ModelTimelineIssues
-                    .Where(x => x.ModelBuildId  == buildId)
+                    .Where(x => x.ModelBuildId  == modelBuild.Id)
                     .Include(x => x.ModelBuild);
                 TimelineIssuesDisplay = await TimelineIssuesDisplay.Create(
                     query,
@@ -112,7 +119,7 @@ namespace DevOps.Status.Pages.View
                 var query = TriageContextUtil
                     .Context
                     .ModelTestResults
-                    .Where(x => x.ModelBuildId == buildId)
+                    .Where(x => x.ModelBuildId == modelBuild.Id)
                     .Include(x => x.ModelTestRun)
                     .Include(x => x.ModelBuild);
                 var modelTestResults = await query.ToListAsync();

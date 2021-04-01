@@ -71,7 +71,7 @@ namespace DevOps.Util.UnitTests
                 Attempt = attempt.Attempt,
                 JobName = parts[0],
                 Message = parts[1],
-                RecordName = parts.Length > 2 ? parts[2] : null,
+                RecordName = parts.Length > 2 ? parts[2] : "",
                 ModelBuild = attempt.ModelBuild,
             };
             Context.ModelTimelineIssues.Add(issue);
@@ -99,10 +99,10 @@ namespace DevOps.Util.UnitTests
 
             var build = new ModelBuild()
             {
-                Id = TriageContextUtil.GetModelBuildId(new BuildKey(def.AzureOrganization, def.AzureProject, number)),
+                NameKey = TriageContextUtil.GetModelBuildNameKey(new BuildKey(def.AzureOrganization, def.AzureProject, number)),
                 BuildNumber = number,
-                GitHubOrganization = GetPartOrNull(parts, 1),
-                GitHubRepository = GetPartOrNull(parts, 2),
+                GitHubOrganization = GetPartOrNull(parts, 1) ?? "",
+                GitHubRepository = GetPartOrNull(parts, 2) ?? "",
                 AzureOrganization = def.AzureOrganization,
                 AzureProject = def.AzureProject,
                 QueueTime = dt is object ? DateTime.ParseExact(dt, "yyyy-MM-dd", null) : (DateTime?)null,
@@ -177,7 +177,7 @@ namespace DevOps.Util.UnitTests
             var trackingIssue = new ModelTrackingIssue()
             {
                 TrackingKind = trackingKind,
-                SearchQuery = query,
+                SearchQuery = query ?? "",
                 IsActive = true,
                 ModelBuildDefinition = definition,
                 IssueTitle = title ?? $"Tracking Issue {trackingKind}",
@@ -212,7 +212,7 @@ namespace DevOps.Util.UnitTests
                 IsHelixTestResult = GetPartOrNull(parts, 1) is { } s ? bool.Parse(s) : false,
                 HelixConsoleUri = GetPartOrNull(parts, 2),
                 HelixRunClientUri = GetPartOrNull(parts, 3),
-                ErrorMessage = GetPartOrNull(parts, 4),
+                ErrorMessage = GetPartOrNull(parts, 4) ?? "",
                 ModelTestRun = testRun,
                 ModelBuild = testRun.ModelBuild,
             };

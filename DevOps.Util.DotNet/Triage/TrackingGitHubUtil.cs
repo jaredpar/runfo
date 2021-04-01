@@ -280,12 +280,6 @@ namespace DevOps.Util.DotNet.Triage
                 TrackingKind.Test => GetReportForTestAsync(modelTrackingIssue, limit, time),
                 TrackingKind.Timeline => GetReportForTimelineAsync(modelTrackingIssue, limit, time),
                 TrackingKind.HelixLogs => GetReportForHelixAsync(modelTrackingIssue, limit),
-
-#pragma warning disable 618
-                // TODO: delete once these types are removed from the DB
-                TrackingKind.HelixConsole => throw null!,
-                TrackingKind.HelixRunClient => throw null!,
-#pragma warning restore 618
                 _ => throw new Exception($"Invalid value {modelTrackingIssue.TrackingKind}"),
             };
 
@@ -313,7 +307,7 @@ namespace DevOps.Util.DotNet.Triage
                     GitHubTargetBranch = x.ModelBuildAttempt.ModelBuild.GitHubTargetBranch,
                     BuildNumber = x.ModelBuildAttempt.ModelBuild.BuildNumber,
                     QueueTime = x.ModelBuildAttempt.ModelBuild.QueueTime,
-                    TestRunName = x.ModelTestResult.ModelTestRun.Name,
+                    TestRunName = x.ModelTestResult != null ? x.ModelTestResult.ModelTestRun.Name : "",
                     TestResult = x.ModelTestResult,
                 })
                 .ToListAsync().ConfigureAwait(false);
@@ -331,9 +325,9 @@ namespace DevOps.Util.DotNet.Triage
                         x.DefinitionName,
                         new GitHubBuildInfo(x.GitHubOrganization, x.GitHubRepository, x.GitHubPullRequestNumber, x.GitHubTargetBranch)),
                     (string?)x.TestRunName,
-                    x.TestResult.GetHelixLogInfo())),
+                    x.TestResult?.GetHelixLogInfo())),
                 includeDefinition: true,
-                includeHelix: matches.Any(x => x.TestResult.IsHelixTestResult));
+                includeHelix: matches.Any(x => x.TestResult?.IsHelixTestResult == true));
 
             var builder = new StringBuilder();
             AppendHeader(builder, modelTrackingIssue);

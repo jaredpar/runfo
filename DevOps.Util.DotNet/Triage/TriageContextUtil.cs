@@ -34,7 +34,7 @@ namespace DevOps.Util.DotNet.Triage
             Context = context;
         }
 
-        public static string GetModelBuildId(BuildKey buildKey) => 
+        public static string GetModelBuildNameKey(BuildKey buildKey) => 
             $"{buildKey.Organization}-{buildKey.Project}-{buildKey.Number}";
 
         public static GitHubPullRequestKey? GetGitHubPullRequestKey(ModelBuild build) =>
@@ -91,9 +91,9 @@ namespace DevOps.Util.DotNet.Triage
 
         public async Task<ModelBuild> EnsureBuildAsync(BuildResultInfo buildInfo)
         {
-            var modelBuildId = GetModelBuildId(buildInfo.BuildKey);
+            var modelBuildNameKey = GetModelBuildNameKey(buildInfo.BuildKey);
             var modelBuild = Context.ModelBuilds
-                .Where(x => x.Id == modelBuildId)
+                .Where(x => x.NameKey == modelBuildNameKey)
                 .FirstOrDefault();
             if (modelBuild is object)
             {
@@ -116,12 +116,12 @@ namespace DevOps.Util.DotNet.Triage
             var modelBuildDefinition = await EnsureBuildDefinitionAsync(buildInfo.DefinitionInfo).ConfigureAwait(false);
             modelBuild = new ModelBuild()
             {
-                Id = modelBuildId,
+                NameKey = modelBuildNameKey,
                 ModelBuildDefinitionId = modelBuildDefinition.Id,
                 AzureOrganization = modelBuildDefinition.AzureOrganization,
                 AzureProject = modelBuildDefinition.AzureProject,
-                GitHubOrganization = buildInfo.GitHubBuildInfo?.Organization,
-                GitHubRepository = buildInfo.GitHubBuildInfo?.Repository,
+                GitHubOrganization = buildInfo.GitHubBuildInfo?.Organization ?? "",
+                GitHubRepository = buildInfo.GitHubBuildInfo?.Repository ?? "",
                 GitHubTargetBranch = buildInfo.GitHubBuildInfo?.TargetBranch,
                 PullRequestNumber = prKey?.Number,
                 StartTime = buildInfo.StartTime,
@@ -304,8 +304,8 @@ namespace DevOps.Util.DotNet.Triage
 
         public IQueryable<ModelBuild> GetModelBuildQuery(BuildKey buildKey)
         {
-            var id = GetModelBuildId(buildKey);
-            return Context.ModelBuilds.Where(x => x.Id == id);
+            var nameKey = GetModelBuildNameKey(buildKey);
+            return Context.ModelBuilds.Where(x => x.NameKey == nameKey);
         }
 
         public Task<ModelBuild?> FindModelBuildAsync(BuildKey buildKey) =>
@@ -316,10 +316,10 @@ namespace DevOps.Util.DotNet.Triage
 
         public IQueryable<ModelBuildAttempt> GetModelBuildAttemptQuery(BuildAttemptKey buildAttemptKey)
         {
-            var buildId = GetModelBuildId(buildAttemptKey.BuildKey);
+            var nameKey = GetModelBuildNameKey(buildAttemptKey.BuildKey);
             return Context
                 .ModelBuildAttempts
-                .Where(x => x.ModelBuildId == buildId && x.Attempt == buildAttemptKey.Attempt);
+                .Where(x => x.NameKey == nameKey && x.Attempt == buildAttemptKey.Attempt);
         }
 
         public Task<ModelBuildAttempt?> FindModelBuildAttemptAsync(BuildAttemptKey buildAttemptKey) =>
@@ -328,19 +328,18 @@ namespace DevOps.Util.DotNet.Triage
         public Task<ModelBuildAttempt> GetModelBuildAttemptAsync(BuildAttemptKey buildAttemptKey) =>
             GetModelBuildAttemptQuery(buildAttemptKey).SingleAsync();
 
-        public IQueryable<ModelTestRun> GetModelTestRunQuery(BuildKey buildKey, int testRunId)
+        public IQueryable<ModelTestRun> GetModelTestRunQuery(ModelBuild modelBuild, int testRunId)
         {
-            var buildId = GetModelBuildId(buildKey);
             return Context
                 .ModelTestRuns
-                .Where(x => x.ModelBuildId == buildId && x.TestRunId == testRunId);
+                .Where(x => x.ModelBuildId == modelBuild.Id && x.TestRunId == testRunId);
         }
 
-        public Task<ModelTestRun?> FindModelTestRunAsync(BuildKey buildKey, int testRunId) =>
-            GetModelTestRunQuery(buildKey, testRunId).FirstOrDefaultAsync()!;
+        public Task<ModelTestRun?> FindModelTestRunAsync(ModelBuild modelBuild, int testRunId) =>
+            GetModelTestRunQuery(modelBuild, testRunId).FirstOrDefaultAsync()!;
 
-        public Task<ModelTestRun> GetModelTestRunAsync(BuildKey buildKey, int testRunId) =>
-            GetModelTestRunQuery(buildKey, testRunId).SingleAsync()!;
+        public Task<ModelTestRun> GetModelTestRunAsync(ModelBuild modelBuild, int testRunId) =>
+            GetModelTestRunQuery(modelBuild, testRunId).SingleAsync()!;
 
         public IQueryable<ModelBuildDefinition> GetModelBuildDefinitionQueryAsync(int id) => Context
             .ModelBuildDefinitions
@@ -379,7 +378,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public async Task<ModelTestRun> EnsureTestRunAsync(ModelBuild modelBuild, int attempt, DotNetTestRun testRun, Dictionary<HelixInfo, HelixLogInfo> helixMap)
         {
-            var modelTestRun = await FindModelTestRunAsync(modelBuild.GetBuildKey(), testRun.TestRun.Id).ConfigureAwait(false);
+            var modelTestRun = await FindModelTestRunAsync(modelBuild, testRun.TestRun.Id).ConfigureAwait(false);
             if (modelTestRun is object)
             {
                 return modelTestRun;
@@ -406,7 +405,7 @@ namespace DevOps.Util.DotNet.Triage
                     Outcome = testCaseResult.Outcome,
                     ModelTestRun = modelTestRun,
                     ModelBuild = modelBuild,
-                    JobName = modelTestRun.Name,
+                    TestRunName = modelTestRun.Name,
                     ErrorMessage = testCaseResult.ErrorMessage,
                     IsSubResultContainer = testCaseResult.SubResults?.Length > 0,
                     IsSubResult = false,
@@ -524,10 +523,10 @@ namespace DevOps.Util.DotNet.Triage
 
         public IQueryable<ModelBuildAttempt> GetModelBuildAttemptsQuery(BuildKey buildKey)
         {
-            var modelBuildId = GetModelBuildId(buildKey);
+            var nameKey = GetModelBuildNameKey(buildKey);
             return Context
                 .ModelBuildAttempts
-                .Where(x => x.ModelBuildId == modelBuildId);
+                .Where(x => x.NameKey == nameKey);
         }
 
         public IQueryable<ModelTrackingIssue> GetModelTrackingIssuesQuery(GitHubIssueKey issueKey) => Context
@@ -569,12 +568,6 @@ namespace DevOps.Util.DotNet.Triage
                             .Filter(query)
                             .Select(x => x.ModelBuild);
                     }
-#pragma warning disable 618
-                    // TODO: delete once these types are removed from the DB
-                case TrackingKind.HelixConsole:
-                case TrackingKind.HelixRunClient:
-                    throw null!;
-#pragma warning restore 618
                 default:
                     throw new InvalidOperationException($"Invalid kind {modelTrackingIssue.TrackingKind}");
             }

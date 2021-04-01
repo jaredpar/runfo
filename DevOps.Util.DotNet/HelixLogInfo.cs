@@ -40,7 +40,7 @@ namespace DevOps.Util.DotNet
 
         public HelixLogInfo(
             HelixLogKind kind,
-            string uri)
+            string? uri)
         {
             switch (kind)
             {
@@ -85,7 +85,7 @@ namespace DevOps.Util.DotNet
             _ => throw new InvalidOperationException($"Invalid enum value {kind}")
         };
 
-        public HelixLogInfo SetUri(HelixLogKind kind, string uri)
+        public HelixLogInfo SetUri(HelixLogKind kind, string? uri)
         {
             var runClientUri = RunClientUri;
             var consoleUri = ConsoleUri;

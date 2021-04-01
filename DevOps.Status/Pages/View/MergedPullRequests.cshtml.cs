@@ -71,7 +71,7 @@ namespace DevOps.Status.Pages.View
                     return new MergedBuildInfo()
                     {
                         Repository = b.GitHubRepository,
-                        PullRequestUri = GitHubPullRequestKey.GetPullRequestUri(b.GitHubOrganization, b.GitHubRepository, prNumber),
+                        PullRequestUri = GitHubPullRequestKey.GetPullRequestUri(b.GitHubOrganization!, b.GitHubRepository!, prNumber),
                         PullRequestNumber = prNumber,
                         BuildUri = b.GetBuildResultInfo().BuildUri,
                         BuildNumber = b.BuildNumber,

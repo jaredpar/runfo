@@ -143,7 +143,7 @@ namespace DevOps.Util.DotNet.Triage
             {
                 query = targetBranch.Kind switch
                 {
-                    StringRelationalKind.Contains => query.Where(convertPredicateFunc(x => x.GitHubTargetBranch.Contains(targetBranch.Text))),
+                    StringRelationalKind.Contains => query.Where(convertPredicateFunc(x => x.GitHubTargetBranch != null && x.GitHubTargetBranch.Contains(targetBranch.Text))),
                     StringRelationalKind.Equals => query.Where(convertPredicateFunc(x => x.GitHubTargetBranch == targetBranch.Text)),
                     StringRelationalKind.NotEquals => query.Where(convertPredicateFunc(x => x.GitHubTargetBranch != targetBranch.Text)),
                     _ => query,

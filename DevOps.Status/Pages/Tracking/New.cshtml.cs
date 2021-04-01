@@ -110,11 +110,6 @@ namespace DevOps.Status.Pages.Tracking
 
             switch (TrackingKind)
             {
-#pragma warning disable 618
-                case TrackingKind.HelixConsole:
-                case TrackingKind.HelixRunClient:
-                    ErrorMessage = $"'{TrackingKind}' is deprecated. Please use {TrackingKind.HelixLogs}";
-                    return Page();
                 case TrackingKind.HelixLogs:
                     {
                         if (TryParseQueryString<SearchHelixLogsRequest>(out var request))

@@ -135,7 +135,7 @@ namespace DevOps.Status.Pages.Search
                         var b = modelBuildInfoList.First(b => b.Id == x.ModelBuildId);
                         return
                             (new BuildInfo(b.AzureOrganization, b.AzureProject, b.BuildNumber,
-                                new GitHubBuildInfo(b.GitHubOrganization, b.GitHubRepository, b.PullRequestNumber, b.GitHubTargetBranch)),
+                                new GitHubBuildInfo(b.GitHubOrganization!, b.GitHubRepository!, b.PullRequestNumber, b.GitHubTargetBranch)),
                                 new HelixLogInfo(
                                     runClientUri: x.HelixRunClientUri,
                                     consoleUri: x.HelixConsoleUri,

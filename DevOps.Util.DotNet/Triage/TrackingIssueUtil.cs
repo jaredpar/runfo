@@ -120,15 +120,6 @@ namespace DevOps.Util.DotNet.Triage
                 case TrackingKind.HelixLogs:
                     isPresent = await TriageHelixLogsAsync(modelBuildAttempt, modelTrackingIssue).ConfigureAwait(false);
                     break;
-
-#pragma warning disable 618
-                case TrackingKind.HelixConsole:
-                case TrackingKind.HelixRunClient:
-                    // TODO: delete this once the DB is cleaned up
-                    // These are old data types that we ignore.
-                    isPresent = false;
-                    break;
-#pragma warning restore 618
                 default:
                     throw new Exception($"Unknown value {modelTrackingIssue.TrackingKind}");
             }
