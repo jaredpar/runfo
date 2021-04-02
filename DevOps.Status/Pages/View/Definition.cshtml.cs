@@ -73,7 +73,7 @@ namespace DevOps.Status.Pages.View
                 {
                     Definition = definitionId.ToString(),
                     Started = new DateRequestValue(limit, RelationalKind.GreaterThan),
-                    BuildType = new BuildTypeRequestValue(ModelBuildKind.PullRequest, EqualsKind.NotEquals),
+                    BuildType = new BuildTypeRequestValue(BuildKind.PullRequest, EqualsKind.NotEquals),
                     TargetBranch = new StringRequestValue(TargetBranch, StringRelationalKind.Equals),
                 };
 
@@ -82,7 +82,7 @@ namespace DevOps.Status.Pages.View
                     .Select(x => new
                     {
                         x.BuildResult,
-                        x.IsMergedPullRequest,
+                        IsMergedPullRequest = x.BuildKind == BuildKind.MergedPullRequest,
                         x.PullRequestNumber,
                         x.StartTime,
                     })
@@ -117,7 +117,7 @@ namespace DevOps.Status.Pages.View
                         new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:mpr targetBranch:{TargetBranch}"),
                         GetRate(total),
                         new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:!pr targetBranch:{TargetBranch}"));
-                    string GetRate(IEnumerable<BuildResult?> e)
+                    string GetRate(IEnumerable<BuildResult> e)
                     {
                         double totalCount = e.Count();
                         double passedCount = e.Count(x => x is BuildResult.Succeeded or BuildResult.PartiallySucceeded);
@@ -142,7 +142,7 @@ namespace DevOps.Status.Pages.View
                     {
                         x.ModelBuild.BuildNumber,
                         x.ModelBuild.PullRequestNumber,
-                        x.ModelBuild.IsMergedPullRequest,
+                        IsMergedPullRequest = x.ModelBuild.BuildKind == BuildKind.MergedPullRequest,
                         GitHubOrganization = x.Organization,
                         GitHubRepository = x.Repository,
                         GitHubIssueNumber = x.Number

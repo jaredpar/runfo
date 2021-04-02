@@ -228,7 +228,7 @@ namespace DevOps.Util.DotNet
             }
         }
 
-        public string BuildManual(IEnumerable<(BuildInfo BuildInfo, DateTime? QueueTime)> results)
+        public string BuildManual(IEnumerable<(BuildInfo BuildInfo, DateTime QueueTime)> results)
         {
             var builder = new StringBuilder();
             builder.AppendLine("|Build|Kind|Start Time|");
@@ -239,7 +239,7 @@ namespace DevOps.Util.DotNet
                 builder.Append('|');
                 AppendBuildKind(builder, tuple.BuildInfo);
                 builder.Append('|');
-                builder.Append(tuple.QueueTime?.ToString("yyyy-dd-MM"));
+                builder.Append(tuple.QueueTime.ToString("yyyy-dd-MM"));
                 builder.Append('|');
                 builder.AppendLine();
             }

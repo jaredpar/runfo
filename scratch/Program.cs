@@ -293,7 +293,7 @@ namespace Scratch
             var date = DateTime.Now - TimeSpan.FromDays(14);
             var builds = await TriageContext
                 .ModelBuilds
-                .Where(x => x.StartTime > date && x.IsMergedPullRequest)
+                .Where(x => x.StartTime > date && x.BuildKind == BuildKind.MergedPullRequest)
                 .Include(x => x.ModelBuildAttempts)
                 .Select(x => new
                 {

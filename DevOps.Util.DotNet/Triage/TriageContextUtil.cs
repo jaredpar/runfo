@@ -17,14 +17,6 @@ using Microsoft.Extensions.Options;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public enum ModelBuildKind
-    {
-        All,
-        Rolling,
-        PullRequest,
-        MergedPullRequest
-    }
-
     public sealed class TriageContextUtil
     {
         public TriageContext Context { get; }
@@ -42,19 +34,19 @@ namespace DevOps.Util.DotNet.Triage
                 ? (GitHubPullRequestKey?)new GitHubPullRequestKey(build.GitHubOrganization, build.GitHubRepository, build.PullRequestNumber.Value)
                 : null;
 
-        public static ModelBuildKind GetModelBuildKind(bool isMergedPullRequest, int? pullRequestNumber)
+        public static BuildKind GetModelBuildKind(bool isMergedPullRequest, int? pullRequestNumber)
         {
             if (isMergedPullRequest)
             {
-                return ModelBuildKind.MergedPullRequest;
+                return BuildKind.MergedPullRequest;
             }
 
             if (pullRequestNumber.HasValue)
             {
-                return ModelBuildKind.PullRequest;
+                return BuildKind.PullRequest;
             }
 
-            return ModelBuildKind.Rolling;
+            return BuildKind.Rolling;
         }
 
         public async Task<ModelBuildDefinition> EnsureBuildDefinitionAsync(DefinitionInfo definitionInfo)
@@ -129,6 +121,7 @@ namespace DevOps.Util.DotNet.Triage
                 QueueTime = buildInfo.QueueTime,
                 BuildNumber = buildInfo.Number,
                 BuildResult = buildInfo.BuildResult,
+                BuildKind = buildInfo.PullRequestKey.HasValue ? BuildKind.PullRequest : BuildKind.Rolling,
                 DefinitionName = buildInfo.DefinitionName,
                 DefinitionId = buildInfo.DefinitionInfo.Id,
             };
@@ -173,7 +166,7 @@ namespace DevOps.Util.DotNet.Triage
                 .SelectNullableValue()
                 .Select(x => (DateTime?)x.DateTime);
             var startTime = startTimeQuery.Any()
-                ? startTimeQuery.Min()
+                ? startTimeQuery.Min()!.Value
                 : modelBuild.StartTime;
             
             var finishTimeQuery = timeline
@@ -203,6 +196,10 @@ namespace DevOps.Util.DotNet.Triage
                     FinishTime = finishTime,
                     ModelBuild = modelBuild,
                     IsTimelineMissing = false,
+                    GitHubTargetBranch = modelBuild.GitHubTargetBranch,
+                    BuildKind = modelBuild.BuildKind,
+                    DefinitionId = modelBuild.DefinitionId,
+                    DefinitionName = modelBuild.DefinitionName,
                 };
                 Context.ModelBuildAttempts.Add(modelBuildAttempt);
             }
@@ -228,6 +225,12 @@ namespace DevOps.Util.DotNet.Triage
                         Message = issue.Message,
                         ModelBuild = modelBuild,
                         IssueType = issue.Type,
+                        StartTime = startTime,
+                        GitHubTargetBranch = modelBuild.GitHubTargetBranch,
+                        BuildKind = modelBuild.BuildKind,
+                        BuildResult = buildResult,
+                        DefinitionId = modelBuild.DefinitionId,
+                        DefinitionName = modelBuild.DefinitionName,
                     };
                     Context.ModelTimelineIssues.Add(timelineIssue);
                 }
@@ -409,6 +412,12 @@ namespace DevOps.Util.DotNet.Triage
                     ErrorMessage = testCaseResult.ErrorMessage,
                     IsSubResultContainer = testCaseResult.SubResults?.Length > 0,
                     IsSubResult = false,
+                    StartTime = modelBuild.StartTime,
+                    GitHubTargetBranch = modelBuild.GitHubTargetBranch,
+                    BuildKind = modelBuild.BuildKind,
+                    BuildResult = modelBuild.BuildResult,
+                    DefinitionId = modelBuild.DefinitionId,
+                    DefinitionName = modelBuild.DefinitionName,
                 };
 
                 AddHelixInfo(testResult);
@@ -456,7 +465,7 @@ namespace DevOps.Util.DotNet.Triage
             bool descendingOrder = true,
             int? definitionId = null,
             string? definitionName = null,
-            ModelBuildKind kind = ModelBuildKind.All,
+            BuildKind kind = BuildKind.All,
             string? gitHubRepository = null,
             string? gitHubOrganization = null,
             int? count = null)
@@ -497,20 +506,12 @@ namespace DevOps.Util.DotNet.Triage
 
             switch (kind)
             {
-                case ModelBuildKind.All:
+                case BuildKind.All:
                     // Nothing to filter
                     break;
-                case ModelBuildKind.MergedPullRequest:
-                    query = query.Where(x => x.IsMergedPullRequest);
-                    break;
-                case ModelBuildKind.PullRequest:
-                    query = query.Where(x => x.PullRequestNumber.HasValue);
-                    break;
-                case ModelBuildKind.Rolling:
-                    query = query.Where(x => x.PullRequestNumber == null);
-                    break;
                 default:
-                    throw new InvalidOperationException($"Invalid kind {kind}");
+                    query = query.Where(x => x.BuildKind == kind);
+                    break;
             }
 
             if (count is { } c)

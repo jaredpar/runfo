@@ -46,7 +46,7 @@ namespace DevOps.Util.DotNet.Triage
                 modelBuild.QueueTime,
                 modelBuild.StartTime,
                 modelBuild.FinishTime,
-                modelBuild.BuildResult ?? BuildResult.None);
+                modelBuild.BuildResult);
 
         public static GitHubBuildInfo GetGitHubBuildInfo(this ModelBuild modelBuild) =>
             new GitHubBuildInfo(
@@ -54,9 +54,6 @@ namespace DevOps.Util.DotNet.Triage
                 modelBuild.GitHubRepository,
                 modelBuild.PullRequestNumber,
                 modelBuild.GitHubTargetBranch);
-
-        public static ModelBuildKind GetModelBuildKind(this ModelBuild modelBuild) =>
-            TriageContextUtil.GetModelBuildKind(modelBuild.IsMergedPullRequest, modelBuild.PullRequestNumber);
 
         public static DefinitionKey GetDefinitionKey(this ModelBuild modelBuild) =>
             new DefinitionKey(
@@ -279,7 +276,7 @@ namespace DevOps.Util.DotNet.Triage
 
         #region Misc
 
-        public static async Task<List<BuildResultInfo>> ToBuildResultInfoListAsync(this IQueryable<ModelBuild> query, BuildResult defaultBuildResult = BuildResult.None )
+        public static async Task<List<BuildResultInfo>> ToBuildResultInfoListAsync(this IQueryable<ModelBuild> query)
         {
             var results = await query
                 .Select(x => new
@@ -315,19 +312,19 @@ namespace DevOps.Util.DotNet.Triage
                     result.QueueTime,
                     result.StartTime,
                     result.FinishTime,
-                    result.BuildResult ?? defaultBuildResult);
+                    result.BuildResult);
                 list.Add(buildInfo);
             }
 
             return list;
         }
 
-        public static string GetDisplayString(this ModelBuildKind kind) => kind switch
+        public static string GetDisplayString(this BuildKind kind) => kind switch
         {
-            ModelBuildKind.All => "All",
-            ModelBuildKind.MergedPullRequest => "Merged Pull Request",
-            ModelBuildKind.PullRequest => "Pull Request",
-            ModelBuildKind.Rolling => "Rolling",
+            BuildKind.All => "All",
+            BuildKind.MergedPullRequest => "Merged Pull Request",
+            BuildKind.PullRequest => "Pull Request",
+            BuildKind.Rolling => "Rolling",
             _ => throw new InvalidOperationException($"Unexpected value: {kind}")
         };
 

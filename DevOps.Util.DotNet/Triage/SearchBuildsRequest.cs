@@ -154,13 +154,13 @@ namespace DevOps.Util.DotNet.Triage
             {
                 query = (buildType.BuildType, buildType.Kind) switch
                 {
-                    (ModelBuildKind.MergedPullRequest, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.IsMergedPullRequest)),
-                    (ModelBuildKind.MergedPullRequest, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => !x.IsMergedPullRequest)),
-                    (ModelBuildKind.PullRequest, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber.HasValue)),
-                    (ModelBuildKind.PullRequest, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber == null || x.IsMergedPullRequest)),
-                    (ModelBuildKind.Rolling, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber == null)),
-                    (ModelBuildKind.Rolling, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.PullRequestNumber != null)),
-                    (ModelBuildKind.All, _) => query,
+                    (BuildKind.MergedPullRequest, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.BuildKind == BuildKind.MergedPullRequest)),
+                    (BuildKind.MergedPullRequest, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.BuildKind != BuildKind.MergedPullRequest)),
+                    (BuildKind.PullRequest, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.BuildKind == BuildKind.PullRequest)),
+                    (BuildKind.PullRequest, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.BuildKind != BuildKind.PullRequest)),
+                    (BuildKind.Rolling, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.BuildKind == BuildKind.Rolling)),
+                    (BuildKind.Rolling, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.BuildKind != BuildKind.Rolling)),
+                    (BuildKind.All, _) => query,
                     _ => query,
                 };
             }

@@ -44,7 +44,7 @@ namespace DevOps.Status.Controllers
                         var buildInfo = x.GetBuildResultInfo();
                         return new BuildStatusRestInfo()
                         {
-                            Result = (x.BuildResult ?? BuildResult.None).ToString(),
+                            Result = x.BuildResult.ToString(),
                             BuildNumber = buildInfo.Number,
                             BuildUri = buildInfo.BuildUri
                         };

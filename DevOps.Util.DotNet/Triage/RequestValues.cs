@@ -163,11 +163,11 @@ namespace DevOps.Util.DotNet.Triage
 
     public readonly struct BuildTypeRequestValue : IRequestValue<EqualsKind>
     {
-        public ModelBuildKind BuildType { get;  }
+        public BuildKind BuildType { get;  }
         public EqualsKind Kind { get; }
         public string? BuildTypeName { get; }
 
-        public BuildTypeRequestValue(ModelBuildKind buildType, EqualsKind kind, string? buildTypeName = null)
+        public BuildTypeRequestValue(BuildKind buildType, EqualsKind kind, string? buildTypeName = null)
         {
             BuildType = buildType;
             Kind = kind;
@@ -187,12 +187,12 @@ namespace DevOps.Util.DotNet.Triage
             (data, kind) = RequestValueUtil.Parse(data, defaultKind);
             var buildType = data.ToLower() switch
             {
-                "all" => ModelBuildKind.All,
-                "rolling" => ModelBuildKind.Rolling,
-                "pullrequest" => ModelBuildKind.PullRequest,
-                "pr" => ModelBuildKind.PullRequest,
-                "mergedpullrequest" => ModelBuildKind.MergedPullRequest,
-                "mpr" => ModelBuildKind.MergedPullRequest,
+                "all" => BuildKind.All,
+                "rolling" => BuildKind.Rolling,
+                "pullrequest" => BuildKind.PullRequest,
+                "pr" => BuildKind.PullRequest,
+                "mergedpullrequest" => BuildKind.MergedPullRequest,
+                "mpr" => BuildKind.MergedPullRequest,
                 _ => throw new Exception($"Invalid build type {data}"),
             };
 

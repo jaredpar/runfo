@@ -474,7 +474,7 @@ namespace DevOps.Util.DotNet.Triage
             builder.AppendLine($"Runfo Tracking Issue: [{modelTrackingIssue.IssueTitle}]({SiteLinkUtil.GetTrackingIssueUri(modelTrackingIssue.Id)})");
         }
 
-        private static void AppendFooter(StringBuilder builder, IEnumerable<(int BuildNumber, DateTime? QueueTime)> builds, DateTime baseTime)
+        private static void AppendFooter(StringBuilder builder, IEnumerable<(int BuildNumber, DateTime QueueTime)> builds, DateTime baseTime)
         {
             builder.AppendLine();
             builder.AppendLine("Build Result Summary");
@@ -483,7 +483,7 @@ namespace DevOps.Util.DotNet.Triage
 
             var list = builds
                 .GroupBy(x => x.BuildNumber)
-                .Select(x => (BuildNumber: x.Key, QueueTime: x.SelectNullableValue(x => x.QueueTime).FirstOrDefault()))
+                .Select(x => (BuildNumber: x.Key, QueueTime: x.Select(x => x.QueueTime).FirstOrDefault()))
                 .Where(x => x.QueueTime != default)
                 .ToList();
             var dayCount = list.Count(x => x.QueueTime > baseTime - TimeSpan.FromDays(1));

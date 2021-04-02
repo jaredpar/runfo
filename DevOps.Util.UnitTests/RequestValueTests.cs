@@ -11,14 +11,14 @@ namespace DevOps.Util.UnitTests
     public class RequestValueTests
     {
         [Theory]
-        [InlineData("rolling", ModelBuildKind.Rolling, EqualsKind.Equals, "rolling", null)]
-        [InlineData("!rolling", ModelBuildKind.Rolling, EqualsKind.NotEquals, "rolling", null)]
-        [InlineData("pr", ModelBuildKind.PullRequest, EqualsKind.Equals, "pr", null)]
-        [InlineData("!pr", ModelBuildKind.PullRequest, EqualsKind.NotEquals, "pr", null)]
-        [InlineData("pullRequest", ModelBuildKind.PullRequest, EqualsKind.Equals, "pullRequest", null)]
-        [InlineData("mpr", ModelBuildKind.MergedPullRequest, EqualsKind.Equals, "mpr", null)]
-        [InlineData("all", ModelBuildKind.All, EqualsKind.Equals, "all", null)]
-        public void BuildTypeRequestValues(string value, ModelBuildKind buildType, EqualsKind kind, string name, EqualsKind? defaultKind)
+        [InlineData("rolling", BuildKind.Rolling, EqualsKind.Equals, "rolling", null)]
+        [InlineData("!rolling", BuildKind.Rolling, EqualsKind.NotEquals, "rolling", null)]
+        [InlineData("pr", BuildKind.PullRequest, EqualsKind.Equals, "pr", null)]
+        [InlineData("!pr", BuildKind.PullRequest, EqualsKind.NotEquals, "pr", null)]
+        [InlineData("pullRequest", BuildKind.PullRequest, EqualsKind.Equals, "pullRequest", null)]
+        [InlineData("mpr", BuildKind.MergedPullRequest, EqualsKind.Equals, "mpr", null)]
+        [InlineData("all", BuildKind.All, EqualsKind.Equals, "all", null)]
+        public void BuildTypeRequestValues(string value, BuildKind buildType, EqualsKind kind, string name, EqualsKind? defaultKind)
         {
             defaultKind ??= EqualsKind.Equals;
             var request = BuildTypeRequestValue.Parse(value, defaultKind: defaultKind.Value);

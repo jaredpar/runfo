@@ -114,7 +114,7 @@ namespace DevOps.Status.Pages.Search
                         Definition = x.DefinitionName,
                         DefinitionUri = x.DefinitionInfo.DefinitionUri,
                         TargetBranch = x.GitHubBuildInfo?.TargetBranch,
-                        Queued = DateTimeUtil.ConvertDateTime(x.QueueTime)?.ToString("yyyy-MM-dd hh:mm tt"),
+                        Queued = DateTimeUtil.ConvertDateTime(x.QueueTime).ToString("yyyy-MM-dd hh:mm tt"),
                     };
                 })
                 .ToList();

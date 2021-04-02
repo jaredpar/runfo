@@ -41,10 +41,6 @@ namespace DevOps.Util.DotNet.Triage
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ModelBuild>()
-                .Property(x => x.IsMergedPullRequest)
-                .HasDefaultValue(false);
-
-            modelBuilder.Entity<ModelBuild>()
                 .Property(x => x.BuildResult)
                 .HasConversion<string>();
 
@@ -195,6 +191,7 @@ namespace DevOps.Util.DotNet.Triage
         public const string BuildDefinitionNameTypeName = "nvarchar(100)";
         public const string GitHubOrganizationTypeName = "nvarchar(100)";
         public const string GitHubRepositoryTypeName = "nvarchar(100)";
+        public const string GitHubBranchName = "nvarchar(100)";
         public const string AzureOrganizationTypeName = "nvarchar(100)";
         public const string AzureProjectTypeName = "nvarchar(100)";
         public const string JobNameTypeName = "nvarchar(200)";
@@ -219,7 +216,7 @@ namespace DevOps.Util.DotNet.Triage
         public int DefinitionId { get; set; }
     }
 
-    public class ModelBuild
+    public partial class ModelBuild
     {
         public int Id { get; set; }
 
@@ -252,52 +249,14 @@ namespace DevOps.Util.DotNet.Triage
         public int? PullRequestNumber { get; set; }
 
         /// <summary>
-        /// This represents the target branch of the Build. For most builds this is the branch that was being built, 
-        /// for pull requests this is the branch the code will be merged into. 
-        /// 
-        /// It is possible for this to be null. There are some types of builds for which there is not a logical target
-        /// branch
-        /// </summary>
-        [Column(TypeName="nvarchar(100)")]
-        public string? GitHubTargetBranch { get; set; }
-
-        public bool IsMergedPullRequest { get; set; }
-
-        /// <summary>
         /// The queue time of the build stored in UTC
         /// </summary>
-        public DateTime? QueueTime { get; set; }
-
-        /// <summary>
-        /// The result of the most recent build attempt
-        /// </summary>
-        public BuildResult? BuildResult { get; set; }
-
-        /// <summary>
-        /// The start time of the build stored in UTC
-        /// </summary>
-        public DateTime? StartTime { get; set; }
+        public DateTime QueueTime { get; set; }
 
         /// <summary>
         /// The finish time of the build stored in UTC
         /// </summary>
         public DateTime? FinishTime { get; set; }
-
-        /// <summary>
-        /// De-normalized <see cref="ModelBuildDefinition.DefinitionName"/>
-        /// </summary>
-        [Column(TypeName=ModelConstants.BuildDefinitionNameTypeName)]
-        [Required]
-        public string DefinitionName { get; set; }
-
-        /// <summary>
-        /// De-normalized <see cref="ModelBuildDefinition.DefinitionId"/>
-        /// </summary>
-        public int DefinitionId { get; set; }
-
-        public int ModelBuildDefinitionId { get; set; }
-
-        public ModelBuildDefinition ModelBuildDefinition { get; set; }
 
         public List<ModelTestResult> ModelTestResults { get; set; }
 
@@ -321,7 +280,7 @@ namespace DevOps.Util.DotNet.Triage
         public ModelBuild ModelBuild { get; set; }
     }
 
-    public class ModelBuildAttempt
+    public partial class ModelBuildAttempt
     {
         public int Id { get; set; }
 
@@ -329,11 +288,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public bool IsTimelineMissing { get; set; }
 
-        public DateTime? StartTime { get; set; }
-
         public DateTime? FinishTime { get; set; }
-
-        public BuildResult BuildResult { get; set; }
 
         [Column(TypeName=ModelConstants.ModelBuildNameKeyTypeName)]
         [Required]
@@ -348,7 +303,7 @@ namespace DevOps.Util.DotNet.Triage
         public List<ModelTrackingIssueResult> ModelTrackingIssueResults { get; set; }
     }
 
-    public class ModelTimelineIssue
+    public partial class ModelTimelineIssue
     {
         public int Id { get; set; }
 
@@ -403,7 +358,7 @@ namespace DevOps.Util.DotNet.Triage
         public ModelBuild ModelBuild { get; set; }
     }
 
-    public class ModelTestResult
+    public partial class ModelTestResult
     {
         public int Id { get; set; }
 

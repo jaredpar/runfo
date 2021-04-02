@@ -123,8 +123,6 @@ namespace DevOps.Util.DotNet.Triage
                     Logger.LogWarning($"Error uploading test run: {ex.Message}");
                     return;
                 }
-
-
             }
         }
     }

@@ -76,7 +76,7 @@ namespace DevOps.Status.Pages.View
                 }
 
                 BuildUri = DevOpsUtil.GetBuildUri(organization, project, number);
-                BuildResult = modelBuild.BuildResult ?? BuildResult.None;
+                BuildResult = modelBuild.BuildResult;
                 Repository = $"{modelBuild.GitHubOrganization}/{modelBuild.GitHubRepository}";
                 RepositoryUri = $"https://{modelBuild.GitHubOrganization}/{modelBuild.GitHubRepository}";
                 DefinitionName = modelBuild.DefinitionName;

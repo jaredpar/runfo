@@ -58,7 +58,7 @@ namespace DevOps.Status.Pages.View
             IQueryable<ModelBuild> query = TriageContextUtil.Context.ModelBuilds
                 .Include(x => x.ModelBuildDefinition);
             var results = await options.Filter(query)
-                .Where(x => x.PullRequestNumber != null && x.IsMergedPullRequest)
+                .Where(x => x.BuildKind == BuildKind.MergedPullRequest)
                 .OrderByDescending(x => x.BuildNumber)
                 .Skip(PageNumber * pageSize)
                 .Take(pageSize)
@@ -77,7 +77,7 @@ namespace DevOps.Status.Pages.View
                         BuildNumber = b.BuildNumber,
                         DefinitionUri = b.ModelBuildDefinition.GetDefinitionKey().DefinitionUri,
                         DefinitionName = b.ModelBuildDefinition.DefinitionName,
-                        Result = b.BuildResult!.Value,
+                        Result = b.BuildResult,
                     };
                 })
                 .ToList();
