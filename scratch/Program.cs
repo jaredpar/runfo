@@ -596,41 +596,6 @@ namespace Scratch
             }
         }
 
-        internal async Task Unknown()
-        {
-            var pageCount = 100;
-            var count = 0;
-            var startTime = DateTime.Parse("2020-08-01");
-            while (true)
-            {
-                var query = TriageContext
-                    .ModelBuilds
-                    .Where(x => x.AzureOrganization == null && x.StartTime >= startTime)
-                    .OrderByDescending(x => x.BuildNumber)
-                    .Take(pageCount)
-                    .Include(x => x.ModelBuildDefinition);
-                var results = await query.ToListAsync();
-                Console.WriteLine(count * pageCount);
-
-                foreach (var build in results)
-                {
-                    if (build.ModelBuildDefinition.AzureOrganization == null)
-                    {
-                    }
-                    build.AzureOrganization = build.ModelBuildDefinition.AzureOrganization;
-                    build.AzureProject = build.ModelBuildDefinition.AzureProject;
-                }
-
-                count++;
-                await TriageContext.SaveChangesAsync();
-
-                if (results.Count == 0)
-                {
-                    break;
-                }
-            }
-        }
-
         class Data
         {
             public string? Count7;
