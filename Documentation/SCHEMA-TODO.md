@@ -5,13 +5,14 @@ Items:
 - Change the date time type. Just use the C# type `DateTime` and EF Core will
 generate `datetime2(7)`
 - X Change the tables to have the columns we need for queries
-- what is using Org.BouncyCastle.Math.EC.Rfc7748?
+- X what is using Org.BouncyCastle.Math.EC.Rfc7748?
 - SearchTestsRequests need to alias job name and test run name. Same value.
 - X rename  GetModelBuildId to GetModelBuildKeyName
 - ensure all query properties set 
     - specifically the updating to merged pull request
 - Delete all the filter map code in SearchBuildsRequests
-- Ensure all enum use int conversion
+- X Ensure all enum use int conversion
+- Delete  GetModelBuildKind
 
 Indexes:
 - X ModelBuild 
