@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public class TriageContext : DbContext
+    public partial class TriageContext : DbContext
     {
         public DbSet<ModelBuild> ModelBuilds { get; set; }
 
@@ -41,48 +41,12 @@ namespace DevOps.Util.DotNet.Triage
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ModelBuild>()
+                .HasIndex(x => x.NameKey)
+                .IsUnique();
+
+            modelBuilder.Entity<ModelBuild>()
                 .Property(x => x.BuildResult)
                 .HasConversion<string>();
-
-            modelBuilder.Entity<ModelBuild>()
-                .Property(x => x.DefinitionName)
-                .HasDefaultValue("");
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => x.StartTime);
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => x.DefinitionId);
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => x.DefinitionName);
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => x.BuildResult);
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => new { x.StartTime, x.DefinitionId })
-                .IncludeProperties(x => new { x.BuildNumber, x.BuildResult, x.PullRequestNumber, x.GitHubRepository });
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => new { x.DefinitionId, x.StartTime })
-                .IncludeProperties(x => new { x.BuildNumber, x.BuildResult, x.PullRequestNumber, x.GitHubRepository });
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => new { x.StartTime, x.DefinitionName })
-                .IncludeProperties(x => new { x.BuildNumber, x.BuildResult, x.PullRequestNumber, x.GitHubRepository });
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => new { x.DefinitionName, x.StartTime })
-                .IncludeProperties(x => new { x.BuildNumber, x.BuildResult, x.PullRequestNumber, x.GitHubRepository });
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => new { x.DefinitionId, x.PullRequestNumber, x.StartTime })
-                .IncludeProperties(x => new { x.BuildNumber, x.BuildResult, x.GitHubRepository });
-
-            modelBuilder.Entity<ModelBuildAttempt>()
-                .HasIndex(x => new { x.Attempt, x.ModelBuildId })
-                .IsUnique();
 
             modelBuilder.Entity<ModelBuildAttempt>()
                 .HasOne(x => x.ModelBuild)
@@ -93,17 +57,9 @@ namespace DevOps.Util.DotNet.Triage
                 .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionId })
                 .IsUnique();
 
-            modelBuilder.Entity<ModelTestRun>()
-                .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.TestRunId })
+            modelBuilder.Entity<ModelBuildDefinition>()
+                .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionId })
                 .IsUnique();
-
-            modelBuilder.Entity<ModelTestRun>()
-                .HasIndex(x => x.ModelBuildId)
-                .IncludeProperties(x => new { x.AzureOrganization, x.AzureProject, x.TestRunId, x.Name });
-
-            modelBuilder.Entity<ModelTestRun>()
-                .Property(x => x.Attempt)
-                .HasDefaultValue(1);
 
             modelBuilder.Entity<ModelTestRun>()
                 .HasOne(x => x.ModelBuild)
@@ -123,11 +79,6 @@ namespace DevOps.Util.DotNet.Triage
                 .HasOne(x => x.ModelTestRun)
                 .WithMany()
                 .OnDelete(DeleteBehavior.NoAction);
-
-            modelBuilder.Entity<ModelTimelineIssue>()
-                .Property(x => x.IssueType)
-                .HasConversion<string>()
-                .HasDefaultValue(IssueType.Warning);
 
             modelBuilder.Entity<ModelTimelineIssue>()
                 .HasIndex(x => x.ModelBuildId)
@@ -174,6 +125,9 @@ namespace DevOps.Util.DotNet.Triage
                 .HasIndex(x => new { x.Number, x.Organization, x.Repository });
 
             modelBuilder.Entity<ModelGitHubIssue>()
+                .HasIndex(x => x.ModelBuildId);
+
+            modelBuilder.Entity<ModelGitHubIssue>()
                 .HasOne(x => x.ModelBuild)
                 .WithMany(x => x.ModelGitHubIssues)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -182,6 +136,8 @@ namespace DevOps.Util.DotNet.Triage
                 .HasOne(x => x.ModelBuild)
                 .WithMany()
                 .OnDelete(DeleteBehavior.Cascade);
+
+            OnModelCreatingQuery(modelBuilder);
         }
     }
 

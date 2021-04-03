@@ -11,6 +11,28 @@ namespace DevOps.Util.DotNet.Triage
     // There are query elements that are the same between a number of entity items and this 
     // file helps keep them all in sync between the different entity types
 
+    public partial class TriageContext : DbContext
+    {
+        private void OnModelCreatingQuery(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ModelBuild>()
+                .HasIndex(x => new { x.StartTime, x.DefinitionId })
+                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+
+            modelBuilder.Entity<ModelBuildAttempt>()
+                .HasIndex(x => new { x.StartTime, x.DefinitionId })
+                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+
+            modelBuilder.Entity<ModelTestResult>()
+                .HasIndex(x => new { x.StartTime, x.DefinitionId })
+                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+
+            modelBuilder.Entity<ModelTimelineIssue>()
+                .HasIndex(x => new { x.StartTime, x.DefinitionId })
+                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+        }
+    }
+
     public partial class ModelBuild
     {
         public DateTime StartTime { get; set; }
