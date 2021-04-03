@@ -57,6 +57,11 @@ namespace DevOps.Util.DotNet.Triage
                 .WithMany(x => x.ModelBuildAttempts)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<ModelBuildAttempt>()
+                .HasOne(x => x.ModelBuildDefinition)
+                .WithMany()
+                .OnDelete(DeleteBehavior.NoAction);
+
             modelBuilder.Entity<ModelBuildDefinition>()
                 .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionId })
                 .IsUnique();
@@ -84,6 +89,11 @@ namespace DevOps.Util.DotNet.Triage
                 .WithMany()
                 .OnDelete(DeleteBehavior.NoAction);
 
+            modelBuilder.Entity<ModelTestResult>()
+                .HasOne(x => x.ModelBuildDefinition)
+                .WithMany()
+                .OnDelete(DeleteBehavior.NoAction);
+
             modelBuilder.Entity<ModelTimelineIssue>()
                 .HasIndex(x => x.ModelBuildId)
                 .IncludeProperties(x => new { x.JobName, x.TaskName, x.RecordName, x.IssueType, x.Attempt, x.Message });
@@ -99,6 +109,11 @@ namespace DevOps.Util.DotNet.Triage
                 .HasOne(x => x.ModelBuild)
                 .WithMany(x => x.ModelTimelineIssues)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ModelTimelineIssue>()
+                .HasOne(x => x.ModelBuildDefinition)
+                .WithMany()
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<ModelTrackingIssue>()
                 .Property(x => x.TrackingKind)

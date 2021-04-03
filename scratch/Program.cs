@@ -54,10 +54,23 @@ namespace Scratch
             {
                 var configuration = ScratchUtil.CreateConfiguration();
                 var connectionString = configuration[DotNetConstants.ConfigurationSqlConnectionString];
-                var message = connectionString.Contains("triage-scratch-dev")
-                    ? "Using sql developer"
-                    : "Using sql production";
-                Console.WriteLine(message);
+                if (connectionString.Contains("Catalog=runfo-test"))
+                {
+                    Console.WriteLine("Using SQL test");
+                }
+                else if (connectionString.Contains("Catalog=runfo"))
+                {
+                    Console.WriteLine("Using SQL test");
+                }
+                else if (connectionString.Contains("triage-scratch-dev"))
+                {
+                    Console.WriteLine("Using SQL test (old)");
+                }
+                else
+                {
+                    Console.WriteLine("Using SQL production (old)");
+                }
+
                 builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds));
             }
         }
