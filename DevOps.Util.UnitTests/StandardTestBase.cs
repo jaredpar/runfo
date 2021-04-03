@@ -106,7 +106,7 @@ namespace DevOps.Util.UnitTests
                 AzureOrganization = def.AzureOrganization,
                 AzureProject = def.AzureProject,
                 QueueTime = dt is object ? DateTime.ParseExact(dt, "yyyy-MM-dd", null) : default,
-                BuildResult = br is object ? Enum.Parse<BuildResult>(br) : default,
+                BuildResult = br is object ? Enum.Parse<ModelBuildResult>(br) : default,
                 ModelBuildDefinition = def,
                 DefinitionId = def.DefinitionId,
                 DefinitionName = def.DefinitionName,

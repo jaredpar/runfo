@@ -77,7 +77,7 @@ namespace DevOps.Status.Pages.Search
             // like say cancelled, then just search all non succeeded builds.
             if (buildsRequest.BuildResult is null)
             {
-                buildsRequest.BuildResult = new BuildResultRequestValue(BuildResult.Succeeded, EqualsKind.NotEquals);
+                buildsRequest.BuildResult = new BuildResultRequestValue(ModelBuildResult.Succeeded, EqualsKind.NotEquals);
                 BuildQuery = buildsRequest.GetQueryString();
             }
 

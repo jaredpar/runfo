@@ -42,20 +42,20 @@ namespace DevOps.Util.DotNet.Function
                 if (mergedBuild is object)
                 {
                     var modelBuild = await triageContextUtil.EnsureBuildAsync(mergedBuild.GetBuildResultInfo()).ConfigureAwait(false);
-                    modelBuild.BuildKind = BuildKind.MergedPullRequest;
+                    modelBuild.BuildKind = ModelBuildKind.MergedPullRequest;
                     foreach (var attempt in triageContext.ModelBuildAttempts.Where(x => x.ModelBuildId == modelBuild.Id))
                     {
-                        attempt.BuildKind = BuildKind.MergedPullRequest;
+                        attempt.BuildKind = ModelBuildKind.MergedPullRequest;
                     }
 
                     foreach (var issue in triageContext.ModelTimelineIssues.Where(x => x.ModelBuildId == modelBuild.Id))
                     {
-                        issue.BuildKind = BuildKind.MergedPullRequest;
+                        issue.BuildKind = ModelBuildKind.MergedPullRequest;
                     }
 
                     foreach (var testResult in triageContext.ModelTestResults.Where(x => x.ModelBuildId == modelBuild.Id))
                     {
-                        testResult.BuildKind = BuildKind.MergedPullRequest;
+                        testResult.BuildKind = ModelBuildKind.MergedPullRequest;
                     }
 
                     await triageContextUtil.Context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

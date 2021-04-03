@@ -49,7 +49,7 @@ namespace DevOps.Util.DotNet.Triage
                 return;
             }
 
-            var failed = modelBuild.BuildResult == BuildResult.Failed || modelBuild.BuildResult == BuildResult.Canceled;
+            var failed = modelBuild.BuildResult == ModelBuildResult.Failed || modelBuild.BuildResult == ModelBuildResult.Canceled;
             if (!failed)
             {
                 Logger.LogWarning($"Build did not fail so no retry is needed");

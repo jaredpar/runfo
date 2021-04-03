@@ -11,14 +11,14 @@ namespace DevOps.Util.UnitTests
     public class RequestValueTests
     {
         [Theory]
-        [InlineData("rolling", BuildKind.Rolling, EqualsKind.Equals, "rolling", null)]
-        [InlineData("!rolling", BuildKind.Rolling, EqualsKind.NotEquals, "rolling", null)]
-        [InlineData("pr", BuildKind.PullRequest, EqualsKind.Equals, "pr", null)]
-        [InlineData("!pr", BuildKind.PullRequest, EqualsKind.NotEquals, "pr", null)]
-        [InlineData("pullRequest", BuildKind.PullRequest, EqualsKind.Equals, "pullRequest", null)]
-        [InlineData("mpr", BuildKind.MergedPullRequest, EqualsKind.Equals, "mpr", null)]
-        [InlineData("all", BuildKind.All, EqualsKind.Equals, "all", null)]
-        public void BuildTypeRequestValues(string value, BuildKind buildType, EqualsKind kind, string name, EqualsKind? defaultKind)
+        [InlineData("rolling", ModelBuildKind.Rolling, EqualsKind.Equals, "rolling", null)]
+        [InlineData("!rolling", ModelBuildKind.Rolling, EqualsKind.NotEquals, "rolling", null)]
+        [InlineData("pr", ModelBuildKind.PullRequest, EqualsKind.Equals, "pr", null)]
+        [InlineData("!pr", ModelBuildKind.PullRequest, EqualsKind.NotEquals, "pr", null)]
+        [InlineData("pullRequest", ModelBuildKind.PullRequest, EqualsKind.Equals, "pullRequest", null)]
+        [InlineData("mpr", ModelBuildKind.MergedPullRequest, EqualsKind.Equals, "mpr", null)]
+        [InlineData("all", ModelBuildKind.All, EqualsKind.Equals, "all", null)]
+        public void BuildTypeRequestValues(string value, ModelBuildKind buildType, EqualsKind kind, string name, EqualsKind? defaultKind)
         {
             defaultKind ??= EqualsKind.Equals;
             var request = BuildKindRequestValue.Parse(value, defaultKind: defaultKind.Value);
@@ -29,10 +29,10 @@ namespace DevOps.Util.UnitTests
         }
 
         [Theory]
-        [InlineData("succeeded", BuildResult.Succeeded, EqualsKind.Equals, "succeeded", null)]
-        [InlineData("!succeeded", BuildResult.Succeeded, EqualsKind.NotEquals, "succeeded", null)]
-        [InlineData("failed", BuildResult.Failed, EqualsKind.Equals, "failed", null)]
-        public void BuildResultRequestValues(string value, BuildResult buildResult, EqualsKind kind, string name, EqualsKind? defaultKind)
+        [InlineData("succeeded", ModelBuildResult.Succeeded, EqualsKind.Equals, "succeeded", null)]
+        [InlineData("!succeeded", ModelBuildResult.Succeeded, EqualsKind.NotEquals, "succeeded", null)]
+        [InlineData("failed", ModelBuildResult.Failed, EqualsKind.Equals, "failed", null)]
+        public void BuildResultRequestValues(string value, ModelBuildResult buildResult, EqualsKind kind, string name, EqualsKind? defaultKind)
         {
             defaultKind ??= EqualsKind.Equals;
             var request = BuildResultRequestValue.Parse(value, defaultKind: defaultKind.Value);

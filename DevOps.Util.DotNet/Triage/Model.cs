@@ -44,9 +44,13 @@ namespace DevOps.Util.DotNet.Triage
                 .HasIndex(x => x.NameKey)
                 .IsUnique();
 
-            modelBuilder.Entity<ModelBuild>()
-                .Property(x => x.BuildResult)
-                .HasConversion<string>();
+            modelBuilder.Entity<ModelBuildAttempt>()
+                .HasIndex(x => new { x.ModelBuildId, x.Attempt })
+                .IsUnique();
+
+            modelBuilder.Entity<ModelBuildAttempt>()
+                .HasIndex(x => new { x.NameKey, x.Attempt })
+                .IsUnique();
 
             modelBuilder.Entity<ModelBuildAttempt>()
                 .HasOne(x => x.ModelBuild)

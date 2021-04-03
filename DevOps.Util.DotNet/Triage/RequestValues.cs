@@ -163,11 +163,11 @@ namespace DevOps.Util.DotNet.Triage
 
     public readonly struct BuildKindRequestValue : IRequestValue<EqualsKind>
     {
-        public BuildKind BuildKind { get;  }
+        public ModelBuildKind BuildKind { get;  }
         public EqualsKind Kind { get; }
         public string? BuildTypeName { get; }
 
-        public BuildKindRequestValue(BuildKind buildKind, EqualsKind kind, string? buildTypeName = null)
+        public BuildKindRequestValue(ModelBuildKind buildKind, EqualsKind kind, string? buildTypeName = null)
         {
             BuildKind = buildKind;
             Kind = kind;
@@ -187,12 +187,12 @@ namespace DevOps.Util.DotNet.Triage
             (data, kind) = RequestValueUtil.Parse(data, defaultKind);
             var buildType = data.ToLower() switch
             {
-                "all" => BuildKind.All,
-                "rolling" => BuildKind.Rolling,
-                "pullrequest" => BuildKind.PullRequest,
-                "pr" => BuildKind.PullRequest,
-                "mergedpullrequest" => BuildKind.MergedPullRequest,
-                "mpr" => BuildKind.MergedPullRequest,
+                "all" => ModelBuildKind.All,
+                "rolling" => ModelBuildKind.Rolling,
+                "pullrequest" => ModelBuildKind.PullRequest,
+                "pr" => ModelBuildKind.PullRequest,
+                "mergedpullrequest" => ModelBuildKind.MergedPullRequest,
+                "mpr" => ModelBuildKind.MergedPullRequest,
                 _ => throw new Exception($"Invalid build type {data}"),
             };
 
@@ -202,11 +202,11 @@ namespace DevOps.Util.DotNet.Triage
 
     public readonly struct BuildResultRequestValue : IRequestValue<EqualsKind>
     {
-        public BuildResult BuildResult { get; }
+        public ModelBuildResult BuildResult { get; }
         public EqualsKind Kind { get; }
         public string? BuildResultName { get; }
 
-        public BuildResultRequestValue(BuildResult buildResult, EqualsKind kind, string? buildResultName = null)
+        public BuildResultRequestValue(ModelBuildResult buildResult, EqualsKind kind, string? buildResultName = null)
         {
             BuildResult = buildResult;
             Kind = kind;
@@ -226,10 +226,10 @@ namespace DevOps.Util.DotNet.Triage
             (data, kind) = RequestValueUtil.Parse(data, defaultKind);
             var buildResult = data.ToLower() switch
             {
-                "failed" => BuildResult.Failed,
-                "canceled" => BuildResult.Canceled,
-                "succeeded" => BuildResult.Succeeded,
-                "partiallysucceeded" => BuildResult.PartiallySucceeded,
+                "failed" => ModelBuildResult.Failed,
+                "canceled" => ModelBuildResult.Canceled,
+                "succeeded" => ModelBuildResult.Succeeded,
+                "partiallysucceeded" => ModelBuildResult.PartiallySucceeded,
                 _ => throw new Exception($"Invalid result {data}")
             };
 

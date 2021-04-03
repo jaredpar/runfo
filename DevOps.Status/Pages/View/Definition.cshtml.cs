@@ -73,7 +73,7 @@ namespace DevOps.Status.Pages.View
                 {
                     Definition = definitionId.ToString(),
                     Started = new DateRequestValue(limit, RelationalKind.GreaterThan),
-                    BuildKind = new BuildKindRequestValue(BuildKind.PullRequest, EqualsKind.NotEquals),
+                    BuildKind = new BuildKindRequestValue(ModelBuildKind.PullRequest, EqualsKind.NotEquals),
                     TargetBranch = new StringRequestValue(TargetBranch, StringRelationalKind.Equals),
                 };
 
@@ -82,7 +82,7 @@ namespace DevOps.Status.Pages.View
                     .Select(x => new
                     {
                         x.BuildResult,
-                        IsMergedPullRequest = x.BuildKind == BuildKind.MergedPullRequest,
+                        IsMergedPullRequest = x.BuildKind == ModelBuildKind.MergedPullRequest,
                         x.PullRequestNumber,
                         x.StartTime,
                     })
@@ -117,10 +117,10 @@ namespace DevOps.Status.Pages.View
                         new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:mpr targetBranch:{TargetBranch}"),
                         GetRate(total),
                         new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:!pr targetBranch:{TargetBranch}"));
-                    string GetRate(IEnumerable<BuildResult> e)
+                    string GetRate(IEnumerable<ModelBuildResult> e)
                     {
                         double totalCount = e.Count();
-                        double passedCount = e.Count(x => x is BuildResult.Succeeded or BuildResult.PartiallySucceeded);
+                        double passedCount = e.Count(x => x is ModelBuildResult.Succeeded or ModelBuildResult.PartiallySucceeded);
                         return (passedCount / totalCount).ToString("P2");
                     }
                 }
@@ -142,7 +142,7 @@ namespace DevOps.Status.Pages.View
                     {
                         x.ModelBuild.BuildNumber,
                         x.ModelBuild.PullRequestNumber,
-                        IsMergedPullRequest = x.ModelBuild.BuildKind == BuildKind.MergedPullRequest,
+                        IsMergedPullRequest = x.ModelBuild.BuildKind == ModelBuildKind.MergedPullRequest,
                         GitHubOrganization = x.Organization,
                         GitHubRepository = x.Repository,
                         GitHubIssueNumber = x.Number

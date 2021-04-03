@@ -137,7 +137,7 @@ namespace DevOps.Util.DotNet.Triage
                 var k = buildKind.BuildKind;
                 query = (k, buildKind.Kind) switch
                 {
-                    (DevOps.Util.BuildKind.All, _) => query,
+                    (ModelBuildKind.All, _) => query,
                     (_, EqualsKind.Equals) => query.Where(x => x.BuildKind == k),
                     (_, EqualsKind.NotEquals) => query.Where(x => x.BuildKind != k),
                     _ => query,
@@ -193,7 +193,7 @@ namespace DevOps.Util.DotNet.Triage
                 var k = buildKind.BuildKind;
                 query = (k, buildKind.Kind) switch
                 {
-                    (DevOps.Util.BuildKind.All, _) => query,
+                    (ModelBuildKind.All, _) => query,
                     (_, EqualsKind.Equals) => query.Where(x => x.BuildKind == k),
                     (_, EqualsKind.NotEquals) => query.Where(x => x.BuildKind != k),
                     _ => query,
@@ -249,7 +249,7 @@ namespace DevOps.Util.DotNet.Triage
                 var k = buildKind.BuildKind;
                 query = (k, buildKind.Kind) switch
                 {
-                    (DevOps.Util.BuildKind.All, _) => query,
+                    (ModelBuildKind.All, _) => query,
                     (_, EqualsKind.Equals) => query.Where(x => x.BuildKind == k),
                     (_, EqualsKind.NotEquals) => query.Where(x => x.BuildKind != k),
                     _ => query,
@@ -305,7 +305,7 @@ namespace DevOps.Util.DotNet.Triage
                 var k = buildKind.BuildKind;
                 query = (k, buildKind.Kind) switch
                 {
-                    (DevOps.Util.BuildKind.All, _) => query,
+                    (ModelBuildKind.All, _) => query,
                     (_, EqualsKind.Equals) => query.Where(x => x.BuildKind == k),
                     (_, EqualsKind.NotEquals) => query.Where(x => x.BuildKind != k),
                     _ => query,

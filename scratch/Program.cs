@@ -293,7 +293,7 @@ namespace Scratch
             var date = DateTime.Now - TimeSpan.FromDays(14);
             var builds = await TriageContext
                 .ModelBuilds
-                .Where(x => x.StartTime > date && x.BuildKind == BuildKind.MergedPullRequest)
+                .Where(x => x.StartTime > date && x.BuildKind == ModelBuildKind.MergedPullRequest)
                 .Include(x => x.ModelBuildAttempts)
                 .Select(x => new
                 {
@@ -313,7 +313,7 @@ namespace Scratch
                 builder.AppendLine($"{group.Key},{(firstAttemptCount / total):P1},{(anyAttemptCount / total):P1}");
             }
 
-            static bool IsAnySuccess(BuildResult? result) => result is { } r && (r == BuildResult.Succeeded || r == BuildResult.PartiallySucceeded);
+            static bool IsAnySuccess(ModelBuildResult? result) => result is { } r && (r == ModelBuildResult.Succeeded || r == ModelBuildResult.PartiallySucceeded);
 
             File.WriteAllText(@"p:\temp\data.csv", builder.ToString());
         }
@@ -467,7 +467,7 @@ namespace Scratch
         {
             var builds = await TriageContext
                 .ModelBuilds
-                .Where(x => x.ModelBuildDefinition.DefinitionId == definitionId && x.BuildResult == BuildResult.Failed)
+                .Where(x => x.ModelBuildDefinition.DefinitionId == definitionId && x.BuildResult == ModelBuildResult.Failed)
                 .OrderByDescending(x => x.BuildNumber)
                 .Take(limit)
                 .ToListAsync();

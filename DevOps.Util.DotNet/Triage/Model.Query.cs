@@ -11,6 +11,28 @@ namespace DevOps.Util.DotNet.Triage
     // There are query elements that are the same between a number of entity items and this 
     // file helps keep them all in sync between the different entity types
 
+    public enum ModelBuildKind
+    {
+        All,
+        Rolling,
+        PullRequest,
+        MergedPullRequest
+    }
+
+    /// <summary>
+    /// The model representation of <see cref="BuildResult"/>. Using a separate type as the 
+    /// DB is using numeric storage and the <see cref="BuildResult"/> type is part of a JSON
+    /// API that is string versioned.
+    /// </summary>
+    public enum ModelBuildResult
+    {
+        None,
+        Canceled,
+        Failed,
+        PartiallySucceeded,
+        Succeeded
+    }
+
     public partial class TriageContext : DbContext
     {
         private void OnModelCreatingQuery(ModelBuilder modelBuilder)
@@ -23,6 +45,14 @@ namespace DevOps.Util.DotNet.Triage
                 .HasIndex(x => new { x.StartTime, x.DefinitionName })
                 .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
 
+            modelBuilder.Entity<ModelBuild>()
+                .Property(x => x.BuildResult)
+                .HasConversion<int>();
+
+            modelBuilder.Entity<ModelBuild>()
+                .Property(x => x.BuildKind)
+                .HasConversion<int>();
+
             modelBuilder.Entity<ModelBuildAttempt>()
                 .HasIndex(x => new { x.StartTime, x.DefinitionId })
                 .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
@@ -30,6 +60,14 @@ namespace DevOps.Util.DotNet.Triage
             modelBuilder.Entity<ModelBuildAttempt>()
                 .HasIndex(x => new { x.StartTime, x.DefinitionName })
                 .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+
+            modelBuilder.Entity<ModelBuildAttempt>()
+                .Property(x => x.BuildResult)
+                .HasConversion<int>();
+
+            modelBuilder.Entity<ModelBuildAttempt>()
+                .Property(x => x.BuildKind)
+                .HasConversion<int>();
 
             modelBuilder.Entity<ModelTestResult>()
                 .HasIndex(x => new { x.StartTime, x.DefinitionId })
@@ -39,6 +77,14 @@ namespace DevOps.Util.DotNet.Triage
                 .HasIndex(x => new { x.StartTime, x.DefinitionName })
                 .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
 
+            modelBuilder.Entity<ModelTestResult>()
+                .Property(x => x.BuildResult)
+                .HasConversion<int>();
+
+            modelBuilder.Entity<ModelTestResult>()
+                .Property(x => x.BuildKind)
+                .HasConversion<int>();
+
             modelBuilder.Entity<ModelTimelineIssue>()
                 .HasIndex(x => new { x.StartTime, x.DefinitionId })
                 .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
@@ -46,6 +92,14 @@ namespace DevOps.Util.DotNet.Triage
             modelBuilder.Entity<ModelTimelineIssue>()
                 .HasIndex(x => new { x.StartTime, x.DefinitionName })
                 .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+
+            modelBuilder.Entity<ModelTimelineIssue>()
+                .Property(x => x.BuildResult)
+                .HasConversion<int>();
+
+            modelBuilder.Entity<ModelTimelineIssue>()
+                .Property(x => x.BuildKind)
+                .HasConversion<int>();
         }
     }
 
@@ -53,9 +107,9 @@ namespace DevOps.Util.DotNet.Triage
     {
         public DateTime StartTime { get; set; }
 
-        public BuildResult BuildResult { get; set; }
+        public ModelBuildResult BuildResult { get; set; }
 
-        public BuildKind BuildKind { get; set; }
+        public ModelBuildKind BuildKind { get; set; }
 
         /// <summary>
         /// This represents the target branch of the Build. For most builds this is the branch that was being built, 
@@ -82,9 +136,9 @@ namespace DevOps.Util.DotNet.Triage
     {
         public DateTime StartTime { get; set; }
 
-        public BuildResult BuildResult { get; set; }
+        public ModelBuildResult BuildResult { get; set; }
 
-        public BuildKind BuildKind { get; set; }
+        public ModelBuildKind BuildKind { get; set; }
 
         [Column(TypeName=ModelConstants.BuildDefinitionNameTypeName)]
         [Required]
@@ -104,9 +158,9 @@ namespace DevOps.Util.DotNet.Triage
     {
         public DateTime StartTime { get; set; }
 
-        public BuildResult BuildResult { get; set; }
+        public ModelBuildResult BuildResult { get; set; }
 
-        public BuildKind BuildKind { get; set; }
+        public ModelBuildKind BuildKind { get; set; }
 
         [Column(TypeName=ModelConstants.BuildDefinitionNameTypeName)]
         [Required]
@@ -126,9 +180,9 @@ namespace DevOps.Util.DotNet.Triage
     {
         public DateTime StartTime { get; set; }
 
-        public BuildResult BuildResult { get; set; }
+        public ModelBuildResult BuildResult { get; set; }
 
-        public BuildKind BuildKind { get; set; }
+        public ModelBuildKind BuildKind { get; set; }
 
         [Column(TypeName=ModelConstants.BuildDefinitionNameTypeName)]
         [Required]

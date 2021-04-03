@@ -46,7 +46,7 @@ namespace DevOps.Util.DotNet.Triage
                 modelBuild.QueueTime,
                 modelBuild.StartTime,
                 modelBuild.FinishTime,
-                modelBuild.BuildResult);
+                modelBuild.BuildResult.ToBuildResult());
 
         public static GitHubBuildInfo GetGitHubBuildInfo(this ModelBuild modelBuild) =>
             new GitHubBuildInfo(
@@ -276,6 +276,28 @@ namespace DevOps.Util.DotNet.Triage
 
         #region Misc
 
+        public static ModelBuildResult ToModelBuildResult(this BuildResult buildResult) =>
+            buildResult switch
+            {
+                BuildResult.None => ModelBuildResult.None,
+                BuildResult.Canceled => ModelBuildResult.Canceled,
+                BuildResult.Failed => ModelBuildResult.Failed,
+                BuildResult.PartiallySucceeded => ModelBuildResult.PartiallySucceeded,
+                BuildResult.Succeeded => ModelBuildResult.Succeeded,
+                _ => throw new InvalidOperationException(),
+            };
+
+        public static BuildResult ToBuildResult(this ModelBuildResult buildResult) =>
+            buildResult switch
+            {
+                ModelBuildResult.None => BuildResult.None,
+                ModelBuildResult.Canceled => BuildResult.Canceled,
+                ModelBuildResult.Failed => BuildResult.Failed,
+                ModelBuildResult.PartiallySucceeded => BuildResult.PartiallySucceeded,
+                ModelBuildResult.Succeeded => BuildResult.Succeeded,
+                _ => throw new InvalidOperationException(),
+            };
+
         public static async Task<List<BuildResultInfo>> ToBuildResultInfoListAsync(this IQueryable<ModelBuild> query)
         {
             var results = await query
@@ -312,19 +334,19 @@ namespace DevOps.Util.DotNet.Triage
                     result.QueueTime,
                     result.StartTime,
                     result.FinishTime,
-                    result.BuildResult);
+                    result.BuildResult.ToBuildResult());
                 list.Add(buildInfo);
             }
 
             return list;
         }
 
-        public static string GetDisplayString(this BuildKind kind) => kind switch
+        public static string GetDisplayString(this ModelBuildKind kind) => kind switch
         {
-            BuildKind.All => "All",
-            BuildKind.MergedPullRequest => "Merged Pull Request",
-            BuildKind.PullRequest => "Pull Request",
-            BuildKind.Rolling => "Rolling",
+            ModelBuildKind.All => "All",
+            ModelBuildKind.MergedPullRequest => "Merged Pull Request",
+            ModelBuildKind.PullRequest => "Pull Request",
+            ModelBuildKind.Rolling => "Rolling",
             _ => throw new InvalidOperationException($"Unexpected value: {kind}")
         };
 

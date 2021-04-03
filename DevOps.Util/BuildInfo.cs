@@ -2,14 +2,6 @@ using System;
 
 namespace DevOps.Util
 {
-    public enum BuildKind
-    {
-        All,
-        Rolling,
-        PullRequest,
-        MergedPullRequest
-    }
-
     public readonly struct GitHubBuildInfo
     {
         public string Organization { get; }

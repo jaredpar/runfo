@@ -34,19 +34,19 @@ namespace DevOps.Util.DotNet.Triage
                 ? (GitHubPullRequestKey?)new GitHubPullRequestKey(build.GitHubOrganization, build.GitHubRepository, build.PullRequestNumber.Value)
                 : null;
 
-        public static BuildKind GetModelBuildKind(bool isMergedPullRequest, int? pullRequestNumber)
+        public static ModelBuildKind GetModelBuildKind(bool isMergedPullRequest, int? pullRequestNumber)
         {
             if (isMergedPullRequest)
             {
-                return BuildKind.MergedPullRequest;
+                return ModelBuildKind.MergedPullRequest;
             }
 
             if (pullRequestNumber.HasValue)
             {
-                return BuildKind.PullRequest;
+                return ModelBuildKind.PullRequest;
             }
 
-            return BuildKind.Rolling;
+            return ModelBuildKind.Rolling;
         }
 
         public async Task<ModelBuildDefinition> EnsureBuildDefinitionAsync(DefinitionInfo definitionInfo)
@@ -93,11 +93,11 @@ namespace DevOps.Util.DotNet.Triage
                 // change the result. When those happens we should update all of the following values. It may
                 // seem strange to update start and finish time here but that is how the AzDO APIs work and it's
                 // best to model them in that way.
-                if (modelBuild.BuildResult != buildInfo.BuildResult)
+                if (modelBuild.BuildResult.ToBuildResult() != buildInfo.BuildResult)
                 {
                     modelBuild.StartTime = buildInfo.StartTime;
                     modelBuild.FinishTime = buildInfo.FinishTime;
-                    modelBuild.BuildResult = buildInfo.BuildResult;
+                    modelBuild.BuildResult = buildInfo.BuildResult.ToModelBuildResult();
                     await Context.SaveChangesAsync().ConfigureAwait(false);
                 }
 
@@ -120,8 +120,8 @@ namespace DevOps.Util.DotNet.Triage
                 FinishTime = buildInfo.FinishTime,
                 QueueTime = buildInfo.QueueTime,
                 BuildNumber = buildInfo.Number,
-                BuildResult = buildInfo.BuildResult,
-                BuildKind = buildInfo.PullRequestKey.HasValue ? BuildKind.PullRequest : BuildKind.Rolling,
+                BuildResult = buildInfo.BuildResult.ToModelBuildResult(),
+                BuildKind = buildInfo.PullRequestKey.HasValue ? ModelBuildKind.PullRequest : ModelBuildKind.Rolling,
                 DefinitionName = buildInfo.DefinitionName,
                 DefinitionId = buildInfo.DefinitionInfo.Id,
             };
@@ -132,10 +132,10 @@ namespace DevOps.Util.DotNet.Triage
 
         public async Task EnsureResultAsync(ModelBuild modelBuild, Build build)
         {
-            if (modelBuild.BuildResult != build.Result)
+            if (modelBuild.BuildResult.ToBuildResult() != build.Result)
             {
                 var buildInfo = build.GetBuildResultInfo();
-                modelBuild.BuildResult = build.Result;
+                modelBuild.BuildResult = build.Result.ToModelBuildResult();
                 modelBuild.StartTime = buildInfo.StartTime;
                 modelBuild.FinishTime = buildInfo.FinishTime;
                 await Context.SaveChangesAsync().ConfigureAwait(false);
@@ -145,10 +145,10 @@ namespace DevOps.Util.DotNet.Triage
         public async Task<ModelBuildAttempt> EnsureBuildAttemptAsync(BuildResultInfo buildInfo, Timeline timeline)
         {
             var modelBuild = await EnsureBuildAsync(buildInfo).ConfigureAwait(false);
-            return await EnsureBuildAttemptAsync(modelBuild, buildInfo.BuildResult, timeline).ConfigureAwait(false);
+            return await EnsureBuildAttemptAsync(modelBuild, buildInfo.BuildResult.ToModelBuildResult(), timeline).ConfigureAwait(false);
         }
 
-        public async Task<ModelBuildAttempt> EnsureBuildAttemptAsync(ModelBuild modelBuild, BuildResult buildResult, Timeline timeline)
+        public async Task<ModelBuildAttempt> EnsureBuildAttemptAsync(ModelBuild modelBuild, ModelBuildResult buildResult, Timeline timeline)
         {
             var attempt = timeline.GetAttempt();
             var modelBuildAttempt = await Context.ModelBuildAttempts
@@ -262,7 +262,7 @@ namespace DevOps.Util.DotNet.Triage
             modelBuildAttempt = new ModelBuildAttempt()
             {
                 Attempt = attempt,
-                BuildResult = build.Result,
+                BuildResult = build.Result.ToModelBuildResult(),
                 StartTime = modelBuild.StartTime,
                 FinishTime = modelBuild.FinishTime,
                 ModelBuild = modelBuild,
@@ -465,7 +465,7 @@ namespace DevOps.Util.DotNet.Triage
             bool descendingOrder = true,
             int? definitionId = null,
             string? definitionName = null,
-            BuildKind kind = BuildKind.All,
+            ModelBuildKind kind = ModelBuildKind.All,
             string? gitHubRepository = null,
             string? gitHubOrganization = null,
             int? count = null)
@@ -506,7 +506,7 @@ namespace DevOps.Util.DotNet.Triage
 
             switch (kind)
             {
-                case BuildKind.All:
+                case ModelBuildKind.All:
                     // Nothing to filter
                     break;
                 default:
