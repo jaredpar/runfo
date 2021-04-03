@@ -1,6 +1,5 @@
 ﻿using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
-using DevOps.Util.DotNet.Triage.Migrations;
 using Microsoft.EntityFrameworkCore;
 using Octokit;
 using System;
