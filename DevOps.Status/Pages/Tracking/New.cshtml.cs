@@ -212,7 +212,7 @@ namespace DevOps.Status.Pages.Tracking
                     {
                         Definition = modelBuildDefinition?.DefinitionId.ToString() ?? null,
                         Queued = new DateRequestValue(7, RelationalKind.GreaterThan),
-                        Result = new BuildResultRequestValue(BuildResult.Succeeded, EqualsKind.NotEquals),
+                        BuildResult = new BuildResultRequestValue(BuildResult.Succeeded, EqualsKind.NotEquals),
                     };
 
                     await FunctionQueueUtil.QueueTriageBuildAttempts(TriageContextUtil, modelTrackingIssue, request);

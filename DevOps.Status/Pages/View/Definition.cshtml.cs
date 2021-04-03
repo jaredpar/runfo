@@ -73,7 +73,7 @@ namespace DevOps.Status.Pages.View
                 {
                     Definition = definitionId.ToString(),
                     Started = new DateRequestValue(limit, RelationalKind.GreaterThan),
-                    BuildType = new BuildTypeRequestValue(BuildKind.PullRequest, EqualsKind.NotEquals),
+                    BuildKind = new BuildKindRequestValue(BuildKind.PullRequest, EqualsKind.NotEquals),
                     TargetBranch = new StringRequestValue(TargetBranch, StringRelationalKind.Equals),
                 };
 

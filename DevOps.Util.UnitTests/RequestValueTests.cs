@@ -21,8 +21,8 @@ namespace DevOps.Util.UnitTests
         public void BuildTypeRequestValues(string value, BuildKind buildType, EqualsKind kind, string name, EqualsKind? defaultKind)
         {
             defaultKind ??= EqualsKind.Equals;
-            var request = BuildTypeRequestValue.Parse(value, defaultKind: defaultKind.Value);
-            Assert.Equal(buildType, request.BuildType);
+            var request = BuildKindRequestValue.Parse(value, defaultKind: defaultKind.Value);
+            Assert.Equal(buildType, request.BuildKind);
             Assert.Equal(kind, request.Kind);
             Assert.Equal(name, request.BuildTypeName);
             Assert.Equal(value, request.GetQueryValue(defaultKind));

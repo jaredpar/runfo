@@ -12,32 +12,12 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public class SearchBuildsRequest : ISearchQueryRequest<ModelBuild>
+    public class SearchBuildsRequest : SearchStandardRequestBase, ISearchQueryRequest<ModelBuild>
     {
-        public string? Definition { get; set; }
-        public BuildTypeRequestValue? BuildType { get; set; }
         public string? Repository { get; set; }
-        public DateRequestValue? Started { get; set; }
         public DateRequestValue? Finished { get; set; }
         public DateRequestValue? Queued { get; set; }
-        public StringRequestValue? TargetBranch { get; set; }
-        public BuildResultRequestValue? Result { get; set; }
         public bool? HasIssues { get; set; }
-
-        public bool HasDefinition => !string.IsNullOrEmpty(Definition);
-
-        public int? DefinitionId
-        {
-            get
-            {
-                if (!string.IsNullOrEmpty(Definition) && int.TryParse(Definition, out int id))
-                {
-                    return id;
-                }
-
-                return null;
-            }
-        }
 
         public SearchBuildsRequest()
         {
@@ -65,16 +45,12 @@ namespace DevOps.Util.DotNet.Triage
                 x => PredicateRewriter.ComposeContainerProperty<ModelBuildAttempt, ModelBuild>(x, nameof(ModelBuildAttempt.ModelBuild)));
 
         public IQueryable<ModelBuild> Filter(IQueryable<ModelBuild> query) =>
-            Filter(query, x => x);
+            Filter(FilterCore(query), x => x);
 
         private IQueryable<T> Filter<T>(
             IQueryable<T> query,
             Func<Expression<Func<ModelBuild, bool>>, Expression<Func<T, bool>>> convertPredicateFunc)
         {
-            var definitionId = DefinitionId;
-            string? definitionName = definitionId is null
-                ? Definition
-                : null;
             string? gitHubRepository = string.IsNullOrEmpty(Repository)
                 ? null
                 : Repository.ToLower();
@@ -82,27 +58,12 @@ namespace DevOps.Util.DotNet.Triage
                 ? null
                 : DotNetConstants.GitHubOrganization;
 
-            if (definitionId is object && definitionName is object)
-            {
-                throw new Exception($"Cannot specify {nameof(definitionId)} and {nameof(definitionName)}");
-            }
-
             if (Queued is { } queued)
             {
                 query = queued.Kind switch
                 {
                     RelationalKind.GreaterThan => query.Where(convertPredicateFunc(x => x.QueueTime >= queued.DateTime.Date)),
                     RelationalKind.LessThan => query.Where(convertPredicateFunc(x => x.QueueTime <= queued.DateTime.Date)),
-                    _ => query
-                };
-            }
-
-            if (Started is { } started)
-            {
-                query = started.Kind switch
-                {
-                    RelationalKind.GreaterThan => query.Where(convertPredicateFunc(x => x.StartTime >= started.DateTime.Date)),
-                    RelationalKind.LessThan => query.Where(convertPredicateFunc(x => x.StartTime <= started.DateTime.Date)),
                     _ => query
                 };
             }
@@ -117,18 +78,6 @@ namespace DevOps.Util.DotNet.Triage
                 };
             }
 
-            // It's important that the definition predicates occur after the time predicates because that matches the way 
-            // the indexes are setup on the builds table. Flipping this will cause the queries to miss the index
-
-            if (definitionId is { } d)
-            {
-                query = query.Where(convertPredicateFunc(x => x.DefinitionId == definitionId));
-            }
-            else if (definitionName is object)
-            {
-                query = query.Where(convertPredicateFunc(x => x.DefinitionName == definitionName));
-            }
-
             if (gitHubOrganization is object)
             {
                 query = query.Where(convertPredicateFunc(x => x.GitHubOrganization == gitHubOrganization));
@@ -137,48 +86,6 @@ namespace DevOps.Util.DotNet.Triage
             if (gitHubRepository is object)
             {
                 query = query.Where(convertPredicateFunc(x => x.GitHubRepository == gitHubRepository));
-            }
-
-            if (TargetBranch is { } targetBranch)
-            {
-                query = targetBranch.Kind switch
-                {
-                    StringRelationalKind.Contains => query.Where(convertPredicateFunc(x => x.GitHubTargetBranch != null && x.GitHubTargetBranch.Contains(targetBranch.Text))),
-                    StringRelationalKind.Equals => query.Where(convertPredicateFunc(x => x.GitHubTargetBranch == targetBranch.Text)),
-                    StringRelationalKind.NotEquals => query.Where(convertPredicateFunc(x => x.GitHubTargetBranch != targetBranch.Text)),
-                    _ => query,
-                };
-            }
-
-            if (BuildType is { } buildType)
-            {
-                query = (buildType.BuildType, buildType.Kind) switch
-                {
-                    (BuildKind.MergedPullRequest, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.BuildKind == BuildKind.MergedPullRequest)),
-                    (BuildKind.MergedPullRequest, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.BuildKind != BuildKind.MergedPullRequest)),
-                    (BuildKind.PullRequest, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.BuildKind == BuildKind.PullRequest)),
-                    (BuildKind.PullRequest, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.BuildKind != BuildKind.PullRequest)),
-                    (BuildKind.Rolling, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.BuildKind == BuildKind.Rolling)),
-                    (BuildKind.Rolling, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.BuildKind != BuildKind.Rolling)),
-                    (BuildKind.All, _) => query,
-                    _ => query,
-                };
-            }
-
-            if (Result is { } buildResult)
-            {
-                query = (buildResult.BuildResult, buildResult.Kind) switch
-                {
-                    (BuildResult.Succeeded, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.BuildResult == BuildResult.Succeeded)),
-                    (BuildResult.Succeeded, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.BuildResult != BuildResult.Succeeded)),
-                    (BuildResult.PartiallySucceeded, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.BuildResult == BuildResult.PartiallySucceeded)),
-                    (BuildResult.PartiallySucceeded, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.BuildResult != BuildResult.PartiallySucceeded)),
-                    (BuildResult.Failed, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.BuildResult == BuildResult.Failed)),
-                    (BuildResult.Failed, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.BuildResult != BuildResult.Failed)),
-                    (BuildResult.Canceled, EqualsKind.Equals) => query.Where(convertPredicateFunc(x => x.BuildResult == BuildResult.Canceled)),
-                    (BuildResult.Canceled, EqualsKind.NotEquals) => query.Where(convertPredicateFunc(x => x.BuildResult != BuildResult.Canceled)),
-                    _ => query,
-                };
             }
 
             if (HasIssues is { } hasIssues)
@@ -199,29 +106,11 @@ namespace DevOps.Util.DotNet.Triage
         public string GetQueryString()
         {
             var builder = new StringBuilder();
-            if (!string.IsNullOrEmpty(Definition))
-            {
-                Append($"definition:{Definition} ");
-            }
+            GetQueryStringCore(builder);
 
             if (!string.IsNullOrEmpty(Repository))
             {
                 Append($"repository:{Repository}");
-            }
-
-            if (BuildType is { } buildType)
-            {
-                Append($"kind:{buildType.GetQueryValue(EqualsKind.Equals)}");
-            }
-
-            if (Result is { } result)
-            {
-                Append($"result:{result.GetQueryValue(EqualsKind.Equals)}");
-            }
-
-            if (Started is { } startTime)
-            {
-                Append($"started:{startTime.GetQueryValue(RelationalKind.GreaterThan)}");
             }
 
             if (Finished is { } finishTime)
@@ -232,11 +121,6 @@ namespace DevOps.Util.DotNet.Triage
             if (Queued is { } queued)
             {
                 Append($"queued:{queued.GetQueryValue(RelationalKind.GreaterThan)}");
-            }
-
-            if (TargetBranch is { } targetBranch)
-            {
-                Append($"targetBranch:{targetBranch.GetQueryValue(StringRelationalKind.Contains)}");
             }
 
             if (HasIssues is { } hasIssues)
@@ -263,14 +147,8 @@ namespace DevOps.Util.DotNet.Triage
             {
                 switch (tuple.Name.ToLower())
                 {
-                    case "definition":
-                        Definition = tuple.Value;
-                        break;
                     case "repository":
                         Repository = tuple.Value;
-                        break;
-                    case "started":
-                        Started = DateRequestValue.Parse(tuple.Value.Trim('"'), RelationalKind.GreaterThan);
                         break;
                     case "finished":
                         Finished = DateRequestValue.Parse(tuple.Value.Trim('"'), RelationalKind.GreaterThan);
@@ -278,20 +156,15 @@ namespace DevOps.Util.DotNet.Triage
                     case "queued":
                         Queued = DateRequestValue.Parse(tuple.Value.Trim('"'), RelationalKind.GreaterThan);
                         break;
-                    case "targetbranch":
-                        TargetBranch = StringRequestValue.Parse(tuple.Value, StringRelationalKind.Contains);
-                        break;
-                    case "kind":
-                        BuildType = BuildTypeRequestValue.Parse(tuple.Value, EqualsKind.Equals);
-                        break;
-                    case "result":
-                        Result = BuildResultRequestValue.Parse(tuple.Value, EqualsKind.Equals);
-                        break;
                     case "issues":
                         HasIssues = bool.Parse(tuple.Value);
                         break;
                     default:
-                        throw new Exception($"Invalid option {tuple.Name}");
+                        if (!ParseQueryStringTuple(tuple.Name, tuple.Value))
+                        {
+                            throw new Exception($"Invalid option {tuple.Name}");
+                        }
+                        break;
                 }
             }
         }

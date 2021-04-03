@@ -88,8 +88,8 @@ namespace DevOps.Status.Pages.Search
 
                 var count = 0;
                 var isBuildKindFiltered =
-                    buildsRequest.BuildType is { } bt &&
-                    !(bt is { BuildType: BuildKind.All, Kind: EqualsKind.Equals });
+                    buildsRequest.BuildKind is { } bk &&
+                    !(bk is { BuildKind: BuildKind.All, Kind: EqualsKind.Equals });
 
                 foreach (var group in results.GroupBy(x => x.TestFullName).OrderByDescending(x => x.Count()))
                 {

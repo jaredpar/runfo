@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public class SearchTimelinesRequest : ISearchQueryRequest<ModelTimelineIssue>
+    public class SearchTimelinesRequest : SearchStandardRequestBase, ISearchQueryRequest<ModelTimelineIssue>
     {
         public const int DefaultLimit = 50;
 
@@ -27,6 +27,8 @@ namespace DevOps.Util.DotNet.Triage
 
         public IQueryable<ModelTimelineIssue> Filter(IQueryable<ModelTimelineIssue> query)
         {
+            query = FilterCore(query);
+
             if (Type is { } type)
             {
                 query = query.Where(x => x.IssueType == type);
@@ -75,6 +77,8 @@ namespace DevOps.Util.DotNet.Triage
         public string GetQueryString()
         {
             var builder = new StringBuilder();
+            GetQueryStringCore(builder);
+
             if (!string.IsNullOrEmpty(Text))
             {
                 Append($"text:\"{Text}\"");
@@ -146,7 +150,11 @@ namespace DevOps.Util.DotNet.Triage
                         };
                         break;
                     default:
-                        throw new Exception($"Invalid option {tuple.Name}");
+                        if (!ParseQueryStringTuple(tuple.Name, tuple.Value))
+                        {
+                            throw new Exception($"Invalid option {tuple.Name}");
+                        }
+                        break;
                 }
             }
         }

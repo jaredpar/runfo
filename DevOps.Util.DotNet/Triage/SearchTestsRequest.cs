@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public class SearchTestsRequest : ISearchQueryRequest<ModelTestResult>
+    public class SearchTestsRequest : SearchStandardRequestBase, ISearchQueryRequest<ModelTestResult>
     {
         public string? Name { get; set; }
         public string? JobName { get; set; }
@@ -21,6 +21,8 @@ namespace DevOps.Util.DotNet.Triage
 
         public IQueryable<ModelTestResult> Filter(IQueryable<ModelTestResult> query)
         {
+            query = FilterCore(query);
+
             if (!string.IsNullOrEmpty(JobName))
             {
                 query = query.Where(x => x.TestRunName.Contains(JobName));
@@ -59,6 +61,8 @@ namespace DevOps.Util.DotNet.Triage
         public string GetQueryString()
         {
             var builder = new StringBuilder();
+            GetQueryStringCore(builder);
+
             if (!string.IsNullOrEmpty(Name))
             {
                 Append($"name:\"{Name}\"");
@@ -109,7 +113,11 @@ namespace DevOps.Util.DotNet.Triage
                         Message = tuple.Value.Trim('"');
                         break;
                     default:
-                        throw new Exception($"Invalid option {tuple.Name}");
+                        if (!ParseQueryStringTuple(tuple.Name, tuple.Value))
+                        {
+                            throw new Exception($"Invalid option {tuple.Name}");
+                        }
+                        break;
                 }
             }
         }

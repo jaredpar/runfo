@@ -14,6 +14,7 @@ for DefinitionName
 - definition names efficient (cache in memory)
 - ensure all query properties set 
     - specifically the updating to merged pull request
+- Delete all the filter map code in SearchBuildsRequests
 
 
 Indexes:
