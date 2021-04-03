@@ -607,7 +607,7 @@ namespace Scratch
         {
             var timelineRequest = new SearchTimelinesRequest()
             {
-                Type = IssueType.Error,
+                Type = ModelIssueType.Error,
                 Text = "We stopped hearing from agent",
             };
 

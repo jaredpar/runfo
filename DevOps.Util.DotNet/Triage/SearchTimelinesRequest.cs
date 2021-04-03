@@ -23,7 +23,7 @@ namespace DevOps.Util.DotNet.Triage
         public string? JobName { get; set; }
         public string? DisplayName { get; set; }
         public string? TaskName { get; set; }
-        public IssueType? Type { get; set; }
+        public ModelIssueType? Type { get; set; }
 
         public IQueryable<ModelTimelineIssue> Filter(IQueryable<ModelTimelineIssue> query)
         {
@@ -144,8 +144,8 @@ namespace DevOps.Util.DotNet.Triage
                     case "type":
                         Type = tuple.Value.ToLower() switch
                         {
-                            "error" => IssueType.Error,
-                            "warning" => IssueType.Warning,
+                            "error" => ModelIssueType.Error,
+                            "warning" => ModelIssueType.Warning,
                             _ => throw new Exception($"Invalid type {tuple.Value}")
                         };
                         break;

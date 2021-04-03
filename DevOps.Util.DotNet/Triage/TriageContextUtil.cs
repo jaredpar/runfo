@@ -224,7 +224,7 @@ namespace DevOps.Util.DotNet.Triage
                         RecordId = record.Id,
                         Message = issue.Message,
                         ModelBuild = modelBuild,
-                        IssueType = issue.Type,
+                        IssueType = issue.Type.ToModelIssueType(),
                         StartTime = startTime,
                         GitHubTargetBranch = modelBuild.GitHubTargetBranch,
                         BuildKind = modelBuild.BuildKind,
@@ -390,8 +390,6 @@ namespace DevOps.Util.DotNet.Triage
             var buildInfo = testRun.Build.GetBuildResultInfo();
             modelTestRun = new ModelTestRun()
             {
-                AzureOrganization = buildInfo.Organization,
-                AzureProject = buildInfo.Project,
                 ModelBuild = modelBuild,
                 TestRunId = testRun.TestRun.Id,
                 Name = testRun.TestRun.Name,

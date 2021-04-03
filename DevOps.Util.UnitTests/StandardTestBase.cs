@@ -195,8 +195,6 @@ namespace DevOps.Util.UnitTests
                 Name = parts[0],
                 Attempt = parts.Length > 1 ? int.Parse(parts[1]) : 1,
                 TestRunId = parts.Length > 2 ? int.Parse(parts[2]) : TestRunCount++,
-                AzureOrganization = build.ModelBuildDefinition.AzureOrganization,
-                AzureProject = build.ModelBuildDefinition.AzureProject,
                 ModelBuild = build,
             };
             Context.ModelTestRuns.Add(testRun);

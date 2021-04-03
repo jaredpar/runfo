@@ -96,7 +96,7 @@ namespace DevOps.Util.DotNet.Triage
             }
 
             var jobFailedCount = issues
-                .Where(x => x.IssueType == IssueType.Error)
+                .Where(x => x.IssueType == ModelIssueType.Error)
                 .GroupBy(x => x.JobName)
                 .Count();
             if (jobFailedCount - count >= 4)

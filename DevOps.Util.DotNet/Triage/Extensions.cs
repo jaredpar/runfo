@@ -298,6 +298,24 @@ namespace DevOps.Util.DotNet.Triage
                 _ => throw new InvalidOperationException(),
             };
 
+        public static IssueType ToIssueType(this ModelIssueType issueType) =>
+            issueType switch
+            {
+                ModelIssueType.Unknown => IssueType.Unknown,
+                ModelIssueType.Warning => IssueType.Warning,
+                ModelIssueType.Error => IssueType.Error,
+                _ => throw new InvalidOperationException(),
+            };
+
+        public static ModelIssueType ToModelIssueType(this IssueType issueType) =>
+            issueType switch
+            {
+                IssueType.Unknown => ModelIssueType.Unknown,
+                IssueType.Warning => ModelIssueType.Warning,
+                IssueType.Error => ModelIssueType.Error,
+                _ => throw new InvalidOperationException(),
+            };
+
         public static async Task<List<BuildResultInfo>> ToBuildResultInfoListAsync(this IQueryable<ModelBuild> query)
         {
             var results = await query

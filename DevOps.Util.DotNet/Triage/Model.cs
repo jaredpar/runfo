@@ -92,6 +92,10 @@ namespace DevOps.Util.DotNet.Triage
                 .HasIndex(x => new { x.ModelBuildId, x.Attempt });
 
             modelBuilder.Entity<ModelTimelineIssue>()
+                .Property(x => x.IssueType)
+                .HasConversion<int>();
+
+            modelBuilder.Entity<ModelTimelineIssue>()
                 .HasOne(x => x.ModelBuild)
                 .WithMany(x => x.ModelTimelineIssues)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -143,6 +147,18 @@ namespace DevOps.Util.DotNet.Triage
 
             OnModelCreatingQuery(modelBuilder);
         }
+    }
+
+    /// <summary>
+    /// The model representation of <see cref="IssueType"/>. Using a separate type as the 
+    /// DB is using numeric storage and the <see cref="IssueType"/> type is part of a JSON
+    /// API that is string versioned.
+    /// </summary>
+    public enum ModelIssueType
+    {
+        Unknown,
+        Error,
+        Warning
     }
 
     public static class ModelConstants
@@ -269,7 +285,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public int Attempt { get; set; }
 
-        [Column(TypeName = "nvarchar(200)")]
+        [Column(TypeName = ModelConstants.JobNameTypeName)]
         [Required]
         public string JobName { get; set; }
 
@@ -288,7 +304,7 @@ namespace DevOps.Util.DotNet.Triage
         public string Message { get; set; }
 
         [Column(TypeName = "nvarchar(12)")]
-        public IssueType IssueType { get; set; }
+        public ModelIssueType IssueType { get; set; }
 
         public int ModelBuildId { get; set; }
 
@@ -298,12 +314,6 @@ namespace DevOps.Util.DotNet.Triage
     public class ModelTestRun
     {
         public int Id { get; set; }
-
-        [Column(TypeName=ModelConstants.AzureOrganizationTypeName)]
-        public string? AzureOrganization { get; set; }
-
-        [Column(TypeName=ModelConstants.AzureOrganizationTypeName)]
-        public string? AzureProject { get; set; }
 
         public int TestRunId { get; set; }
 
@@ -331,6 +341,7 @@ namespace DevOps.Util.DotNet.Triage
         [Required]
         public string TestRunName { get; set; }
 
+        [Column(TypeName = "nvarchar(100)")]
         [Required]
         public string Outcome { get; set; }
 
@@ -440,6 +451,7 @@ namespace DevOps.Util.DotNet.Triage
     {
         public int Id { get; set; }
 
+        [Column(TypeName = ModelConstants.JobNameTypeName)]
         [Required]
         public string JobName { get; set; }
 
