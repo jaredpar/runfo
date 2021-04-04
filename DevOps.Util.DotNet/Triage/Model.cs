@@ -63,11 +63,11 @@ namespace DevOps.Util.DotNet.Triage
                 .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<ModelBuildDefinition>()
-                .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionId })
+                .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionNumber })
                 .IsUnique();
 
             modelBuilder.Entity<ModelBuildDefinition>()
-                .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionId })
+                .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionNumber })
                 .IsUnique();
 
             modelBuilder.Entity<ModelTestRun>()
@@ -204,7 +204,7 @@ namespace DevOps.Util.DotNet.Triage
         [Required]
         public string DefinitionName { get; set; }
 
-        public int DefinitionId { get; set; }
+        public int DefinitionNumber { get; set; }
     }
 
     public partial class ModelBuild

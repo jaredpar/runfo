@@ -59,7 +59,7 @@ namespace DevOps.Status.Pages.View
             TargetBranch ??= "master";
             var modelBuildDefiniton = await TriageContextUtil.Context
                 .ModelBuildDefinitions
-                .Where(x => x.DefinitionId == definitionId)
+                .Where(x => x.DefinitionNumber == definitionId)
                 .SingleAsync();
             var now = DateTime.UtcNow;
 
@@ -190,7 +190,7 @@ namespace DevOps.Status.Pages.View
                 .Select(x => new
                 {
                     x.DefinitionName,
-                    x.DefinitionId,
+                    x.DefinitionNumber,
                     x.AzureOrganization,
                     x.AzureProject
                 })
@@ -203,7 +203,7 @@ namespace DevOps.Status.Pages.View
                 DefinitionInfos.Add(new DefinitionInfo(
                     result.AzureOrganization,
                     result.AzureProject,
-                    result.DefinitionId,
+                    result.DefinitionNumber,
                     result.DefinitionName));
             }
 

@@ -252,6 +252,7 @@ namespace DevOps.Util.DotNet.Triage
                     ModelTrackingIssue = modelTrackingIssue,
                     HelixLogKind = result.HelixLogKind,
                     HelixLogUri = result.HelixLogUri,
+                    JobName = "",
                 };
                 Context.ModelTrackingIssueMatches.Add(modelMatch);
             }

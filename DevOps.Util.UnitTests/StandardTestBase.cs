@@ -68,13 +68,19 @@ namespace DevOps.Util.UnitTests
             var parts = data.Split("|");
             var issue = new ModelTimelineIssue()
             {
+                StartTime = attempt.StartTime,
                 Attempt = attempt.Attempt,
                 JobName = parts[0],
                 Message = parts[1],
                 RecordName = parts.Length > 2 ? parts[2] : "",
+                TaskName = "",
+                DefinitionNumber = attempt.ModelBuildDefinition.DefinitionNumber,
+                DefinitionName = attempt.ModelBuildDefinition.DefinitionName,
                 ModelBuild = attempt.ModelBuild,
+                ModelBuildDefinition = attempt.ModelBuildDefinition,
             };
             Context.ModelTimelineIssues.Add(issue);
+            Context.SaveChanges();
             return issue;
         }
 
@@ -82,11 +88,16 @@ namespace DevOps.Util.UnitTests
         {
             var modelAttempt = new ModelBuildAttempt()
             {
+                StartTime = build.StartTime,
                 Attempt = attempt,
+                NameKey = build.NameKey,
+                DefinitionName = build.DefinitionName,
+                ModelBuildDefinition = build.ModelBuildDefinition,
                 ModelBuild = build
             };
 
             Context.ModelBuildAttempts.Add(modelAttempt);
+            Context.SaveChanges();
             return modelAttempt;
         }
 
@@ -96,6 +107,7 @@ namespace DevOps.Util.UnitTests
             var number = GetPartOrNull(parts, 0) is { } part ? int.Parse(part) : BuildCount++;
             var dt = GetPartOrNull(parts, 3);
             var br = GetPartOrNull(parts, 4);
+            var startTime = dt is object ? DateTime.ParseExact(dt, "yyyy-MM-dd", null) : DateTime.UtcNow;
 
             var build = new ModelBuild()
             {
@@ -105,14 +117,17 @@ namespace DevOps.Util.UnitTests
                 GitHubRepository = GetPartOrNull(parts, 2) ?? "",
                 AzureOrganization = def.AzureOrganization,
                 AzureProject = def.AzureProject,
-                QueueTime = dt is object ? DateTime.ParseExact(dt, "yyyy-MM-dd", null) : default,
+                QueueTime = startTime,
+                StartTime = startTime,
                 BuildResult = br is object ? Enum.Parse<ModelBuildResult>(br) : default,
                 ModelBuildDefinition = def,
-                DefinitionId = def.DefinitionId,
+                ModelBuildDefinitionId = def.Id,
                 DefinitionName = def.DefinitionName,
+                DefinitionNumber = def.DefinitionNumber,
             };
 
             Context.ModelBuilds.Add(build);
+            Context.SaveChanges();
             return build;
         }
 
@@ -154,9 +169,10 @@ namespace DevOps.Util.UnitTests
                 AzureOrganization = parts[0],
                 AzureProject = parts[1],
                 DefinitionName = parts[2],
-                DefinitionId = int.Parse(parts[3]),
+                DefinitionNumber = int.Parse(parts[3]),
             };
             Context.ModelBuildDefinitions.Add(def);
+            Context.SaveChanges();
             return def;
         }
 
@@ -181,9 +197,12 @@ namespace DevOps.Util.UnitTests
                 IsActive = true,
                 ModelBuildDefinition = definition,
                 IssueTitle = title ?? $"Tracking Issue {trackingKind}",
+                GitHubOrganization = "",
+                GitHubRepository = "",
             };
 
             Context.ModelTrackingIssues.Add(trackingIssue);
+            Context.SaveChanges();
             return trackingIssue;
         }
 
@@ -198,6 +217,7 @@ namespace DevOps.Util.UnitTests
                 ModelBuild = build,
             };
             Context.ModelTestRuns.Add(testRun);
+            Context.SaveChanges();
             return testRun;
         }
 
@@ -206,15 +226,22 @@ namespace DevOps.Util.UnitTests
             var parts = data.Split("|");
             var testResult = new ModelTestResult()
             {
+                TestRunName = testRun.Name,
                 TestFullName = parts[0],
                 IsHelixTestResult = GetPartOrNull(parts, 1) is { } s ? bool.Parse(s) : false,
                 HelixConsoleUri = GetPartOrNull(parts, 2),
                 HelixRunClientUri = GetPartOrNull(parts, 3),
                 ErrorMessage = GetPartOrNull(parts, 4) ?? "",
+                Outcome = "",
                 ModelTestRun = testRun,
+                StartTime = testRun.ModelBuild.StartTime,
                 ModelBuild = testRun.ModelBuild,
+                DefinitionNumber = testRun.ModelBuild.DefinitionNumber,
+                DefinitionName = testRun.ModelBuild.DefinitionName,
+                ModelBuildDefinition = testRun.ModelBuild.ModelBuildDefinition,
             };
             Context.ModelTestResults.Add(testResult);
+            Context.SaveChanges();
             return testResult;
         }
 
@@ -239,8 +266,10 @@ namespace DevOps.Util.UnitTests
                 ModelTimelineIssue = timelineIssue,
                 ModelTestResult = testResult,
                 HelixLogUri = helixLogUri,
+                JobName = "",
             };
             Context.ModelTrackingIssueMatches.Add(match);
+            Context.SaveChanges();
             return match;
         }
 

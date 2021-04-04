@@ -36,7 +36,7 @@ namespace DevOps.Util.DotNet.Triage
                 modelBuild.AzureOrganization,
                 modelBuild.AzureProject,
                 modelBuild.BuildNumber,
-                modelBuild.DefinitionId,
+                modelBuild.DefinitionNumber,
                 modelBuild.DefinitionName,
                 GetGitHubBuildInfo(modelBuild));
 
@@ -59,7 +59,7 @@ namespace DevOps.Util.DotNet.Triage
             new DefinitionKey(
                 modelBuild.AzureOrganization,
                 modelBuild.AzureProject,
-                modelBuild.DefinitionId);
+                modelBuild.DefinitionNumber);
 
         #endregion
 
@@ -78,7 +78,7 @@ namespace DevOps.Util.DotNet.Triage
             new DefinitionKey(
                 modelBuildDefinition.AzureOrganization,
                 modelBuildDefinition.AzureProject,
-                modelBuildDefinition.DefinitionId);
+                modelBuildDefinition.DefinitionNumber);
 
         public static DefinitionInfo GetDefinitionInfo(this ModelBuildDefinition modelBuildDefinition) =>
             new DefinitionInfo(GetDefinitionKey(modelBuildDefinition), modelBuildDefinition.DefinitionName);
@@ -330,7 +330,7 @@ namespace DevOps.Util.DotNet.Triage
                     x.BuildNumber,
                     x.BuildResult,
                     x.DefinitionName,
-                    x.DefinitionId,
+                    x.DefinitionNumber,
                     x.QueueTime,
                     x.StartTime,
                     x.FinishTime,
@@ -346,7 +346,7 @@ namespace DevOps.Util.DotNet.Triage
                         result.AzureOrganization,
                         result.AzureProject,
                         result.BuildNumber,
-                        result.DefinitionId,
+                        result.DefinitionNumber,
                         result.DefinitionName,
                         new GitHubBuildInfo(result.GitHubOrganization, result.GitHubRepository, result.PullRequestNumber, result.GitHubTargetBranch)),
                     result.QueueTime,

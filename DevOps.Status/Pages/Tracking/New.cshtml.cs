@@ -210,7 +210,7 @@ namespace DevOps.Status.Pages.Tracking
                     // there hence we limit to only builds with definitions.
                     var request = new SearchBuildsRequest()
                     {
-                        Definition = modelBuildDefinition?.DefinitionId.ToString() ?? null,
+                        Definition = modelBuildDefinition?.DefinitionNumber.ToString() ?? null,
                         Queued = new DateRequestValue(7, RelationalKind.GreaterThan),
                         BuildResult = new BuildResultRequestValue(ModelBuildResult.Succeeded, EqualsKind.NotEquals),
                     };

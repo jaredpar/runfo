@@ -55,7 +55,7 @@ namespace DevOps.Util.DotNet.Triage
                 .Where(x =>
                     x.AzureOrganization == definitionInfo.Organization &&
                     x.AzureProject == definitionInfo.Project &&
-                    x.DefinitionId == definitionInfo.Id)
+                    x.DefinitionNumber == definitionInfo.Id)
                 .FirstOrDefault();
             if (buildDefinition is object)
             {
@@ -72,7 +72,7 @@ namespace DevOps.Util.DotNet.Triage
             {
                 AzureOrganization = definitionInfo.Organization,
                 AzureProject = definitionInfo.Project,
-                DefinitionId = definitionInfo.Id,
+                DefinitionNumber = definitionInfo.Id,
                 DefinitionName = definitionInfo.Name,
             };
 
@@ -123,7 +123,7 @@ namespace DevOps.Util.DotNet.Triage
                 BuildResult = buildInfo.BuildResult.ToModelBuildResult(),
                 BuildKind = buildInfo.PullRequestKey.HasValue ? ModelBuildKind.PullRequest : ModelBuildKind.Rolling,
                 DefinitionName = buildInfo.DefinitionName,
-                DefinitionId = buildInfo.DefinitionInfo.Id,
+                DefinitionNumber = buildInfo.DefinitionInfo.Id,
             };
             Context.ModelBuilds.Add(modelBuild);
             Context.SaveChanges();
@@ -198,7 +198,7 @@ namespace DevOps.Util.DotNet.Triage
                     IsTimelineMissing = false,
                     GitHubTargetBranch = modelBuild.GitHubTargetBranch,
                     BuildKind = modelBuild.BuildKind,
-                    DefinitionId = modelBuild.DefinitionId,
+                    DefinitionNumber = modelBuild.DefinitionNumber,
                     DefinitionName = modelBuild.DefinitionName,
                 };
                 Context.ModelBuildAttempts.Add(modelBuildAttempt);
@@ -229,7 +229,7 @@ namespace DevOps.Util.DotNet.Triage
                         GitHubTargetBranch = modelBuild.GitHubTargetBranch,
                         BuildKind = modelBuild.BuildKind,
                         BuildResult = buildResult,
-                        DefinitionId = modelBuild.DefinitionId,
+                        DefinitionNumber = modelBuild.DefinitionNumber,
                         DefinitionName = modelBuild.DefinitionName,
                     };
                     Context.ModelTimelineIssues.Add(timelineIssue);
@@ -266,6 +266,8 @@ namespace DevOps.Util.DotNet.Triage
                 StartTime = modelBuild.StartTime,
                 FinishTime = modelBuild.FinishTime,
                 ModelBuild = modelBuild,
+                DefinitionNumber = modelBuild.DefinitionNumber,
+                DefinitionName = modelBuild.DefinitionName,
                 IsTimelineMissing = false,
             };
             Context.ModelBuildAttempts.Add(modelBuildAttempt);
@@ -346,7 +348,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public IQueryable<ModelBuildDefinition> GetModelBuildDefinitionQueryAsync(int id) => Context
             .ModelBuildDefinitions
-            .Where(x => x.DefinitionId == id);
+            .Where(x => x.DefinitionNumber == id);
 
         public Task<ModelBuildDefinition?> FindModelBuildDefinitionAsync(int id) =>
             GetModelBuildDefinitionQueryAsync(id).FirstOrDefaultAsync()!;
@@ -360,7 +362,7 @@ namespace DevOps.Util.DotNet.Triage
             {
                 return await Context
                     .ModelBuildDefinitions
-                    .Where(x => x.DefinitionId == id)
+                    .Where(x => x.DefinitionNumber == id)
                     .FirstOrDefaultAsync()
                     .ConfigureAwait(false);
             }
@@ -414,7 +416,7 @@ namespace DevOps.Util.DotNet.Triage
                     GitHubTargetBranch = modelBuild.GitHubTargetBranch,
                     BuildKind = modelBuild.BuildKind,
                     BuildResult = modelBuild.BuildResult,
-                    DefinitionId = modelBuild.DefinitionId,
+                    DefinitionNumber = modelBuild.DefinitionNumber,
                     DefinitionName = modelBuild.DefinitionName,
                 };
 
@@ -483,7 +485,7 @@ namespace DevOps.Util.DotNet.Triage
 
             if (definitionId is { } d)
             {
-                query = query.Where(x => x.DefinitionId == definitionId);
+                query = query.Where(x => x.DefinitionNumber == definitionId);
             }
             else if (definitionName is object)
             {

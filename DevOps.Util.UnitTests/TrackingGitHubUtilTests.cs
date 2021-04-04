@@ -28,7 +28,7 @@ namespace DevOps.Util.UnitTests
         public async Task SimpleTimelineSearh()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
+            var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn|2020-12-01", def));
             var timeline = AddTimelineIssue("windows|dog", attempt);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
@@ -75,6 +75,7 @@ Build Result Summary
                 title: "Test Search",
                 testsRequest: new SearchTestsRequest()
                 {
+                    Started = new DateRequestValue(DateTime.Parse("2020-7-1"), RelationalKind.GreaterThan),
                     Name = "Util",
                 });
 

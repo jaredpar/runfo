@@ -114,7 +114,7 @@ namespace DevOps.Util.DotNet.Triage
 
             if (DefinitionId is { } definitionId)
             {
-                query = query.Where(x => x.DefinitionId == definitionId);
+                query = query.Where(x => x.DefinitionNumber == definitionId);
             }
             else if (Definition is object)
             {
@@ -170,7 +170,7 @@ namespace DevOps.Util.DotNet.Triage
 
             if (DefinitionId is { } definitionId)
             {
-                query = query.Where(x => x.DefinitionId == definitionId);
+                query = query.Where(x => x.DefinitionNumber == definitionId);
             }
             else if (Definition is object)
             {
@@ -226,7 +226,7 @@ namespace DevOps.Util.DotNet.Triage
 
             if (DefinitionId is { } definitionId)
             {
-                query = query.Where(x => x.DefinitionId == definitionId);
+                query = query.Where(x => x.DefinitionNumber == definitionId);
             }
             else if (Definition is object)
             {
@@ -282,7 +282,7 @@ namespace DevOps.Util.DotNet.Triage
 
             if (DefinitionId is { } definitionId)
             {
-                query = query.Where(x => x.DefinitionId == definitionId);
+                query = query.Where(x => x.DefinitionNumber == definitionId);
             }
             else if (Definition is object)
             {

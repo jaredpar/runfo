@@ -364,7 +364,7 @@ namespace Scratch
                 foreach (var build in builds)
                 {
                     build.DefinitionName = build.ModelBuildDefinition.DefinitionName;
-                    build.DefinitionId = build.ModelBuildDefinition.DefinitionId;
+                    build.DefinitionNumber = build.ModelBuildDefinition.DefinitionNumber;
                 }
 
                 await TriageContext.SaveChangesAsync();
@@ -480,7 +480,7 @@ namespace Scratch
         {
             var builds = await TriageContext
                 .ModelBuilds
-                .Where(x => x.ModelBuildDefinition.DefinitionId == definitionId && x.BuildResult == ModelBuildResult.Failed)
+                .Where(x => x.ModelBuildDefinition.DefinitionNumber == definitionId && x.BuildResult == ModelBuildResult.Failed)
                 .OrderByDescending(x => x.BuildNumber)
                 .Take(limit)
                 .ToListAsync();

@@ -299,7 +299,7 @@ namespace DevOps.Util.DotNet.Triage
                 {
                     AzureOrganization = x.ModelBuildAttempt.ModelBuild.AzureOrganization,
                     AzureProject = x.ModelBuildAttempt.ModelBuild.AzureProject,
-                    DefinitionId = x.ModelBuildAttempt.ModelBuild.DefinitionId,
+                    DefinitionId = x.ModelBuildAttempt.ModelBuild.DefinitionNumber,
                     DefinitionName = x.ModelBuildAttempt.ModelBuild.DefinitionName,
                     GitHubOrganization = x.ModelBuildAttempt.ModelBuild.GitHubOrganization,
                     GitHubRepository = x.ModelBuildAttempt.ModelBuild.GitHubRepository,
@@ -352,7 +352,7 @@ namespace DevOps.Util.DotNet.Triage
                 {
                     AzureOrganization = x.ModelBuildAttempt.ModelBuild.AzureOrganization,
                     AzureProject = x.ModelBuildAttempt.ModelBuild.AzureProject,
-                    DefinitionId = x.ModelBuildAttempt.ModelBuild.DefinitionId,
+                    DefinitionId = x.ModelBuildAttempt.ModelBuild.DefinitionNumber,
                     DefinitionName = x.ModelBuildAttempt.ModelBuild.DefinitionName,
                     GitHubOrganization = x.ModelBuildAttempt.ModelBuild.GitHubOrganization,
                     GitHubRepository = x.ModelBuildAttempt.ModelBuild.GitHubRepository,
@@ -398,7 +398,7 @@ namespace DevOps.Util.DotNet.Triage
                 {
                     AzureOrganization = x.ModelBuildAttempt.ModelBuild.AzureOrganization,
                     AzureProject = x.ModelBuildAttempt.ModelBuild.AzureProject,
-                    DefinitionId = x.ModelBuildAttempt.ModelBuild.DefinitionId,
+                    DefinitionId = x.ModelBuildAttempt.ModelBuild.DefinitionNumber,
                     DefinitionName = x.ModelBuildAttempt.ModelBuild.DefinitionName,
                     GitHubOrganization = x.ModelBuildAttempt.ModelBuild.GitHubOrganization,
                     GitHubRepository = x.ModelBuildAttempt.ModelBuild.GitHubRepository,
