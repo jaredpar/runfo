@@ -510,7 +510,7 @@ namespace Scratch
                             var modelTestResult = modelTestResults.FirstOrDefault(x => x.TestFullName == testCaseResult.TestCaseTitle);
                             if (modelTestResult is object)
                             {
-                                modelTestResult.ErrorMessage = testCaseResult.ErrorMessage;
+                                modelTestResult.ErrorMessage = testCaseResult.ErrorMessage ?? "";
                             }
 
                             if (testCaseResult.SubResults is { } subResults)
@@ -528,7 +528,7 @@ namespace Scratch
                                         Outcome = subResult.Outcome,
                                         ModelTestRun = modelTestRun,
                                         ModelBuild = modelBuild,
-                                        ErrorMessage = subResult.ErrorMessage,
+                                        ErrorMessage = subResult.ErrorMessage ?? "",
                                         IsSubResultContainer = false,
                                         IsSubResult = true
                                     };

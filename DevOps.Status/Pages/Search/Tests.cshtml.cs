@@ -1,22 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Octokit;
-using YamlDotNet.Serialization.NodeTypeResolvers;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace DevOps.Status.Pages.Search
 {
@@ -38,16 +30,15 @@ namespace DevOps.Status.Pages.Search
         public TriageContextUtil TriageContextUtil { get; }
         public IGitHubClientFactory GitHubClientFactory { get; }
         public string? ErrorMessage { get; set; }
-        [BindProperty(SupportsGet = true, Name = "bq")]
-        public string? BuildQuery { get; set; }
-        [BindProperty(SupportsGet = true, Name = "tq")]
-        public string? TestsQuery { get; set; }
+        [BindProperty(SupportsGet = true, Name = "q")]
+        public string? Query { get; set; }
         [BindProperty(SupportsGet = true, Name = "pageNumber")]
         public int PageNumber { get; set; }
-        public int? NextPageNumber { get; set; }
-        public int? PreviousPageNumber { get; set; }
-        public int BuildCount { get; set; }
+        public PaginationDisplay? PaginationDisplay { get; set; } 
+        public int? TotalCount { get; set; }
         public List<TestInfo> TestInfos { get; set; } = new List<TestInfo>();
+
+        public TriageContext TriageContext => TriageContextUtil.Context;
 
         public TestsModel(TriageContextUtil triageContextUtil, IGitHubClientFactory gitHubClientFactory)
         {
@@ -57,18 +48,13 @@ namespace DevOps.Status.Pages.Search
 
         public async Task<IActionResult> OnGet()
         {
-            if (string.IsNullOrEmpty(BuildQuery))
+            if (string.IsNullOrEmpty(Query))
             {
-                BuildQuery = new SearchBuildsRequest()
-                {
-                    Definition = "roslyn-ci",
-                    Started = new DateRequestValue(dayQuery: 3),
-                }.GetQueryString();
+                Query = new SearchTestsRequest() { Definition = "roslyn-ci" }.GetQueryString();
                 return Page();
             }
 
-            if (!SearchBuildsRequest.TryCreate(BuildQuery ?? "", out var buildsRequest, out var errorMessage) ||
-                !SearchTestsRequest.TryCreate(TestsQuery ?? "", out var testsRequest, out errorMessage))
+            if (!SearchTestsRequest.TryCreate(Query ?? "", out var testsRequest, out var errorMessage))
             {
                 ErrorMessage = errorMessage;
                 return Page();
@@ -76,19 +62,19 @@ namespace DevOps.Status.Pages.Search
 
             try
             {
-                IQueryable<ModelTestResult> query = TriageContextUtil.Context.ModelTestResults
-                    .Include(x => x.ModelBuild);
-                query = buildsRequest.Filter(query);
-                query = testsRequest.Filter(query);
+                var query = testsRequest
+                    .Filter(TriageContext.ModelTestResults);
+                var totalCount = await query.CountAsync();
                 var results = await query
-                    .OrderByDescending(x => x.ModelBuild.BuildNumber)
+                    .OrderByDescending(x => x.StartTime)
                     .Skip(PageNumber * PageSize)
                     .Take(PageSize + 1)
+                    .Include(x => x.ModelBuild)
                     .ToListAsync();
 
                 var count = 0;
                 var isBuildKindFiltered =
-                    buildsRequest.BuildKind is { } bk &&
+                    testsRequest.BuildKind is { } bk &&
                     !(bk is { BuildKind: ModelBuildKind.All, Kind: EqualsKind.Equals });
 
                 foreach (var group in results.GroupBy(x => x.TestFullName).OrderByDescending(x => x.Count()))
@@ -102,7 +88,7 @@ namespace DevOps.Status.Pages.Search
                         TestName = group.Key,
                         CollapseName = $"collapse{count}",
                         TestNameQuery = testsRequest.GetQueryString(),
-                        BuildDefinition = buildsRequest.Definition,
+                        BuildDefinition = testsRequest.Definition,
                         GitHubOrganization = firstBuild?.GitHubOrganization,
                         GitHubRepository = firstBuild?.GitHubRepository,
                         TestResultsDisplay = new TestResultsDisplay(group)
@@ -116,9 +102,15 @@ namespace DevOps.Status.Pages.Search
                     TestInfos.Add(testInfo);
                 }
 
-                BuildCount = results.GroupBy(x => x.ModelBuild.BuildNumber).Count();
-                PreviousPageNumber = PageNumber > 0 ? PageNumber - 1 : (int?)null;
-                NextPageNumber = results.Count > PageSize ? PageNumber + 1 : (int?)null;
+                PaginationDisplay = new PaginationDisplay(
+                    "/Search/Tests",
+                    new Dictionary<string, string>()
+                    {
+                        { "q", Query ?? "" }
+                    },
+                    PageNumber,
+                    totalCount / PageSize);
+                TotalCount = totalCount;
                 return Page();
             }
             catch (SqlException ex) when (ex.IsTimeoutViolation())

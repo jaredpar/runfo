@@ -1274,7 +1274,7 @@ namespace DevOps.Util
         public double DurationInMs { get; set; }
 
         // Error message in test execution.
-        public string ErrorMessage { get; set; }
+        public string? ErrorMessage { get; set; }
 
         // Information when test results started failing.
         public FailingSince FailingSince { get; set; }
@@ -1481,7 +1481,7 @@ namespace DevOps.Util
         public int DurationInMs { get; set; }
 
         // Error message in sub result.
-        public string ErrorMessage { get; set; }
+        public string? ErrorMessage { get; set; }
 
         // ID of sub result.
         public int Id { get; set; }

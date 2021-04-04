@@ -57,11 +57,7 @@ namespace DevOps.Status.Pages.Search
             const int pageSize = 25;
             if (string.IsNullOrEmpty(Query))
             {
-                Query = new SearchBuildsRequest()
-                {
-                    Definition = "roslyn-ci",
-                    Started = new DateRequestValue(dayQuery: 5),
-                }.GetQueryString();
+                Query = new SearchBuildsRequest() { Definition = "roslyn-ci", }.GetQueryString();
                 return;
             }
 
@@ -89,7 +85,7 @@ namespace DevOps.Status.Pages.Search
             {
                 results = await request
                     .Filter(TriageContext.ModelBuilds)
-                    .OrderByDescending(x => x.BuildNumber)
+                    .OrderByDescending(x => x.StartTime)
                     .Skip(skipCount)
                     .Take(pageSize)
                     .ToBuildResultInfoListAsync();

@@ -195,11 +195,13 @@ namespace DevOps.Util.DotNet.Triage
                     StartTime = startTime,
                     FinishTime = finishTime,
                     ModelBuild = modelBuild,
+                    NameKey = modelBuild.NameKey,
                     IsTimelineMissing = false,
                     GitHubTargetBranch = modelBuild.GitHubTargetBranch,
                     BuildKind = modelBuild.BuildKind,
                     DefinitionNumber = modelBuild.DefinitionNumber,
                     DefinitionName = modelBuild.DefinitionName,
+                    ModelBuildDefinitionId = modelBuild.ModelBuildDefinitionId,
                 };
                 Context.ModelBuildAttempts.Add(modelBuildAttempt);
             }
@@ -231,6 +233,7 @@ namespace DevOps.Util.DotNet.Triage
                         BuildResult = buildResult,
                         DefinitionNumber = modelBuild.DefinitionNumber,
                         DefinitionName = modelBuild.DefinitionName,
+                        ModelBuildDefinitionId = modelBuild.ModelBuildDefinitionId,
                     };
                     Context.ModelTimelineIssues.Add(timelineIssue);
                 }
@@ -409,7 +412,7 @@ namespace DevOps.Util.DotNet.Triage
                     ModelTestRun = modelTestRun,
                     ModelBuild = modelBuild,
                     TestRunName = modelTestRun.Name,
-                    ErrorMessage = testCaseResult.ErrorMessage,
+                    ErrorMessage = testCaseResult.ErrorMessage ?? "",
                     IsSubResultContainer = testCaseResult.SubResults?.Length > 0,
                     IsSubResult = false,
                     StartTime = modelBuild.StartTime,
@@ -418,8 +421,10 @@ namespace DevOps.Util.DotNet.Triage
                     BuildResult = modelBuild.BuildResult,
                     DefinitionNumber = modelBuild.DefinitionNumber,
                     DefinitionName = modelBuild.DefinitionName,
+                    ModelBuildDefinitionId = modelBuild.ModelBuildDefinitionId,
                 };
 
+                AddQueryData(testResult);
                 AddHelixInfo(testResult);
                 Context.ModelTestResults.Add(testResult);
 
@@ -429,15 +434,17 @@ namespace DevOps.Util.DotNet.Triage
                     {
                         var iterationTestResult = new ModelTestResult()
                         {
+                            TestRunName = modelTestRun.Name,
                             TestFullName = testCaseResult.TestCaseTitle,
                             Outcome = subResult.Outcome,
                             ModelTestRun = modelTestRun,
                             ModelBuild = modelBuild,
-                            ErrorMessage = subResult.ErrorMessage,
+                            ErrorMessage = subResult.ErrorMessage ?? "",
                             IsSubResultContainer = false,
-                            IsSubResult = true
+                            IsSubResult = true,
                         };
 
+                        AddQueryData(iterationTestResult);
                         AddHelixInfo(iterationTestResult);
                         Context.ModelTestResults.Add(iterationTestResult);
                     }
@@ -454,6 +461,17 @@ namespace DevOps.Util.DotNet.Triage
                         testResult.HelixRunClientUri = helixLogInfo.RunClientUri;
                         testResult.HelixTestResultsUri = helixLogInfo.TestResultsUri;
                     }
+                }
+
+                void AddQueryData(ModelTestResult testResult)
+                {
+                    testResult.StartTime = modelBuild.StartTime;
+                    testResult.GitHubTargetBranch = modelBuild.GitHubTargetBranch;
+                    testResult.BuildKind = modelBuild.BuildKind;
+                    testResult.BuildResult = modelBuild.BuildResult;
+                    testResult.DefinitionNumber = modelBuild.DefinitionNumber;
+                    testResult.DefinitionName = modelBuild.DefinitionName;
+                    testResult.ModelBuildDefinitionId = modelBuild.ModelBuildDefinitionId;
                 }
             }
 
