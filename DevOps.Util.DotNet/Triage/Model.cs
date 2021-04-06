@@ -549,6 +549,7 @@ namespace DevOps.Util.DotNet.Triage
         TrackingIssue,
         TrackingIssueResult,
         BuildAttempt,
+        TrackingIssueMatch,
     }
 
     // Used to map Id from the old table to the new one

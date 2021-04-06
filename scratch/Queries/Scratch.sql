@@ -13,6 +13,10 @@ FROM ModelTrackingIssueResults r
 JOIN ModelBuildAttempts a ON a.Id = r.ModelBuildAttemptId
 WHERE IsPresent = 1
 
+SELECT m.Id, m.ModelTrackingIssueId, m.ModelBuildAttemptId, a.ModelBuildId, a.Attempt, m.HelixLogUri, m.JobName, m.HelixLogKind
+FROM ModelTrackingIssueMatches m
+JOIN ModelBuildAttempts a ON a.Id = m.ModelBuildAttemptId
+
 /* This is a TimelineIssuesDisplay query */
 /*
 SELECT [m].[Id], [m].[Attempt], [m].[IssueType], [m].[JobName], [m].[Message], [m].[ModelBuildAttemptId], [m].[ModelBuildId], [m].[RecordId], [m].[RecordName]

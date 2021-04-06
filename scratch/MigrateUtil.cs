@@ -81,8 +81,9 @@ namespace Scratch
 
         public async Task Migrate(string migrateDirectory)
         {
-            //await MigrateDefinitionsAsync(migrateDirectory);
-            //await MigrateTrackingIssuesAsync(migrateDirectory);
+            await MigrateDefinitionsAsync(migrateDirectory);
+            await MigrateTrackingIssuesAsync(migrateDirectory);
+            await MigrateTrackingIssueMatchesAsync(migrateDirectory);
             await MigrateTrackingIssueResultsAsync(migrateDirectory);
         }
 
@@ -153,6 +154,40 @@ namespace Scratch
             }
         }
 
+        private async Task MigrateTrackingIssueMatchesAsync(string migrateDirectory)
+        {
+            foreach (var line in File.ReadAllLines(Path.Combine(migrateDirectory, "tracking-issue-matches.csv")))
+            {
+                var items = line.Split(',');
+                var oldId = int.Parse(items[0]);
+                if (await TryGetNewId(ModelMigrationKind.TrackingIssueMatch, oldId) is (true, _))
+                {
+                    continue;
+                }
+
+                if (await EnsureModelBuildAttemptIdAsync(
+                    int.Parse(items[2]),
+                    GetBuildKey(items[3]),
+                    int.Parse(items[4])) is not { } attemptId)
+                {
+                    continue;
+                }
+
+                var model = new ModelTrackingIssueMatch()
+                {
+                    ModelBuildAttemptId = attemptId,
+                    HelixLogUri = ParseString(items[5]),
+                    JobName = ParseString(items[6]),
+                    HelixLogKind = Enum.Parse<HelixLogKind>(items[7]),
+                };
+
+                Console.WriteLine($"Migrating tracking match {oldId}");
+                TriageContext.ModelTrackingIssueMatches.Add(model);
+                await TriageContext.SaveChangesAsync();
+                await SaveNewId(ModelMigrationKind.TrackingIssueMatch, oldId, model.Id);
+            }
+        }
+
         private async Task MigrateTrackingIssueResultsAsync(string migrateDirectory)
         {
             foreach (var line in File.ReadAllLines(Path.Combine(migrateDirectory, "tracking-issue-results.csv")))
@@ -164,7 +199,7 @@ namespace Scratch
                     continue;
                 }
 
-                if (await EnsureModelBuildAttemptIdAsync() is not { } attemptId)
+                if (await EnsureModelBuildAttemptIdAsync(int.Parse(items[2]), GetBuildKey(items[3]), int.Parse(items[4])) is not { } attemptId)
                 {
                     continue;
                 }
@@ -180,22 +215,20 @@ namespace Scratch
                 TriageContext.ModelTrackingIssueResults.Add(model);
                 await TriageContext.SaveChangesAsync();
                 await SaveNewId(ModelMigrationKind.TrackingIssueResult, oldId, model.Id);
-
-                async Task<int?> EnsureModelBuildAttemptIdAsync()
-                {
-                    var oldId = int.Parse(items[2]);
-                    if (await TryGetNewId(ModelMigrationKind.BuildAttempt, oldId) is (true, var newId))
-                    {
-                        return newId;
-                    }
-
-                    var buildKey = GetBuildKey(items[3]);
-                    var modelBuildAttempt = await EnsureBuildAttemptAsync(buildKey, int.Parse(items[4]));
-                    newId = modelBuildAttempt?.Id;
-                    await SaveNewId(ModelMigrationKind.BuildAttempt, oldId, newId);
-                    return newId;
-                }
             }
+        }
+
+        private async Task<int?> EnsureModelBuildAttemptIdAsync(int oldId, BuildKey buildKey, int attempt)
+        {
+            if (await TryGetNewId(ModelMigrationKind.BuildAttempt, oldId) is (true, var newId))
+            {
+                return newId;
+            }
+
+            var modelBuildAttempt = await EnsureBuildAttemptAsync(buildKey, attempt);
+            newId = modelBuildAttempt?.Id;
+            await SaveNewId(ModelMigrationKind.BuildAttempt, oldId, newId);
+            return newId;
         }
 
         private async Task<ModelBuildAttempt?> EnsureBuildAttemptAsync(BuildKey buildKey, int attempt)
