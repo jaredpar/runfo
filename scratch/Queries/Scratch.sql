@@ -8,6 +8,11 @@ FROM ModelBuildDefinitions
 SELECT *
 FROM ModelTrackingIssues
 
+SELECT r.Id, r.ModelTrackingIssueId, r.ModelBuildAttemptId, a.ModelBuildId, a.Attempt
+FROM ModelTrackingIssueResults r
+JOIN ModelBuildAttempts a ON a.Id = r.ModelBuildAttemptId
+WHERE IsPresent = 1
+
 /* This is a TimelineIssuesDisplay query */
 /*
 SELECT [m].[Id], [m].[Attempt], [m].[IssueType], [m].[JobName], [m].[Message], [m].[ModelBuildAttemptId], [m].[ModelBuildId], [m].[RecordId], [m].[RecordName]

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using DevOps.Util;
+using System.Net.Http;
 
 namespace Scratch
 {
@@ -17,11 +18,12 @@ namespace Scratch
     /// </summary>
     public sealed class MigrateUtil
     {
-        public Dictionary<(ModelMigrationKind, int), int> MigrationCache = new();
+        public Dictionary<(ModelMigrationKind, int), int?> MigrationCache = new();
         public DotNetQueryUtil DotNetQueryUtil { get; }
         public TriageContextUtil TriageContextUtil { get; }
         public ModelDataUtil ModelDataUtil { get; }
         public TriageContext TriageContext => TriageContextUtil.Context;
+        public DevOpsServer DevOpsServer => DotNetQueryUtil.Server;
 
         public MigrateUtil(
             DotNetQueryUtil queryUtil,
@@ -33,7 +35,7 @@ namespace Scratch
             ModelDataUtil = new ModelDataUtil(queryUtil, triageContextUtil, logger);
         }
 
-        private async Task SaveNewId(ModelMigrationKind kind, int oldId, int newId)
+        private async Task SaveNewId(ModelMigrationKind kind, int oldId, int? newId)
         {
             var model = new ModelMigration()
             {
@@ -46,11 +48,11 @@ namespace Scratch
             MigrationCache[(kind, oldId)] = newId;
         }
 
-        private async Task<int?> GetNewId(ModelMigrationKind kind, int oldId)
+        private async Task<(bool Succeeded, int? NewId)> TryGetNewId(ModelMigrationKind kind, int oldId)
         {
             if (MigrationCache.TryGetValue((kind, oldId), out var newId))
             {
-                return newId;
+                return (true, newId);
             }
 
             var model = await TriageContext
@@ -60,25 +62,37 @@ namespace Scratch
             if (model is object)
             {
                 MigrationCache[(kind, oldId)] = model.NewId;
-                return model.NewId;
+                return (true, model.NewId);
             }
 
-            return null;
+            return (false, null);
+        }
+
+        private async Task<int?> GetNewId(ModelMigrationKind kind, int oldId)
+        {
+            var result = await TryGetNewId(kind, oldId);
+            if (!result.Succeeded)
+            {
+                throw new InvalidOperationException();
+            }
+
+            return result.NewId;
         }
 
         public async Task Migrate(string migrateDirectory)
         {
-            await MigrateDefinitions(migrateDirectory);
-            await MigrateTrackingIssues(migrateDirectory);
+            //await MigrateDefinitionsAsync(migrateDirectory);
+            //await MigrateTrackingIssuesAsync(migrateDirectory);
+            await MigrateTrackingIssueResultsAsync(migrateDirectory);
         }
 
-        private async Task MigrateDefinitions(string migrateDirectory)
+        private async Task MigrateDefinitionsAsync(string migrateDirectory)
         {
             foreach (var line in File.ReadAllLines(Path.Combine(migrateDirectory, "definitions.csv")))
             {
                 var items = line.Split(',');
                 var oldId = int.Parse(items[0]);
-                if (await GetNewId(ModelMigrationKind.Definition, oldId) is object)
+                if (await TryGetNewId(ModelMigrationKind.Definition, oldId) is (true, _))
                 {
                     continue;
                 }
@@ -95,13 +109,13 @@ namespace Scratch
             }
         }
 
-        private async Task MigrateTrackingIssues(string migrateDirectory)
+        private async Task MigrateTrackingIssuesAsync(string migrateDirectory)
         {
             foreach (var line in File.ReadAllLines(Path.Combine(migrateDirectory, "tracking-issues.csv")))
             {
                 var items = line.Split(',');
                 var oldId = int.Parse(items[0]);
-                if (await GetNewId(ModelMigrationKind.TrackingIssue, oldId) is object)
+                if (await TryGetNewId(ModelMigrationKind.TrackingIssue, oldId) is (true, _))
                 {
                     continue;
                 }
@@ -139,6 +153,84 @@ namespace Scratch
             }
         }
 
+        private async Task MigrateTrackingIssueResultsAsync(string migrateDirectory)
+        {
+            foreach (var line in File.ReadAllLines(Path.Combine(migrateDirectory, "tracking-issue-results.csv")))
+            {
+                var items = line.Split(',');
+                var oldId = int.Parse(items[0]);
+                if (await TryGetNewId(ModelMigrationKind.TrackingIssueResult, oldId) is (true, _))
+                {
+                    continue;
+                }
+
+                if (await EnsureModelBuildAttemptIdAsync() is not { } attemptId)
+                {
+                    continue;
+                }
+
+                var model = new ModelTrackingIssueResult()
+                {
+                    IsPresent = true,
+                    ModelTrackingIssueId = await GetNewId(ModelMigrationKind.TrackingIssue, int.Parse(items[1])) ?? throw new Exception("Missing tracking issue"),
+                    ModelBuildAttemptId = attemptId,
+                };
+
+                Console.WriteLine($"Migrating tracking result {oldId}");
+                TriageContext.ModelTrackingIssueResults.Add(model);
+                await TriageContext.SaveChangesAsync();
+                await SaveNewId(ModelMigrationKind.TrackingIssueResult, oldId, model.Id);
+
+                async Task<int?> EnsureModelBuildAttemptIdAsync()
+                {
+                    var oldId = int.Parse(items[2]);
+                    if (await TryGetNewId(ModelMigrationKind.BuildAttempt, oldId) is (true, var newId))
+                    {
+                        return newId;
+                    }
+
+                    var buildKey = GetBuildKey(items[3]);
+                    var modelBuildAttempt = await EnsureBuildAttemptAsync(buildKey, int.Parse(items[4]));
+                    newId = modelBuildAttempt?.Id;
+                    await SaveNewId(ModelMigrationKind.BuildAttempt, oldId, newId);
+                    return newId;
+                }
+            }
+        }
+
+        private async Task<ModelBuildAttempt?> EnsureBuildAttemptAsync(BuildKey buildKey, int attempt)
+        {
+            var modelBuildAttempt = await TriageContextUtil.FindModelBuildAttemptAsync(new(buildKey, attempt));
+            if (modelBuildAttempt is object)
+            {
+                return modelBuildAttempt;
+            }
+
+            Console.WriteLine($"Getting build {buildKey}");
+            try
+            {
+                var build = await DevOpsServer.GetBuildAsync(buildKey.Project, buildKey.Number);
+
+                var buildAttemptKey = await ModelDataUtil.EnsureModelInfoAsync(build, includeTests: false);
+                if (buildAttemptKey.Attempt < attempt)
+                {
+                    throw new InvalidOperationException("Missing attempt");
+                }
+
+                return await TriageContextUtil.GetModelBuildAttemptAsync(buildAttemptKey);
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Skipping {buildKey}: {ex.Message}");
+                return null;
+            }
+        }
+
+        private static BuildKey GetBuildKey(string key)
+        {
+            var parts = key.Split('-');
+            return new BuildKey(parts[0], parts[1], int.Parse(parts[2]));
+        }
         private static string ParseString(string s) => s == "NULL" ? "" : s;
         private static int? ParseNumber(string s) => s == "NULL" ? null : int.Parse(s);
     }

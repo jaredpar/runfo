@@ -547,7 +547,8 @@ namespace DevOps.Util.DotNet.Triage
     {
         Definition,
         TrackingIssue,
-        TrackingIssueResult
+        TrackingIssueResult,
+        BuildAttempt,
     }
 
     // Used to map Id from the old table to the new one
@@ -559,6 +560,6 @@ namespace DevOps.Util.DotNet.Triage
 
         public int OldId { get; set; }
 
-        public int NewId { get; set; }
+        public int? NewId { get; set; }
     }
 }
