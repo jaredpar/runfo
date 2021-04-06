@@ -13,6 +13,7 @@ generate `datetime2(7)`
 - Delete all the filter map code in SearchBuildsRequests
 - X Ensure all enum use int conversion
 - Delete  GetModelBuildKind
+- Delete the ModelMigration table and enum
 
 Indexes:
 - X ModelBuild 

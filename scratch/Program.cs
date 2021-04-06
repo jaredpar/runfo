@@ -167,7 +167,8 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await PopulateDb(count: 400, definitionId: 15, includeTests: true, includeTriage: false);
+            await Migrate();
+
             /*
             var limitDays = 90;
             var limit = DateTime.UtcNow - TimeSpan.FromDays(limitDays);
@@ -273,6 +274,12 @@ namespace Scratch
             // await PopulateModelTrackingIssue("started:~2 result:failed", 85);
             await RetriesWork();
 */
+        }
+
+        internal async Task Migrate()
+        {
+            var util = new MigrateUtil(DotNetQueryUtil, TriageContextUtil, CreateLogger());
+            await util.Migrate(@"c:\users\jaredpar\temp\migrate");
         }
 
         internal async Task DeleteOldBuilds()

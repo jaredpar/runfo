@@ -1,4 +1,13 @@
 ﻿
+/**
+ * Migration queries
+ */
+SELECT Id,AzureOrganization, AzureProject, DefinitionName, DefinitionId
+FROM ModelBuildDefinitions
+
+SELECT *
+FROM ModelTrackingIssues
+
 /* This is a TimelineIssuesDisplay query */
 /*
 SELECT [m].[Id], [m].[Attempt], [m].[IssueType], [m].[JobName], [m].[Message], [m].[ModelBuildAttemptId], [m].[ModelBuildId], [m].[RecordId], [m].[RecordName]

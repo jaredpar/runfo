@@ -32,6 +32,8 @@ namespace DevOps.Util.DotNet.Triage
 
         public DbSet<ModelGitHubIssue> ModelGitHubIssues { get; set; }
 
+        public DbSet<ModelMigration> ModelMigrations { get; set; }
+
         public TriageContext(DbContextOptions<TriageContext> options)
             : base(options)
         {
@@ -159,6 +161,15 @@ namespace DevOps.Util.DotNet.Triage
                 .HasOne(x => x.ModelBuild)
                 .WithMany()
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ModelMigration>()
+                .HasIndex(x => new { x.MigrationKind, x.OldId })
+                .IncludeProperties(x => x.NewId)
+                .IsUnique();
+
+            modelBuilder.Entity<ModelMigration>()
+                .Property(x => x.MigrationKind)
+                .HasConversion<int>();
 
             OnModelCreatingQuery(modelBuilder);
         }
@@ -530,5 +541,24 @@ namespace DevOps.Util.DotNet.Triage
         public int ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
+    }
+
+    public enum ModelMigrationKind
+    {
+        Definition,
+        TrackingIssue,
+        TrackingIssueResult
+    }
+
+    // Used to map Id from the old table to the new one
+    public sealed class ModelMigration
+    {
+        public int Id { get; set; }
+
+        public ModelMigrationKind MigrationKind { get; set; }
+
+        public int OldId { get; set; }
+
+        public int NewId { get; set; }
     }
 }
