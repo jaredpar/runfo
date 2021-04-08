@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public class SearchHelixLogsRequest : ISearchRequest
+    public class SearchHelixLogsRequest : SearchRequestBase, ISearchQueryRequest<ModelTestResult>
     {
         public const int DefaultLimit = 5_000; 
 
@@ -19,8 +19,19 @@ namespace DevOps.Util.DotNet.Triage
         public string? Text { get; set; }
         public int Limit { get; set; } = DefaultLimit;
 
+        public SearchHelixLogsRequest(string queryString)
+        {
+            ParseQueryString(queryString);
+        }
+
+        public SearchHelixLogsRequest()
+        {
+
+        }
+
         public IQueryable<ModelTestResult> Filter(IQueryable<ModelTestResult> query)
         {
+            query = FilterCore(query);
             query = query.Where(x => x.IsHelixTestResult);
 
             foreach (var kind in HelixLogKinds)
@@ -41,6 +52,8 @@ namespace DevOps.Util.DotNet.Triage
         public string GetQueryString()
         {
             var builder = new StringBuilder();
+            GetQueryStringCore(builder);
+
             foreach (var helixLogKind in HelixLogKinds)
             {
                 switch (helixLogKind)
@@ -107,7 +120,11 @@ namespace DevOps.Util.DotNet.Triage
                         Limit = int.Parse(tuple.Value);
                         break;
                     default:
-                        throw new Exception($"Invalid option {tuple.Name}");
+                        if (!ParseQueryStringTuple(tuple.Name, tuple.Value))
+                        {
+                            throw new Exception($"Invalid option {tuple.Name}");
+                        }
+                        break;
                 }
             }
 

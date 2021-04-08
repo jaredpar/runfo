@@ -77,14 +77,32 @@ namespace DevOps.Util.DotNet.Triage
                 .WithMany()
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<ModelTestRun>()
+                .HasOne(x => x.ModelBuildAttempt)
+                .WithMany()
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<ModelTestRun>()
+                .HasIndex(x => new { x.ModelBuildId, x.TestRunId })
+                .IsUnique();
+
             modelBuilder.Entity<ModelTestResult>()
                 .HasIndex(x => x.ModelBuildId)
+                .IncludeProperties(x => new { x.TestFullName, x.TestRunName, x.IsHelixTestResult });
+
+            modelBuilder.Entity<ModelTestResult>()
+                .HasIndex(x => x.ModelTestRunId)
                 .IncludeProperties(x => new { x.TestFullName, x.TestRunName, x.IsHelixTestResult });
 
             modelBuilder.Entity<ModelTestResult>()
                 .HasOne(x => x.ModelBuild)
                 .WithMany(x => x.ModelTestResults)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ModelTestResult>()
+                .HasOne(x => x.ModelBuildAttempt)
+                .WithMany()
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<ModelTestResult>()
                 .HasOne(x => x.ModelTestRun)
@@ -111,6 +129,11 @@ namespace DevOps.Util.DotNet.Triage
                 .HasOne(x => x.ModelBuild)
                 .WithMany(x => x.ModelTimelineIssues)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ModelTimelineIssue>()
+                .HasOne(x => x.ModelBuildAttempt)
+                .WithMany()
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<ModelTimelineIssue>()
                 .HasOne(x => x.ModelBuildDefinition)
@@ -335,6 +358,10 @@ namespace DevOps.Util.DotNet.Triage
         public int ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
+
+        public int ModelBuildAttemptId { get; set; }
+
+        public ModelBuildAttempt ModelBuildAttempt { get; set; }
     }
 
     public class ModelTestRun
@@ -352,6 +379,10 @@ namespace DevOps.Util.DotNet.Triage
         public int ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
+
+        public int ModelBuildAttemptId { get; set; }
+
+        public ModelBuildAttempt ModelBuildAttempt { get; set; }
     }
 
     public partial class ModelTestResult
@@ -360,6 +391,8 @@ namespace DevOps.Util.DotNet.Triage
 
         [Required]
         public string TestFullName { get; set; }
+
+        public int Attempt { get; set; }
 
         /// <summary>
         /// <see cref="ModelTestRun.Name"/>
@@ -405,6 +438,10 @@ namespace DevOps.Util.DotNet.Triage
         public int ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
+
+        public int ModelBuildAttemptId { get; set; }
+
+        public ModelBuildAttempt ModelBuildAttempt { get; set; }
     }
 
     public enum TrackingKind

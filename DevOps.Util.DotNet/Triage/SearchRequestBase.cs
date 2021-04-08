@@ -16,7 +16,7 @@ namespace DevOps.Util.DotNet.Triage
     {
         public static DateRequestValue StartedDefault => new DateRequestValue(dayQuery: 7, kind: RelationalKind.GreaterThan);
 
-        public DateRequestValue? Started { get; set; }
+        public DateRequestValue? Started { get; set; } = StartedDefault;
         public string? Definition { get; set; }
         public BuildResultRequestValue? BuildResult { get; set; }
         public BuildKindRequestValue? BuildKind { get; set; }
@@ -39,8 +39,10 @@ namespace DevOps.Util.DotNet.Triage
 
         protected string GetQueryStringCore(StringBuilder builder)
         {
-            var started = Started ?? StartedDefault;
-            Append($"started:{started.GetQueryValue(RelationalKind.GreaterThan)}");
+            if (Started is { } started)
+            {
+                Append($"started:{started.GetQueryValue(RelationalKind.GreaterThan)}");
+            }
 
             if (!string.IsNullOrEmpty(Definition))
             {
@@ -272,13 +274,15 @@ namespace DevOps.Util.DotNet.Triage
 
         protected IQueryable<ModelTestResult> FilterCore(IQueryable<ModelTestResult> query)
         {
-            var started = Started ?? StartedDefault;
-            query = started.Kind switch
+            if (Started is { } started)
             {
-                RelationalKind.GreaterThan => query.Where(x => x.StartTime >= started.DateTime.Date),
-                RelationalKind.LessThan => query.Where(x => x.StartTime <= started.DateTime.Date),
-                _ => query
-            };
+                query = started.Kind switch
+                {
+                    RelationalKind.GreaterThan => query.Where(x => x.StartTime >= started.DateTime.Date),
+                    RelationalKind.LessThan => query.Where(x => x.StartTime <= started.DateTime.Date),
+                    _ => query
+                };
+            }
 
             if (DefinitionId is { } definitionId)
             {

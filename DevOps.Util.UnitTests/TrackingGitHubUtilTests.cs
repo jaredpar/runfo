@@ -116,7 +116,7 @@ Build Result Summary
             void AddTestData(int buildNumber, string dateStr)
             {
                 var attempt = AddAttempt(1, AddBuild($"{buildNumber}|dotnet|roslyn|{dateStr}", def));
-                var testRun = AddTestRun("windows", attempt.ModelBuild);
+                var testRun = AddTestRun("windows", attempt);
                 AddTestResult("Util.Test1", testRun);
                 AddTestResult("Util.Test2", testRun);
             }
@@ -165,6 +165,7 @@ Build Result Summary
                 title: "Helix Log",
                 helixLogsRequest: new SearchHelixLogsRequest()
                 {
+                    Started = null,
                     HelixLogKinds = { kind },
                     Text = "data",
                 });
@@ -185,7 +186,7 @@ Build Result Summary
             void AddTestData(int buildNumber, string dateStr)
             {
                 var attempt = AddAttempt(1, AddBuild($"{buildNumber}|dotnet|roslyn|{dateStr}", def));
-                var testRun = AddTestRun("windows", attempt.ModelBuild);
+                var testRun = AddTestRun("windows", attempt);
                 var testResult = AddTestResult("Util.Test1", testRun);
                 AddHelixLog(testResult, kind, "The log data");
             }

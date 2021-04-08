@@ -76,9 +76,9 @@ namespace DevOps.Util.UnitTests
 
 
         [Theory]
-        [InlineData("text:\"error\"", "text:\"error\"")]
-        [InlineData("text:error", "text:\"error\"")]
-        [InlineData("text:\"error\" logKind:console", "logKind:console text:\"error\"")]
+        [InlineData("text:\"error\"", "started:~7 text:\"error\"")]
+        [InlineData("text:error", "started:~7 text:\"error\"")]
+        [InlineData("text:\"error\" logKind:console", "started:~7 logKind:console text:\"error\"")]
         public void HelixLogsRoundTrip(string toParse, string userQuery)
         {
             var options = new SearchHelixLogsRequest();

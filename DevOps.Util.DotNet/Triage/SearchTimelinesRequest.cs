@@ -24,6 +24,16 @@ namespace DevOps.Util.DotNet.Triage
         public string? TaskName { get; set; }
         public ModelIssueType? Type { get; set; }
 
+        public SearchTimelinesRequest()
+        {
+
+        }
+
+        public SearchTimelinesRequest(string query)
+        {
+            ParseQueryString(query);
+        }
+
         public IQueryable<ModelTimelineIssue> Filter(IQueryable<ModelTimelineIssue> query)
         {
             query = FilterCore(query);

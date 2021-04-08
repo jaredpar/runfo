@@ -19,6 +19,16 @@ namespace DevOps.Util.DotNet.Triage
         public string? JobName { get; set; }
         public string? Message { get; set; }
 
+        public SearchTestsRequest(string queryString)
+        {
+            ParseQueryString(queryString);
+        }
+
+        public SearchTestsRequest()
+        {
+
+        }
+
         public IQueryable<ModelTestResult> Filter(IQueryable<ModelTestResult> query)
         {
             query = FilterCore(query);

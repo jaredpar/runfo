@@ -77,6 +77,7 @@ namespace DevOps.Util.UnitTests
                 DefinitionNumber = attempt.ModelBuildDefinition.DefinitionNumber,
                 DefinitionName = attempt.ModelBuildDefinition.DefinitionName,
                 ModelBuild = attempt.ModelBuild,
+                ModelBuildAttempt = attempt,
                 ModelBuildDefinition = attempt.ModelBuildDefinition,
             };
             Context.ModelTimelineIssues.Add(issue);
@@ -208,13 +209,20 @@ namespace DevOps.Util.UnitTests
 
         public ModelTestRun AddTestRun(string data, ModelBuild build)
         {
+            var attempt = AddAttempt(1, build);
+            return AddTestRun(data, attempt);
+        }
+
+        public ModelTestRun AddTestRun(string data, ModelBuildAttempt attempt)
+        {
             var parts = data.Split("|");
             var testRun = new ModelTestRun()
             {
                 Name = parts[0],
-                Attempt = parts.Length > 1 ? int.Parse(parts[1]) : 1,
+                Attempt = attempt.Attempt,
                 TestRunId = parts.Length > 2 ? int.Parse(parts[2]) : TestRunCount++,
-                ModelBuild = build,
+                ModelBuild = attempt.ModelBuild,
+                ModelBuildAttempt = attempt,
             };
             Context.ModelTestRuns.Add(testRun);
             Context.SaveChanges();
@@ -236,6 +244,7 @@ namespace DevOps.Util.UnitTests
                 ModelTestRun = testRun,
                 StartTime = testRun.ModelBuild.StartTime,
                 ModelBuild = testRun.ModelBuild,
+                ModelBuildAttempt = testRun.ModelBuildAttempt,
                 DefinitionNumber = testRun.ModelBuild.DefinitionNumber,
                 DefinitionName = testRun.ModelBuild.DefinitionName,
                 ModelBuildDefinition = testRun.ModelBuild.ModelBuildDefinition,

@@ -91,7 +91,7 @@ namespace DevOps.Util.UnitTests
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
             var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
-            var testRun = AddTestRun("windows", attempt.ModelBuild);
+            var testRun = AddTestRun("windows", attempt);
             var testResult1 = AddTestResult("Util.Test1", testRun);
             var testResult2 = AddTestResult("Util.Test2", testRun);
             var tracking = AddTrackingIssue(
@@ -158,7 +158,7 @@ namespace DevOps.Util.UnitTests
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
             var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
-            var testRun = AddTestRun("windows", attempt.ModelBuild);
+            var testRun = AddTestRun("windows", attempt);
             var testResult1 = AddTestResult("Util.Test1", testRun);
             AddHelixLog(testResult1, kind, "the dog fetched the ball");
             var testResult2 = AddTestResult("Util.Test2", testRun);

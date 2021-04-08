@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -81,18 +82,18 @@ namespace DevOps.Util.DotNet.Triage
                     return;
                 }
 
-                var attempt = modelBuildAttempt?.Attempt ?? 1;
                 foreach (var testRun in testRuns)
                 {
-                    await EnsureTestRun(testRun, attempt).ConfigureAwait(false);
+                    await EnsureTestRun(testRun, modelBuildAttempt).ConfigureAwait(false);
                 }
             }
 
-            async Task EnsureTestRun(TestRun testRun, int attempt)
+            async Task EnsureTestRun(TestRun testRun, ModelBuildAttempt modelBuildAttempt)
             {
+                Debug.Assert(modelBuildAttempt.ModelBuild is object);
                 try
                 {
-                    var modelTestRun = await TriageContextUtil.FindModelTestRunAsync(modelBuild, testRun.Id).ConfigureAwait(false);
+                    var modelTestRun = await TriageContextUtil.FindModelTestRunAsync(modelBuildAttempt.ModelBuildId, testRun.Id).ConfigureAwait(false);
                     if (modelTestRun is object)
                     {
                         return;
@@ -100,7 +101,7 @@ namespace DevOps.Util.DotNet.Triage
 
                     // TODO: Need to record when the maximum test results are exceeded. The limit here is to 
                     // protect us from a catastrophic run that has say several million failures (this is a real
-                    // possibility
+                    // possibility)
                     const int maxTestCaseResultCount = 200;
                     var dotNetTestRun = await QueryUtil.GetDotNetTestRunAsync(
                         build,
@@ -116,7 +117,7 @@ namespace DevOps.Util.DotNet.Triage
                     }
                     var helixMap = await Server.GetHelixMapAsync(dotNetTestRun).ConfigureAwait(false);
 
-                    await TriageContextUtil.EnsureTestRunAsync(modelBuild, attempt, dotNetTestRun, helixMap).ConfigureAwait(false);
+                    await TriageContextUtil.EnsureTestRunAsync(modelBuildAttempt, dotNetTestRun, helixMap).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
