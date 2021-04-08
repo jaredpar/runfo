@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public class SearchBuildsRequest : SearchStandardRequestBase, ISearchQueryRequest<ModelBuild>
+    public class SearchBuildsRequest : SearchRequestBase, ISearchQueryRequest<ModelBuild>
     {
         public string? Repository { get; set; }
         public DateRequestValue? Finished { get; set; }
@@ -29,16 +29,19 @@ namespace DevOps.Util.DotNet.Triage
             ParseQueryString(query);
         }
 
+        [Obsolete]
         public IQueryable<ModelTimelineIssue> Filter(IQueryable<ModelTimelineIssue> query) =>
             Filter(
                 query,
                 x => PredicateRewriter.ComposeContainerProperty<ModelTimelineIssue, ModelBuild>(x, nameof(ModelTimelineIssue.ModelBuild)));
 
+        [Obsolete]
         public IQueryable<ModelTestResult> Filter(IQueryable<ModelTestResult> query) =>
             Filter(
                 query,
                 x => PredicateRewriter.ComposeContainerProperty<ModelTestResult, ModelBuild>(x, nameof(ModelTestResult.ModelBuild)));
 
+        [Obsolete]
         public IQueryable<ModelBuildAttempt> Filter(IQueryable<ModelBuildAttempt> query) =>
             Filter(
                 query,

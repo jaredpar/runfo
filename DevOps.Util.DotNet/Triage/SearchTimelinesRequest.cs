@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public class SearchTimelinesRequest : SearchStandardRequestBase, ISearchQueryRequest<ModelTimelineIssue>
+    public class SearchTimelinesRequest : SearchRequestBase, ISearchQueryRequest<ModelTimelineIssue>
     {
         public const int DefaultLimit = 50;
 

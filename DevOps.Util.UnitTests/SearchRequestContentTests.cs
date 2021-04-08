@@ -39,6 +39,25 @@ namespace DevOps.Util.UnitTests
         }
 
         [Theory]
+        [InlineData("message:error")]
+        [InlineData("message:\"error again\"")]
+        [InlineData("name:test message:\"error again\"")]
+        [InlineData("started:~7 message:\"error again\"")]
+        public void ParseDoesNotReset(string toParse)
+        {
+            var request = new SearchTestsRequest();
+            request.ParseQueryString(toParse);
+            var oldMessage = request.Message;
+            var oldStarted = request.Started;
+            var oldName = request.Name;
+            request.ParseQueryString("targetBranch:main");
+            Assert.Equal(oldMessage, request.Message);
+            Assert.Equal(oldStarted, request.Started);
+            Assert.Equal(oldName, request.Name);
+            Assert.Equal("main", request.TargetBranch!.Value.Text);
+        }
+
+        [Theory]
         [InlineData("text:\"error\"", "started:~7 text:\"error\"")]
         [InlineData("text:\"error and space\"", "started:~7 text:\"error and space\"")]
         [InlineData("text:\"error and space\"   ", "started:~7 text:\"error and space\"")]

@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public abstract class SearchStandardRequestBase
+    public abstract class SearchRequestBase
     {
         public static DateRequestValue StartedDefault => new DateRequestValue(dayQuery: 7, kind: RelationalKind.GreaterThan);
 

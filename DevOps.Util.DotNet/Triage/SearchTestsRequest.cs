@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public class SearchTestsRequest : SearchStandardRequestBase, ISearchQueryRequest<ModelTestResult>
+    public class SearchTestsRequest : SearchRequestBase, ISearchQueryRequest<ModelTestResult>
     {
         public string? Name { get; set; }
         public string? JobName { get; set; }
