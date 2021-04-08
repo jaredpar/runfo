@@ -211,18 +211,11 @@ namespace DevOps.Util.DotNet.Triage
 
         #region TrackingIssueUtil
 
-        public static async Task TriageBuildsAsync(this TrackingIssueUtil trackingIssueUtil, ModelTrackingIssue modelTrackingIssue, SearchBuildsRequest request, CancellationToken cancellationToken = default)
+        public static async Task TriageBuildsAsync(this TrackingIssueUtil trackingIssueUtil, ModelTrackingIssue modelTrackingIssue, string extraQuery, CancellationToken cancellationToken = default)
         {
-            IQueryable<ModelBuildAttempt> buildAttemptQuery = trackingIssueUtil.Context.ModelBuildAttempts;
-            if (modelTrackingIssue.ModelBuildDefinitionId is { } id)
-            {
-                buildAttemptQuery = buildAttemptQuery.Where(x => x.ModelBuild.ModelBuildDefinitionId == id);
-                request.Definition = null;
-            }
+            var query = trackingIssueUtil.TriageContextUtil.GetModelBuildAttemptsQuery(modelTrackingIssue, extraQuery);
 
-            buildAttemptQuery = request.Filter(buildAttemptQuery);
-
-            var attempts = await buildAttemptQuery
+            var attempts = await query
                 .Include(x => x.ModelBuild)
                 .ThenInclude(x => x.ModelBuildDefinition)
                 .ToListAsync();

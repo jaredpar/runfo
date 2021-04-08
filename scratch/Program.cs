@@ -617,131 +617,11 @@ namespace Scratch
             }
         }
 
-        class Data
-        {
-            public string? Count7;
-            public string? Count14;
-            public string? Count30;
-        }
-
-        internal async Task GenerateChrisReport()
-        {
-            var timelineRequest = new SearchTimelinesRequest()
-            {
-                Type = ModelIssueType.Error,
-                Text = "We stopped hearing from agent",
-            };
-
-            const string allBuildsName = "[All Builds]";
-            var defMap = new Dictionary<string, Data>();
-            defMap[allBuildsName] = new Data();
-            var buildMap = new Dictionary<int, ModelBuild>();
-            foreach (var dayCount in new int[] { 7, 14, 30 })
-            {
-                var buildsRequest = new SearchBuildsRequest()
-                {
-                    Started = new DateRequestValue(dayCount, RelationalKind.GreaterThan),
-                };
-
-                IQueryable<ModelTimelineIssue> query = TriageContext.ModelTimelineIssues;
-                query = buildsRequest.Filter(query);
-                query = timelineRequest.Filter(query);
-
-                var resultBuilds = await query
-                    .Select(x => new
-                    {
-                        x.ModelBuild.BuildNumber,
-                        x.ModelBuild.ModelBuildDefinition.DefinitionName,
-                    })
-                    .ToListAsync();
-                var allBuilds = await buildsRequest.Filter(TriageContext.ModelBuilds)
-                    .Select(x => new
-                    {
-                        x.BuildNumber,
-                        x.ModelBuildDefinition.DefinitionName,
-                    })
-                    .ToListAsync();
-
-                foreach (var group in resultBuilds.GroupBy(x => x.DefinitionName))
-                {
-                    if (!defMap.TryGetValue(group.Key, out var data))
-                    {
-                        data = new Data();
-                        defMap[group.Key] = data;
-                    }
-
-                    var allDefCount = allBuilds.Count(x => x.DefinitionName == group.Key);
-                    var ratioStr = GetRatioString(group.Count(), allDefCount);
-                    UpdateRatioString(data, ratioStr);
-                }
-
-                UpdateRatioString(defMap[allBuildsName], GetRatioString(resultBuilds.Count, allBuilds.Count));
-
-                static string GetRatioString(double hitCount, double buildCount)
-                {
-                    var ratio = hitCount / buildCount;
-                    var ratioStr = ratio.ToString("P1");
-                    return $"{ratioStr} ({hitCount}/{buildCount})";
-                }
-
-                void UpdateRatioString(Data data, string ratioStr)
-                {
-                    switch (dayCount)
-                    {
-                        case 7:
-                            data.Count7 = ratioStr;
-                            break;
-                        case 14:
-                            data.Count14 = ratioStr;
-                            break;
-                        case 30:
-                            data.Count30 = ratioStr;
-                            break;
-                        default:
-                            throw null!;
-                    }
-                }
-            }
-
-            Console.WriteLine("|Definition|7 days| 14 days|30 days|");
-            Console.WriteLine("|---|---|---|---|");
-            foreach (var pair in defMap.OrderBy(x => x.Key))
-            {
-                Console.WriteLine($"|{pair.Key}|{pair.Value.Count7}|{pair.Value.Count14}|{pair.Value.Count30}|");
-            }
-        }
-
-        internal async Task PopulateTrackingIssue(int issueId, string buildsQueryString)
+        internal async Task PopulateTrackingIssue(int issueId, string extraQuery)
         {
             var issue = await TriageContext.ModelTrackingIssues.Where(x => x.Id == issueId).SingleAsync();
-
-            var buildsRequest = new SearchBuildsRequest();
-            buildsRequest.ParseQueryString(buildsQueryString);
-            IQueryable<ModelBuild> buildsQuery;
-            switch (issue.TrackingKind)
-            {
-                case TrackingKind.Timeline:
-                    {
-                        var request = new SearchTimelinesRequest();
-                        request.ParseQueryString(issue.SearchQuery);
-                        var query = request.Filter(TriageContext.ModelTimelineIssues);
-                        query = buildsRequest.Filter(query);
-                        buildsQuery = query.Select(x => x.ModelBuild);
-                        break;
-                    };
-                default:
-                    throw new Exception("Not Supported");
-            }
-
-            var results = await buildsQuery.ToListAsync();
-
-            foreach (var build in results)
-            {
-                Console.WriteLine($"Triaging {build.GetBuildKey().BuildUri}");
-                var util = new TrackingIssueUtil(HelixServer, DotNetQueryUtil, TriageContextUtil, CreateLogger());
-                await util.TriageAsync(build.GetBuildKey(), issue.Id);
-            }
-
+            var util = new TrackingIssueUtil(HelixServer, DotNetQueryUtil, TriageContextUtil, CreateLogger());
+            await util.TriageBuildsAsync(issue, extraQuery);
             await FunctionQueueUtil.QueueUpdateIssueAsync(issue, delay: null);
         }
 
@@ -841,22 +721,6 @@ namespace Scratch
                 }
             }
             while (true) ;
-        }
-
-        internal async Task QueryProfile()
-        {
-            var searchBuildsRequest = new SearchBuildsRequest()
-            {
-                Definition = "15",
-            };
-
-            var results = await searchBuildsRequest
-                .Filter(TriageContext.ModelTimelineIssues)
-                .OrderByDescending(x => x.ModelBuild.BuildNumber)
-                .Take(50)
-                .ToListAsync();
-
-            Console.WriteLine(results.Count);
         }
 
         internal async Task PopulateTimelines()

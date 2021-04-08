@@ -560,22 +560,33 @@ namespace DevOps.Util.DotNet.Triage
                     {
                         var request = new SearchTimelinesRequest(modelTrackingIssue.SearchQuery);
                         request.ParseQueryString(extraQuery);
+                        UpdateDefinition(request);
                         return request.Filter(Context.ModelTimelineIssues).Select(x => x.ModelBuildAttempt).Distinct();
                     }
                 case TrackingKind.Test:
                     {
                         var request = new SearchTestsRequest(modelTrackingIssue.SearchQuery);
                         request.ParseQueryString(extraQuery);
+                        UpdateDefinition(request);
                         return request.Filter(Context.ModelTestResults).Select(x => x.ModelBuildAttempt).Distinct();
                     }
                 case TrackingKind.HelixLogs:
                     {
                         var request = new SearchHelixLogsRequest(modelTrackingIssue.SearchQuery);
                         request.ParseQueryString(extraQuery);
+                        UpdateDefinition(request);
                         return request.Filter(Context.ModelTestResults).Select(x => x.ModelBuildAttempt).Distinct();
                     }
                 default:
                     throw new InvalidOperationException($"Invalid kind {modelTrackingIssue.TrackingKind}");
+            }
+
+            void UpdateDefinition(SearchRequestBase requestBase)
+            {
+                if (modelTrackingIssue.ModelBuildDefinition is { } definition)
+                {
+                    requestBase.Definition = definition.DefinitionNumber.ToString();
+                }
             }
         }
     }

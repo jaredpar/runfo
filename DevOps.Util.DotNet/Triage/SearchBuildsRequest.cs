@@ -29,31 +29,9 @@ namespace DevOps.Util.DotNet.Triage
             ParseQueryString(query);
         }
 
-        [Obsolete]
-        public IQueryable<ModelTimelineIssue> Filter(IQueryable<ModelTimelineIssue> query) =>
-            Filter(
-                query,
-                x => PredicateRewriter.ComposeContainerProperty<ModelTimelineIssue, ModelBuild>(x, nameof(ModelTimelineIssue.ModelBuild)));
-
-        [Obsolete]
-        public IQueryable<ModelTestResult> Filter(IQueryable<ModelTestResult> query) =>
-            Filter(
-                query,
-                x => PredicateRewriter.ComposeContainerProperty<ModelTestResult, ModelBuild>(x, nameof(ModelTestResult.ModelBuild)));
-
-        [Obsolete]
-        public IQueryable<ModelBuildAttempt> Filter(IQueryable<ModelBuildAttempt> query) =>
-            Filter(
-                query,
-                x => PredicateRewriter.ComposeContainerProperty<ModelBuildAttempt, ModelBuild>(x, nameof(ModelBuildAttempt.ModelBuild)));
-
-        public IQueryable<ModelBuild> Filter(IQueryable<ModelBuild> query) =>
-            Filter(FilterCore(query), x => x);
-
-        private IQueryable<T> Filter<T>(
-            IQueryable<T> query,
-            Func<Expression<Func<ModelBuild, bool>>, Expression<Func<T, bool>>> convertPredicateFunc)
+        public IQueryable<ModelBuild> Filter(IQueryable<ModelBuild> query)
         {
+            query = FilterCore(query);
             string? gitHubRepository = string.IsNullOrEmpty(Repository)
                 ? null
                 : Repository.ToLower();
@@ -65,8 +43,8 @@ namespace DevOps.Util.DotNet.Triage
             {
                 query = queued.Kind switch
                 {
-                    RelationalKind.GreaterThan => query.Where(convertPredicateFunc(x => x.QueueTime >= queued.DateTime.Date)),
-                    RelationalKind.LessThan => query.Where(convertPredicateFunc(x => x.QueueTime <= queued.DateTime.Date)),
+                    RelationalKind.GreaterThan => query.Where(x => x.QueueTime >= queued.DateTime.Date),
+                    RelationalKind.LessThan => query.Where(x => x.QueueTime <= queued.DateTime.Date),
                     _ => query
                 };
             }
@@ -75,31 +53,31 @@ namespace DevOps.Util.DotNet.Triage
             {
                 query = finished.Kind switch
                 {
-                    RelationalKind.GreaterThan => query.Where(convertPredicateFunc(x => x.FinishTime >= finished.DateTime.Date)),
-                    RelationalKind.LessThan => query.Where(convertPredicateFunc(x => x.FinishTime <= finished.DateTime.Date)),
+                    RelationalKind.GreaterThan => query.Where(x => x.FinishTime >= finished.DateTime.Date),
+                    RelationalKind.LessThan => query.Where(x => x.FinishTime <= finished.DateTime.Date),
                     _ => query
                 };
             }
 
             if (gitHubOrganization is object)
             {
-                query = query.Where(convertPredicateFunc(x => x.GitHubOrganization == gitHubOrganization));
+                query = query.Where(x => x.GitHubOrganization == gitHubOrganization);
             }
 
             if (gitHubRepository is object)
             {
-                query = query.Where(convertPredicateFunc(x => x.GitHubRepository == gitHubRepository));
+                query = query.Where(x => x.GitHubRepository == gitHubRepository);
             }
 
             if (HasIssues is { } hasIssues)
             {
                 if (hasIssues)
                 {
-                    query = query.Where(convertPredicateFunc(x => x.ModelGitHubIssues.Any()));
+                    query = query.Where(x => x.ModelGitHubIssues.Any());
                 }
                 else
                 {
-                    query = query.Where(convertPredicateFunc(x => !x.ModelGitHubIssues.Any()));
+                    query = query.Where(x => !x.ModelGitHubIssues.Any());
                 }
             }
 
