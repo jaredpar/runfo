@@ -101,6 +101,26 @@ SELECT COUNT(*)
 FROM [ModelTimelineIssues] AS [m]
 WHERE ([m].[DefinitionName] = @__Definition_0) AND ([m].[StartTime] >= @__started_DateTime_Date_1)
 
+/* 
+    Search Timelines
+    started:~7 definition:roslyn-ci text:"failures"
+*/
+DECLARE @__started_DateTime_Date_1 AS DateTime2 = '2021-04-03'
+DECLARE @__Definition_0 As nvarchar(100) = 'roslyn-ci'
+DECLARE @__text_3 As nvarchar(100) = 'Too many'
+DECLARE @__p_4 As Integer = 50
+DECLARE @__p_5 As Integer = 25
+SELECT [m0].[BuildNumber], [t].[Message], [t].[JobName], [t].[IssueType], [t].[Attempt]
+FROM (
+  SELECT [m].[Id], [m].[Attempt], [m].[BuildKind], [m].[BuildResult], [m].[DefinitionName], [m].[DefinitionNumber], [m].[GitHubTargetBranch], [m].[IssueType], [m].[JobName], [m].[Message], [m].[ModelBuildAttemptId], [m].[ModelBuildDefinitionId], [m].[ModelBuildId], [m].[RecordId], [m].[RecordName], [m].[StartTime], [m].[TaskName]
+  FROM [ModelTimelineIssues] AS [m]
+  WHERE (([m].[DefinitionName] = @__Definition_0) AND ([m].[StartTime] >= @__started_DateTime_Date_1)) AND CONTAINS([m].[Message], @__text_3)
+  ORDER BY [m].[StartTime] DESC
+  OFFSET @__p_4 ROWS FETCH NEXT @__p_5 ROWS ONLY
+) AS [t]
+INNER JOIN [ModelBuilds] AS [m0] ON [t].[ModelBuildId] = [m0].[Id]
+ORDER BY [t].[StartTime] DESC
+
 /* Show all foreign keys including cascade actions */
  SELECT
     f.name constraint_name

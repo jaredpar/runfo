@@ -1,6 +1,6 @@
 Items:
 - X Move to the numeric ID for ModelBuild
-- Delete the old migrations
+- X Delete the old migrations
 - X Evaluate every string for a `[Required]` value
 - X Change the date time type. Just use the C# type `DateTime` and EF Core will
 generate `datetime2(7)`
@@ -8,11 +8,11 @@ generate `datetime2(7)`
 - X what is using Org.BouncyCastle.Math.EC.Rfc7748?
 - SearchTestsRequests need to alias job name and test run name. Same value.
 - X rename  GetModelBuildId to GetModelBuildKeyName
-- ensure all query properties set 
-    - specifically the updating to merged pull request
-- Delete all the filter map code in SearchBuildsRequests
+- X ensure all query properties set 
+    - X specifically the updating to merged pull request
+- X Delete all the filter map code in SearchBuildsRequests
 - X Ensure all enum use int conversion
-- Delete  GetModelBuildKind
+- X Delete  GetModelBuildKind
 - Delete the ModelMigration table and enum
 
 Indexes:

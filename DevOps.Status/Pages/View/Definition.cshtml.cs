@@ -56,7 +56,7 @@ namespace DevOps.Status.Pages.View
 
         private async Task OnGetDefinition(int definitionId)
         {
-            TargetBranch ??= "master";
+            TargetBranch ??= "main";
             var modelBuildDefiniton = await TriageContextUtil.Context
                 .ModelBuildDefinitions
                 .Where(x => x.DefinitionNumber == definitionId)
