@@ -106,14 +106,6 @@ namespace DevOps.Util.DotNet.Triage
 
         protected IQueryable<ModelBuild> FilterCore(IQueryable<ModelBuild> query)
         {
-            var started = Started ?? StartedDefault;
-            query = started.Kind switch
-            {
-                RelationalKind.GreaterThan => query.Where(x => x.StartTime >= started.DateTime.Date),
-                RelationalKind.LessThan => query.Where(x => x.StartTime <= started.DateTime.Date),
-                _ => query
-            };
-
             if (DefinitionId is { } definitionId)
             {
                 query = query.Where(x => x.DefinitionNumber == definitionId);
@@ -122,6 +114,14 @@ namespace DevOps.Util.DotNet.Triage
             {
                 query = query.Where(x => x.DefinitionName == Definition);
             }
+
+            var started = Started ?? StartedDefault;
+            query = started.Kind switch
+            {
+                RelationalKind.GreaterThan => query.Where(x => x.StartTime >= started.DateTime.Date),
+                RelationalKind.LessThan => query.Where(x => x.StartTime <= started.DateTime.Date),
+                _ => query
+            };
 
             if (BuildResult is { } buildResult)
             {
@@ -162,14 +162,6 @@ namespace DevOps.Util.DotNet.Triage
 
         protected IQueryable<ModelBuildAttempt> FilterCore(IQueryable<ModelBuildAttempt> query)
         {
-            var started = Started ?? StartedDefault;
-            query = started.Kind switch
-            {
-                RelationalKind.GreaterThan => query.Where(x => x.StartTime >= started.DateTime.Date),
-                RelationalKind.LessThan => query.Where(x => x.StartTime <= started.DateTime.Date),
-                _ => query
-            };
-
             if (DefinitionId is { } definitionId)
             {
                 query = query.Where(x => x.DefinitionNumber == definitionId);
@@ -178,6 +170,14 @@ namespace DevOps.Util.DotNet.Triage
             {
                 query = query.Where(x => x.DefinitionName == Definition);
             }
+
+            var started = Started ?? StartedDefault;
+            query = started.Kind switch
+            {
+                RelationalKind.GreaterThan => query.Where(x => x.StartTime >= started.DateTime.Date),
+                RelationalKind.LessThan => query.Where(x => x.StartTime <= started.DateTime.Date),
+                _ => query
+            };
 
             if (BuildResult is { } buildResult)
             {
@@ -218,14 +218,6 @@ namespace DevOps.Util.DotNet.Triage
 
         protected IQueryable<ModelTimelineIssue> FilterCore(IQueryable<ModelTimelineIssue> query)
         {
-            var started = Started ?? StartedDefault;
-            query = started.Kind switch
-            {
-                RelationalKind.GreaterThan => query.Where(x => x.StartTime >= started.DateTime.Date),
-                RelationalKind.LessThan => query.Where(x => x.StartTime <= started.DateTime.Date),
-                _ => query
-            };
-
             if (DefinitionId is { } definitionId)
             {
                 query = query.Where(x => x.DefinitionNumber == definitionId);
@@ -234,6 +226,14 @@ namespace DevOps.Util.DotNet.Triage
             {
                 query = query.Where(x => x.DefinitionName == Definition);
             }
+
+            var started = Started ?? StartedDefault;
+            query = started.Kind switch
+            {
+                RelationalKind.GreaterThan => query.Where(x => x.StartTime >= started.DateTime.Date),
+                RelationalKind.LessThan => query.Where(x => x.StartTime <= started.DateTime.Date),
+                _ => query
+            };
 
             if (BuildResult is { } buildResult)
             {
@@ -274,6 +274,15 @@ namespace DevOps.Util.DotNet.Triage
 
         protected IQueryable<ModelTestResult> FilterCore(IQueryable<ModelTestResult> query)
         {
+            if (DefinitionId is { } definitionId)
+            {
+                query = query.Where(x => x.DefinitionNumber == definitionId);
+            }
+            else if (Definition is object)
+            {
+                query = query.Where(x => x.DefinitionName == Definition);
+            }
+
             if (Started is { } started)
             {
                 query = started.Kind switch
@@ -282,15 +291,6 @@ namespace DevOps.Util.DotNet.Triage
                     RelationalKind.LessThan => query.Where(x => x.StartTime <= started.DateTime.Date),
                     _ => query
                 };
-            }
-
-            if (DefinitionId is { } definitionId)
-            {
-                query = query.Where(x => x.DefinitionNumber == definitionId);
-            }
-            else if (Definition is object)
-            {
-                query = query.Where(x => x.DefinitionName == Definition);
             }
 
             if (BuildResult is { } buildResult)

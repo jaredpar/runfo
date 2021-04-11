@@ -4,14 +4,16 @@ using DevOps.Util.DotNet.Triage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace DevOps.Util.DotNet.Triage.Migrations
 {
     [DbContext(typeof(TriageContext))]
-    partial class TriageContextModelSnapshot : ModelSnapshot
+    [Migration("20210411013646_ReverseIndexOrder")]
+    partial class ReverseIndexOrder
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -87,9 +89,6 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                     b.HasIndex("NameKey")
                         .IsUnique();
 
-                    b.HasIndex("StartTime")
-                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
-
                     b.HasIndex("DefinitionName", "StartTime")
                         .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
 
@@ -147,9 +146,6 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ModelBuildDefinitionId");
-
-                    b.HasIndex("StartTime")
-                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
 
                     b.HasIndex("DefinitionName", "StartTime")
                         .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
@@ -367,9 +363,6 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                     b.HasIndex("ModelTestRunId")
                         .HasAnnotation("SqlServer:Include", new[] { "TestFullName", "TestRunName", "IsHelixTestResult" });
 
-                    b.HasIndex("StartTime")
-                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
-
                     b.HasIndex("DefinitionName", "StartTime")
                         .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
 
@@ -481,9 +474,6 @@ namespace DevOps.Util.DotNet.Triage.Migrations
 
                     b.HasIndex("ModelBuildId")
                         .HasAnnotation("SqlServer:Include", new[] { "JobName", "TaskName", "RecordName", "IssueType", "Attempt", "Message" });
-
-                    b.HasIndex("StartTime")
-                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
 
                     b.HasIndex("DefinitionName", "StartTime")
                         .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });

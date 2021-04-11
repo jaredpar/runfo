@@ -64,6 +64,43 @@ ORDER BY [m0].[BuildNumber] DESC
 OFFSET 0 ROWS FETCH NEXT 25 ROWS ONLY
 */
 
+DECLARE @__started_DateTime_Date_0 AS DateTime2 = '2021-04-03'
+DECLARE @__Definition_1 As nvarchar(100) = 'roslyn-ci'
+SELECT COUNT(*)
+FROM [ModelTestResults] AS [m]
+WHERE ([m].[StartTime] >= @__started_DateTime_Date_0) AND ([m].[DefinitionName] = @__Definition_1)
+
+
+DECLARE @__started_DateTime_Date_0 AS DateTime2 = '2021-04-03'
+DECLARE @__Definition_1 As nvarchar(100) = 'runtime'
+SELECT COUNT(*)
+FROM [ModelTestResults] AS [m]
+WHERE ([m].[DefinitionName] = @__Definition_1) AND ([m].[StartTime] >= @__started_DateTime_Date_0)
+
+
+DECLARE @__started_DateTime_Date_0 AS DateTime2 = '2021-04-03'
+DECLARE @__Definition_1 As nvarchar(100) = 'runtime'
+DECLARE @__p_3 As Integer = 50
+DECLARE @__p_4 As Integer = 25
+DECLARE @__k_2 As INteger = 2
+SELECT [t].[Id], [t].[Attempt], [t].[BuildKind], [t].[BuildResult], [t].[DefinitionName], [t].[DefinitionNumber], [t].[ErrorMessage], [t].[GitHubTargetBranch], [t].[HelixConsoleUri], [t].[HelixCoreDumpUri], [t].[HelixRunClientUri], [t].[HelixTestResultsUri], [t].[IsHelixTestResult], [t].[IsSubResult], [t].[IsSubResultContainer], [t].[ModelBuildAttemptId], [t].[ModelBuildDefinitionId], [t].[ModelBuildId], [t].[ModelTestRunId], [t].[Outcome], [t].[StartTime], [t].[TestFullName], [t].[TestRunName], [m0].[Id], [m0].[AzureOrganization], [m0].[AzureProject], [m0].[BuildKind], [m0].[BuildNumber], [m0].[BuildResult], [m0].[DefinitionName], [m0].[DefinitionNumber], [m0].[FinishTime], [m0].[GitHubOrganization], [m0].[GitHubRepository], [m0].[GitHubTargetBranch], [m0].[ModelBuildDefinitionId], [m0].[NameKey], [m0].[PullRequestNumber], [m0].[QueueTime], [m0].[StartTime]
+FROM (
+  SELECT [m].[Id], [m].[Attempt], [m].[BuildKind], [m].[BuildResult], [m].[DefinitionName], [m].[DefinitionNumber], [m].[ErrorMessage], [m].[GitHubTargetBranch], [m].[HelixConsoleUri], [m].[HelixCoreDumpUri], [m].[HelixRunClientUri], [m].[HelixTestResultsUri], [m].[IsHelixTestResult], [m].[IsSubResult], [m].[IsSubResultContainer], [m].[ModelBuildAttemptId], [m].[ModelBuildDefinitionId], [m].[ModelBuildId], [m].[ModelTestRunId], [m].[Outcome], [m].[StartTime], [m].[TestFullName], [m].[TestRunName]
+  FROM [ModelTestResults] AS [m]
+  WHERE (([m].[StartTime] >= @__started_DateTime_Date_0) AND ([m].[DefinitionName] = @__Definition_1)) AND ([m].[BuildKind] <> @__k_2)
+  ORDER BY [m].[StartTime] DESC
+  OFFSET @__p_3 ROWS FETCH NEXT @__p_4 ROWS ONLY
+) AS [t]
+INNER JOIN [ModelBuilds] AS [m0] ON [t].[ModelBuildId] = [m0].[Id]
+ORDER BY [t].[StartTime] DESC
+
+/* Search timelines initial */
+DECLARE @__started_DateTime_Date_1 AS DateTime2 = '2021-04-03'
+DECLARE @__Definition_0 As nvarchar(100) = 'roslyn-ci'
+SELECT COUNT(*)
+FROM [ModelTimelineIssues] AS [m]
+WHERE ([m].[DefinitionName] = @__Definition_0) AND ([m].[StartTime] >= @__started_DateTime_Date_1)
+
 /* Show all foreign keys including cascade actions */
  SELECT
     f.name constraint_name

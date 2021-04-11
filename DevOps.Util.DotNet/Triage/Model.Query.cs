@@ -38,11 +38,15 @@ namespace DevOps.Util.DotNet.Triage
         private void OnModelCreatingQuery(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => new { x.StartTime, x.DefinitionNumber })
+                .HasIndex(x => new { x.DefinitionNumber, x.StartTime })
                 .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
 
             modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => new { x.StartTime, x.DefinitionName })
+                .HasIndex(x => new { x.DefinitionName, x.StartTime })
+                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+
+            modelBuilder.Entity<ModelBuild>()
+                .HasIndex(x => x.StartTime)
                 .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
 
             modelBuilder.Entity<ModelBuild>()
@@ -54,11 +58,15 @@ namespace DevOps.Util.DotNet.Triage
                 .HasConversion<int>();
 
             modelBuilder.Entity<ModelBuildAttempt>()
-                .HasIndex(x => new { x.StartTime, x.DefinitionNumber })
+                .HasIndex(x => new { x.DefinitionNumber, x.StartTime })
                 .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
 
             modelBuilder.Entity<ModelBuildAttempt>()
-                .HasIndex(x => new { x.StartTime, x.DefinitionName })
+                .HasIndex(x => new { x.DefinitionName, x.StartTime })
+                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+
+            modelBuilder.Entity<ModelBuildAttempt>()
+                .HasIndex(x => x.StartTime)
                 .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
 
             modelBuilder.Entity<ModelBuildAttempt>()
@@ -70,11 +78,15 @@ namespace DevOps.Util.DotNet.Triage
                 .HasConversion<int>();
 
             modelBuilder.Entity<ModelTestResult>()
-                .HasIndex(x => new { x.StartTime, x.DefinitionNumber })
+                .HasIndex(x => new { x.DefinitionNumber, x.StartTime })
                 .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
 
             modelBuilder.Entity<ModelTestResult>()
-                .HasIndex(x => new { x.StartTime, x.DefinitionName })
+                .HasIndex(x => new { x.DefinitionName, x.StartTime })
+                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+
+            modelBuilder.Entity<ModelTestResult>()
+                .HasIndex(x => x.StartTime)
                 .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
 
             modelBuilder.Entity<ModelTestResult>()
@@ -86,11 +98,15 @@ namespace DevOps.Util.DotNet.Triage
                 .HasConversion<int>();
 
             modelBuilder.Entity<ModelTimelineIssue>()
-                .HasIndex(x => new { x.StartTime, x.DefinitionNumber })
+                .HasIndex(x => new { x.DefinitionNumber, x.StartTime })
                 .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
 
             modelBuilder.Entity<ModelTimelineIssue>()
-                .HasIndex(x => new { x.StartTime, x.DefinitionName })
+                .HasIndex(x => new { x.DefinitionName, x.StartTime })
+                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+
+            modelBuilder.Entity<ModelTimelineIssue>()
+                .HasIndex(x => x.StartTime)
                 .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
 
             modelBuilder.Entity<ModelTimelineIssue>()
