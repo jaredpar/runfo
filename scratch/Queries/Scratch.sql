@@ -17,8 +17,12 @@ SELECT m.Id, m.ModelTrackingIssueId, m.ModelBuildAttemptId, a.ModelBuildId, a.At
 FROM ModelTrackingIssueMatches m
 JOIN ModelBuildAttempts a ON a.Id = m.ModelBuildAttemptId
 
+SELECT * 
+FROM ModelGitHubISsues
+
 /* random
 */
+ DBCC SHRINKDATABASE (N'triage-scratch');
 
 SELECT 
     t.NAME AS TableName,

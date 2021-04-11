@@ -170,8 +170,8 @@ namespace Scratch
         internal async Task Scratch()
         {
             await PopulateDb();
-            //await PopulateDb(count: 100, definitionId: 15, includeTests: true, includeTriage: false);
             // await Migrate();
+            //await PopulateDb(count: 100, definitionId: 15, includeTests: true, includeTriage: false);
 
             /*
             var limitDays = 90;

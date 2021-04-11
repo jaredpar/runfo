@@ -85,7 +85,8 @@ namespace Scratch
             //await MigrateDefinitionsAsync(migrateDirectory);
             //await MigrateTrackingIssuesAsync(migrateDirectory);
             //await MigrateTrackingIssueMatchesAsync(migrateDirectory);
-            await MigrateTrackingIssueResultsAsync(migrateDirectory);
+            // await MigrateTrackingIssueResultsAsync(migrateDirectory);
+            await MigrateGitHubIssues(migrateDirectory);
         }
 
         private async Task PopulateCacheAsync()
@@ -233,6 +234,59 @@ namespace Scratch
                 TriageContext.ModelTrackingIssueResults.Add(model);
                 await TriageContext.SaveChangesAsync();
                 await SaveNewId(ModelMigrationKind.TrackingIssueResult, oldId, model.Id);
+            }
+        }
+
+        private async Task MigrateGitHubIssues(string migrateDirectory)
+        {
+            foreach (var line in File.ReadAllLines(Path.Combine(migrateDirectory, "github-issues.csv")))
+            {
+                var items = line.Split(',');
+                var oldId = int.Parse(items[0]);
+                if (await TryGetNewId(ModelMigrationKind.GitHubIssue, oldId) is (true, _))
+                {
+                    continue;
+                }
+
+                if (await EnsureModelBuild(GetBuildKey(items[4])) is not { } buildId)
+                {
+                    continue;
+                }
+
+                var model = new ModelGitHubIssue()
+                {
+                    Organization = items[1],
+                    Repository = items[2],
+                    Number = ParseNumber(items[3]) ?? throw new Exception("Missing GitHub Issue Number"),
+                    ModelBuildId = buildId,
+                };
+
+                Console.WriteLine($"Migrating GitHub Issue {oldId}");
+                TriageContext.ModelGitHubIssues.Add(model);
+                await TriageContext.SaveChangesAsync();
+                await SaveNewId(ModelMigrationKind.GitHubIssue, oldId, model.Id);
+            }
+        }
+
+        private async Task<int?> EnsureModelBuild(BuildKey buildKey)
+        {
+            var modelBuild = await TriageContextUtil.FindModelBuildAsync(buildKey);
+            if (modelBuild is object)
+            {
+                return modelBuild.Id;
+            }
+
+            Console.WriteLine($"Getting build {buildKey}");
+            try
+            {
+                var build = await DevOpsServer.GetBuildAsync(buildKey.Project, buildKey.Number);
+                modelBuild = await TriageContextUtil.EnsureBuildAsync(build.GetBuildResultInfo());
+                return modelBuild.Id;
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Skipping {buildKey}: {ex.Message}");
+                return null;
             }
         }
 

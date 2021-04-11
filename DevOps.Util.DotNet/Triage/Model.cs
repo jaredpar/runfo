@@ -587,6 +587,7 @@ namespace DevOps.Util.DotNet.Triage
         TrackingIssueResult,
         BuildAttempt,
         TrackingIssueMatch,
+        GitHubIssue,
     }
 
     // Used to map Id from the old table to the new one

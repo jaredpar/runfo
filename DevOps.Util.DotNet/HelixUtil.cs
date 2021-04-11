@@ -170,6 +170,11 @@ namespace DevOps.Util.DotNet
                 }
 
                 dynamic d = JObject.Parse(json);
+                if (d.Logs is null)
+                {
+                    return null;
+                }
+
                 foreach (dynamic? log in d.Logs)
                 {
                     if (log is object && log.Module == "run_client.py")
