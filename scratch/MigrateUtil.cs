@@ -81,10 +81,19 @@ namespace Scratch
 
         public async Task Migrate(string migrateDirectory)
         {
-            await MigrateDefinitionsAsync(migrateDirectory);
-            await MigrateTrackingIssuesAsync(migrateDirectory);
-            await MigrateTrackingIssueMatchesAsync(migrateDirectory);
+            await PopulateCacheAsync();
+            //await MigrateDefinitionsAsync(migrateDirectory);
+            //await MigrateTrackingIssuesAsync(migrateDirectory);
+            //await MigrateTrackingIssueMatchesAsync(migrateDirectory);
             await MigrateTrackingIssueResultsAsync(migrateDirectory);
+        }
+
+        private async Task PopulateCacheAsync()
+        {
+            foreach (var model in await TriageContext.ModelMigrations.ToListAsync())
+            {
+                MigrationCache[(model.MigrationKind, model.OldId)] = model.NewId;
+            }
         }
 
         private async Task MigrateDefinitionsAsync(string migrateDirectory)
@@ -165,17 +174,26 @@ namespace Scratch
                     continue;
                 }
 
+                // Not all tracking issues migrate. The inactive ones for instance are not migrated.
+                if (await TryGetNewId(ModelMigrationKind.TrackingIssue, int.Parse(items[1])) is not (true, { } trackingIssueId))
+                {
+                    continue;
+                }
+
+                var buildKey = GetBuildKey(items[3]);
                 if (await EnsureModelBuildAttemptIdAsync(
                     int.Parse(items[2]),
-                    GetBuildKey(items[3]),
+                    buildKey,
                     int.Parse(items[4])) is not { } attemptId)
                 {
+                    Console.WriteLine($"Skipping missing build {buildKey}");
                     continue;
                 }
 
                 var model = new ModelTrackingIssueMatch()
                 {
                     ModelBuildAttemptId = attemptId,
+                    ModelTrackingIssueId = trackingIssueId,
                     HelixLogUri = ParseString(items[5]),
                     JobName = ParseString(items[6]),
                     HelixLogKind = Enum.Parse<HelixLogKind>(items[7]),
@@ -244,10 +262,11 @@ namespace Scratch
             {
                 var build = await DevOpsServer.GetBuildAsync(buildKey.Project, buildKey.Number);
 
-                var buildAttemptKey = await ModelDataUtil.EnsureModelInfoAsync(build, includeTests: false);
+                var buildAttemptKey = await ModelDataUtil.EnsureModelInfoAsync(build, includeTests: true);
                 if (buildAttemptKey.Attempt < attempt)
                 {
-                    throw new InvalidOperationException("Missing attempt");
+                    Console.WriteLine("Missing Attempt");
+                    return null;
                 }
 
                 return await TriageContextUtil.GetModelBuildAttemptAsync(buildAttemptKey);

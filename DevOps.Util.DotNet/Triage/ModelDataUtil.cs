@@ -33,7 +33,7 @@ namespace DevOps.Util.DotNet.Triage
             Logger = logger;
         }
 
-        public async Task<BuildAttemptKey> EnsureModelInfoAsync(Build build, bool includeTests = true)
+        public async Task<BuildAttemptKey> EnsureModelInfoAsync(Build build, bool includeTests = true, bool includeAllAttempts = false)
         {
             var buildInfo = build.GetBuildResultInfo();
             var modelBuild = await TriageContextUtil.EnsureBuildAsync(buildInfo).ConfigureAwait(false);
@@ -58,7 +58,11 @@ namespace DevOps.Util.DotNet.Triage
                     }
                     else
                     {
-                        return await TriageContextUtil.EnsureBuildAttemptAsync(buildInfo, timeline).ConfigureAwait(false);
+                        var modelBuildAttempt = await TriageContextUtil.EnsureBuildAttemptAsync(buildInfo, timeline).ConfigureAwait(false);
+                        if (includeAllAttempts && timeline.GetAttempt() > 1)
+                        {
+                            await EnsurePreviousAttempts(modelBuildAttempt).ConfigureAwait(false);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -67,6 +71,26 @@ namespace DevOps.Util.DotNet.Triage
                 }
 
                 return await TriageContextUtil.EnsureBuildAttemptWithoutTimelineAsync(modelBuild, build).ConfigureAwait(false);
+            }
+
+            async Task EnsurePreviousAttempts(ModelBuildAttempt modelBuildAttempt)
+            {
+                Debug.Assert(modelBuildAttempt.Attempt > 1);
+                try
+                {
+                    for (var i = 1; i < modelBuildAttempt.Attempt; i++)
+                    {
+                        var timeline = await Server.GetTimelineAttemptAsync(buildInfo.Project, buildInfo.Number, i);
+                        if (timeline is object)
+                        {
+                            await TriageContextUtil.EnsureBuildAttemptAsync(buildInfo, timeline).ConfigureAwait(false);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning($"Error getting populating previous attempts: {ex.Message}");
+                }
             }
 
             async Task EnsureTestRuns()

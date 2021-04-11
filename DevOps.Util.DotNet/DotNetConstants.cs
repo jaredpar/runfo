@@ -6,9 +6,9 @@ namespace DevOps.Util.DotNet
 {
     public static class DotNetConstants
     {
-        // public const string ConfigurationSqlConnectionString = "RUNFO_CONNECTION_STRING2";
+        public const string ConfigurationSqlConnectionString = "RUNFO_CONNECTION_STRING2";
 #if DEBUG
-        public const string ConfigurationSqlConnectionString = "RUNFO_CONNECTION_STRING2_TEST";
+        //public const string ConfigurationSqlConnectionString = "RUNFO_CONNECTION_STRING2_TEST";
 #endif
         public const string ConfigurationAppAzureToken = "RUNFO_AZURE_TOKEN";
         public const string ConfigurationGitHubAppId = "GitHubAppId";

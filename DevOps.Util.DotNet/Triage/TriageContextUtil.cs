@@ -83,6 +83,11 @@ namespace DevOps.Util.DotNet.Triage
 
         public async Task<ModelBuild> EnsureBuildAsync(BuildResultInfo buildInfo)
         {
+            if (buildInfo.StartTime is not { } startTime)
+            {
+                throw new InvalidOperationException("Cannot populate a build until it has started");
+            }
+
             var modelBuildNameKey = GetModelBuildNameKey(buildInfo.BuildKey);
             var modelBuild = Context.ModelBuilds
                 .Where(x => x.NameKey == modelBuildNameKey)
@@ -95,7 +100,7 @@ namespace DevOps.Util.DotNet.Triage
                 // best to model them in that way.
                 if (modelBuild.BuildResult.ToBuildResult() != buildInfo.BuildResult)
                 {
-                    modelBuild.StartTime = buildInfo.StartTime;
+                    modelBuild.StartTime = startTime;
                     modelBuild.FinishTime = buildInfo.FinishTime;
                     modelBuild.BuildResult = buildInfo.BuildResult.ToModelBuildResult();
                     await Context.SaveChangesAsync().ConfigureAwait(false);
@@ -116,7 +121,7 @@ namespace DevOps.Util.DotNet.Triage
                 GitHubRepository = buildInfo.GitHubBuildInfo?.Repository ?? "",
                 GitHubTargetBranch = buildInfo.GitHubBuildInfo?.TargetBranch,
                 PullRequestNumber = prKey?.Number,
-                StartTime = buildInfo.StartTime,
+                StartTime = startTime,
                 FinishTime = buildInfo.FinishTime,
                 QueueTime = buildInfo.QueueTime,
                 BuildNumber = buildInfo.Number,
@@ -135,8 +140,13 @@ namespace DevOps.Util.DotNet.Triage
             if (modelBuild.BuildResult.ToBuildResult() != build.Result)
             {
                 var buildInfo = build.GetBuildResultInfo();
+                if (buildInfo.StartTime is not { } startTime)
+                {
+                    throw new InvalidOperationException("Cannot populate a build until it has started");
+                }
+
                 modelBuild.BuildResult = build.Result.ToModelBuildResult();
-                modelBuild.StartTime = buildInfo.StartTime;
+                modelBuild.StartTime = startTime;
                 modelBuild.FinishTime = buildInfo.FinishTime;
                 await Context.SaveChangesAsync().ConfigureAwait(false);
             }
@@ -267,9 +277,11 @@ namespace DevOps.Util.DotNet.Triage
             {
                 Attempt = attempt,
                 BuildResult = build.Result.ToModelBuildResult(),
+                NameKey = modelBuild.NameKey,
                 StartTime = modelBuild.StartTime,
                 FinishTime = modelBuild.FinishTime,
                 ModelBuild = modelBuild,
+                ModelBuildDefinitionId = modelBuild.ModelBuildDefinitionId,
                 DefinitionNumber = modelBuild.DefinitionNumber,
                 DefinitionName = modelBuild.DefinitionName,
                 IsTimelineMissing = false,

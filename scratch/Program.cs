@@ -57,10 +57,10 @@ namespace Scratch
                 if (connectionString.Contains("Catalog=runfo-test"))
                 {
                     Console.WriteLine("Using SQL test");
-                }
-                else if (connectionString.Contains("Catalog=runfo"))
+                } 
+                else if (connectionString.Contains("Catalog=runfo-prod"))
                 {
-                    Console.WriteLine("Using SQL test");
+                    Console.WriteLine("Using SQL production");
                 }
                 else if (connectionString.Contains("triage-scratch-dev"))
                 {
@@ -71,7 +71,7 @@ namespace Scratch
                     Console.WriteLine("Using SQL production (old)");
                 }
 
-                builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds));
+                builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds).EnableRetryOnFailure());
             }
         }
     }
@@ -93,6 +93,7 @@ namespace Scratch
         public static string DefaultOrganization { get; set; } = "dnceng";
 
         public DevOpsServer DevOpsServer { get; set; }
+        public DbContextOptions<TriageContext> TriageContextOptions { get; set; }
         public TriageContext TriageContext { get; set; }
         public TriageContextUtil TriageContextUtil { get; set; }
         public IGitHubClientFactory GitHubClientFactory { get; set; }
@@ -122,9 +123,10 @@ namespace Scratch
                 : "Using sql production";
             //`builder.UseSqlServer(connectionString);
             builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(5).TotalSeconds));
-                //builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds));
+            //builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds));
 
             // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+            TriageContextOptions = builder.Options;
             TriageContext = new TriageContext(builder.Options);
             TriageContextUtil = new TriageContextUtil(TriageContext);
 
@@ -167,7 +169,8 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await PopulateDb(count: 100, definitionId: 15, includeTests: true, includeTriage: false);
+            await PopulateDb();
+            //await PopulateDb(count: 100, definitionId: 15, includeTests: true, includeTriage: false);
             // await Migrate();
 
             /*
@@ -276,6 +279,63 @@ namespace Scratch
             await RetriesWork();
 */
         }
+
+        internal async Task PopulateDb()
+        {
+            const int maxParallel = 4;
+            var logger = CreateLogger();
+            var startTime = DateTime.UtcNow;
+            var buildCount = 0;
+            var list = new List<Task>();
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync("public"))
+            {
+                if (build.FinishTime is null)
+                {
+                    continue;
+                }
+
+                if (await TriageContextUtil.FindModelBuildAsync(build.GetBuildKey()) is object)
+                {
+                    continue;
+                }
+
+                var uri = build.GetBuildResultInfo().BuildUri;
+                Console.WriteLine($"Getting data for {uri}");
+                list.Add(ProcessBuildAsync(build, TriageContextOptions, DotNetQueryUtil, logger));
+                if (list.Count >= maxParallel)
+                {
+                    await Task.WhenAny(list);
+                    buildCount += list.RemoveAll(x => x.IsCompleted);
+
+                    if (buildCount % 10 == 0)
+                    {
+                        var rate = buildCount / (DateTime.UtcNow - startTime).TotalMinutes;
+                        Console.WriteLine($"Builds populated: {buildCount}");
+                        Console.WriteLine($"Builds Per Minute: {rate:n}");
+                        Console.WriteLine($"Most recent build queue date: {build.GetBuildResultInfo().QueueTime.ToLocalTime()}");
+                    }
+                }
+            }
+
+            static async Task ProcessBuildAsync(Build build, DbContextOptions<TriageContext> options, DotNetQueryUtil queryUtil, ILogger logger)
+            {
+                try
+                {
+                    var triageContextUtil = new TriageContextUtil(new TriageContext(options));
+                    var modelDataUtil = new ModelDataUtil(queryUtil, triageContextUtil, logger);
+                    await modelDataUtil.EnsureModelInfoAsync(build, includeTests: true, includeAllAttempts: true);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error: {ex.Message}");
+                    if (ex.InnerException is { } ie)
+                    {
+                        Console.WriteLine($"Inner Error: {ie.Message}");
+                    }
+                }
+            }
+        }
+
 
         internal async Task Migrate()
         {

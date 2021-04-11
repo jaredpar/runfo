@@ -44,9 +44,8 @@ namespace DevOps.Util
         {
             var buildAndDefinitionInfo = GetBuildAndDefinitionInfo(build);
             var queueTime = build.GetQueueTime()?.UtcDateTime ?? throw new InvalidOperationException();
-            var startTime = build.GetStartTime()?.UtcDateTime ?? throw new InvalidOperationException();
+            var startTime = build.GetStartTime()?.UtcDateTime;
             var finishTime = build.GetFinishTime()?.UtcDateTime;
-            var gitHubBuildInfo = GetGitHubBuildInfo(build);
             return new BuildResultInfo(buildAndDefinitionInfo, queueTime, startTime, finishTime, build.Result);
         }
 

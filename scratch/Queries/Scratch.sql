@@ -17,6 +17,42 @@ SELECT m.Id, m.ModelTrackingIssueId, m.ModelBuildAttemptId, a.ModelBuildId, a.At
 FROM ModelTrackingIssueMatches m
 JOIN ModelBuildAttempts a ON a.Id = m.ModelBuildAttemptId
 
+/* random
+*/
+
+SELECT 
+    t.NAME AS TableName,
+    s.Name AS SchemaName,
+    p.rows AS RowCounts,
+    SUM(a.total_pages) * 8 AS TotalSpaceKB, 
+    CAST(ROUND(((SUM(a.total_pages) * 8) / 1024.00), 2) AS NUMERIC(36, 2)) AS TotalSpaceMB,
+    SUM(a.used_pages) * 8 AS UsedSpaceKB, 
+    CAST(ROUND(((SUM(a.used_pages) * 8) / 1024.00), 2) AS NUMERIC(36, 2)) AS UsedSpaceMB, 
+    (SUM(a.total_pages) - SUM(a.used_pages)) * 8 AS UnusedSpaceKB,
+    CAST(ROUND(((SUM(a.total_pages) - SUM(a.used_pages)) * 8) / 1024.00, 2) AS NUMERIC(36, 2)) AS UnusedSpaceMB
+FROM 
+    sys.tables t
+INNER JOIN      
+    sys.indexes i ON t.OBJECT_ID = i.object_id
+INNER JOIN 
+    sys.partitions p ON i.object_id = p.OBJECT_ID AND i.index_id = p.index_id
+INNER JOIN 
+    sys.allocation_units a ON p.partition_id = a.container_id
+LEFT OUTER JOIN 
+    sys.schemas s ON t.schema_id = s.schema_id
+INNER JOIN  sysobjects so on t.object_id = so.id
+INNER JOIN  syscolumns SC on (so.id = sc.id)
+INNER JOIN systypes st on (st.type = sc.type)
+WHERE 
+    t.NAME NOT LIKE 'dt%' 
+    AND t.is_ms_shipped = 0
+    AND i.OBJECT_ID > 255 
+    AND so.type = 'U'
+and st.name IN ('DATETIME', 'DATE', 'TIME')
+GROUP BY 
+    t.Name, s.Name, p.Rows
+ORDER BY 
+    p.rows DESC
 /* This is a TimelineIssuesDisplay query */
 /*
 SELECT [m].[Id], [m].[Attempt], [m].[IssueType], [m].[JobName], [m].[Message], [m].[ModelBuildAttemptId], [m].[ModelBuildId], [m].[RecordId], [m].[RecordName]

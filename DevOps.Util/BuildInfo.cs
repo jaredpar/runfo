@@ -111,7 +111,7 @@ namespace DevOps.Util
     {
         public BuildAndDefinitionInfo BuildAndDefinitionInfo { get; }
         public DateTime QueueTime { get; }
-        public DateTime StartTime { get; }
+        public DateTime? StartTime { get; }
         public DateTime? FinishTime { get; }
         public BuildResult BuildResult { get; }
 
@@ -129,7 +129,7 @@ namespace DevOps.Util
         public BuildResultInfo(
             BuildAndDefinitionInfo buildAndDefinitionInfo,
             DateTime queueTime,
-            DateTime startTime,
+            DateTime? startTime,
             DateTime? finishTime,
             BuildResult buildResult)
         {
