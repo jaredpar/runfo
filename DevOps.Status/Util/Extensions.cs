@@ -59,9 +59,9 @@ namespace DevOps.Status.Util
             }
 
             // Ensure there is some level of filtering occuring here.
-            if (buildsRequest.Result is null)
+            if (buildsRequest.BuildResult is null)
             {
-                buildsRequest.Result = new BuildResultRequestValue(BuildResult.Succeeded, EqualsKind.NotEquals);
+                buildsRequest.BuildResult = new BuildResultRequestValue(ModelBuildResult.Succeeded, EqualsKind.NotEquals);
             }
 
             if (buildsRequest.Queued is null && buildsRequest.Started is null && buildsRequest.Finished is null)

@@ -36,7 +36,7 @@ namespace DevOps.Util.DotNet.Triage
                 modelBuild.AzureOrganization,
                 modelBuild.AzureProject,
                 modelBuild.BuildNumber,
-                modelBuild.DefinitionId,
+                modelBuild.DefinitionNumber,
                 modelBuild.DefinitionName,
                 GetGitHubBuildInfo(modelBuild));
 
@@ -46,7 +46,7 @@ namespace DevOps.Util.DotNet.Triage
                 modelBuild.QueueTime,
                 modelBuild.StartTime,
                 modelBuild.FinishTime,
-                modelBuild.BuildResult ?? BuildResult.None);
+                modelBuild.BuildResult.ToBuildResult());
 
         public static GitHubBuildInfo GetGitHubBuildInfo(this ModelBuild modelBuild) =>
             new GitHubBuildInfo(
@@ -55,14 +55,11 @@ namespace DevOps.Util.DotNet.Triage
                 modelBuild.PullRequestNumber,
                 modelBuild.GitHubTargetBranch);
 
-        public static ModelBuildKind GetModelBuildKind(this ModelBuild modelBuild) =>
-            TriageContextUtil.GetModelBuildKind(modelBuild.IsMergedPullRequest, modelBuild.PullRequestNumber);
-
         public static DefinitionKey GetDefinitionKey(this ModelBuild modelBuild) =>
             new DefinitionKey(
                 modelBuild.AzureOrganization,
                 modelBuild.AzureProject,
-                modelBuild.DefinitionId);
+                modelBuild.DefinitionNumber);
 
         #endregion
 
@@ -81,7 +78,7 @@ namespace DevOps.Util.DotNet.Triage
             new DefinitionKey(
                 modelBuildDefinition.AzureOrganization,
                 modelBuildDefinition.AzureProject,
-                modelBuildDefinition.DefinitionId);
+                modelBuildDefinition.DefinitionNumber);
 
         public static DefinitionInfo GetDefinitionInfo(this ModelBuildDefinition modelBuildDefinition) =>
             new DefinitionInfo(GetDefinitionKey(modelBuildDefinition), modelBuildDefinition.DefinitionName);
@@ -214,18 +211,11 @@ namespace DevOps.Util.DotNet.Triage
 
         #region TrackingIssueUtil
 
-        public static async Task TriageBuildsAsync(this TrackingIssueUtil trackingIssueUtil, ModelTrackingIssue modelTrackingIssue, SearchBuildsRequest request, CancellationToken cancellationToken = default)
+        public static async Task TriageBuildsAsync(this TrackingIssueUtil trackingIssueUtil, ModelTrackingIssue modelTrackingIssue, string extraQuery, CancellationToken cancellationToken = default)
         {
-            IQueryable<ModelBuildAttempt> buildAttemptQuery = trackingIssueUtil.Context.ModelBuildAttempts;
-            if (modelTrackingIssue.ModelBuildDefinitionId is { } id)
-            {
-                buildAttemptQuery = buildAttemptQuery.Where(x => x.ModelBuild.ModelBuildDefinitionId == id);
-                request.Definition = null;
-            }
+            var query = trackingIssueUtil.TriageContextUtil.GetModelBuildAttemptsQuery(modelTrackingIssue, extraQuery);
 
-            buildAttemptQuery = request.Filter(buildAttemptQuery);
-
-            var attempts = await buildAttemptQuery
+            var attempts = await query
                 .Include(x => x.ModelBuild)
                 .ThenInclude(x => x.ModelBuildDefinition)
                 .ToListAsync();
@@ -279,7 +269,47 @@ namespace DevOps.Util.DotNet.Triage
 
         #region Misc
 
-        public static async Task<List<BuildResultInfo>> ToBuildResultInfoListAsync(this IQueryable<ModelBuild> query, BuildResult defaultBuildResult = BuildResult.None )
+        public static ModelBuildResult ToModelBuildResult(this BuildResult buildResult) =>
+            buildResult switch
+            {
+                BuildResult.None => ModelBuildResult.None,
+                BuildResult.Canceled => ModelBuildResult.Canceled,
+                BuildResult.Failed => ModelBuildResult.Failed,
+                BuildResult.PartiallySucceeded => ModelBuildResult.PartiallySucceeded,
+                BuildResult.Succeeded => ModelBuildResult.Succeeded,
+                _ => throw new InvalidOperationException(),
+            };
+
+        public static BuildResult ToBuildResult(this ModelBuildResult buildResult) =>
+            buildResult switch
+            {
+                ModelBuildResult.None => BuildResult.None,
+                ModelBuildResult.Canceled => BuildResult.Canceled,
+                ModelBuildResult.Failed => BuildResult.Failed,
+                ModelBuildResult.PartiallySucceeded => BuildResult.PartiallySucceeded,
+                ModelBuildResult.Succeeded => BuildResult.Succeeded,
+                _ => throw new InvalidOperationException(),
+            };
+
+        public static IssueType ToIssueType(this ModelIssueType issueType) =>
+            issueType switch
+            {
+                ModelIssueType.Unknown => IssueType.Unknown,
+                ModelIssueType.Warning => IssueType.Warning,
+                ModelIssueType.Error => IssueType.Error,
+                _ => throw new InvalidOperationException(),
+            };
+
+        public static ModelIssueType ToModelIssueType(this IssueType issueType) =>
+            issueType switch
+            {
+                IssueType.Unknown => ModelIssueType.Unknown,
+                IssueType.Warning => ModelIssueType.Warning,
+                IssueType.Error => ModelIssueType.Error,
+                _ => throw new InvalidOperationException(),
+            };
+
+        public static async Task<List<BuildResultInfo>> ToBuildResultInfoListAsync(this IQueryable<ModelBuild> query)
         {
             var results = await query
                 .Select(x => new
@@ -293,7 +323,7 @@ namespace DevOps.Util.DotNet.Triage
                     x.BuildNumber,
                     x.BuildResult,
                     x.DefinitionName,
-                    x.DefinitionId,
+                    x.DefinitionNumber,
                     x.QueueTime,
                     x.StartTime,
                     x.FinishTime,
@@ -309,13 +339,13 @@ namespace DevOps.Util.DotNet.Triage
                         result.AzureOrganization,
                         result.AzureProject,
                         result.BuildNumber,
-                        result.DefinitionId,
+                        result.DefinitionNumber,
                         result.DefinitionName,
                         new GitHubBuildInfo(result.GitHubOrganization, result.GitHubRepository, result.PullRequestNumber, result.GitHubTargetBranch)),
                     result.QueueTime,
                     result.StartTime,
                     result.FinishTime,
-                    result.BuildResult ?? defaultBuildResult);
+                    result.BuildResult.ToBuildResult());
                 list.Add(buildInfo);
             }
 

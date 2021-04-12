@@ -28,7 +28,7 @@ namespace DevOps.Util.UnitTests
         public async Task SimpleTimelineSearh()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
+            var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn|2020-12-01", def));
             var timeline = AddTimelineIssue("windows|dog", attempt);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
@@ -75,6 +75,7 @@ Build Result Summary
                 title: "Test Search",
                 testsRequest: new SearchTestsRequest()
                 {
+                    Started = new DateRequestValue(DateTime.Parse("2020-7-1"), RelationalKind.GreaterThan),
                     Name = "Util",
                 });
 
@@ -115,7 +116,7 @@ Build Result Summary
             void AddTestData(int buildNumber, string dateStr)
             {
                 var attempt = AddAttempt(1, AddBuild($"{buildNumber}|dotnet|roslyn|{dateStr}", def));
-                var testRun = AddTestRun("windows", attempt.ModelBuild);
+                var testRun = AddTestRun("windows", attempt);
                 AddTestResult("Util.Test1", testRun);
                 AddTestResult("Util.Test2", testRun);
             }
@@ -164,6 +165,7 @@ Build Result Summary
                 title: "Helix Log",
                 helixLogsRequest: new SearchHelixLogsRequest()
                 {
+                    Started = null,
                     HelixLogKinds = { kind },
                     Text = "data",
                 });
@@ -184,7 +186,7 @@ Build Result Summary
             void AddTestData(int buildNumber, string dateStr)
             {
                 var attempt = AddAttempt(1, AddBuild($"{buildNumber}|dotnet|roslyn|{dateStr}", def));
-                var testRun = AddTestRun("windows", attempt.ModelBuild);
+                var testRun = AddTestRun("windows", attempt);
                 var testResult = AddTestResult("Util.Test1", testRun);
                 AddHelixLog(testResult, kind, "The log data");
             }

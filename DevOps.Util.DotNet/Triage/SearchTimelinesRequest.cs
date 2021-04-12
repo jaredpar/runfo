@@ -1,6 +1,5 @@
 ﻿using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
-using DevOps.Util.DotNet.Triage.Migrations;
 using Microsoft.EntityFrameworkCore;
 using Octokit;
 using System;
@@ -15,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public class SearchTimelinesRequest : ISearchQueryRequest<ModelTimelineIssue>
+    public class SearchTimelinesRequest : SearchRequestBase, ISearchQueryRequest<ModelTimelineIssue>
     {
         public const int DefaultLimit = 50;
 
@@ -23,10 +22,22 @@ namespace DevOps.Util.DotNet.Triage
         public string? JobName { get; set; }
         public string? DisplayName { get; set; }
         public string? TaskName { get; set; }
-        public IssueType? Type { get; set; }
+        public ModelIssueType? Type { get; set; }
+
+        public SearchTimelinesRequest()
+        {
+
+        }
+
+        public SearchTimelinesRequest(string query)
+        {
+            ParseQueryString(query);
+        }
 
         public IQueryable<ModelTimelineIssue> Filter(IQueryable<ModelTimelineIssue> query)
         {
+            query = FilterCore(query);
+
             if (Type is { } type)
             {
                 query = query.Where(x => x.IssueType == type);
@@ -75,6 +86,8 @@ namespace DevOps.Util.DotNet.Triage
         public string GetQueryString()
         {
             var builder = new StringBuilder();
+            GetQueryStringCore(builder);
+
             if (!string.IsNullOrEmpty(Text))
             {
                 Append($"text:\"{Text}\"");
@@ -140,13 +153,17 @@ namespace DevOps.Util.DotNet.Triage
                     case "type":
                         Type = tuple.Value.ToLower() switch
                         {
-                            "error" => IssueType.Error,
-                            "warning" => IssueType.Warning,
+                            "error" => ModelIssueType.Error,
+                            "warning" => ModelIssueType.Warning,
                             _ => throw new Exception($"Invalid type {tuple.Value}")
                         };
                         break;
                     default:
-                        throw new Exception($"Invalid option {tuple.Name}");
+                        if (!ParseQueryStringTuple(tuple.Name, tuple.Value))
+                        {
+                            throw new Exception($"Invalid option {tuple.Name}");
+                        }
+                        break;
                 }
             }
         }

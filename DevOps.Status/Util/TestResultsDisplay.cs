@@ -64,7 +64,7 @@ namespace DevOps.Status.Util
                 {
                     BuildNumber = modelTestResult.ModelBuild.BuildNumber,
                     BuildUri = DevOpsUtil.GetBuildUri(modelTestResult.ModelBuild.AzureOrganization, modelTestResult.ModelBuild.AzureProject, modelTestResult.ModelBuild.BuildNumber),
-                    Kind = modelTestResult.ModelBuild.GetModelBuildKind().GetDisplayString(),
+                    Kind = modelTestResult.BuildKind.GetDisplayString(),
                     TestRun = modelTestResult.TestRunName,
                     TestFullName = modelTestResult.TestFullName,
                     TestFullNameRouteData = routeData,

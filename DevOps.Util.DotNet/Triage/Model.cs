@@ -1,16 +1,14 @@
-#nullable disable
-
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using DevOps.Util.DotNet;
 using Microsoft.EntityFrameworkCore;
-using Org.BouncyCastle.Math.EC.Rfc7748;
+
+#pragma warning disable 8618
 
 namespace DevOps.Util.DotNet.Triage
 {
-    public class TriageContext : DbContext
+    public partial class TriageContext : DbContext
     {
         public DbSet<ModelBuild> ModelBuilds { get; set; }
 
@@ -34,6 +32,8 @@ namespace DevOps.Util.DotNet.Triage
 
         public DbSet<ModelGitHubIssue> ModelGitHubIssues { get; set; }
 
+        public DbSet<ModelMigration> ModelMigrations { get; set; }
+
         public TriageContext(DbContextOptions<TriageContext> options)
             : base(options)
         {
@@ -43,51 +43,15 @@ namespace DevOps.Util.DotNet.Triage
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ModelBuild>()
-                .Property(x => x.IsMergedPullRequest)
-                .HasDefaultValue(false);
-
-            modelBuilder.Entity<ModelBuild>()
-                .Property(x => x.BuildResult)
-                .HasConversion<string>();
-
-            modelBuilder.Entity<ModelBuild>()
-                .Property(x => x.DefinitionName)
-                .HasDefaultValue("");
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => x.StartTime);
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => x.DefinitionId);
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => x.DefinitionName);
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => x.BuildResult);
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => new { x.StartTime, x.DefinitionId })
-                .IncludeProperties(x => new { x.BuildNumber, x.BuildResult, x.PullRequestNumber, x.GitHubRepository });
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => new { x.DefinitionId, x.StartTime })
-                .IncludeProperties(x => new { x.BuildNumber, x.BuildResult, x.PullRequestNumber, x.GitHubRepository });
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => new { x.StartTime, x.DefinitionName })
-                .IncludeProperties(x => new { x.BuildNumber, x.BuildResult, x.PullRequestNumber, x.GitHubRepository });
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => new { x.DefinitionName, x.StartTime })
-                .IncludeProperties(x => new { x.BuildNumber, x.BuildResult, x.PullRequestNumber, x.GitHubRepository });
-
-            modelBuilder.Entity<ModelBuild>()
-                .HasIndex(x => new { x.DefinitionId, x.PullRequestNumber, x.StartTime })
-                .IncludeProperties(x => new { x.BuildNumber, x.BuildResult, x.GitHubRepository });
+                .HasIndex(x => x.NameKey)
+                .IsUnique();
 
             modelBuilder.Entity<ModelBuildAttempt>()
-                .HasIndex(x => new { x.Attempt, x.ModelBuildId })
+                .HasIndex(x => new { x.ModelBuildId, x.Attempt })
+                .IsUnique();
+
+            modelBuilder.Entity<ModelBuildAttempt>()
+                .HasIndex(x => new { x.NameKey, x.Attempt })
                 .IsUnique();
 
             modelBuilder.Entity<ModelBuildAttempt>()
@@ -95,34 +59,40 @@ namespace DevOps.Util.DotNet.Triage
                 .WithMany(x => x.ModelBuildAttempts)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<ModelBuildAttempt>()
+                .HasOne(x => x.ModelBuildDefinition)
+                .WithMany()
+                .OnDelete(DeleteBehavior.NoAction);
+
             modelBuilder.Entity<ModelBuildDefinition>()
-                .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionId })
+                .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionNumber })
                 .IsUnique();
 
-            modelBuilder.Entity<ModelTestRun>()
-                .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.TestRunId })
+            modelBuilder.Entity<ModelBuildDefinition>()
+                .HasIndex(x => new { x.AzureOrganization, x.AzureProject, x.DefinitionNumber })
                 .IsUnique();
-
-            modelBuilder.Entity<ModelTestRun>()
-                .HasIndex(x => x.ModelBuildId)
-                .IncludeProperties(x => new { x.AzureOrganization, x.AzureProject, x.TestRunId, x.Name });
-
-            modelBuilder.Entity<ModelTestRun>()
-                .Property(x => x.Attempt)
-                .HasDefaultValue(1);
 
             modelBuilder.Entity<ModelTestRun>()
                 .HasOne(x => x.ModelBuild)
                 .WithMany()
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<ModelTestResult>()
-                .HasIndex(x => x.ModelBuildId)
-                .IncludeProperties(x => new { x.TestFullName, x.JobName, x.IsHelixTestResult });
+            modelBuilder.Entity<ModelTestRun>()
+                .HasOne(x => x.ModelBuildAttempt)
+                .WithMany()
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<ModelTestRun>()
+                .HasIndex(x => new { x.ModelBuildId, x.TestRunId })
+                .IsUnique();
 
             modelBuilder.Entity<ModelTestResult>()
-                .Property(x => x.JobName)
-                .HasDefaultValue("");
+                .HasIndex(x => x.ModelBuildId)
+                .IncludeProperties(x => new { x.TestFullName, x.TestRunName, x.IsHelixTestResult });
+
+            modelBuilder.Entity<ModelTestResult>()
+                .HasIndex(x => x.ModelTestRunId)
+                .IncludeProperties(x => new { x.TestFullName, x.TestRunName, x.IsHelixTestResult });
 
             modelBuilder.Entity<ModelTestResult>()
                 .HasOne(x => x.ModelBuild)
@@ -130,14 +100,19 @@ namespace DevOps.Util.DotNet.Triage
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<ModelTestResult>()
+                .HasOne(x => x.ModelBuildAttempt)
+                .WithMany()
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<ModelTestResult>()
                 .HasOne(x => x.ModelTestRun)
                 .WithMany()
                 .OnDelete(DeleteBehavior.NoAction);
 
-            modelBuilder.Entity<ModelTimelineIssue>()
-                .Property(x => x.IssueType)
-                .HasConversion<string>()
-                .HasDefaultValue(IssueType.Warning);
+            modelBuilder.Entity<ModelTestResult>()
+                .HasOne(x => x.ModelBuildDefinition)
+                .WithMany()
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<ModelTimelineIssue>()
                 .HasIndex(x => x.ModelBuildId)
@@ -147,9 +122,23 @@ namespace DevOps.Util.DotNet.Triage
                 .HasIndex(x => new { x.ModelBuildId, x.Attempt });
 
             modelBuilder.Entity<ModelTimelineIssue>()
+                .Property(x => x.IssueType)
+                .HasConversion<int>();
+
+            modelBuilder.Entity<ModelTimelineIssue>()
                 .HasOne(x => x.ModelBuild)
                 .WithMany(x => x.ModelTimelineIssues)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ModelTimelineIssue>()
+                .HasOne(x => x.ModelBuildAttempt)
+                .WithMany()
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<ModelTimelineIssue>()
+                .HasOne(x => x.ModelBuildDefinition)
+                .WithMany()
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<ModelTrackingIssue>()
                 .Property(x => x.TrackingKind)
@@ -184,6 +173,9 @@ namespace DevOps.Util.DotNet.Triage
                 .HasIndex(x => new { x.Number, x.Organization, x.Repository });
 
             modelBuilder.Entity<ModelGitHubIssue>()
+                .HasIndex(x => x.ModelBuildId);
+
+            modelBuilder.Entity<ModelGitHubIssue>()
                 .HasOne(x => x.ModelBuild)
                 .WithMany(x => x.ModelGitHubIssues)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -192,15 +184,39 @@ namespace DevOps.Util.DotNet.Triage
                 .HasOne(x => x.ModelBuild)
                 .WithMany()
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ModelMigration>()
+                .HasIndex(x => new { x.MigrationKind, x.OldId })
+                .IncludeProperties(x => x.NewId)
+                .IsUnique();
+
+            modelBuilder.Entity<ModelMigration>()
+                .Property(x => x.MigrationKind)
+                .HasConversion<int>();
+
+            OnModelCreatingQuery(modelBuilder);
         }
+    }
+
+    /// <summary>
+    /// The model representation of <see cref="IssueType"/>. Using a separate type as the 
+    /// DB is using numeric storage and the <see cref="IssueType"/> type is part of a JSON
+    /// API that is string versioned.
+    /// </summary>
+    public enum ModelIssueType
+    {
+        Unknown,
+        Error,
+        Warning
     }
 
     public static class ModelConstants
     {
-        public const string ModelBuildIdTypeName = "nvarchar(100)";
+        public const string ModelBuildNameKeyTypeName = "nvarchar(100)";
         public const string BuildDefinitionNameTypeName = "nvarchar(100)";
         public const string GitHubOrganizationTypeName = "nvarchar(100)";
         public const string GitHubRepositoryTypeName = "nvarchar(100)";
+        public const string GitHubBranchName = "nvarchar(100)";
         public const string AzureOrganizationTypeName = "nvarchar(100)";
         public const string AzureProjectTypeName = "nvarchar(100)";
         public const string JobNameTypeName = "nvarchar(200)";
@@ -211,88 +227,61 @@ namespace DevOps.Util.DotNet.Triage
         public int Id { get; set; }
 
         [Column(TypeName=ModelConstants.AzureOrganizationTypeName)]
+        [Required]
         public string AzureOrganization { get; set; }
 
         [Column(TypeName=ModelConstants.AzureProjectTypeName)]
+        [Required]
         public string AzureProject { get; set; }
 
         [Column(TypeName=ModelConstants.BuildDefinitionNameTypeName)]
+        [Required]
         public string DefinitionName { get; set; }
 
-        public int DefinitionId { get; set; }
+        public int DefinitionNumber { get; set; }
     }
 
-    public class ModelBuild
+    public partial class ModelBuild
     {
-        [Column(TypeName=ModelConstants.ModelBuildIdTypeName)]
-        public string Id { get; set; }
+        public int Id { get; set; }
+
+        /// <summary>
+        /// This is is a unique key that is generated by combining the organization name, project name
+        /// and build number into a single string. 
+        /// </summary>
+        [Column(TypeName=ModelConstants.ModelBuildNameKeyTypeName)]
+        [Required]
+        public string NameKey { get; set; }
 
         public int BuildNumber { get; set; }
 
         [Column(TypeName=ModelConstants.AzureOrganizationTypeName)]
+        [Required]
         public string AzureOrganization { get; set; }
 
         [Column(TypeName=ModelConstants.AzureOrganizationTypeName)]
+        [Required]
         public string AzureProject { get; set; }
 
         [Column(TypeName=ModelConstants.GitHubOrganizationTypeName)]
+        [Required]
         public string GitHubOrganization { get; set; }
 
         [Column(TypeName=ModelConstants.GitHubRepositoryTypeName)]
+        [Required]
         public string GitHubRepository { get; set; }
 
         public int? PullRequestNumber { get; set; }
 
         /// <summary>
-        /// This represents the target branch of the Build. For most builds this is the branch that was being built, 
-        /// for pull requests this is the branch the code will be merged into. 
-        /// 
-        /// It is possible for this to be null. There are some types of builds for which there is not a logical target
-        /// branch
-        /// </summary>
-        [Column(TypeName="nvarchar(100)")]
-        public string GitHubTargetBranch { get; set; }
-
-        public bool IsMergedPullRequest { get; set; }
-
-        /// <summary>
         /// The queue time of the build stored in UTC
         /// </summary>
-        [Column(TypeName="smalldatetime")]
-        public DateTime? QueueTime { get; set; }
-
-        /// <summary>
-        /// The result of the most recent build attempt
-        /// </summary>
-        public BuildResult? BuildResult { get; set; }
-
-        /// <summary>
-        /// The start time of the build stored in UTC
-        /// </summary>
-        [Column(TypeName="smalldatetime")]
-        public DateTime? StartTime { get; set; }
+        public DateTime QueueTime { get; set; }
 
         /// <summary>
         /// The finish time of the build stored in UTC
         /// </summary>
-        [Column(TypeName="smalldatetime")]
         public DateTime? FinishTime { get; set; }
-
-        /// <summary>
-        /// De-normalized <see cref="ModelBuildDefinition.DefinitionName"/>
-        /// </summary>
-        [Column(TypeName=ModelConstants.BuildDefinitionNameTypeName)]
-        [Required]
-        public string DefinitionName { get; set; }
-
-        /// <summary>
-        /// De-normalized <see cref="ModelBuildDefinition.DefinitionId"/>
-        /// </summary>
-        public int DefinitionId { get; set; }
-
-        public int ModelBuildDefinitionId { get; set; }
-
-        public ModelBuildDefinition ModelBuildDefinition { get; set; }
 
         public List<ModelTestResult> ModelTestResults { get; set; }
 
@@ -311,13 +300,12 @@ namespace DevOps.Util.DotNet.Triage
 
         public int JobFailedCount { get; set; }
 
-        [Column(TypeName=ModelConstants.ModelBuildIdTypeName)]
-        public string ModelBuildId { get; set; }
+        public int ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
     }
 
-    public class ModelBuildAttempt
+    public partial class ModelBuildAttempt
     {
         public int Id { get; set; }
 
@@ -325,16 +313,13 @@ namespace DevOps.Util.DotNet.Triage
 
         public bool IsTimelineMissing { get; set; }
 
-        [Column(TypeName="smalldatetime")]
-        public DateTime? StartTime { get; set; }
-
-        [Column(TypeName="smalldatetime")]
         public DateTime? FinishTime { get; set; }
 
-        public BuildResult BuildResult { get; set; }
+        [Column(TypeName=ModelConstants.ModelBuildNameKeyTypeName)]
+        [Required]
+        public string NameKey { get; set; }
 
-        [Column(TypeName=ModelConstants.ModelBuildIdTypeName)]
-        public string ModelBuildId { get; set; }
+        public int ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
 
@@ -343,76 +328,80 @@ namespace DevOps.Util.DotNet.Triage
         public List<ModelTrackingIssueResult> ModelTrackingIssueResults { get; set; }
     }
 
-    public class ModelTimelineIssue
+    public partial class ModelTimelineIssue
     {
         public int Id { get; set; }
 
         public int Attempt { get; set; }
 
-        [Column(TypeName = "nvarchar(200)")]
+        [Column(TypeName = ModelConstants.JobNameTypeName)]
+        [Required]
         public string JobName { get; set; }
 
         [Column(TypeName = "nvarchar(200)")]
+        [Required]
         public string RecordName { get; set; }
 
         [Column(TypeName = "nvarchar(100)")]
+        [Required]
         public string TaskName { get; set; }
 
         [Column(TypeName = "nvarchar(100)")]
-        public string RecordId { get; set; }
+        public string? RecordId { get; set; }
 
+        [Required]
         public string Message { get; set; }
 
         [Column(TypeName = "nvarchar(12)")]
-        public IssueType IssueType { get; set; }
+        public ModelIssueType IssueType { get; set; }
 
-        [Column(TypeName=ModelConstants.ModelBuildIdTypeName)]
-        public string ModelBuildId { get; set; }
+        public int ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
+
+        public int ModelBuildAttemptId { get; set; }
+
+        public ModelBuildAttempt ModelBuildAttempt { get; set; }
     }
 
     public class ModelTestRun
     {
         public int Id { get; set; }
 
-        [Column(TypeName=ModelConstants.AzureOrganizationTypeName)]
-        public string AzureOrganization { get; set; }
-
-        [Column(TypeName=ModelConstants.AzureOrganizationTypeName)]
-        public string AzureProject { get; set; }
-
         public int TestRunId { get; set; }
 
         public int Attempt { get; set; }
 
+        [Column(TypeName = "nvarchar(500)")]
+        [Required]
         public string Name { get; set; }
 
-        [Column(TypeName=ModelConstants.ModelBuildIdTypeName)]
-        public string ModelBuildId { get; set; }
+        public int ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
+
+        public int ModelBuildAttemptId { get; set; }
+
+        public ModelBuildAttempt ModelBuildAttempt { get; set; }
     }
 
-    public class ModelTestResult
+    public partial class ModelTestResult
     {
         public int Id { get; set; }
 
+        [Required]
         public string TestFullName { get; set; }
 
-        [NotMapped]
-        public string TestRunName
-        {
-            get => JobName;
-            set => JobName = value;
-        }
+        public int Attempt { get; set; }
 
         /// <summary>
-        /// The ModelTestRun.Name
+        /// <see cref="ModelTestRun.Name"/>
         /// </summary>
-        [Column(TypeName=ModelConstants.JobNameTypeName)]
-        public string JobName { get; set; }
+        [Required]
+        public string TestRunName { get; set; }
 
+        [Column(TypeName = "nvarchar(100)")]
+        [Required]
         public string Outcome { get; set; }
 
         /// <summary>
@@ -431,24 +420,28 @@ namespace DevOps.Util.DotNet.Triage
 
         public bool IsHelixTestResult { get; set; }
 
-        public string HelixConsoleUri { get; set; }
+        public string? HelixConsoleUri { get; set; }
 
-        public string HelixRunClientUri { get; set; }
+        public string? HelixRunClientUri { get; set; }
 
-        public string HelixCoreDumpUri { get; set; }
+        public string? HelixCoreDumpUri { get; set; }
 
-        public string HelixTestResultsUri { get; set; }
+        public string? HelixTestResultsUri { get; set; }
 
+        [Required]
         public string ErrorMessage { get; set; }
 
         public int ModelTestRunId { get; set; }
 
         public ModelTestRun ModelTestRun { get; set; }
 
-        [Column(TypeName=ModelConstants.ModelBuildIdTypeName)]
-        public string ModelBuildId { get; set; }
+        public int ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
+
+        public int ModelBuildAttemptId { get; set; }
+
+        public ModelBuildAttempt ModelBuildAttempt { get; set; }
     }
 
     public enum TrackingKind
@@ -460,12 +453,6 @@ namespace DevOps.Util.DotNet.Triage
         Timeline,
 
         HelixLogs,
-
-        [Obsolete("Use HelixLogs")]
-        HelixConsole,
-
-        [Obsolete("Use HelixLogs")]
-        HelixRunClient,
     }
 
     /// <summary>
@@ -481,24 +468,11 @@ namespace DevOps.Util.DotNet.Triage
         [Column(TypeName = "nvarchar(30)")]
         public TrackingKind TrackingKind { get; set; }
 
-        /// <summary>
-        /// This is a terrible property name, it's not a regex. Need to rename this to 
-        /// <see cref="SearchQuery"/>
-        /// </summary>
         [Required]
-        [Obsolete("Use SearchQuery instead")]
-        public string SearchRegexText { get; set; }
-
-#pragma warning disable 618
-        [NotMapped]
-        public string SearchQuery
-        {
-            get => SearchRegexText;
-            set => SearchRegexText = value; 
-        }
-#pragma warning restore 618
+        public string SearchQuery { get; set; }
 
         [Column(TypeName = "nvarchar(100)")]
+        [Required]
         public string IssueTitle { get; set; }
 
         public bool IsActive { get; set; }
@@ -507,12 +481,14 @@ namespace DevOps.Util.DotNet.Triage
         /// GitHub organization the tracking issue exists in 
         /// </summary>
         [Column(TypeName=ModelConstants.GitHubOrganizationTypeName)]
+        [Required]
         public string GitHubOrganization { get; set; }
 
         /// <summary>
         /// GitHub repository the tracking issue exists in
         /// </summary>
-        [Column(TypeName=ModelConstants.GitHubOrganizationTypeName)]
+        [Column(TypeName=ModelConstants.GitHubRepositoryTypeName)]
+        [Required]
         public string GitHubRepository { get; set; }
 
         /// <summary>
@@ -525,7 +501,7 @@ namespace DevOps.Util.DotNet.Triage
         /// <summary>
         /// When defined restrict the test failure tracking to the following build definitions
         /// </summary>
-        public ModelBuildDefinition ModelBuildDefinition { get; set; }
+        public ModelBuildDefinition? ModelBuildDefinition { get; set; }
 
         public List<ModelTrackingIssueMatch> ModelTrackingIssueMatches { get; set; }
     }
@@ -538,6 +514,8 @@ namespace DevOps.Util.DotNet.Triage
     {
         public int Id { get; set; }
 
+        [Column(TypeName = ModelConstants.JobNameTypeName)]
+        [Required]
         public string JobName { get; set; }
 
         public int ModelTrackingIssueId { get; set; }
@@ -550,15 +528,15 @@ namespace DevOps.Util.DotNet.Triage
 
         public int? ModelTestResultId { get; set; }
 
-        public ModelTestResult ModelTestResult { get; set; }
+        public ModelTestResult? ModelTestResult { get; set; }
 
         public int? ModelTimelineIssueId { get; set; }
 
-        public ModelTimelineIssue ModelTimelineIssue { get; set; }
+        public ModelTimelineIssue? ModelTimelineIssue { get; set; }
 
         public HelixLogKind HelixLogKind { get; set; }
 
-        public string HelixLogUri { get; set; }
+        public string? HelixLogUri { get; set; }
     }
 
     /// <summary>
@@ -597,9 +575,30 @@ namespace DevOps.Util.DotNet.Triage
 
         public int Number { get; set; }
 
-        [Column(TypeName=ModelConstants.ModelBuildIdTypeName)]
-        public string ModelBuildId { get; set; }
+        public int ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
+    }
+
+    public enum ModelMigrationKind
+    {
+        Definition,
+        TrackingIssue,
+        TrackingIssueResult,
+        BuildAttempt,
+        TrackingIssueMatch,
+        GitHubIssue,
+    }
+
+    // Used to map Id from the old table to the new one
+    public sealed class ModelMigration
+    {
+        public int Id { get; set; }
+
+        public ModelMigrationKind MigrationKind { get; set; }
+
+        public int OldId { get; set; }
+
+        public int? NewId { get; set; }
     }
 }

@@ -14,7 +14,7 @@ namespace DevOps.Util.DotNet.Triage
         {
             if (!string.IsNullOrEmpty(Definition))
             {
-                query = query.Where(x => x.ModelBuildDefinition.DefinitionName == Definition);
+                query = query.Where(x => x.ModelBuildDefinition != null && x.ModelBuildDefinition.DefinitionName == Definition);
             }
 
             return query;

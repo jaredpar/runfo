@@ -195,7 +195,7 @@ namespace DevOps.Status.Pages.Tracking
 
             async Task<IActionResult> UpdateAsync()
             {
-                modelTrackingIssue.IssueTitle = IssueTitle;
+                modelTrackingIssue.IssueTitle = IssueTitle ?? "";
                 await Context.SaveChangesAsync();
                 return await OnGetCoreAsync();
             }

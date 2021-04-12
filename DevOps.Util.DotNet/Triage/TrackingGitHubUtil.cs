@@ -280,12 +280,6 @@ namespace DevOps.Util.DotNet.Triage
                 TrackingKind.Test => GetReportForTestAsync(modelTrackingIssue, limit, time),
                 TrackingKind.Timeline => GetReportForTimelineAsync(modelTrackingIssue, limit, time),
                 TrackingKind.HelixLogs => GetReportForHelixAsync(modelTrackingIssue, limit),
-
-#pragma warning disable 618
-                // TODO: delete once these types are removed from the DB
-                TrackingKind.HelixConsole => throw null!,
-                TrackingKind.HelixRunClient => throw null!,
-#pragma warning restore 618
                 _ => throw new Exception($"Invalid value {modelTrackingIssue.TrackingKind}"),
             };
 
@@ -305,7 +299,7 @@ namespace DevOps.Util.DotNet.Triage
                 {
                     AzureOrganization = x.ModelBuildAttempt.ModelBuild.AzureOrganization,
                     AzureProject = x.ModelBuildAttempt.ModelBuild.AzureProject,
-                    DefinitionId = x.ModelBuildAttempt.ModelBuild.DefinitionId,
+                    DefinitionId = x.ModelBuildAttempt.ModelBuild.DefinitionNumber,
                     DefinitionName = x.ModelBuildAttempt.ModelBuild.DefinitionName,
                     GitHubOrganization = x.ModelBuildAttempt.ModelBuild.GitHubOrganization,
                     GitHubRepository = x.ModelBuildAttempt.ModelBuild.GitHubRepository,
@@ -313,7 +307,7 @@ namespace DevOps.Util.DotNet.Triage
                     GitHubTargetBranch = x.ModelBuildAttempt.ModelBuild.GitHubTargetBranch,
                     BuildNumber = x.ModelBuildAttempt.ModelBuild.BuildNumber,
                     QueueTime = x.ModelBuildAttempt.ModelBuild.QueueTime,
-                    TestRunName = x.ModelTestResult.ModelTestRun.Name,
+                    TestRunName = x.ModelTestResult != null ? x.ModelTestResult.ModelTestRun.Name : "",
                     TestResult = x.ModelTestResult,
                 })
                 .ToListAsync().ConfigureAwait(false);
@@ -331,9 +325,9 @@ namespace DevOps.Util.DotNet.Triage
                         x.DefinitionName,
                         new GitHubBuildInfo(x.GitHubOrganization, x.GitHubRepository, x.GitHubPullRequestNumber, x.GitHubTargetBranch)),
                     (string?)x.TestRunName,
-                    x.TestResult.GetHelixLogInfo())),
+                    x.TestResult?.GetHelixLogInfo())),
                 includeDefinition: true,
-                includeHelix: matches.Any(x => x.TestResult.IsHelixTestResult));
+                includeHelix: matches.Any(x => x.TestResult?.IsHelixTestResult == true));
 
             var builder = new StringBuilder();
             AppendHeader(builder, modelTrackingIssue);
@@ -358,7 +352,7 @@ namespace DevOps.Util.DotNet.Triage
                 {
                     AzureOrganization = x.ModelBuildAttempt.ModelBuild.AzureOrganization,
                     AzureProject = x.ModelBuildAttempt.ModelBuild.AzureProject,
-                    DefinitionId = x.ModelBuildAttempt.ModelBuild.DefinitionId,
+                    DefinitionId = x.ModelBuildAttempt.ModelBuild.DefinitionNumber,
                     DefinitionName = x.ModelBuildAttempt.ModelBuild.DefinitionName,
                     GitHubOrganization = x.ModelBuildAttempt.ModelBuild.GitHubOrganization,
                     GitHubRepository = x.ModelBuildAttempt.ModelBuild.GitHubRepository,
@@ -404,7 +398,7 @@ namespace DevOps.Util.DotNet.Triage
                 {
                     AzureOrganization = x.ModelBuildAttempt.ModelBuild.AzureOrganization,
                     AzureProject = x.ModelBuildAttempt.ModelBuild.AzureProject,
-                    DefinitionId = x.ModelBuildAttempt.ModelBuild.DefinitionId,
+                    DefinitionId = x.ModelBuildAttempt.ModelBuild.DefinitionNumber,
                     DefinitionName = x.ModelBuildAttempt.ModelBuild.DefinitionName,
                     GitHubOrganization = x.ModelBuildAttempt.ModelBuild.GitHubOrganization,
                     GitHubRepository = x.ModelBuildAttempt.ModelBuild.GitHubRepository,
@@ -480,7 +474,7 @@ namespace DevOps.Util.DotNet.Triage
             builder.AppendLine($"Runfo Tracking Issue: [{modelTrackingIssue.IssueTitle}]({SiteLinkUtil.GetTrackingIssueUri(modelTrackingIssue.Id)})");
         }
 
-        private static void AppendFooter(StringBuilder builder, IEnumerable<(int BuildNumber, DateTime? QueueTime)> builds, DateTime baseTime)
+        private static void AppendFooter(StringBuilder builder, IEnumerable<(int BuildNumber, DateTime QueueTime)> builds, DateTime baseTime)
         {
             builder.AppendLine();
             builder.AppendLine("Build Result Summary");
@@ -489,7 +483,7 @@ namespace DevOps.Util.DotNet.Triage
 
             var list = builds
                 .GroupBy(x => x.BuildNumber)
-                .Select(x => (BuildNumber: x.Key, QueueTime: x.SelectNullableValue(x => x.QueueTime).FirstOrDefault()))
+                .Select(x => (BuildNumber: x.Key, QueueTime: x.Select(x => x.QueueTime).FirstOrDefault()))
                 .Where(x => x.QueueTime != default)
                 .ToList();
             var dayCount = list.Count(x => x.QueueTime > baseTime - TimeSpan.FromDays(1));

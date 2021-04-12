@@ -110,11 +110,6 @@ namespace DevOps.Status.Pages.Tracking
 
             switch (TrackingKind)
             {
-#pragma warning disable 618
-                case TrackingKind.HelixConsole:
-                case TrackingKind.HelixRunClient:
-                    ErrorMessage = $"'{TrackingKind}' is deprecated. Please use {TrackingKind.HelixLogs}";
-                    return Page();
                 case TrackingKind.HelixLogs:
                     {
                         if (TryParseQueryString<SearchHelixLogsRequest>(out var request))
@@ -215,9 +210,9 @@ namespace DevOps.Status.Pages.Tracking
                     // there hence we limit to only builds with definitions.
                     var request = new SearchBuildsRequest()
                     {
-                        Definition = modelBuildDefinition?.DefinitionId.ToString() ?? null,
+                        Definition = modelBuildDefinition?.DefinitionNumber.ToString() ?? null,
                         Queued = new DateRequestValue(7, RelationalKind.GreaterThan),
-                        Result = new BuildResultRequestValue(BuildResult.Succeeded, EqualsKind.NotEquals),
+                        BuildResult = new BuildResultRequestValue(ModelBuildResult.Succeeded, EqualsKind.NotEquals),
                     };
 
                     await FunctionQueueUtil.QueueTriageBuildAttempts(TriageContextUtil, modelTrackingIssue, request);

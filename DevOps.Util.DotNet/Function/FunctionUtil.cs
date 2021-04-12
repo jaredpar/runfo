@@ -31,6 +31,7 @@ namespace DevOps.Util.DotNet.Function
         {
             // Pull requests can trigger builds in multiple definitions. Need to calculate the merged PR build
             // for each of them
+            var triageContext = triageContextUtil.Context;
             var allBuilds = await server.ListPullRequestBuildsAsync(prKey, project).ConfigureAwait(false);
             foreach (var group in allBuilds.GroupBy(x => x.Definition.Id))
             {
@@ -41,7 +42,22 @@ namespace DevOps.Util.DotNet.Function
                 if (mergedBuild is object)
                 {
                     var modelBuild = await triageContextUtil.EnsureBuildAsync(mergedBuild.GetBuildResultInfo()).ConfigureAwait(false);
-                    modelBuild.IsMergedPullRequest = true;
+                    modelBuild.BuildKind = ModelBuildKind.MergedPullRequest;
+                    foreach (var attempt in triageContext.ModelBuildAttempts.Where(x => x.ModelBuildId == modelBuild.Id))
+                    {
+                        attempt.BuildKind = ModelBuildKind.MergedPullRequest;
+                    }
+
+                    foreach (var issue in triageContext.ModelTimelineIssues.Where(x => x.ModelBuildId == modelBuild.Id))
+                    {
+                        issue.BuildKind = ModelBuildKind.MergedPullRequest;
+                    }
+
+                    foreach (var testResult in triageContext.ModelTestResults.Where(x => x.ModelBuildId == modelBuild.Id))
+                    {
+                        testResult.BuildKind = ModelBuildKind.MergedPullRequest;
+                    }
+
                     await triageContextUtil.Context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 }
             }

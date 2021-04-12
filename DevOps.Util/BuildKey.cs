@@ -123,4 +123,33 @@ namespace DevOps.Util
 
         public override string ToString() => $"{Organization} {Project} {Id}";
     }
+
+    public readonly struct DefinitionNameKey : IEquatable<DefinitionNameKey>
+    {
+        public string Organization { get; }
+        public string Project { get; }
+        public string Name { get; }
+
+        public DefinitionNameKey(string organization, string project, string name)
+        {
+            Organization = organization;
+            Project = project;
+            Name = name;
+        }
+
+        public static bool operator==(DefinitionNameKey left, DefinitionNameKey right) => left.Equals(right); 
+
+        public static bool operator!=(DefinitionNameKey left, DefinitionNameKey right) => !left.Equals(right);
+
+        public bool Equals(DefinitionNameKey other) =>
+            other.Organization == Organization &&
+            other.Project == Project &&
+            other.Name == Name;
+
+        public override bool Equals(object? other) => other is DefinitionNameKey key && Equals(key);
+
+        public override int GetHashCode() => HashCode.Combine(Organization, Project, Name);
+
+        public override string ToString() => $"{Organization} {Project} {Name}";
+    }
 }

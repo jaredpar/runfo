@@ -21,85 +21,80 @@ namespace DevOps.Util.DotNet.Triage.Migrations
 
             modelBuilder.Entity("DevOps.Util.DotNet.Triage.ModelBuild", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("AzureOrganization")
+                        .IsRequired()
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("AzureProject")
+                        .IsRequired()
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("BuildKind")
+                        .HasColumnType("int");
 
                     b.Property<int>("BuildNumber")
                         .HasColumnType("int");
 
-                    b.Property<string>("BuildResult")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("DefinitionId")
+                    b.Property<int>("BuildResult")
                         .HasColumnType("int");
 
                     b.Property<string>("DefinitionName")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("nvarchar(100)")
-                        .HasDefaultValue("");
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("DefinitionNumber")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("FinishTime")
-                        .HasColumnType("smalldatetime");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("GitHubOrganization")
+                        .IsRequired()
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("GitHubRepository")
+                        .IsRequired()
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("GitHubTargetBranch")
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<bool>("IsMergedPullRequest")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
                     b.Property<int>("ModelBuildDefinitionId")
                         .HasColumnType("int");
+
+                    b.Property<string>("NameKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("PullRequestNumber")
                         .HasColumnType("int");
 
-                    b.Property<DateTime?>("QueueTime")
-                        .HasColumnType("smalldatetime");
+                    b.Property<DateTime>("QueueTime")
+                        .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("StartTime")
-                        .HasColumnType("smalldatetime");
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BuildResult");
-
-                    b.HasIndex("DefinitionId");
-
-                    b.HasIndex("DefinitionName");
-
                     b.HasIndex("ModelBuildDefinitionId");
 
-                    b.HasIndex("StartTime");
+                    b.HasIndex("NameKey")
+                        .IsUnique();
 
-                    b.HasIndex("DefinitionId", "StartTime")
-                        .HasAnnotation("SqlServer:Include", new[] { "BuildNumber", "BuildResult", "PullRequestNumber", "GitHubRepository" });
+                    b.HasIndex("StartTime")
+                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
 
                     b.HasIndex("DefinitionName", "StartTime")
-                        .HasAnnotation("SqlServer:Include", new[] { "BuildNumber", "BuildResult", "PullRequestNumber", "GitHubRepository" });
+                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
 
-                    b.HasIndex("StartTime", "DefinitionId")
-                        .HasAnnotation("SqlServer:Include", new[] { "BuildNumber", "BuildResult", "PullRequestNumber", "GitHubRepository" });
-
-                    b.HasIndex("StartTime", "DefinitionName")
-                        .HasAnnotation("SqlServer:Include", new[] { "BuildNumber", "BuildResult", "PullRequestNumber", "GitHubRepository" });
-
-                    b.HasIndex("DefinitionId", "PullRequestNumber", "StartTime")
-                        .HasAnnotation("SqlServer:Include", new[] { "BuildNumber", "BuildResult", "GitHubRepository" });
+                    b.HasIndex("DefinitionNumber", "StartTime")
+                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
 
                     b.ToTable("ModelBuilds");
                 });
@@ -114,28 +109,59 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                     b.Property<int>("Attempt")
                         .HasColumnType("int");
 
+                    b.Property<int>("BuildKind")
+                        .HasColumnType("int");
+
                     b.Property<int>("BuildResult")
                         .HasColumnType("int");
 
+                    b.Property<string>("DefinitionName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("DefinitionNumber")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("FinishTime")
-                        .HasColumnType("smalldatetime");
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GitHubTargetBranch")
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("IsTimelineMissing")
                         .HasColumnType("bit");
 
-                    b.Property<string>("ModelBuildId")
+                    b.Property<int>("ModelBuildDefinitionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ModelBuildId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NameKey")
+                        .IsRequired()
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<DateTime?>("StartTime")
-                        .HasColumnType("smalldatetime");
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ModelBuildId");
+                    b.HasIndex("ModelBuildDefinitionId");
 
-                    b.HasIndex("Attempt", "ModelBuildId")
-                        .IsUnique()
-                        .HasFilter("[ModelBuildId] IS NOT NULL");
+                    b.HasIndex("StartTime")
+                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
+
+                    b.HasIndex("DefinitionName", "StartTime")
+                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
+
+                    b.HasIndex("DefinitionNumber", "StartTime")
+                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
+
+                    b.HasIndex("ModelBuildId", "Attempt")
+                        .IsUnique();
+
+                    b.HasIndex("NameKey", "Attempt")
+                        .IsUnique();
 
                     b.ToTable("ModelBuildAttempts");
                 });
@@ -148,22 +174,24 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("AzureOrganization")
+                        .IsRequired()
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("AzureProject")
+                        .IsRequired()
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("DefinitionId")
-                        .HasColumnType("int");
 
                     b.Property<string>("DefinitionName")
+                        .IsRequired()
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("DefinitionNumber")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AzureOrganization", "AzureProject", "DefinitionId")
-                        .IsUnique()
-                        .HasFilter("[AzureOrganization] IS NOT NULL AND [AzureProject] IS NOT NULL");
+                    b.HasIndex("AzureOrganization", "AzureProject", "DefinitionNumber")
+                        .IsUnique();
 
                     b.ToTable("ModelBuildDefinitions");
                 });
@@ -175,8 +203,8 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                         .HasColumnType("int")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-                    b.Property<string>("ModelBuildId")
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<int>("ModelBuildId")
+                        .HasColumnType("int");
 
                     b.Property<int>("Number")
                         .HasColumnType("int");
@@ -196,10 +224,34 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                     b.HasIndex("Number", "Organization", "Repository");
 
                     b.HasIndex("Organization", "Repository", "Number", "ModelBuildId")
-                        .IsUnique()
-                        .HasFilter("[ModelBuildId] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("ModelGitHubIssues");
+                });
+
+            modelBuilder.Entity("DevOps.Util.DotNet.Triage.ModelMigration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<int>("MigrationKind")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("NewId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OldId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MigrationKind", "OldId")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Include", new[] { "NewId" });
+
+                    b.ToTable("ModelMigrations");
                 });
 
             modelBuilder.Entity("DevOps.Util.DotNet.Triage.ModelOsxDeprovisionRetry", b =>
@@ -212,8 +264,8 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                     b.Property<int>("JobFailedCount")
                         .HasColumnType("int");
 
-                    b.Property<string>("ModelBuildId")
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<int>("ModelBuildId")
+                        .HasColumnType("int");
 
                     b.Property<int>("OsxJobFailedCount")
                         .HasColumnType("int");
@@ -232,8 +284,28 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                         .HasColumnType("int")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
+                    b.Property<int>("Attempt")
+                        .HasColumnType("int");
+
+                    b.Property<int>("BuildKind")
+                        .HasColumnType("int");
+
+                    b.Property<int>("BuildResult")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DefinitionName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("DefinitionNumber")
+                        .HasColumnType("int");
+
                     b.Property<string>("ErrorMessage")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GitHubTargetBranch")
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("HelixConsoleUri")
                         .HasColumnType("nvarchar(max)");
@@ -256,29 +328,53 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                     b.Property<bool>("IsSubResultContainer")
                         .HasColumnType("bit");
 
-                    b.Property<string>("JobName")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("nvarchar(200)")
-                        .HasDefaultValue("");
+                    b.Property<int>("ModelBuildAttemptId")
+                        .HasColumnType("int");
 
-                    b.Property<string>("ModelBuildId")
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<int>("ModelBuildDefinitionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ModelBuildId")
+                        .HasColumnType("int");
 
                     b.Property<int>("ModelTestRunId")
                         .HasColumnType("int");
 
                     b.Property<string>("Outcome")
-                        .HasColumnType("nvarchar(max)");
+                        .IsRequired()
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("TestFullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TestRunName")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ModelBuildId")
-                        .HasAnnotation("SqlServer:Include", new[] { "TestFullName", "JobName", "IsHelixTestResult" });
+                    b.HasIndex("ModelBuildAttemptId");
 
-                    b.HasIndex("ModelTestRunId");
+                    b.HasIndex("ModelBuildDefinitionId");
+
+                    b.HasIndex("ModelBuildId")
+                        .HasAnnotation("SqlServer:Include", new[] { "TestFullName", "TestRunName", "IsHelixTestResult" });
+
+                    b.HasIndex("ModelTestRunId")
+                        .HasAnnotation("SqlServer:Include", new[] { "TestFullName", "TestRunName", "IsHelixTestResult" });
+
+                    b.HasIndex("StartTime")
+                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch", "TestFullName", "TestRunName", "IsHelixTestResult" });
+
+                    b.HasIndex("DefinitionName", "StartTime")
+                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch", "TestFullName", "TestRunName", "IsHelixTestResult" });
+
+                    b.HasIndex("DefinitionNumber", "StartTime")
+                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch", "TestFullName", "TestRunName", "IsHelixTestResult" });
 
                     b.ToTable("ModelTestResults");
                 });
@@ -291,33 +387,27 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<int>("Attempt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(1);
+                        .HasColumnType("int");
 
-                    b.Property<string>("AzureOrganization")
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<int>("ModelBuildAttemptId")
+                        .HasColumnType("int");
 
-                    b.Property<string>("AzureProject")
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("ModelBuildId")
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<int>("ModelBuildId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Name")
-                        .HasColumnType("nvarchar(max)");
+                        .IsRequired()
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("TestRunId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ModelBuildId")
-                        .HasAnnotation("SqlServer:Include", new[] { "AzureOrganization", "AzureProject", "TestRunId", "Name" });
+                    b.HasIndex("ModelBuildAttemptId");
 
-                    b.HasIndex("AzureOrganization", "AzureProject", "TestRunId")
-                        .IsUnique()
-                        .HasFilter("[AzureOrganization] IS NOT NULL AND [AzureProject] IS NOT NULL");
+                    b.HasIndex("ModelBuildId", "TestRunId")
+                        .IsUnique();
 
                     b.ToTable("ModelTestRuns");
                 });
@@ -332,34 +422,74 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                     b.Property<int>("Attempt")
                         .HasColumnType("int");
 
+                    b.Property<int>("BuildKind")
+                        .HasColumnType("int");
+
+                    b.Property<int>("BuildResult")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DefinitionName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("DefinitionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("GitHubTargetBranch")
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("IssueType")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("nvarchar(12)")
-                        .HasDefaultValue("Warning");
+                        .HasColumnType("nvarchar(12)");
 
                     b.Property<string>("JobName")
+                        .IsRequired()
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Message")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ModelBuildId")
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<int>("ModelBuildAttemptId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ModelBuildDefinitionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ModelBuildId")
+                        .HasColumnType("int");
 
                     b.Property<string>("RecordId")
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("RecordName")
+                        .IsRequired()
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("TaskName")
+                        .IsRequired()
                         .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ModelBuildAttemptId");
+
+                    b.HasIndex("ModelBuildDefinitionId");
+
                     b.HasIndex("ModelBuildId")
                         .HasAnnotation("SqlServer:Include", new[] { "JobName", "TaskName", "RecordName", "IssueType", "Attempt", "Message" });
+
+                    b.HasIndex("StartTime")
+                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch", "IssueType", "JobName", "TaskName", "RecordName" });
+
+                    b.HasIndex("DefinitionName", "StartTime")
+                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch", "IssueType", "JobName", "TaskName", "RecordName" });
+
+                    b.HasIndex("DefinitionNumber", "StartTime")
+                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch", "IssueType", "JobName", "TaskName", "RecordName" });
 
                     b.HasIndex("ModelBuildId", "Attempt");
 
@@ -377,21 +507,24 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("GitHubOrganization")
+                        .IsRequired()
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("GitHubRepository")
+                        .IsRequired()
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("IssueTitle")
+                        .IsRequired()
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("ModelBuildDefinitionId")
                         .HasColumnType("int");
 
-                    b.Property<string>("SearchRegexText")
+                    b.Property<string>("SearchQuery")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -421,7 +554,8 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("JobName")
-                        .HasColumnType("nvarchar(max)");
+                        .IsRequired()
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<int>("ModelBuildAttemptId")
                         .HasColumnType("int");
@@ -485,10 +619,17 @@ namespace DevOps.Util.DotNet.Triage.Migrations
 
             modelBuilder.Entity("DevOps.Util.DotNet.Triage.ModelBuildAttempt", b =>
                 {
+                    b.HasOne("DevOps.Util.DotNet.Triage.ModelBuildDefinition", "ModelBuildDefinition")
+                        .WithMany()
+                        .HasForeignKey("ModelBuildDefinitionId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
                     b.HasOne("DevOps.Util.DotNet.Triage.ModelBuild", "ModelBuild")
                         .WithMany("ModelBuildAttempts")
                         .HasForeignKey("ModelBuildId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("DevOps.Util.DotNet.Triage.ModelGitHubIssue", b =>
@@ -496,7 +637,8 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                     b.HasOne("DevOps.Util.DotNet.Triage.ModelBuild", "ModelBuild")
                         .WithMany("ModelGitHubIssues")
                         .HasForeignKey("ModelBuildId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("DevOps.Util.DotNet.Triage.ModelOsxDeprovisionRetry", b =>
@@ -504,15 +646,29 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                     b.HasOne("DevOps.Util.DotNet.Triage.ModelBuild", "ModelBuild")
                         .WithMany()
                         .HasForeignKey("ModelBuildId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("DevOps.Util.DotNet.Triage.ModelTestResult", b =>
                 {
+                    b.HasOne("DevOps.Util.DotNet.Triage.ModelBuildAttempt", "ModelBuildAttempt")
+                        .WithMany()
+                        .HasForeignKey("ModelBuildAttemptId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("DevOps.Util.DotNet.Triage.ModelBuildDefinition", "ModelBuildDefinition")
+                        .WithMany()
+                        .HasForeignKey("ModelBuildDefinitionId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
                     b.HasOne("DevOps.Util.DotNet.Triage.ModelBuild", "ModelBuild")
                         .WithMany("ModelTestResults")
                         .HasForeignKey("ModelBuildId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("DevOps.Util.DotNet.Triage.ModelTestRun", "ModelTestRun")
                         .WithMany()
@@ -523,18 +679,38 @@ namespace DevOps.Util.DotNet.Triage.Migrations
 
             modelBuilder.Entity("DevOps.Util.DotNet.Triage.ModelTestRun", b =>
                 {
+                    b.HasOne("DevOps.Util.DotNet.Triage.ModelBuildAttempt", "ModelBuildAttempt")
+                        .WithMany()
+                        .HasForeignKey("ModelBuildAttemptId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
                     b.HasOne("DevOps.Util.DotNet.Triage.ModelBuild", "ModelBuild")
                         .WithMany()
                         .HasForeignKey("ModelBuildId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("DevOps.Util.DotNet.Triage.ModelTimelineIssue", b =>
                 {
+                    b.HasOne("DevOps.Util.DotNet.Triage.ModelBuildAttempt", "ModelBuildAttempt")
+                        .WithMany()
+                        .HasForeignKey("ModelBuildAttemptId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("DevOps.Util.DotNet.Triage.ModelBuildDefinition", "ModelBuildDefinition")
+                        .WithMany()
+                        .HasForeignKey("ModelBuildDefinitionId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
                     b.HasOne("DevOps.Util.DotNet.Triage.ModelBuild", "ModelBuild")
                         .WithMany("ModelTimelineIssues")
                         .HasForeignKey("ModelBuildId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("DevOps.Util.DotNet.Triage.ModelTrackingIssue", b =>

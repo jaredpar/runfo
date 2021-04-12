@@ -120,15 +120,6 @@ namespace DevOps.Util.DotNet.Triage
                 case TrackingKind.HelixLogs:
                     isPresent = await TriageHelixLogsAsync(modelBuildAttempt, modelTrackingIssue).ConfigureAwait(false);
                     break;
-
-#pragma warning disable 618
-                case TrackingKind.HelixConsole:
-                case TrackingKind.HelixRunClient:
-                    // TODO: delete this once the DB is cleaned up
-                    // These are old data types that we ignore.
-                    isPresent = false;
-                    break;
-#pragma warning restore 618
                 default:
                     throw new Exception($"Unknown value {modelTrackingIssue.TrackingKind}");
             }
@@ -166,7 +157,11 @@ namespace DevOps.Util.DotNet.Triage
             Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Test);
             Debug.Assert(modelTrackingIssue.SearchQuery is object);
 
-            var request = new SearchTestsRequest();
+            var request = new SearchTestsRequest()
+            {
+                Started = null,
+            };
+
             request.ParseQueryString(modelTrackingIssue.SearchQuery);
             IQueryable<ModelTestResult> testQuery = request
                 .Filter(Context.ModelTestResults)
@@ -199,7 +194,11 @@ namespace DevOps.Util.DotNet.Triage
             Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Timeline);
             Debug.Assert(modelTrackingIssue.SearchQuery is object);
 
-            var request = new SearchTimelinesRequest();
+            var request = new SearchTimelinesRequest()
+            {
+                Started = null,
+            };
+
             request.ParseQueryString(modelTrackingIssue.SearchQuery);
             var timelineQuery = request.Filter(Context.ModelTimelineIssues)
                 .Where(x =>
@@ -230,12 +229,13 @@ namespace DevOps.Util.DotNet.Triage
 
             var request = new SearchHelixLogsRequest()
             {
+                Started = null,
                 Limit = 100,
             };
             request.ParseQueryString(modelTrackingIssue.SearchQuery);
 
             var query = request.Filter(Context.ModelTestResults)
-                .Where(x => x.ModelBuild.Id == modelBuildAttempt.ModelBuild.Id && x.ModelTestRun.Attempt == modelBuildAttempt.Attempt);
+                .Where(x => x.ModelBuildAttemptId == modelBuildAttempt.Id);
             
             // TODO: selecting a lot of info here. Can improve perf by selecting only the needed 
             // columns. The search helix logs page already optimizes this. Consider factoring out
@@ -261,6 +261,7 @@ namespace DevOps.Util.DotNet.Triage
                     ModelTrackingIssue = modelTrackingIssue,
                     HelixLogKind = result.HelixLogKind,
                     HelixLogUri = result.HelixLogUri,
+                    JobName = "",
                 };
                 Context.ModelTrackingIssueMatches.Add(modelMatch);
             }

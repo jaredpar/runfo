@@ -49,7 +49,7 @@ namespace DevOps.Util.DotNet.Triage
                 return;
             }
 
-            var failed = modelBuild.BuildResult == BuildResult.Failed || modelBuild.BuildResult == BuildResult.Canceled;
+            var failed = modelBuild.BuildResult == ModelBuildResult.Failed || modelBuild.BuildResult == ModelBuildResult.Canceled;
             if (!failed)
             {
                 Logger.LogWarning($"Build did not fail so no retry is needed");
@@ -96,7 +96,7 @@ namespace DevOps.Util.DotNet.Triage
             }
 
             var jobFailedCount = issues
-                .Where(x => x.IssueType == IssueType.Error)
+                .Where(x => x.IssueType == ModelIssueType.Error)
                 .GroupBy(x => x.JobName)
                 .Count();
             if (jobFailedCount - count >= 4)

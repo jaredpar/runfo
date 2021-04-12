@@ -15,17 +15,17 @@ namespace DevOps.Status.Pages.Search
     public class TimelinesModel : PageModel
     {
         public TriageContextUtil TriageContextUtil { get; }
-        [BindProperty(SupportsGet = true, Name = "bq")]
-        public string? BuildQuery { get; set; }
-        [BindProperty(SupportsGet = true, Name = "tq")]
-        public string? TimelineQuery { get; set; }
+        [BindProperty(SupportsGet = true, Name = "q")]
+        public string? Query { get; set; }
         [BindProperty(SupportsGet = true, Name = "pageNumber")]
         public int PageNumber { get; set; }
         public PaginationDisplay? PaginationDisplay { get; set; }
-        public TimelineIssuesDisplay TimelineIssuesDisplay { get; set; } = TimelineIssuesDisplay.Empty;
         public int? TotalCount { get; set; }
+        public TimelineIssuesDisplay TimelineIssuesDisplay { get; set; } = TimelineIssuesDisplay.Empty;
         public bool IncludeIssueTypeColumn { get; set; }
         public string? ErrorMessage { get; set; }
+
+        public TriageContext TriageContext => TriageContextUtil.Context;
 
         public TimelinesModel(TriageContextUtil triageContextUtil)
         {
@@ -35,14 +35,13 @@ namespace DevOps.Status.Pages.Search
         public async Task<IActionResult> OnGet()
         {
             const int PageSize = 25;
-            if (string.IsNullOrEmpty(BuildQuery))
+            if (string.IsNullOrEmpty(Query))
             {
-                BuildQuery = new SearchBuildsRequest() { Definition = "runtime" }.GetQueryString();
+                Query = new SearchTimelinesRequest() { Definition = "roslyn-ci" }.GetQueryString();
                 return Page();
             }
 
-            if (!SearchBuildsRequest.TryCreate(BuildQuery ?? "", out var buildsRequest, out var errorMessage) ||
-                !SearchTimelinesRequest.TryCreate(TimelineQuery ?? "", out var timelinesRequest, out errorMessage))
+            if (!SearchTimelinesRequest.TryCreate(Query ?? "", out var timelinesRequest, out var errorMessage))
             {
                 ErrorMessage = errorMessage;
                 return Page();
@@ -50,15 +49,14 @@ namespace DevOps.Status.Pages.Search
 
             try
             {
-                IQueryable<ModelTimelineIssue> query = TriageContextUtil.Context.ModelTimelineIssues;
-                query = buildsRequest.Filter(query);
-                query = timelinesRequest.Filter(query);
+                var query = timelinesRequest.Filter(TriageContext.ModelTimelineIssues);
                 var totalCount = await query.CountAsync();
 
                 query = query
-                    .OrderByDescending(x => x.ModelBuild.BuildNumber)
+                    .OrderByDescending(x => x.StartTime)
                     .Skip(PageNumber * PageSize)
-                    .Take(PageSize);
+                    .Take(PageSize)
+                    .Include(x => x.ModelBuild);
                 TimelineIssuesDisplay = await TimelineIssuesDisplay.Create(
                     query,
                     includeBuildColumn: true,
@@ -69,8 +67,7 @@ namespace DevOps.Status.Pages.Search
                     "/Search/Timelines",
                     new Dictionary<string, string>()
                     {
-                    { "bq", BuildQuery ?? "" },
-                    { "tq", TimelineQuery ?? "" }
+                        { "q", Query ?? "" }
                     },
                     PageNumber,
                     totalCount / PageSize);

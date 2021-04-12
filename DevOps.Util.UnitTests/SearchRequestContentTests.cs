@@ -14,11 +14,11 @@ namespace DevOps.Util.UnitTests
         [Theory]
         [InlineData("started:~10", "started:~10")]
         [InlineData("started:~11", "started:~11")]
-        [InlineData("kind:pullrequest", "kind:pullrequest")]
-        [InlineData("kind:pr", "kind:pr")]
-        [InlineData("kind:mpr", "kind:mpr")]
-        [InlineData("repository:roslyn kind:mpr", "repository:roslyn kind:mpr")]
-        [InlineData("issues:false kind:rolling result:failed", "kind:rolling result:failed issues:false")]
+        [InlineData("kind:pullrequest", "started:~7 kind:pullrequest")]
+        [InlineData("kind:pr", "started:~7 kind:pr")]
+        [InlineData("kind:mpr", "started:~7 kind:mpr")]
+        [InlineData("repository:roslyn kind:mpr", "started:~7 kind:mpr repository:roslyn")]
+        [InlineData("issues:false kind:rolling result:failed", "started:~7 result:failed kind:rolling issues:false")]
         public void BuildsRoundTrip(string toParse, string userQuery)
         {
             var options = new SearchBuildsRequest();
@@ -27,10 +27,10 @@ namespace DevOps.Util.UnitTests
         }
 
         [Theory]
-        [InlineData("message:error", "message:\"error\"")]
-        [InlineData("message:\"error again\"", "message:\"error again\"")]
-        [InlineData("name:test", "name:\"test\"")]
-        [InlineData("name:test message:error", "name:\"test\" message:\"error\"")]
+        [InlineData("message:error", "started:~7 message:\"error\"")]
+        [InlineData("message:\"error again\"", "started:~7 message:\"error again\"")]
+        [InlineData("name:test", "started:~7 name:\"test\"")]
+        [InlineData("name:test message:error", "started:~7 name:\"test\" message:\"error\"")]
         public void TestsRoundTrip(string toParse, string userQuery)
         {
             var options = new SearchTestsRequest();
@@ -39,14 +39,34 @@ namespace DevOps.Util.UnitTests
         }
 
         [Theory]
-        [InlineData("text:\"error\"", "text:\"error\"")]
-        [InlineData("text:\"error and space\"", "text:\"error and space\"")]
-        [InlineData("text:\"error and space\"   ", "text:\"error and space\"")]
-        [InlineData("displayName:Installer   ", "displayName:\"Installer\"")]
-        [InlineData("taskName:Installer   ", "taskName:\"Installer\"")]
-        [InlineData("taskName:Task displayName:Display", "displayName:\"Display\" taskName:\"Task\"")]
-        [InlineData("error", "text:\"error\"")]
-        [InlineData("text:error", "text:\"error\"")]
+        [InlineData("message:error")]
+        [InlineData("message:\"error again\"")]
+        [InlineData("name:test message:\"error again\"")]
+        [InlineData("started:~7 message:\"error again\"")]
+        public void ParseDoesNotReset(string toParse)
+        {
+            var request = new SearchTestsRequest();
+            request.ParseQueryString(toParse);
+            var oldMessage = request.Message;
+            var oldStarted = request.Started;
+            var oldName = request.Name;
+            request.ParseQueryString("targetBranch:main");
+            Assert.Equal(oldMessage, request.Message);
+            Assert.Equal(oldStarted, request.Started);
+            Assert.Equal(oldName, request.Name);
+            Assert.Equal("main", request.TargetBranch!.Value.Text);
+        }
+
+        [Theory]
+        [InlineData("text:\"error\"", "started:~7 text:\"error\"")]
+        [InlineData("text:\"error and space\"", "started:~7 text:\"error and space\"")]
+        [InlineData("text:\"error and space\"   ", "started:~7 text:\"error and space\"")]
+        [InlineData("displayName:Installer   ", "started:~7 displayName:\"Installer\"")]
+        [InlineData("taskName:Installer   ", "started:~7 taskName:\"Installer\"")]
+        [InlineData("taskName:Task displayName:Display", "started:~7 displayName:\"Display\" taskName:\"Task\"")]
+        [InlineData("error", "started:~7 text:\"error\"")]
+        [InlineData("text:error", "started:~7 text:\"error\"")]
+        [InlineData("started:~3 kind:mpr text:error", "started:~3 kind:mpr text:\"error\"")]
         public void TimelineRoundTrip(string toParse, string userQuery)
         {
             var options = new SearchTimelinesRequest();
@@ -56,9 +76,9 @@ namespace DevOps.Util.UnitTests
 
 
         [Theory]
-        [InlineData("text:\"error\"", "text:\"error\"")]
-        [InlineData("text:error", "text:\"error\"")]
-        [InlineData("text:\"error\" logKind:console", "logKind:console text:\"error\"")]
+        [InlineData("text:\"error\"", "started:~7 text:\"error\"")]
+        [InlineData("text:error", "started:~7 text:\"error\"")]
+        [InlineData("text:\"error\" logKind:console", "started:~7 logKind:console text:\"error\"")]
         public void HelixLogsRoundTrip(string toParse, string userQuery)
         {
             var options = new SearchHelixLogsRequest();

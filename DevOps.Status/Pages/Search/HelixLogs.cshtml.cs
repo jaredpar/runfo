@@ -75,9 +75,9 @@ namespace DevOps.Status.Pages.Search
 
             // Helix logs are only kept for failed builds. If the user doesn't specify a specific result type, 
             // like say cancelled, then just search all non succeeded builds.
-            if (buildsRequest.Result is null)
+            if (buildsRequest.BuildResult is null)
             {
-                buildsRequest.Result = new BuildResultRequestValue(BuildResult.Succeeded, EqualsKind.NotEquals);
+                buildsRequest.BuildResult = new BuildResultRequestValue(ModelBuildResult.Succeeded, EqualsKind.NotEquals);
                 BuildQuery = buildsRequest.GetQueryString();
             }
 
@@ -135,7 +135,7 @@ namespace DevOps.Status.Pages.Search
                         var b = modelBuildInfoList.First(b => b.Id == x.ModelBuildId);
                         return
                             (new BuildInfo(b.AzureOrganization, b.AzureProject, b.BuildNumber,
-                                new GitHubBuildInfo(b.GitHubOrganization, b.GitHubRepository, b.PullRequestNumber, b.GitHubTargetBranch)),
+                                new GitHubBuildInfo(b.GitHubOrganization!, b.GitHubRepository!, b.PullRequestNumber, b.GitHubTargetBranch)),
                                 new HelixLogInfo(
                                     runClientUri: x.HelixRunClientUri,
                                     consoleUri: x.HelixConsoleUri,

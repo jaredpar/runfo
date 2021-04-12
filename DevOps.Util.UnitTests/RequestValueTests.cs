@@ -21,18 +21,18 @@ namespace DevOps.Util.UnitTests
         public void BuildTypeRequestValues(string value, ModelBuildKind buildType, EqualsKind kind, string name, EqualsKind? defaultKind)
         {
             defaultKind ??= EqualsKind.Equals;
-            var request = BuildTypeRequestValue.Parse(value, defaultKind: defaultKind.Value);
-            Assert.Equal(buildType, request.BuildType);
+            var request = BuildKindRequestValue.Parse(value, defaultKind: defaultKind.Value);
+            Assert.Equal(buildType, request.BuildKind);
             Assert.Equal(kind, request.Kind);
             Assert.Equal(name, request.BuildTypeName);
             Assert.Equal(value, request.GetQueryValue(defaultKind));
         }
 
         [Theory]
-        [InlineData("succeeded", BuildResult.Succeeded, EqualsKind.Equals, "succeeded", null)]
-        [InlineData("!succeeded", BuildResult.Succeeded, EqualsKind.NotEquals, "succeeded", null)]
-        [InlineData("failed", BuildResult.Failed, EqualsKind.Equals, "failed", null)]
-        public void BuildResultRequestValues(string value, BuildResult buildResult, EqualsKind kind, string name, EqualsKind? defaultKind)
+        [InlineData("succeeded", ModelBuildResult.Succeeded, EqualsKind.Equals, "succeeded", null)]
+        [InlineData("!succeeded", ModelBuildResult.Succeeded, EqualsKind.NotEquals, "succeeded", null)]
+        [InlineData("failed", ModelBuildResult.Failed, EqualsKind.Equals, "failed", null)]
+        public void BuildResultRequestValues(string value, ModelBuildResult buildResult, EqualsKind kind, string name, EqualsKind? defaultKind)
         {
             defaultKind ??= EqualsKind.Equals;
             var request = BuildResultRequestValue.Parse(value, defaultKind: defaultKind.Value);

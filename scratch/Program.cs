@@ -54,11 +54,24 @@ namespace Scratch
             {
                 var configuration = ScratchUtil.CreateConfiguration();
                 var connectionString = configuration[DotNetConstants.ConfigurationSqlConnectionString];
-                var message = connectionString.Contains("triage-scratch-dev")
-                    ? "Using sql developer"
-                    : "Using sql production";
-                Console.WriteLine(message);
-                builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds));
+                if (connectionString.Contains("Catalog=runfo-test"))
+                {
+                    Console.WriteLine("Using SQL test");
+                } 
+                else if (connectionString.Contains("Catalog=runfo-prod"))
+                {
+                    Console.WriteLine("Using SQL production");
+                }
+                else if (connectionString.Contains("triage-scratch-dev"))
+                {
+                    Console.WriteLine("Using SQL test (old)");
+                }
+                else
+                {
+                    Console.WriteLine("Using SQL production (old)");
+                }
+
+                builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds).EnableRetryOnFailure());
             }
         }
     }
@@ -80,6 +93,7 @@ namespace Scratch
         public static string DefaultOrganization { get; set; } = "dnceng";
 
         public DevOpsServer DevOpsServer { get; set; }
+        public DbContextOptions<TriageContext> TriageContextOptions { get; set; }
         public TriageContext TriageContext { get; set; }
         public TriageContextUtil TriageContextUtil { get; set; }
         public IGitHubClientFactory GitHubClientFactory { get; set; }
@@ -109,9 +123,10 @@ namespace Scratch
                 : "Using sql production";
             //`builder.UseSqlServer(connectionString);
             builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(5).TotalSeconds));
-                //builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds));
+            //builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds));
 
             // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+            TriageContextOptions = builder.Options;
             TriageContext = new TriageContext(builder.Options);
             TriageContextUtil = new TriageContextUtil(TriageContext);
 
@@ -154,6 +169,11 @@ namespace Scratch
 
         internal async Task Scratch()
         {
+            await PopulateDb();
+            // await Migrate();
+            //await PopulateDb(count: 100, definitionId: 15, includeTests: true, includeTriage: false);
+
+            /*
             var limitDays = 90;
             var limit = DateTime.UtcNow - TimeSpan.FromDays(limitDays);
 
@@ -184,7 +204,6 @@ namespace Scratch
                 }
             }
 
-            // await PopulateDb(count: 25, definitionId: 15, includeTests: true, includeTriage: false);
             //await DeleteOldBuilds();
             // await PopulateModelBuildDefinitionTable();
 
@@ -261,6 +280,69 @@ namespace Scratch
 */
         }
 
+        internal async Task PopulateDb()
+        {
+            const int maxParallel = 4;
+            var logger = CreateLogger();
+            var startTime = DateTime.UtcNow;
+            var buildCount = 0;
+            var list = new List<Task>();
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync("public"))
+            {
+                if (build.FinishTime is null)
+                {
+                    continue;
+                }
+
+                if (await TriageContextUtil.FindModelBuildAsync(build.GetBuildKey()) is object)
+                {
+                    continue;
+                }
+
+                var uri = build.GetBuildResultInfo().BuildUri;
+                Console.WriteLine($"Getting data for {uri}");
+                list.Add(ProcessBuildAsync(build, TriageContextOptions, DotNetQueryUtil, logger));
+                if (list.Count >= maxParallel)
+                {
+                    await Task.WhenAny(list);
+                    buildCount += list.RemoveAll(x => x.IsCompleted);
+
+                    if (buildCount % 10 == 0)
+                    {
+                        var rate = buildCount / (DateTime.UtcNow - startTime).TotalMinutes;
+                        Console.WriteLine($"Builds populated: {buildCount}");
+                        Console.WriteLine($"Builds Per Minute: {rate:n}");
+                        Console.WriteLine($"Most recent build queue date: {build.GetBuildResultInfo().QueueTime.ToLocalTime()}");
+                    }
+                }
+            }
+
+            static async Task ProcessBuildAsync(Build build, DbContextOptions<TriageContext> options, DotNetQueryUtil queryUtil, ILogger logger)
+            {
+                try
+                {
+                    var triageContextUtil = new TriageContextUtil(new TriageContext(options));
+                    var modelDataUtil = new ModelDataUtil(queryUtil, triageContextUtil, logger);
+                    await modelDataUtil.EnsureModelInfoAsync(build, includeTests: true, includeAllAttempts: true);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error: {ex.Message}");
+                    if (ex.InnerException is { } ie)
+                    {
+                        Console.WriteLine($"Inner Error: {ie.Message}");
+                    }
+                }
+            }
+        }
+
+
+        internal async Task Migrate()
+        {
+            var util = new MigrateUtil(DotNetQueryUtil, TriageContextUtil, CreateLogger());
+            await util.Migrate(@"c:\users\jaredpar\temp\migrate");
+        }
+
         internal async Task DeleteOldBuilds()
         {
             var functionUtil = new FunctionUtil(CreateLogger());
@@ -292,7 +374,7 @@ namespace Scratch
             var date = DateTime.Now - TimeSpan.FromDays(14);
             var builds = await TriageContext
                 .ModelBuilds
-                .Where(x => x.StartTime > date && x.IsMergedPullRequest)
+                .Where(x => x.StartTime > date && x.BuildKind == ModelBuildKind.MergedPullRequest)
                 .Include(x => x.ModelBuildAttempts)
                 .Select(x => new
                 {
@@ -312,7 +394,7 @@ namespace Scratch
                 builder.AppendLine($"{group.Key},{(firstAttemptCount / total):P1},{(anyAttemptCount / total):P1}");
             }
 
-            static bool IsAnySuccess(BuildResult? result) => result is { } r && (r == BuildResult.Succeeded || r == BuildResult.PartiallySucceeded);
+            static bool IsAnySuccess(ModelBuildResult? result) => result is { } r && (r == ModelBuildResult.Succeeded || r == ModelBuildResult.PartiallySucceeded);
 
             File.WriteAllText(@"p:\temp\data.csv", builder.ToString());
         }
@@ -350,7 +432,7 @@ namespace Scratch
                 foreach (var build in builds)
                 {
                     build.DefinitionName = build.ModelBuildDefinition.DefinitionName;
-                    build.DefinitionId = build.ModelBuildDefinition.DefinitionId;
+                    build.DefinitionNumber = build.ModelBuildDefinition.DefinitionNumber;
                 }
 
                 await TriageContext.SaveChangesAsync();
@@ -466,7 +548,7 @@ namespace Scratch
         {
             var builds = await TriageContext
                 .ModelBuilds
-                .Where(x => x.ModelBuildDefinition.DefinitionId == definitionId && x.BuildResult == BuildResult.Failed)
+                .Where(x => x.ModelBuildDefinition.DefinitionNumber == definitionId && x.BuildResult == ModelBuildResult.Failed)
                 .OrderByDescending(x => x.BuildNumber)
                 .Take(limit)
                 .ToListAsync();
@@ -496,7 +578,7 @@ namespace Scratch
                             var modelTestResult = modelTestResults.FirstOrDefault(x => x.TestFullName == testCaseResult.TestCaseTitle);
                             if (modelTestResult is object)
                             {
-                                modelTestResult.ErrorMessage = testCaseResult.ErrorMessage;
+                                modelTestResult.ErrorMessage = testCaseResult.ErrorMessage ?? "";
                             }
 
                             if (testCaseResult.SubResults is { } subResults)
@@ -514,7 +596,7 @@ namespace Scratch
                                         Outcome = subResult.Outcome,
                                         ModelTestRun = modelTestRun,
                                         ModelBuild = modelBuild,
-                                        ErrorMessage = subResult.ErrorMessage,
+                                        ErrorMessage = subResult.ErrorMessage ?? "",
                                         IsSubResultContainer = false,
                                         IsSubResult = true
                                     };
@@ -595,166 +677,11 @@ namespace Scratch
             }
         }
 
-        internal async Task Unknown()
-        {
-            var pageCount = 100;
-            var count = 0;
-            var startTime = DateTime.Parse("2020-08-01");
-            while (true)
-            {
-                var query = TriageContext
-                    .ModelBuilds
-                    .Where(x => x.AzureOrganization == null && x.StartTime >= startTime)
-                    .OrderByDescending(x => x.BuildNumber)
-                    .Take(pageCount)
-                    .Include(x => x.ModelBuildDefinition);
-                var results = await query.ToListAsync();
-                Console.WriteLine(count * pageCount);
-
-                foreach (var build in results)
-                {
-                    if (build.ModelBuildDefinition.AzureOrganization == null)
-                    {
-                    }
-                    build.AzureOrganization = build.ModelBuildDefinition.AzureOrganization;
-                    build.AzureProject = build.ModelBuildDefinition.AzureProject;
-                }
-
-                count++;
-                await TriageContext.SaveChangesAsync();
-
-                if (results.Count == 0)
-                {
-                    break;
-                }
-            }
-        }
-
-        class Data
-        {
-            public string? Count7;
-            public string? Count14;
-            public string? Count30;
-        }
-
-        internal async Task GenerateChrisReport()
-        {
-            var timelineRequest = new SearchTimelinesRequest()
-            {
-                Type = IssueType.Error,
-                Text = "We stopped hearing from agent",
-            };
-
-            const string allBuildsName = "[All Builds]";
-            var defMap = new Dictionary<string, Data>();
-            defMap[allBuildsName] = new Data();
-            var buildMap = new Dictionary<int, ModelBuild>();
-            foreach (var dayCount in new int[] { 7, 14, 30 })
-            {
-                var buildsRequest = new SearchBuildsRequest()
-                {
-                    Started = new DateRequestValue(dayCount, RelationalKind.GreaterThan),
-                };
-
-                IQueryable<ModelTimelineIssue> query = TriageContext.ModelTimelineIssues;
-                query = buildsRequest.Filter(query);
-                query = timelineRequest.Filter(query);
-
-                var resultBuilds = await query
-                    .Select(x => new
-                    {
-                        x.ModelBuild.BuildNumber,
-                        x.ModelBuild.ModelBuildDefinition.DefinitionName,
-                    })
-                    .ToListAsync();
-                var allBuilds = await buildsRequest.Filter(TriageContext.ModelBuilds)
-                    .Select(x => new
-                    {
-                        x.BuildNumber,
-                        x.ModelBuildDefinition.DefinitionName,
-                    })
-                    .ToListAsync();
-
-                foreach (var group in resultBuilds.GroupBy(x => x.DefinitionName))
-                {
-                    if (!defMap.TryGetValue(group.Key, out var data))
-                    {
-                        data = new Data();
-                        defMap[group.Key] = data;
-                    }
-
-                    var allDefCount = allBuilds.Count(x => x.DefinitionName == group.Key);
-                    var ratioStr = GetRatioString(group.Count(), allDefCount);
-                    UpdateRatioString(data, ratioStr);
-                }
-
-                UpdateRatioString(defMap[allBuildsName], GetRatioString(resultBuilds.Count, allBuilds.Count));
-
-                static string GetRatioString(double hitCount, double buildCount)
-                {
-                    var ratio = hitCount / buildCount;
-                    var ratioStr = ratio.ToString("P1");
-                    return $"{ratioStr} ({hitCount}/{buildCount})";
-                }
-
-                void UpdateRatioString(Data data, string ratioStr)
-                {
-                    switch (dayCount)
-                    {
-                        case 7:
-                            data.Count7 = ratioStr;
-                            break;
-                        case 14:
-                            data.Count14 = ratioStr;
-                            break;
-                        case 30:
-                            data.Count30 = ratioStr;
-                            break;
-                        default:
-                            throw null!;
-                    }
-                }
-            }
-
-            Console.WriteLine("|Definition|7 days| 14 days|30 days|");
-            Console.WriteLine("|---|---|---|---|");
-            foreach (var pair in defMap.OrderBy(x => x.Key))
-            {
-                Console.WriteLine($"|{pair.Key}|{pair.Value.Count7}|{pair.Value.Count14}|{pair.Value.Count30}|");
-            }
-        }
-
-        internal async Task PopulateTrackingIssue(int issueId, string buildsQueryString)
+        internal async Task PopulateTrackingIssue(int issueId, string extraQuery)
         {
             var issue = await TriageContext.ModelTrackingIssues.Where(x => x.Id == issueId).SingleAsync();
-
-            var buildsRequest = new SearchBuildsRequest();
-            buildsRequest.ParseQueryString(buildsQueryString);
-            IQueryable<ModelBuild> buildsQuery;
-            switch (issue.TrackingKind)
-            {
-                case TrackingKind.Timeline:
-                    {
-                        var request = new SearchTimelinesRequest();
-                        request.ParseQueryString(issue.SearchQuery);
-                        var query = request.Filter(TriageContext.ModelTimelineIssues);
-                        query = buildsRequest.Filter(query);
-                        buildsQuery = query.Select(x => x.ModelBuild);
-                        break;
-                    };
-                default:
-                    throw new Exception("Not Supported");
-            }
-
-            var results = await buildsQuery.ToListAsync();
-
-            foreach (var build in results)
-            {
-                Console.WriteLine($"Triaging {build.GetBuildKey().BuildUri}");
-                var util = new TrackingIssueUtil(HelixServer, DotNetQueryUtil, TriageContextUtil, CreateLogger());
-                await util.TriageAsync(build.GetBuildKey(), issue.Id);
-            }
-
+            var util = new TrackingIssueUtil(HelixServer, DotNetQueryUtil, TriageContextUtil, CreateLogger());
+            await util.TriageBuildsAsync(issue, extraQuery);
             await FunctionQueueUtil.QueueUpdateIssueAsync(issue, delay: null);
         }
 
@@ -854,22 +781,6 @@ namespace Scratch
                 }
             }
             while (true) ;
-        }
-
-        internal async Task QueryProfile()
-        {
-            var searchBuildsRequest = new SearchBuildsRequest()
-            {
-                Definition = "15",
-            };
-
-            var results = await searchBuildsRequest
-                .Filter(TriageContext.ModelTimelineIssues)
-                .OrderByDescending(x => x.ModelBuild.BuildNumber)
-                .Take(50)
-                .ToListAsync();
-
-            Console.WriteLine(results.Count);
         }
 
         internal async Task PopulateTimelines()

@@ -110,9 +110,9 @@ namespace DevOps.Util
     public sealed class BuildResultInfo
     {
         public BuildAndDefinitionInfo BuildAndDefinitionInfo { get; }
+        public DateTime QueueTime { get; }
         public DateTime? StartTime { get; }
         public DateTime? FinishTime { get; }
-        public DateTime? QueueTime { get; }
         public BuildResult BuildResult { get; }
 
         public BuildInfo BuildInfo => BuildAndDefinitionInfo.BuildInfo;
@@ -128,7 +128,7 @@ namespace DevOps.Util
 
         public BuildResultInfo(
             BuildAndDefinitionInfo buildAndDefinitionInfo,
-            DateTime? queueTime,
+            DateTime queueTime,
             DateTime? startTime,
             DateTime? finishTime,
             BuildResult buildResult)
