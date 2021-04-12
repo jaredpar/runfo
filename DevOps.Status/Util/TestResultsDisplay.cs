@@ -14,11 +14,6 @@ namespace DevOps.Status.Util
 
         public List<TestResultInfo> Results { get; } = new List<TestResultInfo>();
 
-        /// <summary>
-        /// This is only used when creating links for the test name
-        /// </summary>
-        public SearchBuildsRequest? BuildsRequest { get; set; }
-
         public bool IncludeTestFullNameColumn { get; set; }
 
         public bool IncludeErrorMessageColumn { get; set; }
@@ -37,28 +32,21 @@ namespace DevOps.Status.Util
         {
         }
 
-        public TestResultsDisplay(IEnumerable<ModelTestResult> modelTestResults)
+        public TestResultsDisplay(IEnumerable<ModelTestResult> modelTestResults, SearchTestsRequest? testsRequest)
         {
             var anyHelix = false;
             string? gitHubRepository = null;
-            var emptyDictionary = new Dictionary<string, string>();
             foreach (var modelTestResult in modelTestResults)
             {
                 anyHelix = anyHelix || modelTestResult.IsHelixTestResult;
                 gitHubRepository ??= modelTestResult.ModelBuild.GitHubRepository;
 
                 var routeData = new Dictionary<string, string>();
-                if (BuildsRequest is object)
+                if (testsRequest is object)
                 {
-                    routeData["bq"] = BuildsRequest.GetQueryString();
+                    testsRequest.Name = modelTestResult.TestFullName;
+                    routeData["q"] = testsRequest.GetQueryString();
                 }
-
-                var request = new SearchTestsRequest()
-                {
-                    Name = modelTestResult.TestFullName
-                };
-
-                routeData["tq"] = request.GetQueryString();
 
                 var testResultInfo = new TestResultInfo()
                 {
