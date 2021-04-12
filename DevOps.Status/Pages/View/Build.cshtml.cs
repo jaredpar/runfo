@@ -124,7 +124,17 @@ namespace DevOps.Status.Pages.View
                     .Include(x => x.ModelBuild);
                 var modelTestResults = await query.ToListAsync();
 
-                TestResultsDisplay = new TestResultsDisplay(modelTestResults)
+                SearchTestsRequest? testsRequest = null;
+                if (modelBuild is object)
+                {
+                    testsRequest = new SearchTestsRequest()
+                    {
+                        Definition = modelBuild.DefinitionName,
+                        Started = new DateRequestValue(dayQuery: 7)
+                    };
+                }
+
+                TestResultsDisplay = new TestResultsDisplay(modelTestResults, testsRequest)
                 {
                     IncludeBuildColumn = false,
                     IncludeBuildKindColumn = false,
@@ -133,14 +143,6 @@ namespace DevOps.Status.Pages.View
                     IncludeErrorMessageColumn = true,
                 };
 
-                if (modelBuild is object)
-                {
-                    TestResultsDisplay.BuildsRequest = new SearchBuildsRequest()
-                    {
-                        Definition = modelBuild.DefinitionName,
-                        Started = new DateRequestValue(dayQuery: 7)
-                    };
-                }
             }
         }
 

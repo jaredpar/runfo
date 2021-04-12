@@ -91,7 +91,7 @@ namespace DevOps.Status.Pages.Search
                         BuildDefinition = testsRequest.Definition,
                         GitHubOrganization = firstBuild?.GitHubOrganization,
                         GitHubRepository = firstBuild?.GitHubRepository,
-                        TestResultsDisplay = new TestResultsDisplay(group)
+                        TestResultsDisplay = new TestResultsDisplay(group, null)
                         {
                             IncludeBuildColumn = true,
                             IncludeBuildKindColumn = !isBuildKindFiltered,
