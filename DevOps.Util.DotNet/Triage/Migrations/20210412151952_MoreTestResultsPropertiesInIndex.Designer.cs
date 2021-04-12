@@ -4,14 +4,16 @@ using DevOps.Util.DotNet.Triage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace DevOps.Util.DotNet.Triage.Migrations
 {
     [DbContext(typeof(TriageContext))]
-    partial class TriageContextModelSnapshot : ModelSnapshot
+    [Migration("20210412151952_MoreTestResultsPropertiesInIndex")]
+    partial class MoreTestResultsPropertiesInIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -483,13 +485,13 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                         .HasAnnotation("SqlServer:Include", new[] { "JobName", "TaskName", "RecordName", "IssueType", "Attempt", "Message" });
 
                     b.HasIndex("StartTime")
-                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch", "IssueType", "JobName", "TaskName", "RecordName" });
+                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
 
                     b.HasIndex("DefinitionName", "StartTime")
-                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch", "IssueType", "JobName", "TaskName", "RecordName" });
+                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
 
                     b.HasIndex("DefinitionNumber", "StartTime")
-                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch", "IssueType", "JobName", "TaskName", "RecordName" });
+                        .HasAnnotation("SqlServer:Include", new[] { "BuildResult", "BuildKind", "GitHubTargetBranch" });
 
                     b.HasIndex("ModelBuildId", "Attempt");
 

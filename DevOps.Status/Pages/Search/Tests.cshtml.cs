@@ -14,7 +14,7 @@ namespace DevOps.Status.Pages.Search
 {
     public class TestsModel : PageModel
     {
-        public class TestInfo
+        public sealed class TestInfo
         {
             public string? TestName { get; set; }
             public string? CollapseName { get; set; }
@@ -96,7 +96,7 @@ namespace DevOps.Status.Pages.Search
                             IncludeBuildColumn = true,
                             IncludeBuildKindColumn = !isBuildKindFiltered,
                             IncludeErrorMessageColumn = true,
-                        }
+                        },
                     };
 
                     TestInfos.Add(testInfo);

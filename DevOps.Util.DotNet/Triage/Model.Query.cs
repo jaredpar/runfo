@@ -79,15 +79,15 @@ namespace DevOps.Util.DotNet.Triage
 
             modelBuilder.Entity<ModelTestResult>()
                 .HasIndex(x => new { x.DefinitionNumber, x.StartTime })
-                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch, x.TestFullName, x.TestRunName, x.IsHelixTestResult });
 
             modelBuilder.Entity<ModelTestResult>()
                 .HasIndex(x => new { x.DefinitionName, x.StartTime })
-                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch, x.TestFullName, x.TestRunName, x.IsHelixTestResult });
 
             modelBuilder.Entity<ModelTestResult>()
                 .HasIndex(x => x.StartTime)
-                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch, x.TestFullName, x.TestRunName, x.IsHelixTestResult });
 
             modelBuilder.Entity<ModelTestResult>()
                 .Property(x => x.BuildResult)
@@ -99,15 +99,15 @@ namespace DevOps.Util.DotNet.Triage
 
             modelBuilder.Entity<ModelTimelineIssue>()
                 .HasIndex(x => new { x.DefinitionNumber, x.StartTime })
-                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch, x.IssueType, x.JobName, x.TaskName, x.RecordName});
 
             modelBuilder.Entity<ModelTimelineIssue>()
                 .HasIndex(x => new { x.DefinitionName, x.StartTime })
-                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch, x.IssueType, x.JobName, x.TaskName, x.RecordName});
 
             modelBuilder.Entity<ModelTimelineIssue>()
                 .HasIndex(x => x.StartTime)
-                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch });
+                .IncludeProperties(x => new { x.BuildResult, x.BuildKind, x.GitHubTargetBranch, x.IssueType, x.JobName, x.TaskName, x.RecordName});
 
             modelBuilder.Entity<ModelTimelineIssue>()
                 .Property(x => x.BuildResult)

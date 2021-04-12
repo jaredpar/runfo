@@ -24,7 +24,6 @@
     <div id="accordion">
         @foreach (var testInfo in @Model.TestInfos)
         {
-            string filterTestQuery = $@"name:""{testInfo.TestName}""";
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">
@@ -38,7 +37,7 @@
                     <partial name="../Shared/_TestResultsDisplay" model="@testInfo.TestResultsDisplay" />
                     <div class="row">
                         <div class="m-2">
-                            <a class="btn btn-primary" asp-route-q=@filterTestQuery>Filter to test</a>
+                            <a class="btn btn-primary" asp-route-q="@testInfo.TestNameQuery">Filter to test</a>
                         </div>
                         <div class="m-2">
                             <a class="btn btn-primary"

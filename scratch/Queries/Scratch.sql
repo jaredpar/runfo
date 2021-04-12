@@ -98,12 +98,36 @@ FROM (
 INNER JOIN [ModelBuilds] AS [m0] ON [t].[ModelBuildId] = [m0].[Id]
 ORDER BY [t].[StartTime] DESC
 
+/* Search tests */
+DECLARE @__started_DateTime_Date_1 AS DateTime2 = '2021-04-03'
+DECLARE @__Definition_0 As nvarchar(100) = 'roslyn-ci'
+DECLARE @__p_2 As Integer = 50
+DECLARE @__p_3 As Integer = 25
+      SELECT [t].[Id], [t].[Attempt], [t].[BuildKind], [t].[BuildResult], [t].[DefinitionName], [t].[DefinitionNumber], [t].[ErrorMessage], [t].[GitHubTargetBranch], [t].[HelixConsoleUri], [t].[HelixCoreDumpUri], [t].[HelixRunClientUri], [t].[HelixTestResultsUri], [t].[IsHelixTestResult], [t].[IsSubResult], [t].[IsSubResultContainer], [t].[ModelBuildAttemptId], [t].[ModelBuildDefinitionId], [t].[ModelBuildId], [t].[ModelTestRunId], [t].[Outcome], [t].[StartTime], [t].[TestFullName], [t].[TestRunName], [m0].[Id], [m0].[AzureOrganization], [m0].[AzureProject], [m0].[BuildKind], [m0].[BuildNumber], [m0].[BuildResult], [m0].[DefinitionName], [m0].[DefinitionNumber], [m0].[FinishTime], [m0].[GitHubOrganization], [m0].[GitHubRepository], [m0].[GitHubTargetBranch], [m0].[ModelBuildDefinitionId], [m0].[NameKey], [m0].[PullRequestNumber], [m0].[QueueTime], [m0].[StartTime]
+      FROM (
+          SELECT [m].[Id], [m].[Attempt], [m].[BuildKind], [m].[BuildResult], [m].[DefinitionName], [m].[DefinitionNumber], [m].[ErrorMessage], [m].[GitHubTargetBranch], [m].[HelixConsoleUri], [m].[HelixCoreDumpUri], [m].[HelixRunClientUri], [m].[HelixTestResultsUri], [m].[IsHelixTestResult], [m].[IsSubResult], [m].[IsSubResultContainer], [m].[ModelBuildAttemptId], [m].[ModelBuildDefinitionId], [m].[ModelBuildId], [m].[ModelTestRunId], [m].[Outcome], [m].[StartTime], [m].[TestFullName], [m].[TestRunName]
+          FROM [ModelTestResults] AS [m]
+          WHERE ([m].[DefinitionName] = @__Definition_0) AND ([m].[StartTime] >= @__started_DateTime_Date_1)
+          ORDER BY [m].[StartTime] DESC
+          OFFSET @__p_2 ROWS FETCH NEXT @__p_3 ROWS ONLY
+      ) AS [t]
+      INNER JOIN [ModelBuilds] AS [m0] ON [t].[ModelBuildId] = [m0].[Id]
+      ORDER BY [t].[StartTime] DESC
+
+/* Search tests with name */
+DECLARE @__started_DateTime_Date_0 AS DateTime2 = '2021-04-03'
+DECLARE @__Name_1 As nvarchar(100) = 'system.net.tests.httpwebrequesttest_sync.readwritetimeout_cancelsresponse'
+SELECT COUNT(*)
+FROM [ModelTestResults] AS [m]
+WHERE ([m].[StartTime] >= @__started_DateTime_Date_0) AND ((@__Name_1 = N'') OR (CHARINDEX(@__Name_1, [m].[TestFullName]) > 0))
+
 /* Search timelines initial */
 DECLARE @__started_DateTime_Date_1 AS DateTime2 = '2021-04-03'
 DECLARE @__Definition_0 As nvarchar(100) = 'roslyn-ci'
+DECLARE @__text_3 As nvarchar(100) = 'error'
 SELECT COUNT(*)
 FROM [ModelTimelineIssues] AS [m]
-WHERE ([m].[DefinitionName] = @__Definition_0) AND ([m].[StartTime] >= @__started_DateTime_Date_1)
+WHERE (([m].[DefinitionName] = @__Definition_0) AND ([m].[StartTime] >= @__started_DateTime_Date_1)) AND CONTAINS([m].[Message], @__text_3)
 
 /* 
     Search Timelines
@@ -111,7 +135,7 @@ WHERE ([m].[DefinitionName] = @__Definition_0) AND ([m].[StartTime] >= @__starte
 */
 DECLARE @__started_DateTime_Date_1 AS DateTime2 = '2021-04-03'
 DECLARE @__Definition_0 As nvarchar(100) = 'roslyn-ci'
-DECLARE @__text_3 As nvarchar(100) = 'Too many'
+DECLARE @__text_3 As nvarchar(100) = 'error'
 DECLARE @__p_4 As Integer = 50
 DECLARE @__p_5 As Integer = 25
 SELECT [m0].[BuildNumber], [t].[Message], [t].[JobName], [t].[IssueType], [t].[Attempt]
@@ -124,6 +148,20 @@ FROM (
 ) AS [t]
 INNER JOIN [ModelBuilds] AS [m0] ON [t].[ModelBuildId] = [m0].[Id]
 ORDER BY [t].[StartTime] DESC
+
+
+/*
+      
+Failed executing DbCommand (30,433ms) [Parameters=[@__Definition_0='runtime' (Size = 100), @__started_DateTime_Date_1='2021-04-05T00:00:00', @__type_2='1' (Nullable = false) (Size = 12), @__text_4='"abandoned due to an infrastructure failure"' (Size = 4000)], CommandType='Text', CommandTimeout='30']
+*/
+
+DECLARE @__started_DateTime_Date_1 AS DateTime2 = '2021-04-03'
+DECLARE @__Definition_0 As nvarchar(100) = 'roslyn-ci'
+DECLARE @__type_2 As integer = 1
+DECLARE @__text_4 As nvarchar(100) = '"abandoned due to an infrastructure failure"'
+      SELECT COUNT(*)
+      FROM [ModelTimelineIssues] AS [m]
+      WHERE ((([m].[DefinitionName] = @__Definition_0) AND ([m].[StartTime] >= @__started_DateTime_Date_1)) AND ([m].[IssueType] = @__type_2)) AND CONTAINS([m].[Message], @__text_4)
 
 /* Show all foreign keys including cascade actions */
  SELECT
