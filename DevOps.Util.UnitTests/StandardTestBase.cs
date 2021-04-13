@@ -245,6 +245,7 @@ namespace DevOps.Util.UnitTests
                 StartTime = testRun.ModelBuild.StartTime,
                 ModelBuild = testRun.ModelBuild,
                 ModelBuildAttempt = testRun.ModelBuildAttempt,
+                Attempt = testRun.Attempt,
                 DefinitionNumber = testRun.ModelBuild.DefinitionNumber,
                 DefinitionName = testRun.ModelBuild.DefinitionName,
                 ModelBuildDefinition = testRun.ModelBuild.ModelBuildDefinition,

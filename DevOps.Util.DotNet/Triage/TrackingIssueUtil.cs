@@ -157,20 +157,26 @@ namespace DevOps.Util.DotNet.Triage
             Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Test);
             Debug.Assert(modelTrackingIssue.SearchQuery is object);
 
-            var request = new SearchTestsRequest()
+            // The only actual build range filtering we do at this point is making sure that the
+            // definition filtering matches
+            if (modelTrackingIssue.ModelBuildDefinitionId is { } definitionId && modelBuildAttempt.ModelBuildDefinitionId != definitionId)
+            {
+                return false;
+            }
+
+            var testsQuery = Context
+                .ModelTestResults
+                .Where(x => x.ModelBuildId == modelBuildAttempt.ModelBuildId && x.Attempt == modelBuildAttempt.Attempt);
+
+            var request = new SearchTestsRequest(modelTrackingIssue.SearchQuery)
             {
                 Started = null,
             };
 
-            request.ParseQueryString(modelTrackingIssue.SearchQuery);
-            IQueryable<ModelTestResult> testQuery = request
-                .Filter(Context.ModelTestResults)
-                .Where(x =>
-                    x.ModelBuildId == modelBuildAttempt.ModelBuildId &&
-                    x.ModelTestRun.Attempt == modelBuildAttempt.Attempt)
-                .Include(x => x.ModelTestRun);
+            testsQuery = request.Filter(testsQuery).Include(x => x.ModelTestRun);
+
             var any = false;
-            foreach (var testResult in await testQuery.ToListAsync().ConfigureAwait(false))
+            foreach (var testResult in await testsQuery.ToListAsync().ConfigureAwait(false))
             {
                 var modelMatch = new ModelTrackingIssueMatch()
                 {
@@ -194,16 +200,24 @@ namespace DevOps.Util.DotNet.Triage
             Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Timeline);
             Debug.Assert(modelTrackingIssue.SearchQuery is object);
 
-            var request = new SearchTimelinesRequest()
+            // The only actual build range filtering we do at this point is making sure that the
+            // definition filtering matches
+            if (modelTrackingIssue.ModelBuildDefinitionId is { } definitionId && modelBuildAttempt.ModelBuildDefinitionId != definitionId)
+            {
+                return false;
+            }
+
+            var timelineQuery = Context
+                .ModelTimelineIssues
+                .Where(x => x.ModelBuildId == modelBuildAttempt.ModelBuildId && x.Attempt == modelBuildAttempt.Attempt);
+
+            var request = new SearchTimelinesRequest(modelTrackingIssue.SearchQuery)
             {
                 Started = null,
             };
 
-            request.ParseQueryString(modelTrackingIssue.SearchQuery);
-            var timelineQuery = request.Filter(Context.ModelTimelineIssues)
-                .Where(x =>
-                    x.ModelBuildId == modelBuildAttempt.ModelBuild.Id &&
-                    x.Attempt == modelBuildAttempt.Attempt);
+            timelineQuery = request.Filter(Context.ModelTimelineIssues);
+
             var any = false;
             foreach (var modelTimelineIssue in await timelineQuery.ToListAsync().ConfigureAwait(false))
             {

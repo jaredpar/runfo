@@ -87,7 +87,7 @@ namespace DevOps.Util.DotNet.Triage
                 .IsUnique();
 
             modelBuilder.Entity<ModelTestResult>()
-                .HasIndex(x => x.ModelBuildId)
+                .HasIndex(x => new { x.ModelBuildId, x.Attempt })
                 .IncludeProperties(x => new { x.TestFullName, x.TestRunName, x.IsHelixTestResult });
 
             modelBuilder.Entity<ModelTestResult>()
