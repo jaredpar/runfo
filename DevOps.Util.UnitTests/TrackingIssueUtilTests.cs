@@ -150,6 +150,52 @@ namespace DevOps.Util.UnitTests
             Assert.Equal(2, results.Count);
         }
 
+        /// <summary>
+        /// Make sure the triage is working for only the specific <see cref="ModelBuildAttempt"/>
+        /// that is passed in. Helps validate that our search is as limited as it should be within
+        /// the util
+        /// </summary>
+        [Fact]
+        public async Task TriageTimelineIssueAttemptOnly()
+        {
+            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var attempt1 = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
+            var timeline1 = AddTimelineIssue("windows|dog", attempt1);
+            var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def));
+            var timeline2 = AddTimelineIssue("windows|dog", attempt2);
+            var tracking = AddTrackingIssue(
+                TrackingKind.Timeline,
+                timelinesRequest: new SearchTimelinesRequest() { Text = "#dog" });
+            await Context.SaveChangesAsync();
+
+            await TrackingIssueUtil.TriageAsync(attempt1.GetBuildAttemptKey(), tracking.Id);
+            Assert.Equal(1, await Context.ModelTrackingIssueResults.CountAsync());
+            await TrackingIssueUtil.TriageAsync(attempt2.GetBuildAttemptKey(), tracking.Id);
+            Assert.Equal(2, await Context.ModelTrackingIssueResults.CountAsync());
+        }
+
+        [Fact]
+        public async Task TriageTimelineIssueAttemptOnlyWithinBuild()
+        {
+            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var attempt1 = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
+            var attempt2 = AddAttempt(2, attempt1.ModelBuild);
+            var attempt3 = AddAttempt(3, attempt1.ModelBuild);
+            var timeline1 = AddTimelineIssue("windows|dog", attempt1);
+            var timeline2 = AddTimelineIssue("windows|dog", attempt2);
+            var tracking = AddTrackingIssue(
+                TrackingKind.Timeline,
+                timelinesRequest: new SearchTimelinesRequest() { Text = "#dog" });
+            await Context.SaveChangesAsync();
+
+            await TrackingIssueUtil.TriageAsync(attempt1.GetBuildAttemptKey(), tracking.Id);
+            Assert.Equal(1, await Context.ModelTrackingIssueResults.CountAsync());
+            await TrackingIssueUtil.TriageAsync(attempt2.GetBuildAttemptKey(), tracking.Id);
+            Assert.Equal(2, await Context.ModelTrackingIssueResults.CountAsync());
+            await TrackingIssueUtil.TriageAsync(attempt2.GetBuildAttemptKey(), tracking.Id);
+            Assert.Equal(2, await Context.ModelTrackingIssueResults.CountAsync());
+        }
+
         [Theory]
         [InlineData(HelixLogKind.Console)]
         [InlineData(HelixLogKind.RunClient)]
