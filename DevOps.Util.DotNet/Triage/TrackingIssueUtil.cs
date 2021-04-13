@@ -216,7 +216,7 @@ namespace DevOps.Util.DotNet.Triage
                 Started = null,
             };
 
-            timelineQuery = request.Filter(Context.ModelTimelineIssues);
+            timelineQuery = request.Filter(timelineQuery);
 
             var any = false;
             foreach (var modelTimelineIssue in await timelineQuery.ToListAsync().ConfigureAwait(false))
