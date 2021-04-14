@@ -67,8 +67,12 @@ namespace DevOps.Status.Pages.Tracking
             }
 
             var week = DateTime.UtcNow - TimeSpan.FromDays(7);
+            var totalCount = await query.Where(x => x.IsActive).CountAsync();
             Issues = await query
                 .Where(x => x.IsActive)
+                .OrderByDescending(x => x.Id)
+                .Skip(PageSize * PageNumber)
+                .Take(PageSize)
                 .Select(issue => new IssueData()
                 {
                     Id = issue.Id,
@@ -77,9 +81,6 @@ namespace DevOps.Status.Pages.Tracking
                     TotalCount = issue.ModelTrackingIssueMatches.Count(),
                     WeekCount = issue.ModelTrackingIssueMatches.Where(x => x.ModelBuildAttempt.ModelBuild.StartTime >= week).Count()
                 })
-                .OrderByDescending(x => x.WeekCount)
-                .Skip(PageSize * PageNumber)
-                .Take(PageSize)
                 .ToListAsync();
 
             PaginationDisplay = new PaginationDisplay(
@@ -88,7 +89,8 @@ namespace DevOps.Status.Pages.Tracking
                 {
                     {nameof(Query), Query ?? "" }
                 },
-                PageNumber);
+                PageNumber,
+                totalCount / PageSize);
 
         }
     }
