@@ -145,7 +145,7 @@ namespace DevOps.Util.DotNet.Triage
             {
                 var query = Context
                     .ModelTrackingIssueResults
-                    .Where(x => x.ModelBuildAttemptId == modelBuildAttempt.Id && x.ModelTrackingIssueId == modelTrackingIssue.Id);
+                    .Where(x => x.ModelTrackingIssueId == modelTrackingIssue.Id && x.ModelBuildAttemptId == modelBuildAttempt.Id);
                 return await query.AnyAsync().ConfigureAwait(false);
             }
         }

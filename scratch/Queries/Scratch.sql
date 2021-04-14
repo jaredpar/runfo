@@ -163,6 +163,27 @@ DECLARE @__text_4 As nvarchar(100) = '"abandoned due to an infrastructure failur
       FROM [ModelTimelineIssues] AS [m]
       WHERE ((([m].[DefinitionName] = @__Definition_0) AND ([m].[StartTime] >= @__started_DateTime_Date_1)) AND ([m].[IssueType] = @__type_2)) AND CONTAINS([m].[Message], @__text_4)
 
+/*
+  Searching for tests
+started:~3 definition:roslyn-ci message:"One or more errors occurred"
+  */
+DECLARE @__Definition_0 As nvarchar(100) ='roslyn-ci' 
+DECLARE @__started_DateTime_Date_1 As DateTime2='2021-04-10T00:00:00'
+DECLARE @__text_3 As nvarchar(4000)='"One or more errors occurred"' 
+DECLARE @__p_4 As Integer=0
+DECLARE @__p_5 As Integer =101
+      SELECT [t].[Id], [t].[Attempt], [t].[BuildKind], [t].[BuildResult], [t].[DefinitionName], [t].[DefinitionNumber], [t].[ErrorMessage], [t].[GitHubTargetBranch], [t].[HelixConsoleUri], [t].[HelixCoreDumpUri], [t].[HelixRunClientUri], [t].[HelixTestResultsUri], [t].[IsHelixTestResult], [t].[IsSubResult], [t].[IsSubResultContainer], [t].[ModelBuildAttemptId], [t].[ModelBuildDefinitionId], [t].[ModelBuildId], [t].[ModelTestRunId], [t].[Outcome], [t].[StartTime], [t].[TestFullName], [t].[TestRunName], [m0].[Id], [m0].[AzureOrganization], [m0].[AzureProject], [m0].[BuildKind], [m0].[BuildNumber], [m0].[BuildResult], [m0].[DefinitionName], [m0].[DefinitionNumber], [m0].[FinishTime], [m0].[GitHubOrganization], [m0].[GitHubRepository], [m0].[GitHubTargetBranch], [m0].[ModelBuildDefinitionId], [m0].[NameKey], [m0].[PullRequestNumber], [m0].[QueueTime], [m0].[StartTime]
+      FROM (
+          SELECT [m].[Id], [m].[Attempt], [m].[BuildKind], [m].[BuildResult], [m].[DefinitionName], [m].[DefinitionNumber], [m].[ErrorMessage], [m].[GitHubTargetBranch], [m].[HelixConsoleUri], [m].[HelixCoreDumpUri], [m].[HelixRunClientUri], [m].[HelixTestResultsUri], [m].[IsHelixTestResult], [m].[IsSubResult], [m].[IsSubResultContainer], [m].[ModelBuildAttemptId], [m].[ModelBuildDefinitionId], [m].[ModelBuildId], [m].[ModelTestRunId], [m].[Outcome], [m].[StartTime], [m].[TestFullName], [m].[TestRunName]
+          FROM [ModelTestResults] AS [m]
+          WHERE (([m].[DefinitionName] = @__Definition_0) AND ([m].[StartTime] >= @__started_DateTime_Date_1)) AND CONTAINS([m].[ErrorMessage], @__text_3)
+          ORDER BY [m].[StartTime] DESC
+          OFFSET @__p_4 ROWS FETCH NEXT @__p_5 ROWS ONLY
+      ) AS [t]
+      INNER JOIN [ModelBuilds] AS [m0] ON [t].[ModelBuildId] = [m0].[Id]
+      ORDER BY [t].[StartTime] DESC
+
+
 /* Show all foreign keys including cascade actions */
  SELECT
     f.name constraint_name
@@ -200,6 +221,9 @@ SELECT COUNT(Id)
 FROM ModelBuilds
 WHERE StartTIme < '2020-11-01'
 
+SELECT COUNT(*)
+FROM ModelTrackingIssueMatches
+
 /* Delete Time */
 SELECT COUNT(*)
 FROM ModelTestResults m
@@ -207,6 +231,9 @@ WHERE m.ModelBuildId IN (
 	SELECT Id 
 	FROM ModelBuilds
 	WHERE StartTime < '2020-12-01')
+
+EXEC sp_helpindex 'ModelTrackingIssueMatches'
+GO
 
 DELETE m
 FROM ModelTestResults m
@@ -227,7 +254,26 @@ FROM ModelTestResults m
 LEFT JOIN ModelBuilds as b ON m.ModelBuildId = b.Id
 WHERE b.StartTime < '2020-11-01'
 
+/*
+That time I needed to fix all the matches table entries cause I created 10+ million of them
+DROP INDEX ModelTrackingIssueMatches.IX_ModelTrackingIssueMatches_ModelBuildAttemptId	
+DROP INDEX ModelTrackingIssueMatches.IX_ModelTrackingIssueMatches_ModelTestResultId	
+DROP INDEX ModelTrackingIssueMatches.IX_ModelTrackingIssueMatches_ModelTimelineIssueId
+DROP INDEX ModelTrackingIssueMatches.IX_ModelTrackingIssueMatches_ModelTrackingIssueId
+EXEC sp_helpindex 'ModelTrackingIssueMatches'
+GO
 
+CREATE INDEX IX_ModelTrackingIssueMatches_ModelTrackingIssueId
+ON ModelTrackingIssueMatches (ModelTrackingIssueId)
+
+CREATE INDEX IX_ModelTrackingIssueMatches_ModelBuildAttemptId	
+ON ModelTrackingIssueMatches (ModelBuildAttemptId)
+CREATE INDEX IX_ModelTrackingIssueMatches_ModelTestResultId	
+ON ModelTrackingIssueMatches (ModelTestResultId)
+CREATE INDEX IX_ModelTrackingIssueMatches_ModelTimelineIssueId
+ON ModelTrackingIssueMatches (ModelTimelineIssueId)
+
+*/
 SELECT TOP 10
 FROM ModelTestResults
 ORDER BY 

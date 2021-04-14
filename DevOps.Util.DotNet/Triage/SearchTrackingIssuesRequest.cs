@@ -29,7 +29,6 @@ namespace DevOps.Util.DotNet.Triage
                 Append($"definition:{Definition}");
             }
 
-
             return builder.ToString();
             void Append(string message)
             {

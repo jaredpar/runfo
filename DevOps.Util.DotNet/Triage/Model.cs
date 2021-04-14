@@ -141,6 +141,10 @@ namespace DevOps.Util.DotNet.Triage
                 .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<ModelTrackingIssue>()
+                .HasIndex(x => new { x.IsActive, x.Id })
+                .IsUnique();
+
+            modelBuilder.Entity<ModelTrackingIssue>()
                 .Property(x => x.TrackingKind)
                 .HasConversion<string>();
 

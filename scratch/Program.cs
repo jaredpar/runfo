@@ -169,7 +169,8 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await PopulateDb();
+            // await PopulateDb();
+            await CleanMatches();
             // await Migrate();
             //await PopulateDb(count: 100, definitionId: 15, includeTests: true, includeTriage: false);
 
@@ -280,6 +281,42 @@ namespace Scratch
 */
         }
 
+        internal async Task CleanMatches()
+        {
+            foreach (var issue in await TriageContext.ModelTrackingIssues.Where(x => x.IsActive).ToListAsync())
+            {
+                Console.WriteLine($"Processing {issue.IssueTitle}");
+                var matches = await TriageContext.ModelTrackingIssueMatches.Where(x => x.ModelTrackingIssueId == issue.Id).ToListAsync();
+                Console.WriteLine($"{matches.Count:n0} matches");
+
+                const int limit = 50_000;
+                var deleteCount = 0;
+                var set = new HashSet<int>();
+                foreach (var match in matches)
+                {
+                    if (!set.Add(match.ModelBuildAttemptId))
+                    {
+                        TriageContext.Remove(match);
+                        deleteCount++;
+
+                        if (deleteCount == limit)
+                        {
+                            Console.Write($"Deleting {deleteCount:n0} matches ... ");
+                            await TriageContext.SaveChangesAsync();
+                            deleteCount = 0;
+                        }
+                    }
+                }
+
+                if (deleteCount > 0)
+                {
+                    Console.Write($"Deleting {deleteCount:n0} matches ... ");
+                    await TriageContext.SaveChangesAsync();
+                    Console.WriteLine("done");
+                }
+            }
+        }
+
         internal async Task PopulateDb()
         {
             const int maxParallel = 4;
@@ -294,12 +331,13 @@ namespace Scratch
                     continue;
                 }
 
+                var uri = build.GetBuildResultInfo().BuildUri;
                 if (await TriageContextUtil.FindModelBuildAsync(build.GetBuildKey()) is object)
                 {
+                    Console.WriteLine($"Skipping {uri}");
                     continue;
                 }
 
-                var uri = build.GetBuildResultInfo().BuildUri;
                 Console.WriteLine($"Getting data for {uri}");
                 list.Add(ProcessBuildAsync(build, TriageContextOptions, DotNetQueryUtil, logger));
                 if (list.Count >= maxParallel)
