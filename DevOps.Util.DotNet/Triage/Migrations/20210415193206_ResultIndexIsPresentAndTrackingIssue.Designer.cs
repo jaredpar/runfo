@@ -4,14 +4,16 @@ using DevOps.Util.DotNet.Triage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace DevOps.Util.DotNet.Triage.Migrations
 {
     [DbContext(typeof(TriageContext))]
-    partial class TriageContextModelSnapshot : ModelSnapshot
+    [Migration("20210415193206_ResultIndexIsPresentAndTrackingIssue")]
+    partial class ResultIndexIsPresentAndTrackingIssue
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -535,9 +537,6 @@ namespace DevOps.Util.DotNet.Triage.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ModelBuildDefinitionId");
-
-                    b.HasIndex("IsActive", "Id")
-                        .IsUnique();
 
                     b.ToTable("ModelTrackingIssues");
                 });

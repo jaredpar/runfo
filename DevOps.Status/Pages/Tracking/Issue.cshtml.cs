@@ -117,7 +117,7 @@ namespace DevOps.Status.Pages.Tracking
                     RepositoryUri = x.ModelBuildAttempt.ModelBuild.GitHubRepository is object
                         ? $"https://github.com/{x.ModelBuildAttempt.ModelBuild.GitHubOrganization}/{x.ModelBuildAttempt.ModelBuild.GitHubRepository}"
                         : "",
-                    Queued = dateTimeUtil.ConvertDateTime(x.ModelBuildAttempt.ModelBuild.QueueTime),
+                    Queued = dateTimeUtil.ConvertDateTime(x.ModelBuildAttempt.StartTime),
                 })
                 .AsNoTracking()
                 .ToListAsync();
@@ -132,7 +132,7 @@ namespace DevOps.Status.Pages.Tracking
 
             async Task<int> GetHitCount(DateTime before) => await Context
                 .ModelTrackingIssueResults
-                .Where(x => x.ModelTrackingIssueId == ModelTrackingIssueId && x.IsPresent && x.ModelBuildAttempt.ModelBuild.QueueTime > before)
+                .Where(x => x.IsPresent && x.ModelTrackingIssueId == ModelTrackingIssueId && x.ModelBuildAttempt.StartTime > before)
                 .CountAsync();
         }
 

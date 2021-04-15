@@ -165,6 +165,9 @@ namespace DevOps.Util.DotNet.Triage
                 .IsUnique();
 
             modelBuilder.Entity<ModelTrackingIssueResult>()
+                .HasIndex(x => new { x.IsPresent, x.ModelTrackingIssueId });
+
+            modelBuilder.Entity<ModelTrackingIssueResult>()
                 .HasOne(x => x.ModelBuildAttempt)
                 .WithMany(x => x.ModelTrackingIssueResults)
                 .OnDelete(DeleteBehavior.Cascade);
