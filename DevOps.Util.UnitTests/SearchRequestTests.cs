@@ -99,5 +99,26 @@ namespace DevOps.Util.UnitTests
                 Assert.Equal(count, queryCount);
             }
         }
+
+        [Fact]
+        public async Task TimelineRespectsStartedOption()
+        {
+            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var build = AddBuild("1|dotnet|roslyn|2020-01-01|Failed", def);
+            AddTimelineIssue("build|dog", AddAttempt(1, build));
+            await Context.SaveChangesAsync();
+
+            var request = new SearchTimelinesRequest("text:#dog")
+            {
+                Started = null,
+            };
+
+            Assert.Equal(1, await request.Filter(Context.ModelTimelineIssues).CountAsync());
+
+            // By default the Started value will be seven days ago which won't match
+            // the date of the build here
+            request = new SearchTimelinesRequest("text:#dog");
+            Assert.Equal(0, await request.Filter(Context.ModelTimelineIssues).CountAsync());
+        }
     }
 }

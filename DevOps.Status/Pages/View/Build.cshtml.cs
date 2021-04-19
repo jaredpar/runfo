@@ -35,6 +35,7 @@ namespace DevOps.Status.Pages.View
         public TestResultsDisplay TestResultsDisplay { get; set; } = TestResultsDisplay.Empty;
         public List<GitHubIssueKey> GitHubIssues { get; set; } = new List<GitHubIssueKey>();
         public string? GitHubIssueAddErrorMessage { get; set; }
+        public DateTime? QueueTime { get; set; }
 
         public BuildModel(TriageContextUtil triageContextUtil, IGitHubClientFactory gitHubClientFactory, ILogger<BuildModel> logger)
         {
@@ -93,6 +94,9 @@ namespace DevOps.Status.Pages.View
                         modelBuild.GitHubRepository,
                         prNumber);
                 }
+
+                var dateTimeUtil = new DateTimeUtil();
+                QueueTime = dateTimeUtil.ConvertDateTime(modelBuild.QueueTime);
 
                 return modelBuild;
             }

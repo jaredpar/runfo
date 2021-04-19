@@ -85,5 +85,17 @@ namespace DevOps.Util.UnitTests
             options.ParseQueryString(toParse);
             Assert.Equal(userQuery, options.GetQueryString());
         }
+
+        [Fact]
+        public void ExplititStartOverridesQuery()
+        {
+            var request = new SearchTimelinesRequest("started:~7 text:error")
+            {
+                Started = null,
+            };
+
+            Assert.Null(request.Started);
+            Assert.Equal(@"text:""error""", request.GetQueryString());
+        }
     }
 }

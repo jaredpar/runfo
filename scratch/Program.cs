@@ -169,8 +169,14 @@ namespace Scratch
 
         internal async Task Scratch()
         {
+            var items = await TriageContext.ModelTrackingIssues.Where(x => x.IsActive && x.SearchQuery.Contains("started")).ToListAsync();
+            foreach (var item in items)
+            {
+
+            }
+
+
             // await PopulateDb();
-            await CleanMatches();
             // await Migrate();
             //await PopulateDb(count: 100, definitionId: 15, includeTests: true, includeTriage: false);
 
