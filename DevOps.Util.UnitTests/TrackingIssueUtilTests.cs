@@ -240,7 +240,7 @@ namespace DevOps.Util.UnitTests
             async Task TestSearch(ModelTrackingIssue issue, int matchCount, bool isPresent)
             {
                 await Context.SaveChangesAsync();
-                await TrackingIssueUtil.TriageAsync(attempt, issue);
+                await TrackingIssueUtil.TriageAsync(attempt.GetBuildAttemptKey(), issue);
                 var matches = await Context.ModelTrackingIssueMatches.Where(x => x.ModelTrackingIssueId == issue.Id).ToListAsync();
                 Assert.Equal(matchCount, matches.Count);
                 var result = await Context.ModelTrackingIssueResults.Where(x => x.ModelTrackingIssueId == issue.Id).SingleAsync();
