@@ -115,13 +115,15 @@ namespace DevOps.Util.DotNet.Triage
                 query = query.Where(x => x.DefinitionName == Definition);
             }
 
-            var started = Started ?? StartedDefault;
-            query = started.Kind switch
+            if (Started is { } started)
             {
-                RelationalKind.GreaterThan => query.Where(x => x.StartTime >= started.DateTime.Date),
-                RelationalKind.LessThan => query.Where(x => x.StartTime <= started.DateTime.Date),
-                _ => query
-            };
+                query = started.Kind switch
+                {
+                    RelationalKind.GreaterThan => query.Where(x => x.StartTime >= started.DateTime.Date),
+                    RelationalKind.LessThan => query.Where(x => x.StartTime <= started.DateTime.Date),
+                    _ => query
+                };
+            }
 
             if (BuildResult is { } buildResult)
             {
@@ -171,13 +173,15 @@ namespace DevOps.Util.DotNet.Triage
                 query = query.Where(x => x.DefinitionName == Definition);
             }
 
-            var started = Started ?? StartedDefault;
-            query = started.Kind switch
+            if (Started is { } started)
             {
-                RelationalKind.GreaterThan => query.Where(x => x.StartTime >= started.DateTime.Date),
-                RelationalKind.LessThan => query.Where(x => x.StartTime <= started.DateTime.Date),
-                _ => query
-            };
+                query = started.Kind switch
+                {
+                    RelationalKind.GreaterThan => query.Where(x => x.StartTime >= started.DateTime.Date),
+                    RelationalKind.LessThan => query.Where(x => x.StartTime <= started.DateTime.Date),
+                    _ => query
+                };
+            }
 
             if (BuildResult is { } buildResult)
             {
@@ -227,13 +231,15 @@ namespace DevOps.Util.DotNet.Triage
                 query = query.Where(x => x.DefinitionName == Definition);
             }
 
-            var started = Started ?? StartedDefault;
-            query = started.Kind switch
+            if (Started is { } started)
             {
-                RelationalKind.GreaterThan => query.Where(x => x.StartTime >= started.DateTime.Date),
-                RelationalKind.LessThan => query.Where(x => x.StartTime <= started.DateTime.Date),
-                _ => query
-            };
+                query = started.Kind switch
+                {
+                    RelationalKind.GreaterThan => query.Where(x => x.StartTime >= started.DateTime.Date),
+                    RelationalKind.LessThan => query.Where(x => x.StartTime <= started.DateTime.Date),
+                    _ => query
+                };
+            }
 
             if (BuildResult is { } buildResult)
             {

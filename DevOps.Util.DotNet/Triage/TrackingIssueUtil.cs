@@ -176,6 +176,7 @@ namespace DevOps.Util.DotNet.Triage
 
             var testsQuery = Context
                 .ModelTestResults
+                .Include(x => x.ModelTestRun)
                 .Where(x => x.ModelBuildId == modelBuildId && x.Attempt == attemptKey.Attempt);
 
             var request = new SearchTestsRequest(modelTrackingIssue.SearchQuery)
@@ -183,17 +184,24 @@ namespace DevOps.Util.DotNet.Triage
                 Started = null,
             };
 
-            testsQuery = request.Filter(testsQuery).Include(x => x.ModelTestRun);
+            var data = await request.Filter(testsQuery)
+                .Select(x => new
+                {
+                    ModelTestResultId = x.Id,
+                    JobName = x.ModelTestRun.Name
+                })
+                .ToListAsync()
+                .ConfigureAwait(false);
 
             var any = false;
-            foreach (var testResult in await testsQuery.ToListAsync().ConfigureAwait(false))
+            foreach (var testResult in data)
             {
                 var modelMatch = new ModelTrackingIssueMatch()
                 {
                     ModelTrackingIssue = modelTrackingIssue,
                     ModelBuildAttemptId = modelBuildAttemptId,
-                    ModelTestResult = testResult,
-                    JobName = testResult.ModelTestRun.Name,
+                    ModelTestResultId = testResult.ModelTestResultId,
+                    JobName = testResult.JobName,
                 };
 
                 Context.ModelTrackingIssueMatches.Add(modelMatch);

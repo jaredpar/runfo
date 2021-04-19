@@ -29,6 +29,9 @@
         <dt class="col-sm-3">GitHub Repository</dt>
         <dd class="col-sm-9"><a href="@Model.RepositoryUri">@Model.Repository</a></dd>
 
+        <dt class="col-sm-3">Queue Time</dt>
+        <dd class="col-sm-9">@Model.QueueTime</dd>
+
         @if (Model.TargetBranch is { })
         {
             <dt class="col-sm-3">Target Branch</dt>
@@ -46,7 +49,6 @@
 
         <dt class="col-sm-3">Result</dt>
         <dd class="col-sm-9">@Model.BuildResult</dd>
-
     </dl>
 
     <div>
