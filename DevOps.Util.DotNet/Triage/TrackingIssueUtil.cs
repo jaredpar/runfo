@@ -42,13 +42,14 @@ namespace DevOps.Util.DotNet.Triage
         public async Task TriageAsync(BuildKey buildKey, int modelTrackingIssueId)
         {
             var attempts = await TriageContextUtil
-                .GetModelBuildAttemptsQuery(buildKey)
-                .Include(x => x.ModelBuild)
+                .GetModelBuildQuery(buildKey)
+                .SelectMany(x => x.ModelBuildAttempts)
+                .Select(x => x.Attempt)
                 .ToListAsync()
                 .ConfigureAwait(false);
             foreach (var attempt in attempts)
             {
-                await TriageAsync(attempt.GetBuildAttemptKey(), modelTrackingIssueId).ConfigureAwait(false);
+                await TriageAsync(new BuildAttemptKey(buildKey, attempt), modelTrackingIssueId).ConfigureAwait(false);
             }
         }
 
@@ -58,8 +59,7 @@ namespace DevOps.Util.DotNet.Triage
                 .ModelTrackingIssues
                 .Where(x => x.Id == modelTrackingIssueId)
                 .SingleAsync().ConfigureAwait(false);
-            var modelBuildAttempt = await GetModelBuildAttemptAsync(attemptKey).ConfigureAwait(false);
-            await TriageAsync(modelBuildAttempt, modelTrackingIssue).ConfigureAwait(false);
+            await TriageAsync(attemptKey, modelTrackingIssue).ConfigureAwait(false);
         }
 
         public async Task TriageAsync(BuildAttemptKey attemptKey)
@@ -84,19 +84,37 @@ namespace DevOps.Util.DotNet.Triage
 
             foreach (var trackingIssue in trackingIssues)
             {
-                await TriageAsync(modelBuildAttempt, trackingIssue).ConfigureAwait(false);
+                await TriageAsync(modelBuildAttempt.GetBuildAttemptKey(), trackingIssue).ConfigureAwait(false);
             }
         }
 
-        public async Task TriageAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue)
+        public async Task TriageAsync(BuildAttemptKey attemptKey, ModelTrackingIssue modelTrackingIssue)
         {
-            if (modelBuildAttempt.ModelBuild is null)
+            var data = await TriageContextUtil
+                .GetModelBuildAttemptQuery(attemptKey)
+                .Select(x => new
+                {
+                    x.Id,
+                    x.ModelBuildId,
+                    x.ModelBuildDefinitionId,
+                })
+                .SingleOrDefaultAsync()
+                .ConfigureAwait(false);
+            if (data is object)
             {
-                throw new Exception("The attempt must include the build");
+                await TriageAsync(
+                    attemptKey,
+                    modelBuildAttemptId: data.Id,
+                    modelBuildId: data.ModelBuildId,
+                    modelDefinitionId: data.ModelBuildDefinitionId,
+                    modelTrackingIssue).ConfigureAwait(false);
             }
+        }
 
+        private async Task TriageAsync(BuildAttemptKey attemptKey, int modelBuildAttemptId, int modelBuildId, int modelDefinitionId, ModelTrackingIssue modelTrackingIssue)
+        {
             if (modelTrackingIssue.ModelBuildDefinitionId is { } definitionId &&
-                definitionId != modelBuildAttempt.ModelBuild.ModelBuildDefinitionId)
+                definitionId != modelDefinitionId)
             {
                 return;
             }
@@ -112,13 +130,13 @@ namespace DevOps.Util.DotNet.Triage
             switch (modelTrackingIssue.TrackingKind)
             {
                 case TrackingKind.Test:
-                    isPresent = await TriageTestAsync(modelBuildAttempt, modelTrackingIssue).ConfigureAwait(false);
+                    isPresent = await TriageTestAsync(attemptKey, modelBuildAttemptId, modelBuildId, modelTrackingIssue).ConfigureAwait(false);
                     break;
                 case TrackingKind.Timeline:
-                    isPresent = await TriageTimelineAsync(modelBuildAttempt, modelTrackingIssue).ConfigureAwait(false);
+                    isPresent = await TriageTimelineAsync(attemptKey, modelBuildAttemptId, modelBuildId, modelTrackingIssue).ConfigureAwait(false);
                     break;
                 case TrackingKind.HelixLogs:
-                    isPresent = await TriageHelixLogsAsync(modelBuildAttempt, modelTrackingIssue).ConfigureAwait(false);
+                    isPresent = await TriageHelixLogsAsync(attemptKey, modelBuildAttemptId, modelBuildId, modelTrackingIssue).ConfigureAwait(false);
                     break;
                 default:
                     throw new Exception($"Unknown value {modelTrackingIssue.TrackingKind}");
@@ -126,7 +144,7 @@ namespace DevOps.Util.DotNet.Triage
 
             var result = new ModelTrackingIssueResult()
             {
-                ModelBuildAttempt = modelBuildAttempt,
+                ModelBuildAttemptId = modelBuildAttemptId,
                 ModelTrackingIssue = modelTrackingIssue,
                 IsPresent = isPresent
             };
@@ -136,7 +154,7 @@ namespace DevOps.Util.DotNet.Triage
             // retried because they assume races with other operations can happen. 
             if (isPresent && modelTrackingIssue.GetGitHubIssueKey() is { } issueKey)
             {
-                await TriageContextUtil.EnsureGitHubIssueAsync(modelBuildAttempt.ModelBuild, issueKey, saveChanges: false).ConfigureAwait(false);
+                await TriageContextUtil.EnsureGitHubIssueAsync(attemptKey.BuildKey, modelBuildId, issueKey, saveChanges: false).ConfigureAwait(false);
             }
 
             await Context.SaveChangesAsync().ConfigureAwait(false);
@@ -145,28 +163,20 @@ namespace DevOps.Util.DotNet.Triage
             {
                 var query = Context
                     .ModelTrackingIssueResults
-                    .Where(x => x.ModelTrackingIssueId == modelTrackingIssue.Id && x.ModelBuildAttemptId == modelBuildAttempt.Id);
+                    .Where(x => x.ModelTrackingIssueId == modelTrackingIssue.Id && x.ModelBuildAttemptId == modelBuildAttemptId);
                 return await query.AnyAsync().ConfigureAwait(false);
             }
         }
 
-        private async Task<bool> TriageTestAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue)
+        private async Task<bool> TriageTestAsync(BuildAttemptKey attemptKey, int modelBuildAttemptId, int modelBuildId, ModelTrackingIssue modelTrackingIssue)
         {
-            Debug.Assert(modelBuildAttempt.ModelBuild is object);
             Debug.Assert(modelTrackingIssue.IsActive);
             Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Test);
             Debug.Assert(modelTrackingIssue.SearchQuery is object);
 
-            // The only actual build range filtering we do at this point is making sure that the
-            // definition filtering matches
-            if (modelTrackingIssue.ModelBuildDefinitionId is { } definitionId && modelBuildAttempt.ModelBuildDefinitionId != definitionId)
-            {
-                return false;
-            }
-
             var testsQuery = Context
                 .ModelTestResults
-                .Where(x => x.ModelBuildId == modelBuildAttempt.ModelBuildId && x.Attempt == modelBuildAttempt.Attempt);
+                .Where(x => x.ModelBuildId == modelBuildId && x.Attempt == attemptKey.Attempt);
 
             var request = new SearchTestsRequest(modelTrackingIssue.SearchQuery)
             {
@@ -181,7 +191,7 @@ namespace DevOps.Util.DotNet.Triage
                 var modelMatch = new ModelTrackingIssueMatch()
                 {
                     ModelTrackingIssue = modelTrackingIssue,
-                    ModelBuildAttempt = modelBuildAttempt,
+                    ModelBuildAttemptId = modelBuildAttemptId,
                     ModelTestResult = testResult,
                     JobName = testResult.ModelTestRun.Name,
                 };
@@ -193,23 +203,15 @@ namespace DevOps.Util.DotNet.Triage
             return any;
         }
 
-        private async Task<bool> TriageTimelineAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue)
+        private async Task<bool> TriageTimelineAsync(BuildAttemptKey attemptKey, int modelBuildAttemptId, int modelBuildId, ModelTrackingIssue modelTrackingIssue)
         {
-            Debug.Assert(modelBuildAttempt.ModelBuild is object);
             Debug.Assert(modelTrackingIssue.IsActive);
             Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.Timeline);
             Debug.Assert(modelTrackingIssue.SearchQuery is object);
 
-            // The only actual build range filtering we do at this point is making sure that the
-            // definition filtering matches
-            if (modelTrackingIssue.ModelBuildDefinitionId is { } definitionId && modelBuildAttempt.ModelBuildDefinitionId != definitionId)
-            {
-                return false;
-            }
-
             var timelineQuery = Context
                 .ModelTimelineIssues
-                .Where(x => x.ModelBuildId == modelBuildAttempt.ModelBuildId && x.Attempt == modelBuildAttempt.Attempt);
+                .Where(x => x.ModelBuildId == modelBuildId && x.Attempt == attemptKey.Attempt);
 
             var request = new SearchTimelinesRequest(modelTrackingIssue.SearchQuery)
             {
@@ -224,7 +226,7 @@ namespace DevOps.Util.DotNet.Triage
                 var modelMatch = new ModelTrackingIssueMatch()
                 {
                     ModelTrackingIssue = modelTrackingIssue,
-                    ModelBuildAttempt = modelBuildAttempt,
+                    ModelBuildAttemptId = modelBuildAttemptId,
                     ModelTimelineIssue = modelTimelineIssue,
                     JobName = modelTimelineIssue.JobName,
                 };
@@ -235,9 +237,8 @@ namespace DevOps.Util.DotNet.Triage
             return any;
         }
 
-        private async Task<bool> TriageHelixLogsAsync(ModelBuildAttempt modelBuildAttempt, ModelTrackingIssue modelTrackingIssue)
+        private async Task<bool> TriageHelixLogsAsync(BuildAttemptKey attemptKey, int modelBuildAttemptId, int modelBuildId, ModelTrackingIssue modelTrackingIssue)
         {
-            Debug.Assert(modelBuildAttempt.ModelBuild is object);
             Debug.Assert(modelTrackingIssue.IsActive);
             Debug.Assert(modelTrackingIssue.SearchQuery is object);
 
@@ -249,13 +250,15 @@ namespace DevOps.Util.DotNet.Triage
             request.ParseQueryString(modelTrackingIssue.SearchQuery);
 
             var query = request.Filter(Context.ModelTestResults)
-                .Where(x => x.ModelBuildAttemptId == modelBuildAttempt.Id);
+                .Where(x => x.ModelBuildAttemptId == modelBuildAttemptId);
+
+            var modelBuild = await Context.ModelBuilds.Where(x => x.Id == modelBuildId).SingleAsync().ConfigureAwait(false);
             
             // TODO: selecting a lot of info here. Can improve perf by selecting only the needed 
             // columns. The search helix logs page already optimizes this. Consider factoring out
             // the shared code.
             var testResultList = await query.ToListAsync().ConfigureAwait(false);
-            var buildInfo = modelBuildAttempt.ModelBuild.GetBuildInfo();
+            var buildInfo = modelBuild.GetBuildInfo();
             var helixLogInfos = testResultList
                 .Select(x => x.GetHelixLogInfo())
                 .SelectNotNull()
@@ -271,7 +274,7 @@ namespace DevOps.Util.DotNet.Triage
                 any = true;
                 var modelMatch = new ModelTrackingIssueMatch()
                 {
-                    ModelBuildAttempt = modelBuildAttempt,
+                    ModelBuildAttemptId = modelBuildAttemptId,
                     ModelTrackingIssue = modelTrackingIssue,
                     HelixLogKind = result.HelixLogKind,
                     HelixLogUri = result.HelixLogUri,

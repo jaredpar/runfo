@@ -276,9 +276,12 @@ namespace DevOps.Util.DotNet.Triage
             return modelBuildAttempt;
         }
 
-        public async Task<ModelGitHubIssue> EnsureGitHubIssueAsync(ModelBuild modelBuild, GitHubIssueKey issueKey, bool saveChanges)
+        public Task<ModelGitHubIssue> EnsureGitHubIssueAsync(ModelBuild modelBuild, GitHubIssueKey issueKey, bool saveChanges)
+            => EnsureGitHubIssueAsync(modelBuild.GetBuildKey(), modelBuild.Id, issueKey, saveChanges);
+
+        public async Task<ModelGitHubIssue> EnsureGitHubIssueAsync(BuildKey buildKey, int modelBuildId, GitHubIssueKey issueKey, bool saveChanges)
         {
-            var query = GetModelBuildQuery(modelBuild.GetBuildKey())
+            var query = GetModelBuildQuery(buildKey)
                 .SelectMany(x => x.ModelGitHubIssues)
                 .Where(x =>
                     x.Number == issueKey.Number &&
@@ -295,7 +298,7 @@ namespace DevOps.Util.DotNet.Triage
                 Organization = issueKey.Organization,
                 Repository = issueKey.Repository,
                 Number = issueKey.Number,
-                ModelBuild = modelBuild,
+                ModelBuildId = modelBuildId,
             };
 
             Context.ModelGitHubIssues.Add(modelGitHubIssue);
