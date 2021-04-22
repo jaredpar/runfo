@@ -20,9 +20,36 @@ JOIN ModelBuildAttempts a ON a.Id = m.ModelBuildAttemptId
 SELECT * 
 FROM ModelGitHubISsues
 
-/* random
+/*
+Looking at tracking issue performance 
 */
- DBCC SHRINKDATABASE (N'triage-scratch');
+
+/* query that we started with */ 
+DECLARE @__modelBuild_Id_0 as INteger = 26151
+DECLARE @__key_Attempt_1 As INTEGER = 1
+DECLARE @__Definition_2 AS NVARCHAR(100)='runtime'  
+DECLARE @__Name_3 AS NVARCHAR(1000)='System.Security.Cryptography.Rsa.Tests.EncryptDecrypt_Span.RoundtripEmptyArray' 
+SELECT [m].[Id] AS [ModelTestResultId], [m0].[Name] AS [JobName]
+FROM [ModelTestResults] AS [m]
+INNER JOIN [ModelTestRuns] AS [m0] ON [m].[ModelTestRunId] = [m0].[Id]
+WHERE ((([m].[ModelBuildId] = @__modelBuild_Id_0) AND ([m].[Attempt] = @__key_Attempt_1)) AND ([m].[DefinitionName] = @__Definition_2)) AND ((@__Name_3 = N'') OR (CHARINDEX(@__Name_3, [m].[TestFullName]) > 0))
+
+/* make sure to clear out the definition since we already filtered to that */
+DECLARE @__modelBuild_Id_0 as INteger = 26151
+DECLARE @__key_Attempt_1 As INTEGER = 1
+DECLARE @__Name_2 AS NVARCHAR(1000)='System.Security.Cryptography.Rsa.Tests.EncryptDecrypt_Span.RoundtripEmptyArray' 
+      SELECT [m].[Id] AS [ModelTestResultId], [m0].[Name] AS [JobName]
+      FROM [ModelTestResults] AS [m]
+      INNER JOIN [ModelTestRuns] AS [m0] ON [m].[ModelTestRunId] = [m0].[Id]
+      WHERE (([m].[ModelBuildId] = @__modelBuild_Id_0) AND ([m].[Attempt] = @__key_Attempt_1)) AND ((@__Name_2 = N'') OR (CHARINDEX(@__Name_2, [m].[TestFullName]) > 0))
+
+/* don't join into ModelTestRun anymore because the data is all in the ModelTestResults table */
+DECLARE @__modelBuild_Id_0 as INteger = 26151
+DECLARE @__key_Attempt_1 As INTEGER = 1
+DECLARE @__Name_2 AS NVARCHAR(1000)='System.Security.Cryptography.Rsa.Tests.EncryptDecrypt_Span.RoundtripEmptyArray' 
+      SELECT [m].[Id] AS [ModelTestResultId], [m].[TestRunName] AS [JobName]
+      FROM [ModelTestResults] AS [m]
+      WHERE (([m].[ModelBuildId] = @__modelBuild_Id_0) AND ([m].[Attempt] = @__key_Attempt_1)) AND ((@__Name_2 = N'') OR (CHARINDEX(@__Name_2, [m].[TestFullName]) > 0))
 
 SELECT 
     t.NAME AS TableName,

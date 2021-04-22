@@ -207,12 +207,9 @@ namespace DevOps.Util.UnitTests
             return trackingIssue;
         }
 
-        public ModelTestRun AddTestRun(string data, ModelBuild build)
-        {
-            var attempt = AddAttempt(1, build);
-            return AddTestRun(data, attempt);
-        }
-
+        /// <summary>
+        /// |name|?|test run id| 
+        /// </summary>
         public ModelTestRun AddTestRun(string data, ModelBuildAttempt attempt)
         {
             var parts = data.Split("|");
@@ -229,6 +226,9 @@ namespace DevOps.Util.UnitTests
             return testRun;
         }
 
+        /// <summary>
+        /// |test name|is helix|console uri|runclient uri|error message|
+        /// </summary>
         public ModelTestResult AddTestResult(string data, ModelTestRun testRun)
         {
             var parts = data.Split("|");

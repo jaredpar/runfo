@@ -25,6 +25,18 @@ namespace DevOps.Util.UnitTests
             TrackingIssueUtil = new TrackingIssueUtil(HelixServer, QueryUtil, TriageContextUtil, TestableLogger);
         }
 
+        public async Task<int> GetMatchCountAsync(ModelTrackingIssue trackingIssue) =>
+            await Context
+            .ModelTrackingIssueMatches
+            .Where(x => x.ModelTrackingIssueId == trackingIssue.Id)
+            .CountAsync();
+
+        public async Task<int> GetMatchCountAsync(ModelTrackingIssue trackingIssue, ModelBuildAttempt modelBuildAttempt) =>
+            await Context
+            .ModelTrackingIssueMatches
+            .Where(x => x.ModelTrackingIssueId == trackingIssue.Id && x.ModelBuildAttemptId == modelBuildAttempt.Id)
+            .CountAsync();
+
         [Fact]
         public async Task TimelineSearchSimple()
         {
@@ -247,6 +259,40 @@ namespace DevOps.Util.UnitTests
                 Assert.Equal(isPresent, result.IsPresent);
             }
 
+        }
+
+        [Fact]
+        public async Task TestsSearchRespectsDefinition()
+        {
+            var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
+            var attempt1 = AddAttempt(1, AddBuild("1|dotnet|roslyn", def1));
+            var testRun1 = AddTestRun("windows", attempt1);
+            AddTestResult("test1|||failed dog", testRun1);
+            AddTestResult("test2|||failed cat", testRun1);
+
+            var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def1));
+            var testRun2 = AddTestRun("windows", attempt2);
+            AddTestResult("test2|||failed dog", testRun2);
+            AddTestResult("test2|||failed dog", testRun2);
+
+            var def2 = AddBuildDefinition("dnceng|public|roslyn|13");
+            var attempt3 = AddAttempt(1, AddBuild("3|dotnet|roslyn", def2));
+            var testRun3 = AddTestRun("windows", attempt3);
+            AddTestResult("test1|||failed dog", testRun3);
+            AddTestResult("test2|||failed dog", testRun3);
+
+            var tracking = AddTrackingIssue(
+                TrackingKind.Test,
+                testsRequest: new SearchTestsRequest() { Name = "test2" },
+                definition: def1);
+            await Context.SaveChangesAsync();
+
+            await TrackingIssueUtil.TriageAsync(attempt1);
+            await TrackingIssueUtil.TriageAsync(attempt2);
+            await TrackingIssueUtil.TriageAsync(attempt3);
+            Assert.Equal(1, await GetMatchCountAsync(tracking, attempt1));
+            Assert.Equal(2, await GetMatchCountAsync(tracking, attempt2));
+            Assert.Equal(0, await GetMatchCountAsync(tracking, attempt3));
         }
     }
 }

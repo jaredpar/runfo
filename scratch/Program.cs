@@ -125,7 +125,7 @@ namespace Scratch
             builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(5).TotalSeconds));
             //builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds));
 
-            // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+            builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
             TriageContextOptions = builder.Options;
             TriageContext = new TriageContext(builder.Options);
             TriageContextUtil = new TriageContextUtil(TriageContext);
@@ -169,11 +169,7 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            var items = await TriageContext.ModelTrackingIssues.Where(x => x.IsActive && x.SearchQuery.Contains("started")).ToListAsync();
-            foreach (var item in items)
-            {
-
-            }
+            await MeasureTrackingIssuePerf();
 
 
             // await PopulateDb();
@@ -285,6 +281,34 @@ namespace Scratch
             // await PopulateModelTrackingIssue("started:~2 result:failed", 85);
             await RetriesWork();
 */
+        }
+
+        internal async Task MeasureTrackingIssuePerf()
+        {
+
+            // Copied the query from the tracking issue util, paste it here, grab the SQL and 
+            // get the execution plan
+            var key = new BuildAttemptKey("dnceng", "public", 1101727, 1);
+            var modelBuild = await TriageContextUtil.GetModelBuildQuery(key.BuildKey).Include(x => x.ModelBuildDefinition).SingleAsync();
+
+            var testsQuery = TriageContext
+                .ModelTestResults
+                .Where(x => x.ModelBuildId == modelBuild.Id && x.Attempt == key.Attempt);
+
+            var request = new SearchTestsRequest()
+            {
+                Started = null,
+                Name = "System.Security.Cryptography.Rsa.Tests.EncryptDecrypt_Span.RoundtripEmptyArray",
+            };
+
+            var data = await request.Filter(testsQuery)
+                .Select(x => new
+                {
+                    ModelTestResultId = x.Id,
+                    JobName = x.TestRunName,
+                })
+                .ToListAsync()
+                .ConfigureAwait(false);
         }
 
         internal async Task CleanMatches()
