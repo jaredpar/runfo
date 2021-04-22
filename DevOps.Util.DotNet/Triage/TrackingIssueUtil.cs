@@ -176,19 +176,16 @@ namespace DevOps.Util.DotNet.Triage
 
             var testsQuery = Context
                 .ModelTestResults
-                .Include(x => x.ModelTestRun)
                 .Where(x => x.ModelBuildId == modelBuildId && x.Attempt == attemptKey.Attempt);
 
-            var request = new SearchTestsRequest(modelTrackingIssue.SearchQuery)
-            {
-                Started = null,
-            };
+            var request = new SearchTestsRequest(modelTrackingIssue.SearchQuery);
+            CleanupTrackingRequest(request);
 
             var data = await request.Filter(testsQuery)
                 .Select(x => new
                 {
                     ModelTestResultId = x.Id,
-                    JobName = x.ModelTestRun.Name
+                    JobName = x.TestRunName
                 })
                 .ToListAsync()
                 .ConfigureAwait(false);
@@ -221,10 +218,8 @@ namespace DevOps.Util.DotNet.Triage
                 .ModelTimelineIssues
                 .Where(x => x.ModelBuildId == modelBuildId && x.Attempt == attemptKey.Attempt);
 
-            var request = new SearchTimelinesRequest(modelTrackingIssue.SearchQuery)
-            {
-                Started = null,
-            };
+            var request = new SearchTimelinesRequest(modelTrackingIssue.SearchQuery);
+            CleanupTrackingRequest(request);
 
             timelineQuery = request.Filter(timelineQuery);
 
@@ -250,22 +245,21 @@ namespace DevOps.Util.DotNet.Triage
             Debug.Assert(modelTrackingIssue.IsActive);
             Debug.Assert(modelTrackingIssue.SearchQuery is object);
 
-            var request = new SearchHelixLogsRequest()
+            var request = new SearchHelixLogsRequest(modelTrackingIssue.SearchQuery)
             {
-                Started = null,
                 Limit = 100,
             };
-            request.ParseQueryString(modelTrackingIssue.SearchQuery);
+            CleanupTrackingRequest(request);
 
             var query = request.Filter(Context.ModelTestResults)
-                .Where(x => x.ModelBuildAttemptId == modelBuildAttemptId);
+                .Where(x => x.ModelBuildId == modelBuildId && x.Attempt == attemptKey.Attempt);
 
-            var modelBuild = await Context.ModelBuilds.Where(x => x.Id == modelBuildId).SingleAsync().ConfigureAwait(false);
-            
             // TODO: selecting a lot of info here. Can improve perf by selecting only the needed 
             // columns. The search helix logs page already optimizes this. Consider factoring out
             // the shared code.
             var testResultList = await query.ToListAsync().ConfigureAwait(false);
+
+            var modelBuild = await Context.ModelBuilds.Where(x => x.Id == modelBuildId).SingleAsync().ConfigureAwait(false);
             var buildInfo = modelBuild.GetBuildInfo();
             var helixLogInfos = testResultList
                 .Select(x => x.GetHelixLogInfo())
@@ -291,6 +285,22 @@ namespace DevOps.Util.DotNet.Triage
                 Context.ModelTrackingIssueMatches.Add(modelMatch);
             }
             return any;
+        }
+
+        /// <summary>
+        /// This removes unnecessary data in the tracking request. The <see cref="ModelTrackingIssue.SearchQuery"/> field
+        /// can support any arbitrary search string. Several of the fields though aren't valid in this context and using
+        /// them causes us to not hit important search indexs. 
+        /// </summary>
+        /// <param name="request"></param>
+        private static void CleanupTrackingRequest(SearchRequestBase request)
+        {
+            // This isn't a supported field in a tracking query
+            request.Started = null;
+
+            // The attempts are pre-filtered for their definition and adding it back causes us to miss and 
+            // index
+            request.Definition = null;
         }
 
         private Task<ModelBuildAttempt> GetModelBuildAttemptAsync(BuildAttemptKey attemptKey) => TriageContextUtil
