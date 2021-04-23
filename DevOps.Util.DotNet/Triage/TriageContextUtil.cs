@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using DevOps.Util;
 using DevOps.Util.DotNet;
@@ -588,6 +589,31 @@ namespace DevOps.Util.DotNet.Triage
                     requestBase.Definition = definition.DefinitionNumber.ToString();
                 }
             }
+        }
+
+        /// <summary>
+        /// Update the model to reflect that this build was the build for a merged pull request. This will
+        /// update the build and all of the related entities that track <see cref="ModelBuildKind"/>
+        /// </summary>
+        public async Task MarkAsMergedPullRequestAsync(ModelBuild modelBuild, CancellationToken cancellationToken = default)
+        {
+            modelBuild.BuildKind = ModelBuildKind.MergedPullRequest;
+            foreach (var attempt in Context.ModelBuildAttempts.Where(x => x.ModelBuildId == modelBuild.Id))
+            {
+                attempt.BuildKind = ModelBuildKind.MergedPullRequest;
+            }
+
+            foreach (var issue in Context.ModelTimelineIssues.Where(x => x.ModelBuildId == modelBuild.Id))
+            {
+                issue.BuildKind = ModelBuildKind.MergedPullRequest;
+            }
+
+            foreach (var testResult in Context.ModelTestResults.Where(x => x.ModelBuildId == modelBuild.Id))
+            {
+                testResult.BuildKind = ModelBuildKind.MergedPullRequest;
+            }
+
+            await Context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 }

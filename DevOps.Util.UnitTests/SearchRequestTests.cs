@@ -21,10 +21,10 @@ namespace DevOps.Util.UnitTests
         public async Task BuildResultSearches()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            AddBuild("1|dotnet|roslyn||Failed", def);
-            AddBuild("2|dotnet|roslyn||Failed", def);
-            AddBuild("3|dotnet|roslyn||Succeeded", def);
-            AddBuild("4|dotnet|roslyn||Canceled", def);
+            AddBuild("1|Failed|", def);
+            AddBuild("2|Failed", def);
+            AddBuild("3|Succeeded", def);
+            AddBuild("4|Canceled", def);
             await Context.SaveChangesAsync();
 
             await Test(2, "result:failed");
@@ -73,12 +73,12 @@ namespace DevOps.Util.UnitTests
         public async Task TestResultSearchMessage()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var build1 = AddBuild("1|dotnet|roslyn||Failed", def);
+            var build1 = AddBuild("1|Failed", def);
             var testRun1 = AddTestRun("windows", AddAttempt(1, build1));
             AddTestResult("Test1||||cat", testRun1);
             AddTestResult("Test2||||cat", testRun1);
             AddTestResult("Test3||||dog", testRun1);
-            var build2 = AddBuild("2|dotnet|roslyn||Failed", def);
+            var build2 = AddBuild("2|Failed", def);
             var testRun2 = AddTestRun("windows", AddAttempt(1, build2));
             AddTestResult("Test1||||fish", testRun1);
             AddTestResult("Test2||||fish", testRun1);
@@ -104,7 +104,7 @@ namespace DevOps.Util.UnitTests
         public async Task TimelineRespectsStartedOption()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var build = AddBuild("1|dotnet|roslyn|2020-01-01|Failed", def);
+            var build = AddBuild("1|Failed|2020-01-01", def);
             AddTimelineIssue("build|dog", AddAttempt(1, build));
             await Context.SaveChangesAsync();
 
