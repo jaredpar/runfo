@@ -99,7 +99,8 @@ namespace DevOps.Util.UnitTests
                 NameKey = build.NameKey,
                 DefinitionName = build.DefinitionName,
                 ModelBuildDefinition = build.ModelBuildDefinition,
-                ModelBuild = build
+                ModelBuild = build,
+                BuildKind = ModelBuildKind.Rolling, 
             };
 
             Context.ModelBuildAttempts.Add(modelAttempt);
