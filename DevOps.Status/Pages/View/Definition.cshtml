@@ -25,7 +25,8 @@
                 <tr>
                     <th scope="col">Days</th>
                     <th scope="col">Rolling</th>
-                    <th scope="col">Merged Pull Requests</th>
+                    <th title="Merged Pull Requests" scope="col">Merged PR</th>
+                    <th title="Merged Pull Requests Attempt 1" scope="col">Merged PR Attempt 1</th>
                     <th scope="col">Total</th>
                 </tr>
             </thead>
@@ -36,6 +37,7 @@
                         <td>@buildInfo.Title</td>
                         <td><a asp-page="/search/builds" asp-route-q="@buildInfo.RollingRequest.GetQueryString()">@buildInfo.RollingRate</a></td>
                         <td><a asp-page="/search/builds" asp-route-q="@buildInfo.MergedPullRequestRequest.GetQueryString()">@buildInfo.MergedPullRequestRate</a></td>
+                        <td>@buildInfo.MergedPullRequestInitialRate</td>
                         <td><a asp-page="/search/builds" asp-route-q="@buildInfo.TotalRequest.GetQueryString()">@buildInfo.TotalRate</a></td>
                     </tr>
                 }

@@ -20,6 +20,7 @@ namespace DevOps.Status.Pages.View
             SearchBuildsRequest RollingRequest,
             string MergedPullRequestRate,
             SearchBuildsRequest MergedPullRequestRequest,
+            string MergedPullRequestInitialRate,
             string TotalRate,
             SearchBuildsRequest TotalRequest);
         public record DefinitionDisplayInfo(ModelBuildDefinition ModelBuildDefinition, DefinitionKey DefinitionKey, BuildResultInfo[] BuildResultInfo);
@@ -54,12 +55,12 @@ namespace DevOps.Status.Pages.View
             ? OnGetDefinition(definitionId)
             : OnGetSearch(SearchDefinitionName ?? "");
 
-        private async Task OnGetDefinition(int definitionId)
+        private async Task OnGetDefinition(int definitionNumber)
         {
             TargetBranch ??= "main";
             var modelBuildDefiniton = await TriageContextUtil.Context
                 .ModelBuildDefinitions
-                .Where(x => x.DefinitionNumber == definitionId)
+                .Where(x => x.DefinitionNumber == definitionNumber)
                 .SingleAsync();
             var now = DateTime.UtcNow;
 
@@ -69,24 +70,39 @@ namespace DevOps.Status.Pages.View
             async Task GenerateBuildPassInfo()
             {
                 var limit = now - TimeSpan.FromDays(21);
-                var buildsRequest = new SearchBuildsRequest()
-                {
-                    Definition = definitionId.ToString(),
-                    Started = new DateRequestValue(limit, RelationalKind.GreaterThan),
-                    BuildKind = new BuildKindRequestValue(ModelBuildKind.PullRequest, EqualsKind.NotEquals),
-                    TargetBranch = new StringRequestValue(TargetBranch, StringRelationalKind.Equals),
-                };
-
-                var builds = await buildsRequest
-                    .Filter(TriageContextUtil.Context.ModelBuilds)
+                var started = new DateRequestValue(limit, RelationalKind.GreaterThan);
+                var attempts = await TriageContextUtil.Context
+                    .ModelBuildAttempts
+                    .Include(x => x.ModelBuild)
+                    .Where(x =>
+                        x.DefinitionNumber == definitionNumber &&
+                        x.StartTime >= started.DateTime &&
+                        x.BuildKind != ModelBuildKind.PullRequest &&
+                        x.GitHubTargetBranch == TargetBranch)
                     .Select(x => new
                     {
-                        x.BuildResult,
-                        IsMergedPullRequest = x.BuildKind == ModelBuildKind.MergedPullRequest,
-                        x.PullRequestNumber,
-                        x.StartTime,
+                        AttemptNumber = x.Attempt,
+                        AttemptResult = x.BuildResult,
+                        BuildResult = x.ModelBuild.BuildResult,
+                        BuildKind = x.ModelBuild.BuildKind,
+                        BuildNumber = x.ModelBuild.BuildNumber,
+                        BuildStartTime = x.StartTime,
+                        PullRequestNumber = x.ModelBuild.PullRequestNumber,
                     })
                     .ToListAsync();
+
+                var builds = attempts
+                    .GroupBy(x => x.BuildNumber)
+                    .Select(x => x.First())
+                    .Select(x => new
+                    {
+                        x.BuildNumber,
+                        x.BuildResult,
+                        x.BuildKind,
+                        x.PullRequestNumber,
+                        StartTime = x.BuildStartTime
+                    })
+                    .ToList();
 
                 Definition = new DefinitionDisplayInfo(
                     modelBuildDefiniton,
@@ -106,17 +122,21 @@ namespace DevOps.Status.Pages.View
                     var filtered = builds.Where(x => x.StartTime >= limit).ToList();
                     double count = filtered.Count;
                     var rolling = filtered.Where(x => x.PullRequestNumber is null).Select(x => x.BuildResult);
-                    var mpr = filtered.Where(x => x.IsMergedPullRequest).Select(x => x.BuildResult);
-                    var total = filtered.Where(x => x.IsMergedPullRequest || x.PullRequestNumber is null).Select(x => x.BuildResult);
+                    var mpr = filtered.Where(x => x.BuildKind == ModelBuildKind.MergedPullRequest).Select(x => x.BuildResult);
+                    var total = filtered.Select(x => x.BuildResult);
+
+                    var attemptMpr = attempts.Where(x => x.BuildStartTime >= limit && x.AttemptNumber == 1 && x.BuildKind == ModelBuildKind.MergedPullRequest).Select(x => x.AttemptResult).ToList();
 
                     return new BuildResultInfo(
                         title,
                         GetRate(rolling),
-                        new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:rolling targetBranch:{TargetBranch}"),
+                        new SearchBuildsRequest($"definition:{definitionNumber} started:~{days} kind:rolling targetBranch:{TargetBranch}"),
                         GetRate(mpr),
-                        new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:mpr targetBranch:{TargetBranch}"),
+                        new SearchBuildsRequest($"definition:{definitionNumber} started:~{days} kind:mpr targetBranch:{TargetBranch}"),
+                        GetRate(attemptMpr),
                         GetRate(total),
-                        new SearchBuildsRequest($"definition:{definitionId} started:~{days} kind:!pr targetBranch:{TargetBranch}"));
+                        new SearchBuildsRequest($"definition:{definitionNumber} started:~{days} kind:!pr targetBranch:{TargetBranch}"));
+
                     string GetRate(IEnumerable<ModelBuildResult> e)
                     {
                         double totalCount = e.Count();
@@ -130,7 +150,7 @@ namespace DevOps.Status.Pages.View
             {
                 var buildsRequest = new SearchBuildsRequest()
                 {
-                    Definition = definitionId.ToString(),
+                    Definition = definitionNumber.ToString(),
                     Started = new DateRequestValue(now - TimeSpan.FromDays(21), RelationalKind.GreaterThan),
                     TargetBranch = new StringRequestValue(TargetBranch, StringRelationalKind.Equals),
                 };
