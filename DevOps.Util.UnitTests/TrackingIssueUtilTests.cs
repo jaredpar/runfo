@@ -41,7 +41,7 @@ namespace DevOps.Util.UnitTests
         public async Task TimelineSearchSimple()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
+            var attempt = AddAttempt(1, AddBuild("1", def));
             var timeline = AddTimelineIssue("windows|dog", attempt);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
@@ -62,9 +62,9 @@ namespace DevOps.Util.UnitTests
         {
             var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
             var def2 = AddBuildDefinition("dnceng|public|runtime|13");
-            var attempt1 = AddAttempt(1, AddBuild("1|dotnet|roslyn", def1));
+            var attempt1 = AddAttempt(1, AddBuild("1", def1));
             var timeline1 = AddTimelineIssue("windows|dog", attempt1);
-            var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def2));
+            var attempt2 = AddAttempt(1, AddBuild("2", def2));
             var timeline2 = AddTimelineIssue("windows|dog", attempt2);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
@@ -83,7 +83,7 @@ namespace DevOps.Util.UnitTests
         public async Task TimelineSavesJobName()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
+            var attempt = AddAttempt(1, AddBuild("1", def));
             var timeline = AddTimelineIssue("windows|dog", attempt);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
@@ -102,7 +102,7 @@ namespace DevOps.Util.UnitTests
         public async Task SimpleTestSearch(string search, int count)
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
+            var attempt = AddAttempt(1, AddBuild("1", def));
             var testRun = AddTestRun("windows", attempt);
             var testResult1 = AddTestResult("Util.Test1", testRun);
             var testResult2 = AddTestResult("Util.Test2", testRun);
@@ -125,9 +125,9 @@ namespace DevOps.Util.UnitTests
         {
             var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
             var def2 = AddBuildDefinition("dnceng|public|runtime|13");
-            var attempt1 = AddAttempt(1, AddBuild("1|dotnet|roslyn", def1));
+            var attempt1 = AddAttempt(1, AddBuild("1", def1));
             var timeline1 = AddTimelineIssue("windows|dog", attempt1);
-            var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def2));
+            var attempt2 = AddAttempt(1, AddBuild("2", def2));
             var timeline2 = AddTimelineIssue("windows|dog", attempt2);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
@@ -147,9 +147,9 @@ namespace DevOps.Util.UnitTests
         {
             var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
             var def2 = AddBuildDefinition("dnceng|public|runtime|13");
-            var attempt1 = AddAttempt(1, AddBuild("1|dotnet|roslyn", def1));
+            var attempt1 = AddAttempt(1, AddBuild("1", def1));
             var timeline1 = AddTimelineIssue("windows|dog", attempt1);
-            var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def2));
+            var attempt2 = AddAttempt(1, AddBuild("2", def2));
             var timeline2 = AddTimelineIssue("windows|dog", attempt2);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
@@ -171,9 +171,9 @@ namespace DevOps.Util.UnitTests
         public async Task TriageTimelineIssueAttemptOnly()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt1 = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
+            var attempt1 = AddAttempt(1, AddBuild("1", def));
             var timeline1 = AddTimelineIssue("windows|dog", attempt1);
-            var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def));
+            var attempt2 = AddAttempt(1, AddBuild("2", def));
             var timeline2 = AddTimelineIssue("windows|dog", attempt2);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
@@ -190,7 +190,7 @@ namespace DevOps.Util.UnitTests
         public async Task TriageTimelineIssueAttemptOnlyWithinBuild()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt1 = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
+            var attempt1 = AddAttempt(1, AddBuild("1", def));
             var attempt2 = AddAttempt(2, attempt1.ModelBuild);
             var attempt3 = AddAttempt(3, attempt1.ModelBuild);
             var timeline1 = AddTimelineIssue("windows|dog", attempt1);
@@ -215,7 +215,7 @@ namespace DevOps.Util.UnitTests
         public async Task SimpleHelixLogTrackingIssue(HelixLogKind kind)
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn", def));
+            var attempt = AddAttempt(1, AddBuild("1", def));
             var testRun = AddTestRun("windows", attempt);
             var testResult1 = AddTestResult("Util.Test1", testRun);
             AddHelixLog(testResult1, kind, "the dog fetched the ball");
@@ -265,18 +265,18 @@ namespace DevOps.Util.UnitTests
         public async Task TestsSearchRespectsDefinition()
         {
             var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt1 = AddAttempt(1, AddBuild("1|dotnet|roslyn", def1));
+            var attempt1 = AddAttempt(1, AddBuild("1", def1));
             var testRun1 = AddTestRun("windows", attempt1);
             AddTestResult("test1|||failed dog", testRun1);
             AddTestResult("test2|||failed cat", testRun1);
 
-            var attempt2 = AddAttempt(1, AddBuild("2|dotnet|roslyn", def1));
+            var attempt2 = AddAttempt(1, AddBuild("2", def1));
             var testRun2 = AddTestRun("windows", attempt2);
             AddTestResult("test2|||failed dog", testRun2);
             AddTestResult("test2|||failed dog", testRun2);
 
             var def2 = AddBuildDefinition("dnceng|public|roslyn|13");
-            var attempt3 = AddAttempt(1, AddBuild("3|dotnet|roslyn", def2));
+            var attempt3 = AddAttempt(1, AddBuild("3", def2));
             var testRun3 = AddTestRun("windows", attempt3);
             AddTestResult("test1|||failed dog", testRun3);
             AddTestResult("test2|||failed dog", testRun3);

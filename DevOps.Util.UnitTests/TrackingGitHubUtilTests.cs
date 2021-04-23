@@ -28,7 +28,7 @@ namespace DevOps.Util.UnitTests
         public async Task SimpleTimelineSearh()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt = AddAttempt(1, AddBuild("1|dotnet|roslyn|2020-12-01", def));
+            var attempt = AddAttempt(1, AddBuild("1|Succeeded|2020-12-01", def));
             var timeline = AddTimelineIssue("windows|dog", attempt);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
@@ -115,7 +115,7 @@ Build Result Summary
 
             void AddTestData(int buildNumber, string dateStr)
             {
-                var attempt = AddAttempt(1, AddBuild($"{buildNumber}|dotnet|roslyn|{dateStr}", def));
+                var attempt = AddAttempt(1, AddBuild($"{buildNumber}||{dateStr}", def));
                 var testRun = AddTestRun("windows", attempt);
                 AddTestResult("Util.Test1", testRun);
                 AddTestResult("Util.Test2", testRun);
@@ -130,7 +130,7 @@ Build Result Summary
 
             for (int i = 0; i < 5; i++)
             {
-                AddGitHubIssue(issueKey, AddBuild($"|||2020-10-0{i + 1}", def));
+                AddGitHubIssue(issueKey, AddBuild($"||2020-10-0{i + 1}", def));
                 await Context.SaveChangesAsync();
             }
 
@@ -185,7 +185,7 @@ Build Result Summary
 
             void AddTestData(int buildNumber, string dateStr)
             {
-                var attempt = AddAttempt(1, AddBuild($"{buildNumber}|dotnet|roslyn|{dateStr}", def));
+                var attempt = AddAttempt(1, AddBuild($"{buildNumber}||{dateStr}", def));
                 var testRun = AddTestRun("windows", attempt);
                 var testResult = AddTestResult("Util.Test1", testRun);
                 AddHelixLog(testResult, kind, "The log data");

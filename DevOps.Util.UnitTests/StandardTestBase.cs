@@ -29,6 +29,7 @@ namespace DevOps.Util.UnitTests
         public TestableGitHubClientFactory TestableGitHubClientFactory { get; set; }
         public TestableGitHubClient TestableGitHubClient => TestableGitHubClientFactory.TestableGitHubClient;
         private int BuildCount { get; set; }
+        private int DefinitionCount { get; set; }
         private int TestRunCount { get; set; }
         private int GitHubIssueCount { get; set; }
         private int HelixLogCount { get; set; }
@@ -63,6 +64,9 @@ namespace DevOps.Util.UnitTests
 
         public void Dispose() => Connection.Dispose();
 
+        /// <summary>
+        /// |job name|message|record name|
+        /// </summary>
         public ModelTimelineIssue AddTimelineIssue(string data, ModelBuildAttempt attempt)
         {
             var parts = data.Split("|");
@@ -79,6 +83,7 @@ namespace DevOps.Util.UnitTests
                 ModelBuild = attempt.ModelBuild,
                 ModelBuildAttempt = attempt,
                 ModelBuildDefinition = attempt.ModelBuildDefinition,
+                BuildKind = ModelBuildKind.Rolling,
             };
             Context.ModelTimelineIssues.Add(issue);
             Context.SaveChanges();
@@ -94,7 +99,8 @@ namespace DevOps.Util.UnitTests
                 NameKey = build.NameKey,
                 DefinitionName = build.DefinitionName,
                 ModelBuildDefinition = build.ModelBuildDefinition,
-                ModelBuild = build
+                ModelBuild = build,
+                BuildKind = ModelBuildKind.Rolling, 
             };
 
             Context.ModelBuildAttempts.Add(modelAttempt);
@@ -102,20 +108,23 @@ namespace DevOps.Util.UnitTests
             return modelAttempt;
         }
 
+        /// <summary>
+        /// | number | result | date | github org | github repo |
+        /// </summary>
         public ModelBuild AddBuild(string data, ModelBuildDefinition def)
         {
             var parts = data.Split("|");
             var number = GetPartOrNull(parts, 0) is { } part ? int.Parse(part) : BuildCount++;
-            var dt = GetPartOrNull(parts, 3);
-            var br = GetPartOrNull(parts, 4);
+            var br = GetPartOrNull(parts, 1);
+            var dt = GetPartOrNull(parts, 2);
             var startTime = dt is object ? DateTime.ParseExact(dt, "yyyy-MM-dd", null) : DateTime.UtcNow;
 
             var build = new ModelBuild()
             {
                 NameKey = TriageContextUtil.GetModelBuildNameKey(new BuildKey(def.AzureOrganization, def.AzureProject, number)),
                 BuildNumber = number,
-                GitHubOrganization = GetPartOrNull(parts, 1) ?? "",
-                GitHubRepository = GetPartOrNull(parts, 2) ?? "",
+                GitHubOrganization = GetPartOrNull(parts, 1) ?? "dotnet",
+                GitHubRepository = GetPartOrNull(parts, 2) ?? "roslyn",
                 AzureOrganization = def.AzureOrganization,
                 AzureProject = def.AzureProject,
                 QueueTime = startTime,
@@ -125,6 +134,7 @@ namespace DevOps.Util.UnitTests
                 ModelBuildDefinitionId = def.Id,
                 DefinitionName = def.DefinitionName,
                 DefinitionNumber = def.DefinitionNumber,
+                BuildKind = ModelBuildKind.Rolling,
             };
 
             Context.ModelBuilds.Add(build);
@@ -162,16 +172,22 @@ namespace DevOps.Util.UnitTests
             return issue;
         }
 
+        /// <summary>
+        /// |azure org|azure project|name|number|
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
         public ModelBuildDefinition AddBuildDefinition(string data)
         {
             var parts = data.Split("|");
             var def = new ModelBuildDefinition()
             {
-                AzureOrganization = parts[0],
-                AzureProject = parts[1],
+                AzureOrganization = GetPartOrNull(parts, 0) ?? "dnceng",
+                AzureProject = GetPartOrNull(parts, 1) ?? "public",
                 DefinitionName = parts[2],
-                DefinitionNumber = int.Parse(parts[3]),
+                DefinitionNumber = GetPartOrNull(parts, 3) is { } part ? int.Parse(part) : DefinitionCount++,
             };
+
             Context.ModelBuildDefinitions.Add(def);
             Context.SaveChanges();
             return def;
@@ -208,7 +224,7 @@ namespace DevOps.Util.UnitTests
         }
 
         /// <summary>
-        /// |name|?|test run id| 
+        /// |name|test run id| 
         /// </summary>
         public ModelTestRun AddTestRun(string data, ModelBuildAttempt attempt)
         {
@@ -217,7 +233,7 @@ namespace DevOps.Util.UnitTests
             {
                 Name = parts[0],
                 Attempt = attempt.Attempt,
-                TestRunId = parts.Length > 2 ? int.Parse(parts[2]) : TestRunCount++,
+                TestRunId = GetPartOrNull(parts, 1) is { }  part ? int.Parse(part) : TestRunCount++,
                 ModelBuild = attempt.ModelBuild,
                 ModelBuildAttempt = attempt,
             };
@@ -249,6 +265,7 @@ namespace DevOps.Util.UnitTests
                 DefinitionNumber = testRun.ModelBuild.DefinitionNumber,
                 DefinitionName = testRun.ModelBuild.DefinitionName,
                 ModelBuildDefinition = testRun.ModelBuild.ModelBuildDefinition,
+                BuildKind = ModelBuildKind.Rolling,
             };
             Context.ModelTestResults.Add(testResult);
             Context.SaveChanges();
