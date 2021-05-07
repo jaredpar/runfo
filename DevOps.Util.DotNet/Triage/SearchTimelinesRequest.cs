@@ -18,7 +18,7 @@ namespace DevOps.Util.DotNet.Triage
     {
         public const int DefaultLimit = 50;
 
-        public string? Text { get; set; }
+        public string? Message { get; set; }
         public string? JobName { get; set; }
         public string? DisplayName { get; set; }
         public string? TaskName { get; set; }
@@ -59,14 +59,14 @@ namespace DevOps.Util.DotNet.Triage
             }
 
             // Keep this in sync with logic in SearchTestsRequest
-            if (!string.IsNullOrEmpty(Text))
+            if (!string.IsNullOrEmpty(Message))
             {
-                var c = Text[0];
+                var c = Message[0];
                 query = c switch
                 {
-                    '#' => query = query.Where(x => x.Message.Contains(Text.Substring(1))),
-                    '*' => GetFullText(query, Text.Substring(1)),
-                    _ => GetFullText(query, Text)
+                    '#' => query = query.Where(x => x.Message.Contains(Message.Substring(1))),
+                    '*' => GetFullText(query, Message.Substring(1)),
+                    _ => GetFullText(query, Message)
                 };
 
                 static IQueryable<ModelTimelineIssue> GetFullText(IQueryable<ModelTimelineIssue> query, string text)
@@ -88,9 +88,9 @@ namespace DevOps.Util.DotNet.Triage
             var builder = new StringBuilder();
             GetQueryStringCore(builder);
 
-            if (!string.IsNullOrEmpty(Text))
+            if (!string.IsNullOrEmpty(Message))
             {
-                Append($"text:\"{Text}\"");
+                Append($"message:\"{Message}\"");
             }
 
             if (!string.IsNullOrEmpty(JobName))
@@ -130,7 +130,7 @@ namespace DevOps.Util.DotNet.Triage
         {
             if (!userQuery.Contains(":"))
             {
-                Text = userQuery.Trim('"');
+                Message = userQuery.Trim('"');
                 return;
             }
 
@@ -139,7 +139,8 @@ namespace DevOps.Util.DotNet.Triage
                 switch (tuple.Name.ToLower())
                 {
                     case "text":
-                        Text = tuple.Value.Trim('"');
+                    case "message":
+                        Message = tuple.Value.Trim('"');
                         break;
                     case "jobname":
                         JobName = tuple.Value.Trim('"');

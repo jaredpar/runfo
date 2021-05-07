@@ -35,7 +35,7 @@ namespace DevOps.Util.UnitTests
                 title: "Dog Search",
                 timelinesRequest: new SearchTimelinesRequest()
                 {
-                    Text = "dog",
+                    Message = "dog",
                 });
             var match = AddTrackingMatch(tracking, attempt, timelineIssue: timeline);
             var result = AddTrackingResult(tracking, attempt);

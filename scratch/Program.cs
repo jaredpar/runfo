@@ -58,17 +58,13 @@ namespace Scratch
                 {
                     Console.WriteLine("Using SQL test");
                 } 
-                else if (connectionString.Contains("Catalog=runfo-prod"))
+                else if (connectionString.Contains("Catalog=runfo-prod2"))
                 {
                     Console.WriteLine("Using SQL production");
                 }
-                else if (connectionString.Contains("triage-scratch-dev"))
-                {
-                    Console.WriteLine("Using SQL test (old)");
-                }
                 else
                 {
-                    Console.WriteLine("Using SQL production (old)");
+                    throw new Exception($"Connection string not recognized");
                 }
 
                 builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds).EnableRetryOnFailure());
@@ -125,7 +121,7 @@ namespace Scratch
             builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(5).TotalSeconds));
             //builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds));
 
-            builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+            // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
             TriageContextOptions = builder.Options;
             TriageContext = new TriageContext(builder.Options);
             TriageContextUtil = new TriageContextUtil(TriageContext);
@@ -169,10 +165,10 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await MeasureTrackingIssuePerf();
+            await PopulateDb();
+            // await MeasureTrackingIssuePerf();
 
 
-            // await PopulateDb();
             // await Migrate();
             //await PopulateDb(count: 100, definitionId: 15, includeTests: true, includeTriage: false);
 
@@ -349,7 +345,8 @@ namespace Scratch
 
         internal async Task PopulateDb()
         {
-            const int maxParallel = 4;
+            // At 10 you start getting rate limited1
+            const int maxParallel = 5;
             var logger = CreateLogger();
             var startTime = DateTime.UtcNow;
             var buildCount = 0;

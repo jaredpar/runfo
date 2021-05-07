@@ -45,7 +45,7 @@ namespace DevOps.Util.UnitTests
             var timeline = AddTimelineIssue("windows|dog", attempt);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
-                timelinesRequest: new SearchTimelinesRequest() { Text = "#dog" });
+                timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt);
@@ -68,7 +68,7 @@ namespace DevOps.Util.UnitTests
             var timeline2 = AddTimelineIssue("windows|dog", attempt2);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
-                timelinesRequest: new SearchTimelinesRequest() { Text = "#dog" },
+                timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" },
                 definition: def2);
             await Context.SaveChangesAsync();
 
@@ -87,7 +87,7 @@ namespace DevOps.Util.UnitTests
             var timeline = AddTimelineIssue("windows|dog", attempt);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
-                timelinesRequest: new SearchTimelinesRequest() { Text = "#dog" });
+                timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt);
@@ -131,7 +131,7 @@ namespace DevOps.Util.UnitTests
             var timeline2 = AddTimelineIssue("windows|dog", attempt2);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
-                timelinesRequest: new SearchTimelinesRequest() { Text = "#dog" },
+                timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" },
                 definition: def2);
             await Context.SaveChangesAsync();
 
@@ -153,7 +153,7 @@ namespace DevOps.Util.UnitTests
             var timeline2 = AddTimelineIssue("windows|dog", attempt2);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
-                timelinesRequest: new SearchTimelinesRequest() { Text = "#dog" });
+                timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt1.GetBuildAttemptKey(), tracking.Id);
@@ -177,7 +177,7 @@ namespace DevOps.Util.UnitTests
             var timeline2 = AddTimelineIssue("windows|dog", attempt2);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
-                timelinesRequest: new SearchTimelinesRequest() { Text = "#dog" });
+                timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt1.GetBuildAttemptKey(), tracking.Id);
@@ -197,7 +197,7 @@ namespace DevOps.Util.UnitTests
             var timeline2 = AddTimelineIssue("windows|dog", attempt2);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
-                timelinesRequest: new SearchTimelinesRequest() { Text = "#dog" });
+                timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt1.GetBuildAttemptKey(), tracking.Id);
