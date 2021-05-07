@@ -119,6 +119,7 @@ namespace DevOps.Util.DotNet.Triage
                     case "jobname":
                         JobName = tuple.Value.Trim('"');
                         break;
+                    case "text":
                     case "message":
                         Message = tuple.Value.Trim('"');
                         break;

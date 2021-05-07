@@ -58,22 +58,24 @@ namespace DevOps.Util.UnitTests
         }
 
         [Theory]
-        [InlineData("text:\"error\"", "started:~7 text:\"error\"")]
-        [InlineData("text:\"error and space\"", "started:~7 text:\"error and space\"")]
-        [InlineData("text:\"error and space\"   ", "started:~7 text:\"error and space\"")]
+        [InlineData("message:\"error\"", "started:~7 message:\"error\"")]
+        [InlineData("message:\"error and space\"", "started:~7 message:\"error and space\"")]
+        [InlineData("message:\"error and space\"   ", "started:~7 message:\"error and space\"")]
+        [InlineData("text:\"error\"", "started:~7 message:\"error\"")]
+        [InlineData("text:\"error and space\"", "started:~7 message:\"error and space\"")]
+        [InlineData("text:\"error and space\"   ", "started:~7 message:\"error and space\"")]
         [InlineData("displayName:Installer   ", "started:~7 displayName:\"Installer\"")]
         [InlineData("taskName:Installer   ", "started:~7 taskName:\"Installer\"")]
         [InlineData("taskName:Task displayName:Display", "started:~7 displayName:\"Display\" taskName:\"Task\"")]
-        [InlineData("error", "started:~7 text:\"error\"")]
-        [InlineData("text:error", "started:~7 text:\"error\"")]
-        [InlineData("started:~3 kind:mpr text:error", "started:~3 kind:mpr text:\"error\"")]
+        [InlineData("error", "started:~7 message:\"error\"")]
+        [InlineData("text:error", "started:~7 message:\"error\"")]
+        [InlineData("started:~3 kind:mpr text:error", "started:~3 kind:mpr message:\"error\"")]
         public void TimelineRoundTrip(string toParse, string userQuery)
         {
             var options = new SearchTimelinesRequest();
             options.ParseQueryString(toParse);
             Assert.Equal(userQuery, options.GetQueryString());
         }
-
 
         [Theory]
         [InlineData("text:\"error\"", "started:~7 text:\"error\"")]
@@ -89,13 +91,13 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public void ExplititStartOverridesQuery()
         {
-            var request = new SearchTimelinesRequest("started:~7 text:error")
+            var request = new SearchTimelinesRequest("started:~7 message:error")
             {
                 Started = null,
             };
 
             Assert.Null(request.Started);
-            Assert.Equal(@"text:""error""", request.GetQueryString());
+            Assert.Equal(@"message:""error""", request.GetQueryString());
         }
     }
 }
