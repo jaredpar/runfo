@@ -39,6 +39,8 @@ namespace DevOps.Status.Util
 
         public DevOpsServer CreateDevOpsServerForAnonymous() => new DevOpsServer(DotNetConstants.AzureOrganization);
 
+        public HelixServer CreateHelixServerForAnonymous() => new HelixServer();
+
         public async Task<DotNetQueryUtil> CreateDotNetQueryUtilForUserAsync() => CreateForServer(await CreateDevOpsServerForUserAsync());
 
         public DotNetQueryUtil CreateDotNetQueryUtilForApp() => CreateForServer(CreateDevOpsServerForApp());

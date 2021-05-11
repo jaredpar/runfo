@@ -1,34 +1,30 @@
 using DevOps.Util;
 using System.Diagnostics;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace DevOps.Util.DotNet
 {
-    public readonly struct DotNetTestRunInfo
-    {
-        public Build Build { get; }
-        public TestRun TestRun { get; }
-
-        internal DotNetTestRunInfo(Build build, TestRun testRun)
-        {
-            Build = build;
-            TestRun = testRun;
-        }
-    }
-
     public sealed class DotNetTestRun
     {
-        public DotNetTestRunInfo TestRunInfo { get; }
+        public string ProjectName { get; }
+
+        /// <summary>
+        /// The id in Azure that represents this <see cref="TestRun"/>
+        /// </summary>
+        public int TestRunId { get; }
+
+        public string TestRunName { get; }
 
         public ReadOnlyCollection<DotNetTestCaseResult> TestCaseResults { get; }
 
-        public Build Build => TestRunInfo.Build;
+        public bool HasHelixWorkItem => TestCaseResults.Any(static x => x.IsHelixWorkItem);
 
-        public TestRun TestRun => TestRunInfo.TestRun;
-
-        public DotNetTestRun(DotNetTestRunInfo testRunInfo, ReadOnlyCollection<DotNetTestCaseResult> testCaseResults)
+        public DotNetTestRun(string projectName, int testRunId, string testRunName, ReadOnlyCollection<DotNetTestCaseResult> testCaseResults)
         {
-            TestRunInfo = testRunInfo;
+            ProjectName = projectName;
+            TestRunId = testRunId;
+            TestRunName = testRunName;
             TestCaseResults = testCaseResults;
         }
     }

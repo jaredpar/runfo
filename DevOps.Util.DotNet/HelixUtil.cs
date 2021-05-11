@@ -13,6 +13,7 @@ using Newtonsoft;
 using Newtonsoft.Json.Linq;
 using System.Net.Http;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.DotNet.Helix.Client;
 
 namespace DevOps.Util.DotNet
 {
@@ -75,42 +76,6 @@ namespace DevOps.Util.DotNet
         }
 
         /// <summary>
-        /// Parse out the UploadFileResults file to get the console and core URIs
-        /// </summary>
-        private static async Task<HelixLogInfo> GetHelixLogInfoAsync(string? runClientUri, Stream resultsStream)
-        {
-            string? consoleUri = null;
-            string? coreUri = null;
-            string? testResultsUri = null;
-
-            using var reader = new StreamReader(resultsStream);
-            string? line = await reader.ReadLineAsync();
-            while (line is object)
-            {
-                if (Regex.IsMatch(line, @"console.*\.log:"))
-                {
-                    consoleUri = (await reader.ReadLineAsync())?.Trim();
-                }
-                else if (Regex.IsMatch(line, @"core\..*:"))
-                {
-                    coreUri = (await reader.ReadLineAsync())?.Trim();
-                }
-                else if (Regex.IsMatch(line, @"testResults.*xml:"))
-                {
-                    testResultsUri = (await reader.ReadLineAsync())?.Trim();
-                }
-
-                line = await reader.ReadLineAsync();
-            }
-
-            return new HelixLogInfo(
-                runClientUri: RewriteUri(runClientUri),
-                consoleUri: RewriteUri(consoleUri),
-                coreDumpUri: RewriteUri(coreUri),
-                testResultsUri: RewriteUri(testResultsUri));
-        }
-
-        /// <summary>
         /// This works around the following arcade bug which causes query strings to be imporperly escaped
         /// https://github.com/dotnet/arcade/issues/6256
         /// </summary>
@@ -127,67 +92,53 @@ namespace DevOps.Util.DotNet
         }
 
         public static async Task<HelixLogInfo> GetHelixLogInfoAsync(
-            DevOpsServer server,
-            HelixWorkItem workItem)
+            IHelixApi helixApi,
+            HelixInfo helixInfo)
         {
-            using var stream = await GetHelixAttachmentContentAsync(server, workItem.ProjectName, workItem.TestRun.Id, workItem.TestCaseResult.Id);
-            if (stream is null)
+            var details = await helixApi.WorkItem.DetailsAsync(id: helixInfo.WorkItemName, job: helixInfo.JobId).ConfigureAwait(false);
+            var runClientUri = details.Logs.FirstOrDefault(x => x.Module.StartsWith("run_client"))?.Uri;
+            string? dumpUri = null;
+            string? testResultsUri = null;
+
+            foreach (var file in details.Files)
             {
-                return HelixLogInfo.Empty;
+                // TODO: Helix can upload multiple dump files but at the moment we only support 
+                // one of the API in our info type here. Need to adjust that. For now just grab the 
+                // first
+                if (dumpUri is null)
+                {
+                    if (file.FileName.StartsWith("core") || file.FileName.EndsWith(".dmp"))
+                    {
+                        dumpUri = file.Uri;
+                    }
+                }
+
+                if (file.FileName.StartsWith("testResults", StringComparison.OrdinalIgnoreCase))
+                {
+                    testResultsUri = file.Uri;
+                }
             }
 
-            var runClientUri = await GetRunClientUri(server, workItem.HelixInfo);
-            return await GetHelixLogInfoAsync(runClientUri, stream);
+            return new HelixLogInfo(
+                runClientUri: runClientUri,
+                consoleUri: details.ConsoleOutputUri,
+                coreDumpUri: dumpUri,
+                testResultsUri: testResultsUri);
         }
 
         public static async Task<string> GetHelixConsoleText(
-            DevOpsServer server,
-            string consoleUri)
+            IHelixApi helixApi,
+            HelixInfo helixInfo)
         {
             try
             {
-                using var stream = await server.DownloadFileAsync(consoleUri);
+                using var stream = await helixApi.WorkItem.ConsoleLogAsync(id: helixInfo.WorkItemName, job: helixInfo.JobId).ConfigureAwait(false);
                 using var reader = new StreamReader(stream);
                 return await reader.ReadToEndAsync();
             }
             catch (Exception ex)
             {
                 return ex.Message;
-            }
-        }
-
-        private static async Task<string?> GetRunClientUri(
-            DevOpsServer server,
-            HelixInfo helixInfo)
-        {
-            try
-            {
-                var uri = $"https://helix.dot.net/api/2019-06-17/jobs/{helixInfo.JobId}/workitems/{helixInfo.WorkItemName}/";  // TODO: use HelixServer instead of hardcoding URL here
-                var json = await server.GetJsonAsync(uri).ConfigureAwait(false);
-                if (json is null)
-                {
-                    return null;
-                }
-
-                dynamic d = JObject.Parse(json);
-                if (d.Logs is null)
-                {
-                    return null;
-                }
-
-                foreach (dynamic? log in d.Logs)
-                {
-                    if (log is object && log.Module == "run_client.py")
-                    {
-                        return log!.Uri;
-                    }
-                }
-                
-                return null;
-            }
-            catch
-            {
-                return null;
             }
         }
     }

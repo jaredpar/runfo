@@ -622,73 +622,18 @@ namespace DevOps.Util.DotNet
             }
 
             return list;
-
         }
 
-        public async Task<DotNetTestRun> GetDotNetTestRunAsync(
+        public Task<DotNetTestRun> GetDotNetTestRunAsync(
             Build build,
             TestRun testRun,
             TestOutcome[] outcomes,
             bool includeSubResults,
-            Action<Exception>? onError = null)
-        {
-            var buildInfo = build.GetBuildResultInfo();
-            var testCaseResults = await Server.ListTestResultsAsync(build.Project.Name, testRun.Id, outcomes, includeSubResults, onError).ConfigureAwait(false);
-            var info = new DotNetTestRunInfo(build, testRun);
-            var list = ToDotNetTestCaseResult(info, testCaseResults);
-            return new DotNetTestRun(info, new ReadOnlyCollection<DotNetTestCaseResult>(list));
+            Action<Exception>? onError = null) =>
+            Server.GetDotNetTestRunAsync(build.Project.Name, testRun.Id, testRun.Name, outcomes, includeSubResults, onError);
 
-            static List<DotNetTestCaseResult> ToDotNetTestCaseResult(DotNetTestRunInfo testRunInfo, List<TestCaseResult> testCaseResults)
-            {
-                var list = new List<DotNetTestCaseResult>();
-                foreach (var testCaseResult in testCaseResults)
-                {
-                    var helixInfo = HelixUtil.TryGetHelixInfo(testCaseResult);
-                    if (helixInfo is null)
-                    {
-                        list.Add(new DotNetTestCaseResult(testRunInfo, testCaseResult));
-                        continue;
-                    }
-
-                    if (HelixUtil.IsHelixWorkItem(testCaseResult))
-                    {
-                        var helixWorkItem = new HelixWorkItem(testRunInfo, helixInfo.Value, testCaseResult);
-                        list.Add(new DotNetTestCaseResult(testRunInfo, helixWorkItem, testCaseResult));
-                    }
-                    else
-                    {
-                        var workItemTestCaseResult = testCaseResults.FirstOrDefault(x => HelixUtil.IsHelixWorkItemAndTestCaseResult(workItem: x, test: testCaseResult));
-                        if (workItemTestCaseResult is null)
-                        {
-                            // This can happen when helix errors and doesn't fully upload a result. Treat it like
-                            // a normal test case
-                            list.Add(new DotNetTestCaseResult(testRunInfo, testCaseResult));
-                        }
-                        else
-                        {
-                            var helixWorkItem = new HelixWorkItem(testRunInfo, helixInfo.Value, workItemTestCaseResult);
-                            list.Add(new DotNetTestCaseResult(testRunInfo, helixWorkItem, testCaseResult));
-                        }
-                    }
-                }
-
-                return list;
-            }
-        }
-
-        public async Task<List<HelixWorkItem>> ListHelixWorkItemsAsync(Build build, params TestOutcome[] outcomes)
-        {
-            // Don't need sub results to get the helix work item info 
-            var testRuns = await ListDotNetTestRunsAsync(build, includeSubResults: false, outcomes).ConfigureAwait(false);
-            return ListHelixWorkItems(testRuns);
-        }
-
-        public List<HelixWorkItem> ListHelixWorkItems(List<DotNetTestRun> testRuns) =>
-            testRuns
-                .SelectMany(x => x.TestCaseResults)
-                .Where(x => x.IsHelixWorkItem)
-                .SelectNullableValue(x => x.HelixWorkItem)
-                .ToList();
+        public Task<List<HelixInfo>> ListHelixInfosAsync(Build build, params TestOutcome[] outcomes) =>
+            Server.ListHelixInfosAsync(build.Project.Name, build.Id, outcomes);
 
         public async Task<List<HelixTimelineResult>> ListHelixJobsAsync(string project, int buildNumber, int? attempt = null)
         {

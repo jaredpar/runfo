@@ -2,6 +2,7 @@ using System;
 
 namespace DevOps.Util.DotNet
 {
+    // TODO: rename to HelixWorkItem maybe
     public readonly struct HelixInfo : IEquatable<HelixInfo>
     {
         public string JobId { get; }

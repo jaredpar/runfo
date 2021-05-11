@@ -53,17 +53,18 @@ namespace DevOps.Status.Controllers
             }
 
             var queryUtil = await QueryUtilFactory.CreateDotNetQueryUtilForUserAsync();
+            var helixApi = QueryUtilFactory.CreateHelixServerForAnonymous().HelixApi;
             var build = await queryUtil.Server.GetBuildAsync(project, buildNumber);
-            var workItems = await queryUtil.ListHelixWorkItemsAsync(build, DevOpsUtil.FailedTestOutcomes);
+            var helixInfos = await queryUtil.ListHelixInfosAsync(build, DevOpsUtil.FailedTestOutcomes);
             var list = new List<HelixWorkItemRestInfo>();
-            foreach (var workItem in workItems)
+            foreach (var helixInfo in helixInfos)
             {
                 var restWorkItem = new HelixWorkItemRestInfo();
-                restWorkItem.Job = workItem.JobId;
-                restWorkItem.WorkItem = workItem.WorkItemName;
+                restWorkItem.Job = helixInfo.JobId;
+                restWorkItem.WorkItem = helixInfo.WorkItemName;
 
                 var logs = new List<HelixLogRestInfo>();
-                var logInfo = await HelixUtil.GetHelixLogInfoAsync(queryUtil.Server, workItem);
+                var logInfo = await HelixUtil.GetHelixLogInfoAsync(helixApi, helixInfo);
                 foreach (var entry in logInfo.GetUris())
                 {
                     logs.Add(new HelixLogRestInfo()

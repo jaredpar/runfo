@@ -1,6 +1,8 @@
-﻿using Octokit;
+﻿using Microsoft.DotNet.Helix.Client;
+using Octokit;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -16,22 +18,6 @@ namespace DevOps.Util.DotNet
         {
             IAzureUtil azureUtil = new AzureUtil(server);
             return azureUtil.ListTimelineAttemptsAsync(project, buildNumber);
-        }
-
-        public static Task<Dictionary<HelixInfo, HelixLogInfo>> GetHelixMapAsync(this DevOpsServer server, DotNetTestRun testRun) =>
-            GetHelixMapAsync(server, testRun.TestCaseResults);
-
-        public static async Task<Dictionary<HelixInfo, HelixLogInfo>> GetHelixMapAsync(this DevOpsServer server, IEnumerable<DotNetTestCaseResult> testCaseResults)
-        {
-            var query = testCaseResults
-                .Where(x => x.HelixWorkItem.HasValue)
-                .Select(x => x.HelixWorkItem!.Value)
-                .GroupBy(x => x.HelixInfo)
-                .ToList()
-                .AsParallel()
-                .Select(async g => (g.Key, await HelixUtil.GetHelixLogInfoAsync(server, g.First())));
-            await Task.WhenAll(query).ConfigureAwait(false);
-            return query.ToDictionary(x => x.Result.Key, x => x.Result.Item2);
         }
 
         /// <summary>
@@ -87,6 +73,110 @@ namespace DevOps.Util.DotNet
             }
 
             return testCaseResults;
+        }
+
+        public static async Task<DotNetTestRun> GetDotNetTestRunAsync(
+            this DevOpsServer server,
+            string project,
+            int testRunId,
+            string testRunName,
+            TestOutcome[] outcomes,
+            bool includeSubResults,
+            Action<Exception>? onError = null)
+        {
+            var testCaseResults = await server.ListTestResultsAsync(project, testRunId, outcomes, includeSubResults, onError).ConfigureAwait(false);
+            var list = ToDotNetTestCaseResult(testCaseResults);
+            return new DotNetTestRun(project, testRunId, testRunName, new ReadOnlyCollection<DotNetTestCaseResult>(list));
+
+            static List<DotNetTestCaseResult> ToDotNetTestCaseResult(List<TestCaseResult> testCaseResults)
+            {
+                var list = new List<DotNetTestCaseResult>();
+                foreach (var testCaseResult in testCaseResults)
+                {
+                    var helixInfo = HelixUtil.TryGetHelixInfo(testCaseResult);
+                    if (helixInfo is null)
+                    {
+                        list.Add(new DotNetTestCaseResult(testCaseResult));
+                        continue;
+                    }
+
+                    var isHelixWorkItem = HelixUtil.IsHelixWorkItem(testCaseResult);
+                    list.Add(new DotNetTestCaseResult(testCaseResult, helixInfo, isHelixWorkItem));
+                }
+
+                return list;
+            }
+        }
+
+        public static async Task<List<DotNetTestRun>> ListDotNetTestRunsAsync(
+            this DevOpsServer server,
+            string project,
+            int buildNumber,
+            TestOutcome[] outcomes,
+            bool includeSubResults,
+            Action<Exception>? onError = null)
+        {
+            var testRuns = await server.ListTestRunsAsync(project, buildNumber).ConfigureAwait(false);
+            var list = new List<Task<DotNetTestRun>>();
+            foreach (var testRun in testRuns)
+            {
+                list.Add(GetDotNetTestRunAsync(server, project, testRun.Id, testRun.Name, outcomes, includeSubResults, onError));
+            }
+
+            await Task.WhenAll(list).ConfigureAwait(false);
+
+            return list.Select(x => x.Result).ToList();
+        }
+
+        public static async Task<List<HelixInfo>> ListHelixInfosAsync(
+            this DevOpsServer server,
+            string project,
+            int buildNumber,
+            TestOutcome[] outcomes,
+            Action<Exception>? onError = null)
+        {
+            // Don't need sub results to find the Helix info for test cases. All sub results will have a corresponding
+            // work item node that we can get the info from
+            var testRuns = await server.ListDotNetTestRunsAsync(project, buildNumber, outcomes, includeSubResults: false, onError).ConfigureAwait(false);
+            return testRuns
+                .SelectMany(x => x.TestCaseResults)
+                .SelectNullableValue(x => x.HelixInfo)
+                .ToHashSet()
+                .OrderBy(x => (x.JobId, x.WorkItemName))
+                .ToList();
+        }
+
+        public static async Task<Dictionary<HelixInfo, HelixLogInfo>> GetHelixMapAsync(
+            this DevOpsServer server,
+            string project,
+            int buildNumber,
+            TestOutcome[] outcomes,
+            IHelixApi helixApi,
+            Action<Exception>? onError = null)
+        {
+            // Don't need sub results to find the Helix info for test cases. All sub results will have a corresponding
+            // work item node that we can get the info from
+            var testRuns = await ListDotNetTestRunsAsync(server, project, buildNumber, outcomes, includeSubResults: false, onError).ConfigureAwait(false);
+            return await helixApi.GetHelixMapAsync(testRuns.SelectMany(x => x.TestCaseResults)).ConfigureAwait(false);
+        }
+
+        #endregion
+
+        #region IHelixApi
+
+        public static Task<Dictionary<HelixInfo, HelixLogInfo>> GetHelixMapAsync(this IHelixApi helixApi, DotNetTestRun testRun) =>
+            GetHelixMapAsync(helixApi, testRun.TestCaseResults);
+
+        public static async Task<Dictionary<HelixInfo, HelixLogInfo>> GetHelixMapAsync(this IHelixApi helixApi, IEnumerable<DotNetTestCaseResult> testCaseResults)
+        {
+            var query = testCaseResults
+                .SelectNullableValue(x => x.HelixInfo)
+                .Distinct()
+                .ToList()
+                .AsParallel()
+                .Select(async helixInfo => (helixInfo, await HelixUtil.GetHelixLogInfoAsync(helixApi, helixInfo).ConfigureAwait(false)));
+            await Task.WhenAll(query).ConfigureAwait(false);
+            return query.ToDictionary(x => x.Result.helixInfo, x => x.Result.Item2);
         }
 
         #endregion

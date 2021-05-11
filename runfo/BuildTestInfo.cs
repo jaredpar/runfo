@@ -15,64 +15,70 @@ namespace Runfo
     // just wrote this for functionality at the moment. Perf fix ups later.
     internal sealed class BuildTestInfo
     {
-        public List<DotNetTestCaseResult> DataList;
+        public List<DotNetTestRun> DataList { get; }
 
         public Build Build { get; }
 
-        internal BuildTestInfo(Build build, List<DotNetTestCaseResult> dataList)
+        internal BuildTestInfo(Build build, List<DotNetTestRun> dataList)
         {
             Build = build;
             DataList = dataList;
         }
 
         internal IEnumerable<string> GetTestCaseTitles() => DataList
+            .SelectMany(x => x.TestCaseResults)
             .Select(x => x.TestCaseTitle)
             .Distinct()
             .OrderBy(x => x);
 
-        internal IEnumerable<TestRun> GetTestRuns() => DataList.Select(x => x.TestRun);
-
-        internal IEnumerable<string> GetTestRunNames() => GetTestRuns()
-            .Select(x => x.Name)
+        internal IEnumerable<string> GetTestRunNames() => DataList
+            .Select(x => x.TestRunName)
             .Distinct()
             .OrderBy(x => x);
 
         internal IEnumerable<string> GetTestRunNamesForTestCaseTitle(string testCaseTitle) => DataList
-            .Where(x => x.TestCaseTitle == testCaseTitle)
-            .Select(x => x.TestRun.Name)
+            .Where(x => x.TestCaseResults.Any(x => x.TestCaseTitle == testCaseTitle))
+            .Select(x => x.TestRunName)
             .Distinct()
             .OrderBy(x => x);
 
-        internal IEnumerable<DotNetTestCaseResult> GetDotNetTestCaseResultForTestCaseTitle(string testCaseTitle) =>
-            DataList.Where(x => x.TestCaseTitle == testCaseTitle);
+        internal IEnumerable<DotNetTestCaseResult> GetDotNetTestCaseResultForTestCaseTitle(string testCaseTitle) => DataList
+            .SelectMany(x => x.TestCaseResults)
+            .Where(x => x.TestCaseTitle == testCaseTitle);
 
-        internal IEnumerable<DotNetTestCaseResult> GetDotNetTestCaseResultForTestRunName(string testRunName) =>
-            DataList.Where(x => x.TestRun.Name == testRunName);
+        internal IEnumerable<DotNetTestCaseResult> GetDotNetTestCaseResultForTestRunName(string testRunName) => DataList
+            .Where(x => x.TestRunName == testRunName)
+            .SelectMany(x => x.TestCaseResults);
 
-        internal IEnumerable<HelixWorkItem> GetHelixWorkItems() => DataList
-            .Select(x => x.HelixWorkItem)
-            .Where(x => x is object)
-            .Select(x => x!.Value)
-            .GroupBy(x => x.HelixInfo.WorkItemName)
+        internal IEnumerable<HelixInfo> GetHelixWorkItems() => DataList
+            .SelectMany(x => x.TestCaseResults)
+            .SelectNullableValue(x => x.HelixInfo)
+            .GroupBy(x => x.WorkItemName)
             .Select(x => x.First())
             .OrderBy(x => x.JobId);
 
         internal bool ContainsTestCaseTitle(string testCaseTitle) => GetTestCaseTitles().Contains(testCaseTitle);
 
-        internal bool ContainsTestRunName(string testRunName) => DataList.Exists(x => x.TestRun.Name == testRunName);
+        internal bool ContainsTestRunName(string testRunName) => DataList.Exists(x => x.TestRunName == testRunName);
 
         internal BuildTestInfo FilterToTestCaseTitle(Regex testCaseTitleRegex)
         {
-            var dataList = DataList
-                .Where(x => testCaseTitleRegex.IsMatch(x.TestCaseTitle))
-                .ToList();
-            return new BuildTestInfo(Build, dataList);
+            var list = new List<DotNetTestRun>();
+            foreach (var testRun in DataList)
+            {
+                list.Add(new DotNetTestRun(
+                    testRun.ProjectName,
+                    testRun.TestRunId,
+                    testRun.TestRunName,
+                    testRun.TestCaseResults.Where(x => testCaseTitleRegex.IsMatch(x.TestCaseTitle)).ToList().ToReadOnlyCollection()));
+            }
+            return new BuildTestInfo(Build, list);
         }
 
         internal BuildTestInfo FilterToTestRunName(Regex testRunNameRegex)
         {
             var dataList = DataList
-                .Where(x => testRunNameRegex.IsMatch(x.TestRun.Name))
+                .Where(x => testRunNameRegex.IsMatch(x.TestRunName))
                 .ToList();
             return new BuildTestInfo(Build, dataList);
         }
@@ -127,7 +133,7 @@ namespace Runfo
             .ToList();
 
         internal List<string> GetTestRunNames() => BuildTestInfos
-            .SelectMany(x => x.GetTestRuns().Select(x => x.Name))
+            .SelectMany(x => x.DataList.Select(x => x.TestRunName))
             .Distinct()
             .OrderBy(x => x)
             .ToList();
