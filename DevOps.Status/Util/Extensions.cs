@@ -44,72 +44,98 @@ namespace DevOps.Status.Util
         /// queue up say 100,000 builds as that will end up spiking all our resources. Have to put some throttling
         /// in here.
         /// </summary>
-        public static async Task<int> QueueTriageBuildAttempts(
+        public static async Task<(int Queued, int Total)> QueueTriageBuildAttempts(
             this FunctionQueueUtil util,
             TriageContextUtil triageContextUtil,
-            ModelTrackingIssue trackingIssue,
-            SearchBuildsRequest buildsRequest,
+            ModelTrackingIssue modelTrackingIssue,
+            string extraQuery,
             int limit = 200)
         {
-            // Need to filter to a bulid definition other wise there is no reasonable way to filter the builds. Any
-            // triage is basically pointless.
-            if (trackingIssue.ModelBuildDefinition is null && !buildsRequest.HasDefinition)
-            {
-                throw new Exception("Must filter to a build definition");
-            }
+            var context = triageContextUtil.Context;
+            var (query, request) = GetQueryData();
 
-            // Ensure there is some level of filtering occuring here.
-            if (buildsRequest.BuildResult is null)
-            {
-                buildsRequest.BuildResult = new BuildResultRequestValue(ModelBuildResult.Succeeded, EqualsKind.NotEquals);
-            }
-
-            if (buildsRequest.Queued is null && buildsRequest.Started is null && buildsRequest.Finished is null)
-            {
-                buildsRequest.Queued = new DateRequestValue(7, RelationalKind.GreaterThan);
-            }
-
-            var buildsQuery = buildsRequest
-                .Filter(triageContextUtil.Context.ModelBuilds)
-                .OrderByDescending(x => x.BuildNumber)
-                .SelectMany(x => x.ModelBuildAttempts)
+            var attempts = await query
+                .Include(x => x.ModelBuild)
                 .Select(x => new
                 {
                     x.ModelBuild.BuildNumber,
                     x.ModelBuild.AzureOrganization,
                     x.ModelBuild.AzureProject,
                     x.Attempt,
-                    x.Id
-                });
+                    ModelBuildAttemptId = x.Id
+                }).ToListAsync();
 
-            var existingAttemptsQuery = triageContextUtil
-                .Context
+            // Want to filter to attempts that haven't already been triaged so grab the set of already 
+            // triaged ids and use that to filter down the list. 
+            var triagedAttempts = await context
                 .ModelTrackingIssueResults
-                .Where(x => x.ModelTrackingIssueId == trackingIssue.Id)
-                .Include(x => x.ModelBuildAttempt)
-                .ThenInclude(x => x.ModelBuild)
-                .Select(x => new
-                {
-                    x.ModelBuildAttempt.ModelBuild.AzureOrganization,
-                    x.ModelBuildAttempt.ModelBuild.AzureProject,
-                    x.ModelBuildAttempt.ModelBuild.BuildNumber,
-                    x.ModelBuildAttempt.Attempt,
-                });
+                .Where(x => x.ModelTrackingIssueId == modelTrackingIssue.Id)
+                .Select(x => x.ModelBuildAttemptId)
+                .ToListAsync()
+                .ConfigureAwait(false);
+            var triageAttemptsSet = new HashSet<int>(triagedAttempts);
 
-            var existingAttemptsResults = await existingAttemptsQuery.ToListAsync();
-            var existingAttemptsSet = new HashSet<BuildAttemptKey>(
-                existingAttemptsResults.Select(x => new BuildAttemptKey(x.AzureOrganization, x.AzureProject, x.BuildNumber, x.Attempt)));
-
-            var attempts = await buildsQuery.ToListAsync();
             var attemptKeys = attempts
+                .Where(x => !triageAttemptsSet.Contains(x.ModelBuildAttemptId))
                 .Select(x => new BuildAttemptKey(x.AzureOrganization, x.AzureProject, x.BuildNumber, x.Attempt))
-                .Where(x => !existingAttemptsSet.Contains(x))
-                .Take(limit)
                 .ToList();
+            var total = attemptKeys.Count;
+            var queued = total >= limit ? limit : total;
 
-            await util.QueueTriageBuildAttemptsAsync(trackingIssue, attemptKeys);
+            await util.QueueTriageBuildAttemptsAsync(modelTrackingIssue, attemptKeys.Take(limit));
 
-            return attemptKeys.Count;
+            return (queued, total);
+
+            (IQueryable<ModelBuildAttempt> Query, SearchRequestBase SearchRequest) GetQueryData()
+            {
+                switch (modelTrackingIssue.TrackingKind)
+                {
+                    case TrackingKind.Timeline:
+                        {
+                            var request = new SearchTimelinesRequest(modelTrackingIssue.SearchQuery);
+                            request.ParseQueryString(extraQuery);
+                            UpdateRequest(request);
+                            var query = request.Filter(context.ModelTimelineIssues).Select(x => x.ModelBuildAttempt).Distinct();
+                            return (query, request);
+                        }
+                    case TrackingKind.Test:
+                        {
+                            var request = new SearchTestsRequest(modelTrackingIssue.SearchQuery);
+                            request.ParseQueryString(extraQuery);
+                            UpdateRequest(request);
+                            var query = request.Filter(context.ModelTestResults).Select(x => x.ModelBuildAttempt).Distinct();
+                            return (query, request);
+                        }
+                    case TrackingKind.HelixLogs:
+                        {
+                            var request = new SearchHelixLogsRequest(modelTrackingIssue.SearchQuery);
+                            request.ParseQueryString(extraQuery);
+                            UpdateRequest(request);
+                            var query = request.Filter(context.ModelTestResults).Select(x => x.ModelBuildAttempt).Distinct();
+                            return (query, request);
+                        }
+                    default:
+                        throw new InvalidOperationException($"Invalid kind {modelTrackingIssue.TrackingKind}");
+                }
+
+                void UpdateRequest(SearchRequestBase requestBase)
+                {
+                    if (modelTrackingIssue.ModelBuildDefinition is { } definition)
+                    {
+                        requestBase.Definition = definition.DefinitionNumber.ToString();
+                    }
+
+                    if (requestBase.BuildResult is null)
+                    {
+                        requestBase.BuildResult = new BuildResultRequestValue(ModelBuildResult.Succeeded, EqualsKind.NotEquals);
+                    }
+
+                    if (requestBase.Started is null)
+                    {
+                        throw new InvalidOperationException($"Must provide a start date");
+                    }
+                }
+            }
         }
     }
 }

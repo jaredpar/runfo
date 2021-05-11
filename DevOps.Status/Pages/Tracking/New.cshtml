@@ -7,23 +7,22 @@
 <form method="post">
     <div class="form-group row">
         <label class="col-sm-2 col-form-label">Title</label>
-        <input class="col-sm-10 form-control" type="text" asp-for="IssueTitle" />
+        <input class="col-sm-10 form-control" type="text" asp-for="TitleData" />
     </div>
 
     <div class="form-group row">
         <label class="col-sm-2 col-form-label">Definition</label>
-        <input class="col-sm-10 form-control" type="text" asp-for="Definition" />
+        <input class="col-sm-10 form-control" type="text" asp-for="DefinitionData" />
     </div>
 
     <div class="form-group row">
         <label class="col-sm-2 col-form-label">Query</label>
-        <input class="col-sm-10 form-control" type="text" asp-for="SearchText" />
+        <input class="col-sm-10 form-control" type="text" asp-for="SearchTextData" />
     </div>
 
     <div class="form-group row">
         <label class="col-sm-2 col-form-label">Kind</label>
-        <select class="col-sm-10 form-control" asp-for="TrackingKind" asp-items="Html.GetEnumSelectList<DevOps.Util.DotNet.Triage.TrackingKind>()">
-            <option value="">Select a kind</option>
+        <select class="col-sm-10 form-control" asp-for="TrackingKindData" asp-items="NewTrackingIssueModel.TrackingKinds">
         </select>
     </div>
 

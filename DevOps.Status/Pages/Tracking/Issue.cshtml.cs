@@ -56,7 +56,7 @@ namespace DevOps.Status.Pages.Tracking
         public string? GitHubIssueUri { get; set; }
         [BindProperty]
         public string? PopulateBuildsQuery { get; set; }
-        public int? PopulateCount { get; set; }
+        public (int Queued, int Total)? PopulateData { get; set; }
         public HitCountInfo HitCount { get; set; }
         public List<Result> Results { get; set; } = new List<Result>();
         public int ModelTrackingIssueId { get; set; }
@@ -176,21 +176,23 @@ namespace DevOps.Status.Pages.Tracking
 
             async Task<IActionResult> PopulateAsync()
             {
-                var request = new SearchBuildsRequest()
+                try
                 {
-                    Definition = modelTrackingIssue.ModelBuildDefinition?.DefinitionName,
-                };
+                    if (string.IsNullOrEmpty(PopulateBuildsQuery))
+                    {
+                        ErrorMessage = "Need to add a filter that includes a started predicate";
+                        return await OnGetCoreAsync();
+                    }
 
-                request.ParseQueryString(string.IsNullOrEmpty(PopulateBuildsQuery) ? "started:~7" : PopulateBuildsQuery);
-                if (!request.HasDefinition)
-                {
-                    ErrorMessage = "Need to filter build results to a definition";
+                    PopulateData = await FunctionQueueUtil.QueueTriageBuildAttempts(TriageContextUtil, modelTrackingIssue, PopulateBuildsQuery);
+                    await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, delay: TimeSpan.FromMinutes(1));
                     return await OnGetCoreAsync();
                 }
-
-                PopulateCount = await FunctionQueueUtil.QueueTriageBuildAttempts(TriageContextUtil, modelTrackingIssue, request);
-                await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, delay: TimeSpan.FromMinutes(1));
-                return await OnGetCoreAsync();
+                catch (Exception ex)
+                {
+                    ErrorMessage = ex.Message;
+                    return await OnGetCoreAsync();
+                }
             }
 
             async Task<IActionResult> UpdateAsync()

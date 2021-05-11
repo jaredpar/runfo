@@ -553,44 +553,6 @@ namespace DevOps.Util.DotNet.Triage
                 x.GitHubRepository == issueKey.Repository &&
                 x.GitHubIssueNumber == issueKey.Number);
 
-        public IQueryable<ModelBuildAttempt> GetModelBuildAttemptsQuery(ModelTrackingIssue modelTrackingIssue, string extraQuery)
-        {
-            switch (modelTrackingIssue.TrackingKind)
-            {
-                case TrackingKind.Timeline:
-                    {
-                        var request = new SearchTimelinesRequest(modelTrackingIssue.SearchQuery);
-                        request.ParseQueryString(extraQuery);
-                        UpdateDefinition(request);
-                        return request.Filter(Context.ModelTimelineIssues).Select(x => x.ModelBuildAttempt).Distinct();
-                    }
-                case TrackingKind.Test:
-                    {
-                        var request = new SearchTestsRequest(modelTrackingIssue.SearchQuery);
-                        request.ParseQueryString(extraQuery);
-                        UpdateDefinition(request);
-                        return request.Filter(Context.ModelTestResults).Select(x => x.ModelBuildAttempt).Distinct();
-                    }
-                case TrackingKind.HelixLogs:
-                    {
-                        var request = new SearchHelixLogsRequest(modelTrackingIssue.SearchQuery);
-                        request.ParseQueryString(extraQuery);
-                        UpdateDefinition(request);
-                        return request.Filter(Context.ModelTestResults).Select(x => x.ModelBuildAttempt).Distinct();
-                    }
-                default:
-                    throw new InvalidOperationException($"Invalid kind {modelTrackingIssue.TrackingKind}");
-            }
-
-            void UpdateDefinition(SearchRequestBase requestBase)
-            {
-                if (modelTrackingIssue.ModelBuildDefinition is { } definition)
-                {
-                    requestBase.Definition = definition.DefinitionNumber.ToString();
-                }
-            }
-        }
-
         /// <summary>
         /// Update the model to reflect that this build was the build for a merged pull request. This will
         /// update the build and all of the related entities that track <see cref="ModelBuildKind"/>

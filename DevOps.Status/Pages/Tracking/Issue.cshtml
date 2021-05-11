@@ -46,10 +46,10 @@
 </form>
 
 
-@if (Model.PopulateCount is { } populateCount)
+@if (Model.PopulateData is { } data)
 {
     <div class="alert alert-success">
-        <p>Queued @populateCount build attempts for triaging against this issue.</p>
+        <p>Queued first @data.Queued build attempts from total of @data.Total for triaging against this issue.</p>
     </div>
 }
 
