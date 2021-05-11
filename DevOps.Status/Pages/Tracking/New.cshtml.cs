@@ -5,10 +5,13 @@ using DevOps.Util.DotNet.Function;
 using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Logging;
 using Octokit;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,25 +19,31 @@ namespace DevOps.Status.Pages.Tracking
 {
     public class NewTrackingIssueModel : PageModel
     {
+        public static List<SelectListItem> TrackingKinds => Enum
+            .GetValues(typeof(TrackingKind))
+            .Cast<TrackingKind>()
+            .Select(x => new SelectListItem(x.ToString(), x.ToString()))
+            .ToList();
+
         public TriageContext TriageContext { get; }
         public TriageContextUtil TriageContextUtil { get; }
         public IGitHubClientFactory GitHubClientFactory { get; }
         public FunctionQueueUtil FunctionQueueUtil { get; }
         public ILogger Logger { get; }
 
-        [BindProperty(SupportsGet = true)]
-        public string? IssueTitle { get; set; }
-        [BindProperty(SupportsGet = true)]
-        public TrackingKind TrackingKind { get; set; }
-        [BindProperty(SupportsGet = true)]
-        public string? SearchText { get; set; }
-        [BindProperty(SupportsGet = true)]
-        public string? Definition { get; set; }
+        [BindProperty]
+        public string? TitleData { get; set; }
+        [BindProperty]
+        public TrackingKind TrackingKindData { get; set; }
+        [BindProperty]
+        public string? SearchTextData { get; set; }
+        [BindProperty]
+        public string? DefinitionData { get; set; }
         [BindProperty(SupportsGet = true)]
         public string? GitHubOrganization { get; set; }
         [BindProperty(SupportsGet = true)]
         public string? GitHubRepository { get; set; }
-        [BindProperty(SupportsGet = true)]
+        [BindProperty]
         public string? GitHubIssueUri { get; set; }
 
         public string? ErrorMessage { get; set; }
@@ -48,67 +57,63 @@ namespace DevOps.Status.Pages.Tracking
             Logger = logger;
         }
 
-        public void OnGet()
+        public void OnGet(string? searchText, TrackingKind trackingKind, string? issueTitle, string? definition) 
         {
-            if (string.IsNullOrEmpty(Definition))
-            {
-                Definition = "roslyn-ci";
-            }
+            DefinitionData = string.IsNullOrEmpty(definition)
+                ? "roslyn-ci"
+                : definition;
 
-            if (TrackingKind == TrackingKind.Unknown)
-            {
-                TrackingKind = TrackingKind.Timeline;
-            }
+            TrackingKindData = trackingKind is TrackingKind.Unknown
+                ? TrackingKind.Timeline
+                : trackingKind;
 
-            if (string.IsNullOrEmpty(IssueTitle))
-            {
-                IssueTitle = $"Tracking issue in {Definition}";
-            }
+            TitleData = string.IsNullOrEmpty(issueTitle)
+                ? $"Tracking issue in {DefinitionData}"
+                : issueTitle;
 
-            if (string.IsNullOrEmpty(SearchText))
-            {
-                SearchText = "Error";
-            }
+            SearchTextData = SanitizeSearchText(searchText, TrackingKindData) is { } s
+                ? s
+                : "message:Error";
         }
 
         public async Task<IActionResult> OnPost()
         {
-            if (TrackingKind == TrackingKind.Unknown)
+            if (TrackingKindData == TrackingKind.Unknown)
             {
                 ErrorMessage = "Invalid Tracking Kind";
                 return Page();
             }
 
-            if (string.IsNullOrEmpty(IssueTitle))
+            if (string.IsNullOrEmpty(TitleData))
             {
                 ErrorMessage = "Need an issue title";
                 return Page();
             }
 
-            if (IssueTitle.Length >= ModelTrackingIssue.IssueTitleLengthLimit)
+            if (TitleData.Length >= ModelTrackingIssue.IssueTitleLengthLimit)
             {
                 ErrorMessage = $"Please limit issue title to {ModelTrackingIssue.IssueTitleLengthLimit} characters";
                 return Page();
             }
 
-            if (string.IsNullOrEmpty(SearchText))
+            if (string.IsNullOrEmpty(SearchTextData))
             {
                 ErrorMessage = "Must provide search text";
                 return Page();
             }
 
             ModelBuildDefinition? modelBuildDefinition = null;
-            if (!string.IsNullOrEmpty(Definition))
+            if (!string.IsNullOrEmpty(DefinitionData))
             {
-                modelBuildDefinition = await TriageContextUtil.FindModelBuildDefinitionAsync(Definition);
+                modelBuildDefinition = await TriageContextUtil.FindModelBuildDefinitionAsync(DefinitionData);
                 if (modelBuildDefinition is null)
                 {
-                    ErrorMessage = $"Cannot find build definition with name or ID: {Definition}";
+                    ErrorMessage = $"Cannot find build definition with name or ID: {DefinitionData}";
                     return Page();
                 }
             }
 
-            switch (TrackingKind)
+            switch (TrackingKindData)
             {
                 case TrackingKind.HelixLogs:
                     {
@@ -184,9 +189,9 @@ namespace DevOps.Status.Pages.Tracking
                 var modelTrackingIssue = new ModelTrackingIssue()
                 {
                     IsActive = true,
-                    IssueTitle = IssueTitle,
-                    TrackingKind = TrackingKind,
-                    SearchQuery = SearchText,
+                    IssueTitle = TitleData,
+                    TrackingKind = TrackingKindData,
+                    SearchQuery = SearchTextData,
                     ModelBuildDefinition = modelBuildDefinition,
                     GitHubOrganization = issueKey.Organization,
                     GitHubRepository = issueKey.Repository,
@@ -223,7 +228,7 @@ namespace DevOps.Status.Pages.Tracking
                     return key;
                 }
 
-                var newIssue = new NewIssue(IssueTitle)
+                var newIssue = new NewIssue(TitleData)
                 {
                     Body = TrackingGitHubUtil.WrapInStartEndMarkers("Runfo Creating Tracking Issue (data being generated)")
                 };
@@ -238,7 +243,7 @@ namespace DevOps.Status.Pages.Tracking
                 value = new T();
                 try
                 {
-                    value.ParseQueryString(SearchText ?? "");
+                    value.ParseQueryString(SearchTextData ?? "");
                     return true;
                 }
                 catch (Exception ex)
@@ -246,6 +251,50 @@ namespace DevOps.Status.Pages.Tracking
                     ErrorMessage = ex.ToString();
                     return false;
                 }
+            }
+        }
+
+        /// <summary>
+        /// There are a lot of query parameters that just aren't valid for tracking issue 
+        /// storage. For example started. This function will attempt to clean up the 
+        /// </summary>
+        private static string? SanitizeSearchText(string? searchText, TrackingKind kind)
+        {
+            if (searchText is null)
+            {
+                return null;
+            }
+
+            switch (kind)
+            {
+                case TrackingKind.Test:
+                    {
+                        var request = new SearchTestsRequest(searchText);
+                        Sanitize(request);
+                        return request.GetQueryString();
+                    };
+                case TrackingKind.Timeline:
+                    {
+                        var request = new SearchTimelinesRequest(searchText);
+                        Sanitize(request);
+                        return request.GetQueryString();
+                    }
+                case TrackingKind.HelixLogs:
+                    {
+                        var request = new SearchHelixLogsRequest(searchText);
+                        Sanitize(request);
+                        return request.GetQueryString();
+                    }
+            }
+
+            return searchText;
+
+            static void Sanitize(SearchRequestBase request)
+            {
+                request.Started = null;
+                request.BuildKind = null;
+                request.BuildResult = null;
+                request.Definition = null; // this is tracked separately
             }
         }
     }
