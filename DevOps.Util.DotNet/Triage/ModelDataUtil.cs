@@ -136,10 +136,14 @@ namespace DevOps.Util.DotNet.Triage
                     if (dotNetTestRun.TestCaseResults.Count > maxTestCaseResultCount)
                     {
                         dotNetTestRun = new DotNetTestRun(
-                            dotNetTestRun.TestRunInfo,
+                            dotNetTestRun.ProjectName,
+                            dotNetTestRun.TestRunId,
+                            dotNetTestRun.TestRunName,
                             dotNetTestRun.TestCaseResults.Take(maxTestCaseResultCount).ToReadOnlyCollection());
                     }
-                    var helixMap = await Server.GetHelixMapAsync(dotNetTestRun).ConfigureAwait(false);
+
+                    var helixApi = HelixServer.GetHelixApi();
+                    var helixMap = await helixApi.GetHelixMapAsync(dotNetTestRun).ConfigureAwait(false);
 
                     await TriageContextUtil.EnsureTestRunAsync(modelBuildAttempt, dotNetTestRun, helixMap).ConfigureAwait(false);
                 }

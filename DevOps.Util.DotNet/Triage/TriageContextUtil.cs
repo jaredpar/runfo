@@ -388,7 +388,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public async Task<ModelTestRun> EnsureTestRunAsync(ModelBuildAttempt modelBuildAttempt, DotNetTestRun testRun, Dictionary<HelixInfo, HelixLogInfo> helixMap)
         {
-            var modelTestRun = await FindModelTestRunAsync(modelBuildAttempt.ModelBuildId, testRun.TestRun.Id).ConfigureAwait(false);
+            var modelTestRun = await FindModelTestRunAsync(modelBuildAttempt.ModelBuildId, testRun.TestRunId).ConfigureAwait(false);
             if (modelTestRun is object)
             {
                 return modelTestRun;
@@ -398,8 +398,8 @@ namespace DevOps.Util.DotNet.Triage
             {
                 ModelBuildId = modelBuildAttempt.ModelBuildId,
                 ModelBuildAttempt = modelBuildAttempt,
-                TestRunId = testRun.TestRun.Id,
-                Name = testRun.TestRun.Name,
+                TestRunId = testRun.TestRunId,
+                Name = testRun.TestRunName,
                 Attempt = modelBuildAttempt.Attempt,
             };
             Context.ModelTestRuns.Add(modelTestRun);

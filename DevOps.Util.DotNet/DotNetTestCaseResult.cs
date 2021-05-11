@@ -5,38 +5,32 @@ namespace DevOps.Util.DotNet
 {
     public sealed class DotNetTestCaseResult
     {
-        public DotNetTestRunInfo TestRunInfo { get; }
-
-        // The TestCaseResult representing the actual test failure
+        /// <summary>
+        /// The TestCaseResult representing the actual test failure
+        /// </summary>
         public TestCaseResult TestCaseResult { get; }
 
-        // Contains all the Helix info when this is a Helix test case result
-        public HelixWorkItem? HelixWorkItem { get; }
+        /// <summary>
+        /// Helix information for the test case if this was executed in Helix
+        /// </summary>
+        public HelixInfo? HelixInfo { get; }
 
-        public HelixInfo? HelixInfo => HelixWorkItem?.HelixInfo;
+        /// <summary>
+        /// Is this the test case result that represents the helix work item. There is one of these 
+        /// per WorkItem that helix runs
+        /// </summary>
+        public bool IsHelixWorkItem { get; }
 
-        public bool IsHelixTestResult => HelixWorkItem.HasValue;
-
-        public bool IsHelixWorkItem => HelixUtil.IsHelixWorkItem(TestCaseResult);
+        public bool IsHelixTestResult => HelixInfo.HasValue;
 
         public string TestCaseTitle => TestCaseResult.TestCaseTitle;
 
-        public TestRun TestRun => TestRunInfo.TestRun;
-
-        public Build Build => TestRunInfo.Build;
-
-        public DotNetTestCaseResult(DotNetTestRunInfo testRunInfo, HelixWorkItem helixWorkItem, TestCaseResult testCaseResult)
+        public DotNetTestCaseResult(TestCaseResult testCaseResult, HelixInfo? helixInfo = null, bool isHelixWorkItem = false)
         {
-            Debug.Assert(HelixUtil.TryGetHelixInfo(testCaseResult) == helixWorkItem.HelixInfo);
-            TestRunInfo = testRunInfo;
-            HelixWorkItem = helixWorkItem;
+            Debug.Assert(!isHelixWorkItem || (helixInfo is { } info && info == HelixUtil.TryGetHelixInfo(testCaseResult)));
             TestCaseResult = testCaseResult;
-        }
-
-        public DotNetTestCaseResult(DotNetTestRunInfo testRunInfo, TestCaseResult testCaseResult)
-        {
-            TestRunInfo = testRunInfo;
-            TestCaseResult = testCaseResult;
+            HelixInfo = helixInfo;
+            IsHelixWorkItem = IsHelixWorkItem;
         }
     }
 }

@@ -139,7 +139,7 @@ namespace Scratch
 
             DotNetQueryUtil = new DotNetQueryUtil(
                 DevOpsServer,
-                new CachingAzureUtil(BlobStorageUtil, DevOpsServer));
+                new AzureUtil(DevOpsServer));
             FunctionQueueUtil = new FunctionQueueUtil(configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
             HelixServer = new HelixServer();
         }
@@ -165,7 +165,28 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await PopulateDb();
+            var helixApi = HelixServer.GetHelixApi();
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync("public"))
+            {
+                if (build.Status is not BuildStatus.Completed)
+                {
+                    continue;
+                }
+
+                if (build.Definition.Id is 15 or 686)
+                {
+                    var buildInfo = build.GetBuildInfo();
+                    Console.WriteLine(buildInfo.BuildUri);
+                    var map = await DevOpsServer.GetHelixMapAsync("public", buildInfo.Number, DevOpsUtil.FailedTestOutcomes, helixApi);
+                    foreach (var (helixInfo, helixLogInfo) in map)
+                    {
+                        Console.WriteLine($"\t{helixInfo.JobId} - {helixInfo.WorkItemName}");
+                        foreach (var kind in Enum.GetValues(typeof(HelixLogKind)).Cast<HelixLogKind>())
+                        Console.WriteLine($"\t\t{kind} - {helixLogInfo.GetUri(kind)}");
+                    }
+                }
+            }
+
             // await MeasureTrackingIssuePerf();
 
 

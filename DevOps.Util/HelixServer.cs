@@ -5,8 +5,10 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DevOps.Util
@@ -14,15 +16,28 @@ namespace DevOps.Util
     public sealed class HelixServer
     {
         private readonly DevOpsHttpClient _client;
-        private readonly AuthorizationToken _token;
-        private readonly string _helixBaseUri;
+        private readonly string? _token;
+        private readonly string? _helixBaseUri;
+
+        public IHelixApi HelixApi => GetHelixApi(_helixBaseUri, _token);
 
         public HelixServer(string? helixBaseUri = null, string? token = null, HttpClient? httpClient = null)
         {
-            _helixBaseUri = string.IsNullOrEmpty(helixBaseUri) ? "https://helix.dot.net/" : helixBaseUri;
-            _token = string.IsNullOrEmpty(token) ?
-                default : new AuthorizationToken(AuthorizationKind.PersonalAccessToken, token);
+            _helixBaseUri = helixBaseUri;
+            _token = token;
             _client = new DevOpsHttpClient(httpClient: httpClient);
+        }
+
+        public static IHelixApi GetHelixApi(string? helixBaseUri = null, string? token = null)
+        {
+            helixBaseUri = string.IsNullOrEmpty(helixBaseUri) ? "https://helix.dot.net/" : helixBaseUri;
+            if (string.IsNullOrEmpty(token))
+            {
+                return ApiFactory.GetAnonymous(helixBaseUri);
+            }
+
+            var authToken = new AuthorizationToken(AuthorizationKind.PersonalAccessToken, token);
+            return ApiFactory.GetAuthenticated(helixBaseUri, authToken.Token);
         }
 
         public async ValueTask GetHelixPayloads(string jobId, List<string> workItems, string downloadDir, bool ignoreDumps)
@@ -32,7 +47,7 @@ namespace DevOps.Util
                 downloadDir = Path.Combine(Environment.CurrentDirectory, downloadDir);
             }
 
-            IHelixApi helixApi = _token.IsNone ? ApiFactory.GetAnonymous(_helixBaseUri) : ApiFactory.GetAuthenticated(_helixBaseUri, _token.Token);
+            IHelixApi helixApi = HelixApi;
             JobDetails jobDetails = await helixApi.Job.DetailsAsync(jobId).ConfigureAwait(false);
             string? jobListFile = jobDetails.JobList;
 
@@ -120,6 +135,15 @@ namespace DevOps.Util
                     }
                 }
             }
+        }
+
+        public async Task<List<(string Name, string Link)>> GetUploadedFilesAsync(string jobId, string workItemId, CancellationToken cancellationToken = default)
+        {
+            IHelixApi helixApi = HelixApi;
+            var files = await helixApi.WorkItem.ListFilesAsync(workItemId, job: jobId, cancellationToken).ConfigureAwait(false);
+            return files
+                .Select(x => (x.Name, x.Link))
+                .ToList();
         }
 
         public Task<MemoryStream> DownloadFileAsync(string uri) => _client.DownloadFileAsync(uri);
