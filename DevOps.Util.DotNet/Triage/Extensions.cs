@@ -209,34 +209,6 @@ namespace DevOps.Util.DotNet.Triage
 
         #endregion
 
-        #region TrackingIssueUtil
-
-        public static async Task TriageBuildsAsync(this TrackingIssueUtil trackingIssueUtil, ModelTrackingIssue modelTrackingIssue, string extraQuery, CancellationToken cancellationToken = default)
-        {
-            var attempts = await trackingIssueUtil
-                .TriageContextUtil
-                .GetModelBuildAttemptsQuery(modelTrackingIssue, extraQuery)
-                .Include(x => x.ModelBuild)
-                .Select(x => new
-                {
-                    x.ModelBuild.AzureOrganization,
-                    x.ModelBuild.AzureProject,
-                    x.ModelBuild.BuildNumber,
-                    x.Attempt
-                })
-                .ToListAsync()
-                .ConfigureAwait(false);
-
-            foreach (var attempt in attempts)
-            {
-                var key = new BuildAttemptKey(attempt.AzureOrganization, attempt.AzureProject, attempt.BuildNumber, attempt.Attempt);
-                await trackingIssueUtil.TriageAsync(key, modelTrackingIssue);
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-        }
-
-        #endregion
-
         #region Exceptions
 
         public static SqlException? GetSqlException(this Exception ex)

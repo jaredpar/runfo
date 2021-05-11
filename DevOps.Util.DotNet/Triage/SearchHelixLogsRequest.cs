@@ -16,7 +16,21 @@ namespace DevOps.Util.DotNet.Triage
         public const int DefaultLimit = 5_000; 
 
         public List<HelixLogKind> HelixLogKinds { get; set; } = new List<HelixLogKind>();
+
+        /// <summary>
+        /// The text in the log to search for.
+        /// 
+        /// Note: this does not actually filter the builds returned from <see cref="Filter(IQueryable{ModelTestResult})"/> 
+        /// but is used in subsequent searches
+        /// </summary>
         public string? Text { get; set; }
+
+        /// <summary>
+        /// The number of logs to actually search. 
+        ///
+        /// Note: this does not actually filter the builds returned from <see cref="Filter(IQueryable{ModelTestResult})"/> 
+        /// but is used in subsequent searches
+        /// </summary>
         public int Limit { get; set; } = DefaultLimit;
 
         public SearchHelixLogsRequest(string queryString)

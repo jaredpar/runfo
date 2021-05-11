@@ -742,14 +742,6 @@ namespace Scratch
             }
         }
 
-        internal async Task PopulateTrackingIssue(int issueId, string extraQuery)
-        {
-            var issue = await TriageContext.ModelTrackingIssues.Where(x => x.Id == issueId).SingleAsync();
-            var util = new TrackingIssueUtil(HelixServer, DotNetQueryUtil, TriageContextUtil, CreateLogger());
-            await util.TriageBuildsAsync(issue, extraQuery);
-            await FunctionQueueUtil.QueueUpdateIssueAsync(issue, delay: null);
-        }
-
         internal async Task PopulateModelBuildDefinitionTable()
         {
             var definitions = await DevOpsServer.ListDefinitionsAsync("public");
