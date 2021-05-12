@@ -332,11 +332,7 @@ namespace Scratch
             }
         }
 
-        private static BuildKey GetBuildKey(string key)
-        {
-            var parts = key.Split('-');
-            return new BuildKey(parts[0], parts[1], int.Parse(parts[2]));
-        }
+        private static BuildKey GetBuildKey(string key) => BuildKey.FromNameKey(key);
         private static string ParseString(string s) => s == "NULL" ? "" : s;
         private static int? ParseNumber(string s) => s == "NULL" ? null : int.Parse(s);
     }

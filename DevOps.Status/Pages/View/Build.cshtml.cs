@@ -54,7 +54,6 @@ namespace DevOps.Status.Pages.View
             var buildKey = GetBuildKey(number);
             var project = buildKey.Project;
             var organization = buildKey.Organization;
-            var buildId = TriageContextUtil.GetModelBuildNameKey(buildKey);
 
             var modelBuild = await PopulateBuildInfo();
             if (modelBuild is object)
