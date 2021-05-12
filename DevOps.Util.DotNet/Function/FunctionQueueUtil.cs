@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using static DevOps.Util.DotNet.Function.FunctionConstants;
 
@@ -17,6 +18,15 @@ namespace DevOps.Util.DotNet.Function
         public FunctionQueueUtil(string connectionString)
         {
             _connectionString = connectionString;
+        }
+
+        public async Task EnsureAllQueues(CancellationToken cancellationToken = default)
+        {
+            foreach (var name in AllQueueNames)
+            {
+                var client = new QueueClient(_connectionString, name);
+                await client.CreateIfNotExistsAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
         }
 
         public async Task QueueTriageBuildAsync(BuildKey buildKey)

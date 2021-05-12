@@ -14,5 +14,20 @@ namespace DevOps.Util.DotNet.Function
         public const string QueueNameTriageTrackingIssueRange = "triage-tracking-issue-range";
         public const string QueueNamePullRequestMerged = "pull-request-merged";
         public const string QueueNameIssueUpdateManual = "issue-update-manual";
+
+        public static IEnumerable<string> AllQueueNames
+        {
+            get
+            {
+                yield return QueueNameBuildComplete;
+                yield return QueueNameBuildRetry;
+                yield return QueueNameTriageBuildAttempt;
+                yield return QueueNameTriageBuild;
+                yield return QueueNameTriageTrackingIssue;
+                yield return QueueNameTriageTrackingIssueRange;
+                yield return QueueNamePullRequestMerged;
+                yield return QueueNameIssueUpdateManual;
+            }
+        }
     }
 }
