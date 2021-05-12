@@ -113,7 +113,7 @@ namespace DevOps.Util.DotNet
                     }
                 }
 
-                if (file.FileName.StartsWith("testResults", StringComparison.OrdinalIgnoreCase))
+                if (file.FileName.EndsWith(".xml"))
                 {
                     testResultsUri = file.Uri;
                 }
