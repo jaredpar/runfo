@@ -96,12 +96,13 @@ namespace DevOps.Functions
         [FunctionName("build-complete")]
         public async Task BuildCompleteAsync(
             [QueueTrigger(QueueNameBuildComplete, Connection = ConfigurationAzureBlobConnectionString)] string message,
-            [Queue(QueueNameTriageBuildAttempt, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> triageCollector,
+            [Queue(QueueNameTriageBuild, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> triageCollector,
             [Queue(QueueNameBuildRetry, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> retryCollector,
             ILogger logger)
         {
             var buildInfoMessage = JsonConvert.DeserializeObject<BuildInfoMessage>(message);
             var projectName = buildInfoMessage.ProjectName;
+            var buildNumber = buildInfoMessage.BuildNumber;
             if (projectName is null)
             {
                 var projectId = buildInfoMessage.ProjectId;
@@ -111,22 +112,22 @@ namespace DevOps.Functions
                     return;
                 }
 
-                buildInfoMessage.ProjectName = await Server.ConvertProjectIdToNameAsync(projectId);
+                projectName = await Server.ConvertProjectIdToNameAsync(projectId);
             }
 
-            logger.LogInformation($"Gathering data for build {buildInfoMessage.ProjectName} {buildInfoMessage.BuildNumber}");
-            if (buildInfoMessage.ProjectName != "public")
+            logger.LogInformation($"Gathering data for build {projectName} {buildNumber}");
+            if (projectName != "public")
             {
-                logger.LogError($"Asked to gather data from {buildInfoMessage.ProjectName} which is not 'public'");
+                logger.LogError($"Asked to gather data from {projectName} which is not 'public'");
                 return;
             }
 
-            var build = await Server.GetBuildAsync(buildInfoMessage.ProjectName!, buildInfoMessage.BuildNumber);
+            var build = await Server.GetBuildAsync(projectName, buildNumber);
             var queryUtil = new DotNetQueryUtil(Server);
             var modelDataUtil = new ModelDataUtil(queryUtil, TriageContextUtil, logger);
             var buildAttemptKey = await modelDataUtil.EnsureModelInfoAsync(build);
 
-            await triageCollector.AddAsync(JsonConvert.SerializeObject(new BuildAttemptMessage(buildAttemptKey)));
+            await triageCollector.AddAsync(JsonConvert.SerializeObject(new BuildMessage(buildAttemptKey.BuildKey)));
             await retryCollector.AddAsync(JsonConvert.SerializeObject(new BuildAttemptMessage(buildAttemptKey)));
         }
 
@@ -148,7 +149,7 @@ namespace DevOps.Functions
         }
 
         /// <summary>
-        /// This function will triage a tracking issue against a build attempt
+        /// This function will triage a tracking issue against a build (all attempts)
         /// </summary>
         [FunctionName("triage-tracking-issue")]
         public async Task TriageTrackingIssueAsync(
@@ -156,12 +157,12 @@ namespace DevOps.Functions
             ILogger logger)
         {
             var issueMessage = JsonConvert.DeserializeObject<TriageTrackingIssueMessage>(message);
-            if (issueMessage.BuildAttemptKey is { } buildAttemptKey && issueMessage.ModelTrackingIssueId is { } trackingIssueId)
+            if (issueMessage.BuildMessage?.BuildKey is { } buildKey && issueMessage.ModelTrackingIssueId is { } trackingIssueId)
             {
-                logger.LogInformation($"Triaging issue {trackingIssueId} against build attempt {buildAttemptKey}");
+                logger.LogInformation($"Triaging issue {trackingIssueId} against build {buildKey}");
                 var queryUtil = new DotNetQueryUtil(Server);
                 var util = new TrackingIssueUtil(HelixServer, queryUtil, TriageContextUtil, logger);
-                await util.TriageAsync(buildAttemptKey, trackingIssueId);
+                await util.TriageAsync(buildKey, trackingIssueId);
             }
             else
             {
@@ -170,7 +171,7 @@ namespace DevOps.Functions
         }
 
         /// <summary>
-        /// This function will triage a tracking issue against a build attempt
+        /// This function will triage a tracking issue against a build range (all attempts)
         /// </summary>
         [FunctionName("triage-tracking-issue-range")]
         public async Task TriageTrackingIssueRangeAsync(
@@ -179,15 +180,15 @@ namespace DevOps.Functions
             ILogger logger)
         {
             var rangeMessage = JsonConvert.DeserializeObject<TriageTrackingIssueRangeMessage>(message);
-            if (rangeMessage.ModelTrackingIssueId is { } issueId && rangeMessage.BuildAttemptMessages is { } attemptMessages)
+            if (rangeMessage.ModelTrackingIssueId is { } issueId && rangeMessage.BuildMessages is { } buildMessages)
             {
                 var list = new List<Task>();
-                foreach (var attemptMessage in attemptMessages)
+                foreach (var buildMessage in buildMessages)
                 {
                     var triageMessage = new TriageTrackingIssueMessage()
                     {
                         ModelTrackingIssueId = issueId,
-                        BuildAttemptMessage = attemptMessage
+                        BuildMessage = buildMessage,
                     };
                     var text = JsonConvert.SerializeObject(triageMessage);
                     list.Add(triageCollector.AddAsync(text));
@@ -202,23 +203,24 @@ namespace DevOps.Functions
         }
 
         /// <summary>
-        /// This will schedule the attempt to be triaged against all of the active tracking issues
+        /// This will schedule the build to be triaged against all of the active tracking issues
+        /// definition
         /// </summary>
-        [FunctionName("triage-build-attempt")]
-        public async Task TriageBuildAttemptAsync(
-            [QueueTrigger(QueueNameTriageBuildAttempt, Connection = ConfigurationAzureBlobConnectionString)] string message,
+        [FunctionName("triage-build")]
+        public async Task TriageBuildAsync(
+            [QueueTrigger(QueueNameTriageBuild, Connection = ConfigurationAzureBlobConnectionString)] string message,
             [Queue(QueueNameTriageTrackingIssue, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> triageCollector,
             ILogger logger)
         {
-            var buildAttemptMessage = JsonConvert.DeserializeObject<BuildAttemptMessage>(message);
-            if (buildAttemptMessage.BuildAttemptKey is { } buildAttemptKey)
+            var buildMessage = JsonConvert.DeserializeObject<BuildMessage>(message);
+            if (buildMessage.BuildKey is { } buildKey)
             {
-                logger.LogInformation($"Triaging build: {buildAttemptKey}");
+                logger.LogInformation($"Triaging build: {buildKey}");
 
                 var ids = await Context.ModelTrackingIssues.Where(x => x.IsActive).Select(x => x.Id).ToListAsync();
                 foreach (var id in ids)
                 {
-                    var triageMessage = new TriageTrackingIssueMessage(buildAttemptKey, id);
+                    var triageMessage = new TriageTrackingIssueMessage(buildKey, id);
                     var text = JsonConvert.SerializeObject(triageMessage);
                     await triageCollector.AddAsync(text);
                 }
@@ -226,38 +228,6 @@ namespace DevOps.Functions
             else
             {
                 logger.LogError($"Message not a valid build attempt key: {message}");
-            }
-        }
-
-        /// <summary>
-        /// This function will enqueue all attempts in a build which have not yet been triaged for triaging
-        /// </summary>
-        [FunctionName("triage-build")]
-        public async Task TriageBuildAsync(
-            [QueueTrigger(QueueNameTriageBuild, Connection = ConfigurationAzureBlobConnectionString)] string message,
-            [Queue(QueueNameTriageBuildAttempt, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> attemptCollector,
-            ILogger logger)
-        {
-            logger.LogInformation($"Triaging build message {message}");
-            var buildMessage = JsonConvert.DeserializeObject<BuildMessage>(message);
-            if (buildMessage.BuildKey is { } buildKey)
-            {
-                logger.LogInformation($"Triaging build: {buildKey}");
-
-                var attempts = await TriageContextUtil
-                    .GetModelBuildAttemptsQuery(buildKey)
-                    .Select(x => x.Attempt)
-                    .ToListAsync();
-                foreach (var attempt in attempts)
-                {
-                    var attemptMessage = new BuildAttemptMessage(buildKey, attempt);
-                    var text = JsonConvert.SerializeObject(attemptMessage);
-                    await attemptCollector.AddAsync(text);
-                }
-            }
-            else
-            {
-                logger.LogError($"Message not a valid build key: {message}");
             }
         }
 

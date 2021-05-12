@@ -27,9 +27,6 @@ namespace DevOps.Util.DotNet.Triage
             Context = context;
         }
 
-        public static string GetModelBuildNameKey(BuildKey buildKey) => 
-            $"{buildKey.Organization}-{buildKey.Project}-{buildKey.Number}";
-
         public static GitHubPullRequestKey? GetGitHubPullRequestKey(ModelBuild build) =>
             build.PullRequestNumber.HasValue
                 ? (GitHubPullRequestKey?)new GitHubPullRequestKey(build.GitHubOrganization, build.GitHubRepository, build.PullRequestNumber.Value)
@@ -74,7 +71,7 @@ namespace DevOps.Util.DotNet.Triage
                 throw new InvalidOperationException("Cannot populate a build until it has started");
             }
 
-            var modelBuildNameKey = GetModelBuildNameKey(buildInfo.BuildKey);
+            var modelBuildNameKey = buildInfo.BuildKey.NameKey;
             var modelBuild = Context.ModelBuilds
                 .Where(x => x.NameKey == modelBuildNameKey)
                 .FirstOrDefault();
@@ -314,7 +311,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public IQueryable<ModelBuild> GetModelBuildQuery(BuildKey buildKey)
         {
-            var nameKey = GetModelBuildNameKey(buildKey);
+            var nameKey = buildKey.NameKey;
             return Context.ModelBuilds.Where(x => x.NameKey == nameKey);
         }
 
@@ -326,7 +323,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public IQueryable<ModelBuildAttempt> GetModelBuildAttemptQuery(BuildAttemptKey buildAttemptKey)
         {
-            var nameKey = GetModelBuildNameKey(buildAttemptKey.BuildKey);
+            var nameKey = buildAttemptKey.BuildKey.NameKey;
             return Context
                 .ModelBuildAttempts
                 .Where(x => x.NameKey == nameKey && x.Attempt == buildAttemptKey.Attempt);
@@ -539,7 +536,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public IQueryable<ModelBuildAttempt> GetModelBuildAttemptsQuery(BuildKey buildKey)
         {
-            var nameKey = GetModelBuildNameKey(buildKey);
+            var nameKey = buildKey.NameKey;
             return Context
                 .ModelBuildAttempts
                 .Where(x => x.NameKey == nameKey);

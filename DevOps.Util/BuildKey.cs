@@ -10,6 +10,8 @@ namespace DevOps.Util
 
         public string BuildUri => DevOpsUtil.GetBuildUri(Organization, Project, Number);
 
+        public string NameKey => $"{Organization}-{Project}-{Number}";
+
         public BuildKey(string organization, string project, int number)
         {
             if (organization is null)
@@ -30,6 +32,12 @@ namespace DevOps.Util
         public BuildKey(Build build) : 
             this(DevOpsUtil.GetOrganization(build), build.Project.Name, build.Id)
         {
+        }
+
+        public static BuildKey FromNameKey(string nameKey)
+        {
+            var parts = nameKey.Split('-');
+            return new BuildKey(parts[0], parts[1], int.Parse(parts[2]));
         }
 
         public static bool operator==(BuildKey left, BuildKey right) => left.Equals(right); 

@@ -165,6 +165,8 @@ namespace Scratch
 
         internal async Task Scratch()
         {
+            await FunctionQueueUtil.EnsureAllQueues();
+                /*
             var helixApi = HelixServer.GetHelixApi();
             await foreach (var build in DevOpsServer.EnumerateBuildsAsync("public"))
             {
@@ -186,6 +188,7 @@ namespace Scratch
                     }
                 }
             }
+                */
 
             // await MeasureTrackingIssuePerf();
 

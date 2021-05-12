@@ -81,25 +81,21 @@ namespace DevOps.Util.DotNet.Function
     {
         public int? ModelTrackingIssueId { get; set; }
 
-        public BuildAttemptMessage[]? BuildAttemptMessages { get; set; }
+        public BuildMessage[]? BuildMessages { get; set; }
     }
 
     public sealed class TriageTrackingIssueMessage
     {
-        public BuildAttemptMessage? BuildAttemptMessage { get; set; }
+        public BuildMessage? BuildMessage { get; set; }
         public int? ModelTrackingIssueId { get; set; }
-
-        [JsonIgnore]
-        public BuildAttemptKey? BuildAttemptKey => BuildAttemptMessage?.BuildAttemptKey;
 
         public TriageTrackingIssueMessage()
         {
-
         }
 
-        public TriageTrackingIssueMessage(BuildAttemptKey key, int modelTrackingIssueId)
+        public TriageTrackingIssueMessage(BuildKey key, int modelTrackingIssueId)
         {
-            BuildAttemptMessage = new BuildAttemptMessage(key);
+            BuildMessage = new BuildMessage(key);
             ModelTrackingIssueId = modelTrackingIssueId;
         }
     }

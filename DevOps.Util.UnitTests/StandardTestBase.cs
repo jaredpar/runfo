@@ -121,7 +121,7 @@ namespace DevOps.Util.UnitTests
 
             var build = new ModelBuild()
             {
-                NameKey = TriageContextUtil.GetModelBuildNameKey(new BuildKey(def.AzureOrganization, def.AzureProject, number)),
+                NameKey = new BuildKey(def.AzureOrganization, def.AzureProject, number).NameKey,
                 BuildNumber = number,
                 GitHubOrganization = GetPartOrNull(parts, 1) ?? "dotnet",
                 GitHubRepository = GetPartOrNull(parts, 2) ?? "roslyn",
