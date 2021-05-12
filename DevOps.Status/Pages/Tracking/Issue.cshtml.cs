@@ -184,7 +184,7 @@ namespace DevOps.Status.Pages.Tracking
                         return await OnGetCoreAsync();
                     }
 
-                    PopulateData = await FunctionQueueUtil.QueueTriageBuildAttempts(TriageContextUtil, modelTrackingIssue, PopulateBuildsQuery);
+                    PopulateData = await FunctionQueueUtil.QueueTriageBuildAttempts(TriageContextUtil.Context, modelTrackingIssue, PopulateBuildsQuery);
                     await FunctionQueueUtil.QueueUpdateIssueAsync(modelTrackingIssue, delay: TimeSpan.FromMinutes(1));
                     return await OnGetCoreAsync();
                 }

@@ -8,7 +8,6 @@ namespace DevOps.Util.DotNet.Function
     {
         public const string QueueNameBuildComplete = "build-complete";
         public const string QueueNameBuildRetry = "build-retry";
-        public const string QueueNameTriageBuildAttempt = "triage-build-attempt";
         public const string QueueNameTriageBuild = "triage-build";
         public const string QueueNameTriageTrackingIssue = "triage-tracking-issue";
         public const string QueueNameTriageTrackingIssueRange = "triage-tracking-issue-range";
@@ -21,7 +20,6 @@ namespace DevOps.Util.DotNet.Function
             {
                 yield return QueueNameBuildComplete;
                 yield return QueueNameBuildRetry;
-                yield return QueueNameTriageBuildAttempt;
                 yield return QueueNameTriageBuild;
                 yield return QueueNameTriageTrackingIssue;
                 yield return QueueNameTriageTrackingIssueRange;
