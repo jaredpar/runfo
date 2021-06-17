@@ -129,6 +129,11 @@ namespace DevOps.Util
                             continue;
 
                         string destFile = Path.Combine(itemDir, file.Name);
+                        string? dstDirName = Path.GetDirectoryName(destFile);
+                        if (dstDirName != null && !Directory.Exists(dstDirName))
+                        {
+                            Directory.CreateDirectory(dstDirName);
+                        }
 
                         Console.WriteLine($"{file.Name} => {destFile}");
                         await _client.DownloadFileAsync(file.Link, destFile, showProgress: true, writer: Console.Out).ConfigureAwait(false);
