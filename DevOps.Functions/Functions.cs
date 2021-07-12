@@ -326,11 +326,11 @@ namespace DevOps.Functions
 
         [FunctionName("delete-old-builds")]
         public async Task DeleteOldBuilds(
-            [TimerTrigger("0 0 * * * *")] TimerInfo timerInfo,
+            [TimerTrigger("0 */5 * * * *")] TimerInfo timerInfo,
             ILogger logger)
         {
             var functionUtil = new FunctionUtil(logger);
-            await functionUtil.DeleteOldBuilds(TriageContextUtil.Context, deleteMax: 100);
+            await functionUtil.DeleteOldBuilds(TriageContextUtil.Context, deleteMax: 5);
         }
     }
 }
