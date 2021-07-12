@@ -52,7 +52,7 @@ namespace DevOps.Util.DotNet.Function
         /// </summary>
         public async Task DeleteOldBuilds(TriageContext triageContext, int deleteMax = 25)
         {
-            var limitDays = 90;
+            var limitDays = 30;
             var limit = DateTime.UtcNow - TimeSpan.FromDays(limitDays);
 
             var modelBuilds = await triageContext
