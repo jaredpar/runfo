@@ -330,7 +330,7 @@ namespace DevOps.Functions
             ILogger logger)
         {
             var functionUtil = new FunctionUtil(logger);
-            await functionUtil.DeleteOldBuilds(TriageContextUtil.Context, deleteMax: 5);
+            await functionUtil.DeleteOldBuilds(TriageContextUtil.Context, deleteMax: 25);
         }
     }
 }
