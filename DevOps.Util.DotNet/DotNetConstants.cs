@@ -6,7 +6,12 @@ namespace DevOps.Util.DotNet
 {
     public static class DotNetConstants
     {
+#if DEBUG
+        public const string KeyVaultEndPoint = "https://runfo-test.vault.azure.net/";
+#else
         public const string KeyVaultEndPoint = "https://runfo-prod.vault.azure.net/";
+#endif
+
 
         public const string ConfigurationSqlConnectionString = "RunfoConnectionString";
 #if DEBUG

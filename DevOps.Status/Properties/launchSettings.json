@@ -11,7 +11,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "tracking/new/?issuetitle=microsoft.codeanalysis.csharp.unittests.semantics.uninitializednonnullablefieldtests.structconstructorinitializer_uninitializedproperty&trackingkind=test&searchtext=started%3A~7%20definition%3Aroslyn-ci%20name%3A\"microsoft.codeanalysis.csharp.unittests.semantics.uninitializednonnullablefieldtests.structconstructorinitializer_uninitializedproperty\"&githuborganization=dotnet&githubrepository=roslyn&definition=roslyn-ci",
+      "launchUrl": "status",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
