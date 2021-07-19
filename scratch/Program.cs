@@ -151,7 +151,7 @@ namespace Scratch
             var config = new ConfigurationBuilder()
                 .AddUserSecrets<Program>()
                 .AddAzureKeyVault(
-                    "https://runfo-prod.vault.azure.net/",
+                    DotNetConstants.KeyVaultEndPoint,
                     new DefaultKeyVaultSecretManager())
                 .Build();
             return config;
