@@ -1,4 +1,5 @@
-﻿using Azure.Storage.Queues;
+﻿using Azure.Identity;
+using Azure.Storage.Queues;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Function;
@@ -7,6 +8,7 @@ using Microsoft.DotNet.Helix.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.AzureKeyVault;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -109,7 +111,7 @@ namespace Scratch
         public void Reset(string organization)
         {
             var configuration = CreateConfiguration();
-            var azureToken = configuration["RUNFO_AZURE_TOKEN"];
+            var azureToken = configuration[DotNetConstants.ConfigurationAzdoToken];
             DevOpsServer = new DevOpsServer(organization, new AuthorizationToken(AuthorizationKind.PersonalAccessToken, azureToken));
 
             var builder = new DbContextOptionsBuilder<TriageContext>();
@@ -118,7 +120,7 @@ namespace Scratch
                 ? "Using sql developer"
                 : "Using sql production";
             //`builder.UseSqlServer(connectionString);
-            builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(5).TotalSeconds));
+            builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(15).TotalSeconds));
             //builder.UseSqlServer(connectionString, opts => opts.CommandTimeout((int)TimeSpan.FromMinutes(145).TotalSeconds));
 
             // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
@@ -148,6 +150,9 @@ namespace Scratch
         {
             var config = new ConfigurationBuilder()
                 .AddUserSecrets<Program>()
+                .AddAzureKeyVault(
+                    DotNetConstants.KeyVaultEndPoint,
+                    new DefaultKeyVaultSecretManager())
                 .Build();
             return config;
         }
@@ -165,7 +170,22 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await FunctionQueueUtil.EnsureAllQueues();
+            while (true)
+            {
+                try
+                {
+                    var functionUtil = new FunctionUtil(CreateLogger());
+                    await functionUtil.DeleteOldBuilds(new TriageContext(TriageContextOptions), deleteMax: 25);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    if (ex.InnerException is object)
+                    {
+                        Console.WriteLine(ex.InnerException);
+                    }
+                }
+            }
                 /*
             var helixApi = HelixServer.GetHelixApi();
             await foreach (var build in DevOpsServer.EnumerateBuildsAsync("public"))

@@ -6,11 +6,13 @@ namespace DevOps.Util.DotNet
 {
     public static class DotNetConstants
     {
+        public const string KeyVaultEndPoint = "https://runfo-prod.vault.azure.net/";
+
         public const string ConfigurationSqlConnectionString = "RunfoConnectionString";
 #if DEBUG
         //public const string ConfigurationSqlConnectionString = "RunfoConnectionStringTest";
 #endif
-        public const string ConfigurationAppAzureToken = "RUNFO_AZURE_TOKEN";
+        public const string ConfigurationAzdoToken = "RunfoAzdoToken";
         public const string ConfigurationGitHubAppId = "GitHubAppId";
         public const string ConfigurationGitHubAppPrivateKey = "GitHubAppPrivateKey";
         public const string ConfigurationGitHubClientId = "GitHubClientId";
