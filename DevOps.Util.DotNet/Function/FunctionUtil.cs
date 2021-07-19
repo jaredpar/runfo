@@ -50,10 +50,11 @@ namespace DevOps.Util.DotNet.Function
         /// <summary>
         /// This will collect and delete builds that are past the data retention deadline
         /// </summary>
-        public async Task DeleteOldBuilds(TriageContext triageContext, int deleteMax = 25)
+        public async Task<int> DeleteOldBuilds(TriageContext triageContext, int deleteMax = 25)
         {
             var limitDays = 30;
             var limit = DateTime.UtcNow - TimeSpan.FromDays(limitDays);
+            var count = 0;
 
             var modelBuilds = await triageContext
                 .ModelBuilds
@@ -69,9 +70,25 @@ namespace DevOps.Util.DotNet.Function
                     Logger.LogInformation($"Deleting {modelBuild.GetBuildKey()} ran at {modelBuild.StartTime}");
                 }
 
-                triageContext.Remove(modelBuild);
-                await triageContext.SaveChangesAsync().ConfigureAwait(false);
+                try
+                {
+                    triageContext.Remove(modelBuild);
+                    await triageContext.SaveChangesAsync().ConfigureAwait(false);
+                    count++;
+                }
+                catch (Exception ex)
+                {
+                    var message = $"Error deleting build {ex.Message}";
+                    if (ex.InnerException is object)
+                    {
+                        message += $" (Inner {ex.InnerException.Message})";
+                    }
+                    Logger.LogError(message);
+                }
             }
+
+            Logger.LogInformation($"Deleted {count} builds");
+            return count;
         }
     }
 }

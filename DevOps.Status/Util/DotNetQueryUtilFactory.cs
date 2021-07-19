@@ -32,7 +32,7 @@ namespace DevOps.Status.Util
 
         public DevOpsServer CreateDevOpsServerForApp()
         {
-            var azdoToken = Configuration[DotNetConstants.ConfigurationAppAzureToken];
+            var azdoToken = Configuration[DotNetConstants.ConfigurationAzdoToken];
             var token = new AuthorizationToken(AuthorizationKind.PersonalAccessToken, azdoToken);
             return new DevOpsServer(DotNetConstants.AzureOrganization, token);
         }

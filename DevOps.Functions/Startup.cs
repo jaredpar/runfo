@@ -24,8 +24,9 @@ namespace DevOps.Functions
                 .Build();
 
             var connectionString = config[DotNetConstants.ConfigurationSqlConnectionString];
-            var azdoToken = config["RUNFO_AZURE_TOKEN"];
-            builder.Services.AddDbContext<TriageContext>(options => options.UseSqlServer(connectionString));
+            var azdoToken = config[DotNetConstants.ConfigurationAzdoToken];
+            builder.Services.AddDbContext<TriageContext>(
+                options => options.UseSqlServer(connectionString, o => o.CommandTimeout((int)TimeSpan.FromMinutes(10).TotalSeconds)));
             builder.Services.AddScoped<DevOpsServer>(_ =>
                 new DevOpsServer(
                     DotNetConstants.AzureOrganization,

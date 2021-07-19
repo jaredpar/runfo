@@ -10,7 +10,7 @@ namespace DevOps.Util.DotNet
 #if DEBUG
         //public const string ConfigurationSqlConnectionString = "RunfoConnectionStringTest";
 #endif
-        public const string ConfigurationAppAzureToken = "RUNFO_AZURE_TOKEN";
+        public const string ConfigurationAzdoToken = "RunfoAzdoToken";
         public const string ConfigurationGitHubAppId = "GitHubAppId";
         public const string ConfigurationGitHubAppPrivateKey = "GitHubAppPrivateKey";
         public const string ConfigurationGitHubClientId = "GitHubClientId";
