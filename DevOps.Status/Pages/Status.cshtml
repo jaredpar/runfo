@@ -1,0 +1,18 @@
+﻿@page
+@model DevOps.Status.Pages.StatusModel
+@{
+}
+
+<div class="container">
+    <div>
+        Builds Total @Model.TotalCount.ToString("N0")
+    </div>
+
+    <div>
+        Builds Today @Model.TodayCount.ToString("N0")
+    </div>
+
+    <div>
+        Builds Expired @Model.ExpiredCount.ToString("N0")
+    </div>
+</div>
