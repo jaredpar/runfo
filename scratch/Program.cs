@@ -28,6 +28,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using FileMode = System.IO.FileMode;
 
 // [assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsId("67c4a872-5dd7-422a-acad-fdbe907ace33")]
 
@@ -137,7 +138,7 @@ namespace Scratch
             }
             GitHubClientFactory = new FakeGitHubClientFactory(gitHubClient);
 
-            BlobStorageUtil = new BlobStorageUtil(organization, configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
+            // BlobStorageUtil = new BlobStorageUtil(organization, configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
 
             DotNetQueryUtil = new DotNetQueryUtil(
                 DevOpsServer,
@@ -170,22 +171,9 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            while (true)
-            {
-                try
-                {
-                    var functionUtil = new FunctionUtil(CreateLogger());
-                    await functionUtil.DeleteOldBuilds(new TriageContext(TriageContextOptions), deleteMax: 25);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    if (ex.InnerException is object)
-                    {
-                        Console.WriteLine(ex.InnerException);
-                    }
-                }
-            }
+            await DownloadHelixLogs(
+                @"c:\users\jaredpar\temp\helix",
+                "started:~7 definition:aspnetcore-ci kind:!pr result:failed");
                 /*
             var helixApi = HelixServer.GetHelixApi();
             await foreach (var build in DevOpsServer.EnumerateBuildsAsync("public"))
@@ -321,6 +309,76 @@ namespace Scratch
             // await PopulateModelTrackingIssue("started:~2 result:failed", 85);
             await RetriesWork();
 */
+        }
+
+        internal async Task DownloadHelixLogs(string directory, string queryText)
+        {
+            Directory.CreateDirectory(directory);
+            var searchBuilds = new SearchBuildsRequest(queryText);
+            var builds = await searchBuilds.Filter(TriageContext.ModelBuilds)
+                .ToListAsync();
+            var options = new ParallelOptions() { MaxDegreeOfParallelism = 10 };
+            var semaphore = new SemaphoreSlim(initialCount: 10);
+            var tasks = new List<Task>();
+
+            foreach (var build in builds)
+            {
+                tasks.Add(Task.Run(async () =>
+                {
+                    semaphore.Wait();
+                    try
+                    {
+                        var number = build.BuildNumber;
+                        var path = Path.Combine(directory, number.ToString());
+                        if (Directory.Exists(path))
+                        {
+                            Directory.Delete(path, recursive: true);
+                        }
+                        Directory.CreateDirectory(path);
+
+                        var buildUri = build.GetBuildInfo().BuildUri;
+                        var consoleCount = 0;
+                        var runClientCount = 0;
+                        var context = new TriageContext(TriageContextOptions);
+                        var testResults = await context.ModelTestResults.Where(x => x.ModelBuildId == build.Id).ToListAsync();
+                        foreach (var testResult in testResults.Where(x => x.TestFullName.Contains("Work Item")))
+                        {
+                            if (testResult.HelixConsoleUri is object)
+                            {
+                                await DownloadHelixFile(buildUri, testResult.HelixConsoleUri, Path.Combine(path, $"console{consoleCount++}.txt"));
+                            }
+
+                            if (testResult.HelixRunClientUri is object)
+                            {
+                                await DownloadHelixFile(buildUri, testResult.HelixRunClientUri, Path.Combine(path, $"runClient{runClientCount++}.txt"));
+                            }
+                        }
+
+                        Console.WriteLine($"{buildUri}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"{build.BuildNumber} Error {ex.Message}");
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }));
+
+            }
+
+            Task.WaitAll(tasks.ToArray());
+
+            async Task DownloadHelixFile(string buildUri, string uri, string filePath)
+            {
+                var stream = await HelixServer.DownloadFileAsync(uri);
+                using var file = File.Open(filePath, FileMode.Create);
+                var encoding = Encoding.UTF8;
+                await file.WriteAsync(encoding.GetBytes(buildUri + Environment.NewLine));
+                await file.WriteAsync(encoding.GetBytes(uri + Environment.NewLine));
+                await stream.CopyToAsync(file);
+            }
         }
 
         internal async Task MeasureTrackingIssuePerf()
