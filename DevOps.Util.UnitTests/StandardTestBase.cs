@@ -272,12 +272,36 @@ namespace DevOps.Util.UnitTests
             return testResult;
         }
 
-        public void AddHelixLog(ModelTestResult testResult, HelixLogKind kind, string content)
+        public void AddHelixLogToTestResult(ModelTestResult testResult, HelixLogKind kind, string content)
         {
             var uri = $"https://localhost/runfo/{HelixLogCount++}/{kind}";
             testResult.SetHelixLogUri(kind, uri);
             TestableHttpMessageHandler.AddRaw(uri, content);
         }
+
+        public ModelHelixLog AddHelixLog(
+            ModelTestRun testRun, 
+            ModelHelixLogKind kind = ModelHelixLogKind.Console,
+            string? jobId = null,
+            string? workItemName = null)
+        {
+            var log = new ModelHelixLog()
+            {
+                LogUri = Guid.NewGuid().ToString(),
+                HelixLogKind = kind,
+                JobId = jobId ?? Guid.NewGuid().ToString(),
+                Content = "",
+                WorkItemName = workItemName ?? Guid.NewGuid().ToString(),
+                ModelTestRun = testRun,
+                ModelBuildAttempt = testRun.ModelBuildAttempt,
+                ModelBuild = testRun.ModelBuild
+            };
+
+            Context.ModelHelixLogs.Add(log);
+            Context.SaveChanges();
+            return log;
+        }
+
 
         public ModelTrackingIssueMatch AddTrackingMatch(
             ModelTrackingIssue trackingIssue,

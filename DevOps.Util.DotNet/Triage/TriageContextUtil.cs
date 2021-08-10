@@ -413,6 +413,7 @@ namespace DevOps.Util.DotNet.Triage
                     ErrorMessage = testCaseResult.ErrorMessage ?? "",
                     IsSubResultContainer = testCaseResult.SubResults?.Length > 0,
                     IsSubResult = false,
+                    IsHelixWorkItem = dotnetTestCaseResult.IsHelixWorkItem,
                     StartTime = modelBuildAttempt.StartTime,
                 };
 

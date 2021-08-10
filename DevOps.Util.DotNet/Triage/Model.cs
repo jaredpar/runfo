@@ -30,6 +30,8 @@ namespace DevOps.Util.DotNet.Triage
 
         public DbSet<ModelTrackingIssueResult> ModelTrackingIssueResults { get; set; }
 
+        public DbSet<ModelHelixLog> ModelHelixLogs { get; set; }
+
         public DbSet<ModelGitHubIssue> ModelGitHubIssues { get; set; }
 
         public DbSet<ModelMigration> ModelMigrations { get; set; }
@@ -137,6 +139,29 @@ namespace DevOps.Util.DotNet.Triage
 
             modelBuilder.Entity<ModelTimelineIssue>()
                 .HasOne(x => x.ModelBuildDefinition)
+                .WithMany()
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<ModelHelixLog>()
+                .Property(x => x.HelixLogKind)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<ModelHelixLog>()
+                .HasIndex(x => x.LogUri)
+                .IsUnique();
+
+            modelBuilder.Entity<ModelHelixLog>()
+                .HasOne(x => x.ModelBuild)
+                .WithMany(x => x.ModelHelixLogs)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ModelHelixLog>()
+                .HasOne(x => x.ModelBuildAttempt)
+                .WithMany()
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<ModelHelixLog>()
+                .HasOne(x => x.ModelTestRun)
                 .WithMany()
                 .OnDelete(DeleteBehavior.NoAction);
 
@@ -297,6 +322,8 @@ namespace DevOps.Util.DotNet.Triage
         public List<ModelBuildAttempt> ModelBuildAttempts { get; set; }
 
         public List<ModelGitHubIssue> ModelGitHubIssues { get; set; }
+
+        public List<ModelHelixLog> ModelHelixLogs { get; set; }
     }
 
     public class ModelOsxDeprovisionRetry
@@ -383,6 +410,8 @@ namespace DevOps.Util.DotNet.Triage
         [Required]
         public string Name { get; set; }
 
+        public bool AreHelixLogsComplete { get; set; }
+
         public int ModelBuildId { get; set; }
 
         public ModelBuild ModelBuild { get; set; }
@@ -427,6 +456,8 @@ namespace DevOps.Util.DotNet.Triage
 
         public bool IsHelixTestResult { get; set; }
 
+        public bool IsHelixWorkItem { get; set; }
+
         public string? HelixConsoleUri { get; set; }
 
         public string? HelixRunClientUri { get; set; }
@@ -449,6 +480,49 @@ namespace DevOps.Util.DotNet.Triage
         public int ModelBuildAttemptId { get; set; }
 
         public ModelBuildAttempt ModelBuildAttempt { get; set; }
+    }
+
+    public enum ModelHelixLogKind
+    {
+        Console,
+        RunClient
+    }
+
+    public class ModelHelixLog
+    {
+        public int Id { get; set; }
+
+        public ModelHelixLogKind HelixLogKind { get; set; }
+
+        public bool IsContentTooLarge { get; set; }
+
+        [Column(TypeName = "varchar(200)")]
+        [Required]
+        public string JobId { get; set; }
+
+        [Column(TypeName = "varchar(200)")]
+        [Required]
+        public string WorkItemName { get; set; }
+
+        [Column(TypeName = "text")]
+        [Required]
+        public string Content { get; set; }
+
+        [Column(TypeName = "varchar(1000)")]
+        [Required]
+        public string LogUri { get; set; }
+
+        public int ModelBuildId { get; set; }
+
+        public ModelBuild ModelBuild { get; set; }
+
+        public int ModelBuildAttemptId { get; set; }
+
+        public ModelBuildAttempt ModelBuildAttempt { get; set; }
+
+        public int ModelTestRunId { get; set; }
+
+        public ModelTestRun ModelTestRun { get; set; }
     }
 
     public enum TrackingKind

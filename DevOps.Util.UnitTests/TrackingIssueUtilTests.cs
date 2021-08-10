@@ -218,9 +218,9 @@ namespace DevOps.Util.UnitTests
             var attempt = AddAttempt(1, AddBuild("1", def));
             var testRun = AddTestRun("windows", attempt);
             var testResult1 = AddTestResult("Util.Test1", testRun);
-            AddHelixLog(testResult1, kind, "the dog fetched the ball");
+            AddHelixLogToTestResult(testResult1, kind, "the dog fetched the ball");
             var testResult2 = AddTestResult("Util.Test2", testRun);
-            AddHelixLog(testResult2, kind, "the tree grew");
+            AddHelixLogToTestResult(testResult2, kind, "the tree grew");
 
             var tracking1 = AddTrackingIssue(
                 TrackingKind.HelixLogs,

@@ -19,6 +19,8 @@ namespace DevOps.Util
 
         private readonly DevOpsHttpClient _client;
 
+        public HttpClient HttpClient => _client.HttpClient;
+
         public DevOpsServer(string organization, AuthorizationToken authorizationToken = default, HttpClient? httpClient = null)
         {
             Organization = organization;

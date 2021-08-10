@@ -188,7 +188,7 @@ Build Result Summary
                 var attempt = AddAttempt(1, AddBuild($"{buildNumber}||{dateStr}", def));
                 var testRun = AddTestRun("windows", attempt);
                 var testResult = AddTestResult("Util.Test1", testRun);
-                AddHelixLog(testResult, kind, "The log data");
+                AddHelixLogToTestResult(testResult, kind, "The log data");
             }
         }
     }

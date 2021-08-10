@@ -1,9 +1,12 @@
 ﻿using DevOps.Util.DotNet;
+using Microsoft.DotNet.Helix.Client;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -118,7 +121,7 @@ namespace DevOps.Util.DotNet.Triage
                 try
                 {
                     var modelTestRun = await TriageContextUtil.FindModelTestRunAsync(modelBuildAttempt.ModelBuildId, testRun.Id).ConfigureAwait(false);
-                    if (modelTestRun is object)
+                    if (modelTestRun is { AreHelixLogsComplete: true })
                     {
                         return;
                     }
@@ -145,7 +148,72 @@ namespace DevOps.Util.DotNet.Triage
                     var helixApi = HelixServer.GetHelixApi();
                     var helixMap = await helixApi.GetHelixMapAsync(dotNetTestRun).ConfigureAwait(false);
 
-                    await TriageContextUtil.EnsureTestRunAsync(modelBuildAttempt, dotNetTestRun, helixMap).ConfigureAwait(false);
+                    if (modelTestRun is null)
+                    {
+                        modelTestRun = await TriageContextUtil.EnsureTestRunAsync(modelBuildAttempt, dotNetTestRun, helixMap).ConfigureAwait(false);
+                    }
+
+                    await EnsureHelixLogs().ConfigureAwait(false);
+                    Debug.Assert(modelTestRun.AreHelixLogsComplete);
+
+                    async Task EnsureHelixLogs()
+                    {
+                        var context = TriageContextUtil.Context;
+                        var httpClient = Server.HttpClient;
+                        foreach (var pair in helixMap)
+                        {
+                            // TODO: more than just console logs
+                            await ProcessFile(pair.Key.JobId, pair.Key.WorkItemName, pair.Value.ConsoleUri, ModelHelixLogKind.Console);
+                        }
+
+                        modelTestRun.AreHelixLogsComplete = true;
+                        await context.SaveChangesAsync().ConfigureAwait(false);
+
+                        async ValueTask ProcessFile(string jobId, string workItemName, string? uri, ModelHelixLogKind kind)
+                        {
+                            try
+                            {
+                                if (uri is null)
+                                {
+                                    return;
+                                }
+
+                                if (await context.ModelHelixLogs.Where(x => x.LogUri == uri).AnyAsync().ConfigureAwait(false))
+                                {
+                                    return;
+                                }
+
+                                var response = await httpClient.GetAsync(uri).ConfigureAwait(false);
+                                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                                var log = new ModelHelixLog()
+                                {
+                                    HelixLogKind = kind,
+                                    JobId = jobId,
+                                    WorkItemName = workItemName,
+                                    LogUri = uri,
+                                    ModelBuild = modelBuildAttempt.ModelBuild,
+                                    ModelBuildAttempt = modelBuildAttempt,
+                                    ModelTestRun = modelTestRun,
+                                };
+
+                                if (content.Length > 1_000_000)
+                                {
+                                    log.IsContentTooLarge = true;
+                                    log.Content = "";
+                                }
+                                else
+                                {
+                                    log.Content = content;
+                                }
+
+                                context.ModelHelixLogs.Add(log);
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.LogWarning($"Can't download helix log {uri}: {ex.Message}");
+                            }
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
