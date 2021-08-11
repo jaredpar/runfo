@@ -38,9 +38,7 @@ namespace DevOps.Util.UnitTests
 
         public StandardTestBase(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper)
         {
-            Assert.Equal(0, databaseFixture.TriageContext.ModelBuilds.Count());
-            Assert.Equal(0, databaseFixture.TriageContext.ModelBuildDefinitions.Count());
-
+            databaseFixture.AssertEmpty();
             DatabaseFixture = databaseFixture;
             TriageContextUtil = new TriageContextUtil(Context);
             TestableHttpMessageHandler = new TestableHttpMessageHandler();
