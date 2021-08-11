@@ -137,7 +137,7 @@ namespace Scratch
             }
             GitHubClientFactory = new FakeGitHubClientFactory(gitHubClient);
 
-            BlobStorageUtil = new BlobStorageUtil(organization, configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
+            // BlobStorageUtil = new BlobStorageUtil(organization, configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
 
             DotNetQueryUtil = new DotNetQueryUtil(
                 DevOpsServer,
@@ -170,22 +170,8 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            while (true)
-            {
-                try
-                {
-                    var functionUtil = new FunctionUtil(CreateLogger());
-                    await functionUtil.DeleteOldBuilds(new TriageContext(TriageContextOptions), deleteMax: 25);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    if (ex.InnerException is object)
-                    {
-                        Console.WriteLine(ex.InnerException);
-                    }
-                }
-            }
+            await PopulateDb();
+
                 /*
             var helixApi = HelixServer.GetHelixApi();
             await foreach (var build in DevOpsServer.EnumerateBuildsAsync("public"))
@@ -395,7 +381,7 @@ namespace Scratch
             var startTime = DateTime.UtcNow;
             var buildCount = 0;
             var list = new List<Task>();
-            await foreach (var build in DevOpsServer.EnumerateBuildsAsync("public"))
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync("public", definitions: new[] { 686 }, statusFilter: BuildStatus.Completed))
             {
                 if (build.FinishTime is null)
                 {
