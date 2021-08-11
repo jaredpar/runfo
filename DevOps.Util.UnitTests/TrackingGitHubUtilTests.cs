@@ -14,12 +14,13 @@ using Xunit.Abstractions;
 
 namespace DevOps.Util.UnitTests
 {
+    [Collection(DatabaseCollection.Name)]
     public sealed class TrackingGitHubUtilTests : StandardTestBase
     {
         public TrackingGitHubUtil TrackingGitHubUtil { get; }
 
-        public TrackingGitHubUtilTests(ITestOutputHelper testOutputHelper)
-            : base(testOutputHelper)
+        public TrackingGitHubUtilTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper)
+            : base(databaseFixture, testOutputHelper)
         {
             TrackingGitHubUtil = new TrackingGitHubUtil(TestableGitHubClientFactory, Context, new SiteLinkUtil("localhost"), TestableLogger);
         }

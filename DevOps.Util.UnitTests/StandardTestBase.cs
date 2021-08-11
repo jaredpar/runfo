@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,8 +19,7 @@ namespace DevOps.Util.UnitTests
 {
     public class StandardTestBase : IDisposable
     {
-        public DbConnection Connection { get; }
-        public TriageContext Context { get; }
+        public DatabaseFixture DatabaseFixture { get; }
         public TriageContextUtil TriageContextUtil { get; }
         public DevOpsServer Server { get; set; }
         public DotNetQueryUtil QueryUtil { get; set; }
@@ -34,13 +34,14 @@ namespace DevOps.Util.UnitTests
         private int GitHubIssueCount { get; set; }
         private int HelixLogCount { get; set; }
 
-        public StandardTestBase(ITestOutputHelper testOutputHelper)
+        public TriageContext Context => DatabaseFixture.TriageContext;
+
+        public StandardTestBase(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper)
         {
-            Connection = CreateInMemoryDatabase();
-            var options = new DbContextOptionsBuilder<TriageContext>()
-                .UseSqlite(Connection)
-                .Options;
-            Context = new TriageContext(options);
+            Assert.Equal(0, databaseFixture.TriageContext.ModelBuilds.Count());
+            Assert.Equal(0, databaseFixture.TriageContext.ModelBuildDefinitions.Count());
+
+            DatabaseFixture = databaseFixture;
             TriageContextUtil = new TriageContextUtil(Context);
             TestableHttpMessageHandler = new TestableHttpMessageHandler();
             TestableLogger = new TestableLogger(testOutputHelper);
@@ -50,19 +51,9 @@ namespace DevOps.Util.UnitTests
             Server = new DevOpsServer("random", httpClient: httpClient);
             HelixServer = new HelixServer(httpClient: httpClient);
             QueryUtil = new DotNetQueryUtil(Server);
-
-            Context.Database.EnsureDeleted();
-            Context.Database.EnsureCreated();
         }
 
-        private static DbConnection CreateInMemoryDatabase()
-        {
-            var connection = new SqliteConnection("Filename=:memory:");
-            connection.Open();
-            return connection;
-        }
-
-        public void Dispose() => Connection.Dispose();
+        public void Dispose() => DatabaseFixture.TestCompletion();
 
         /// <summary>
         /// |job name|message|record name|

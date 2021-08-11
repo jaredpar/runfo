@@ -15,12 +15,13 @@ using Xunit.Abstractions;
 
 namespace DevOps.Util.UnitTests
 {
+    [Collection(DatabaseCollection.Name)]
     public sealed class TrackingIssueUtilTests : StandardTestBase
     {
         public TrackingIssueUtil TrackingIssueUtil { get; }
 
-        public TrackingIssueUtilTests(ITestOutputHelper testOutputHelper)
-            : base(testOutputHelper)
+        public TrackingIssueUtilTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper)
+            : base(databaseFixture, testOutputHelper)
         {
             TrackingIssueUtil = new TrackingIssueUtil(HelixServer, QueryUtil, TriageContextUtil, TestableLogger);
         }
