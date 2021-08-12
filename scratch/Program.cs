@@ -185,19 +185,20 @@ namespace Scratch
 
         internal async Task FindLogMacBuildAsync()
         {
-            await FindLongMacBuildAsync("public", 364, "linker-ci");
-            await FindLongMacBuildAsync("internal", 679, "dotnet-runtime-official");
-            await FindLongMacBuildAsync("public", 686, "runtime");
+            await FindLongMacBuildAsync("public", 364, "refs/heads/main", "linker-ci");
+            await FindLongMacBuildAsync("internal", 679, "refs/heads/main", "dotnet-runtime-official");
+            await FindLongMacBuildAsync("internal", 679, "refs/heads/release/5.0", "dotnet-runtime-official");
+            await FindLongMacBuildAsync("public", 686, "refs/heads/main", "runtime");
         }
 
-        internal async Task FindLongMacBuildAsync(string project, int definition, string friendlyName)
+        internal async Task FindLongMacBuildAsync(string project, int definition, string branchName, string friendlyName)
         {
-            Console.WriteLine($"Searching {project} {definition} ({friendlyName})");
+            Console.WriteLine($"Searching {project} {definition} {branchName} ({friendlyName})");
             var map = new Dictionary<string, List<JobInfo>>();
             var maxCount = 100;
             var count = 0;
 
-            await foreach (var build in DevOpsServer.EnumerateBuildsAsync(project, definitions: new[] { definition }, statusFilter: BuildStatus.Completed))
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync(project, definitions: new[] { definition }, statusFilter: BuildStatus.Completed, branchName: branchName))
             {
                 count++;
                 if (count == maxCount)
@@ -237,7 +238,7 @@ namespace Scratch
             }
 
             Console.WriteLine("");
-            Console.WriteLine($"Results for {project} {definition} ({friendlyName})");
+            Console.WriteLine($"Results for {project} {definition} {branchName} ({friendlyName})");
             var builds = new HashSet<string>();
             foreach (var pair in map)
             {
@@ -263,7 +264,8 @@ namespace Scratch
             }
 
             Console.WriteLine();
-            Console.WriteLine($"Total builds with at least one slow job {builds.Count}");
+            Console.WriteLine($"Total builds {count}");
+            Console.WriteLine($"Builds with at least one slow job {builds.Count}");
             Console.WriteLine();
 
             bool IsMacName(string name) =>
