@@ -170,7 +170,6 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await TestUpdateGitHubIssue();
         }
 
         internal async Task TestUpdateGitHubIssue()
@@ -178,6 +177,145 @@ namespace Scratch
             Reset(useProduction: true);
             var util = new TrackingGitHubUtil(GitHubClientFactory, TriageContext, SiteLinkUtil.Published, CreateLogger());
             await util.UpdateTrackingGitHubIssuesAsync();
+        }
+        internal record JobInfo(BuildInfo BuildInfo, TimelineRecord TimelineRecord)
+        {
+            public string JobName => TimelineRecord.Name;
+        }
+
+        internal async Task FindLogMacBuildAsync()
+        {
+            await FindLongMacBuildAsync("public", 364, "linker-ci");
+            await FindLongMacBuildAsync("internal", 679, "dotnet-runtime-official");
+            await FindLongMacBuildAsync("public", 686, "runtime");
+        }
+
+        internal async Task FindLongMacBuildAsync(string project, int definition, string friendlyName)
+        {
+            Console.WriteLine($"Searching {project} {definition} ({friendlyName})");
+            var map = new Dictionary<string, List<JobInfo>>();
+            var maxCount = 100;
+            var count = 0;
+
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync(project, definitions: new[] { definition }, statusFilter: BuildStatus.Completed))
+            {
+                count++;
+                if (count == maxCount)
+                {
+                    break;
+                }
+
+                var buildInfo = build.GetBuildInfo();
+                try
+                {
+                    Console.Write(".");
+                    var timeline = await DevOpsServer.GetTimelineAsync(build);
+                    if (timeline is null)
+                    {
+                        continue;
+                    }
+
+                    var tree = TimelineTree.Create(timeline);
+                    foreach (var job in tree.JobNodes)
+                    {
+                        if (IsMacName(job.Name))
+                        {
+                            if (!map.TryGetValue(job.Name, out var list))
+                            {
+                                list = new();
+                                map[job.Name] = list;
+                            }
+
+                            list.Add(new JobInfo(buildInfo, job.TimelineRecord));
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+
+            Console.WriteLine("");
+            Console.WriteLine($"Results for {project} {definition} ({friendlyName})");
+            var builds = new HashSet<string>();
+            foreach (var pair in map)
+            {
+                Console.WriteLine($"Job {pair.Key}");
+                var average = pair
+                    .Value
+                    .Where(x => x.TimelineRecord.Result == TaskResult.Succeeded)
+                    .Select(x => x.TimelineRecord.GetDuration()?.TotalMinutes)
+                    .SelectNullableValue()
+                    .Average();
+                Console.WriteLine($"Average minutes when succeeded {(int)average}");
+
+                var limit = average * 1.50;
+                foreach (var item in pair.Value.Where(x => x.TimelineRecord.GetDuration()?.TotalMinutes > limit))
+                {
+                    builds.Add(item.BuildInfo.BuildUri);
+                    var minutes = item.TimelineRecord.GetDuration()!.Value.TotalMinutes;
+                    var tuple = await GetAgentInfo(item.BuildInfo.Number, item.TimelineRecord);
+                    Console.WriteLine($"{item.BuildInfo.BuildUri} {(int)minutes} minutes on machine {tuple.MachineName}");
+                }
+
+                Console.WriteLine();
+            }
+
+            Console.WriteLine();
+            Console.WriteLine($"Total builds with at least one slow job {builds.Count}");
+            Console.WriteLine();
+
+            bool IsMacName(string name) =>
+                name.Contains("mac", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("osx", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("ios", StringComparison.OrdinalIgnoreCase);
+
+            async Task<(string? MachineName, string? AgentName)> GetAgentInfo(int buildId, TimelineRecord record)
+            {
+                try
+                {
+                    if (record.Log?.Id is not { } logId)
+                    {
+                        return default;
+                    }
+
+                    string? agentName = null;
+                    string? machineName = null;
+                    var content = await DevOpsServer.GetBuildLogAsync(project, buildId, logId);
+                    if (content is null)
+                    {
+                        return default;
+                    }
+
+                    var reader = new StringReader(content);
+                    while (reader.ReadLine() is { } line)
+                    {
+                        var match = Regex.Match(line, $"Agent name: '(.*)'");
+                        if (match.Success)
+                        {
+                            agentName = match.Groups[1].Value;
+                        }
+
+                        match = Regex.Match(line, $"Agent machine name: '(.*)'");
+                        if (match.Success)
+                        {
+                            machineName = match.Groups[1].Value;
+                        }
+
+                        if (agentName is { } && machineName is { })
+                        {
+                            break;
+                        }
+                    }
+
+                    return (machineName, agentName);
+                }
+                catch
+                {
+                    return default;
+                }
+            }
         }
 
         internal async Task MeasureConnectionIssues()
@@ -251,6 +389,7 @@ namespace Scratch
                 }
             }
         }
+
 
         internal async Task MeasureTrackingIssuePerf()
         {
