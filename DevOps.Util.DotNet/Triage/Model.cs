@@ -46,6 +46,9 @@ namespace DevOps.Util.DotNet.Triage
                 .HasIndex(x => x.NameKey)
                 .IsUnique();
 
+            modelBuilder.Entity<ModelBuild>()
+                .HasIndex(x => new { x.GitHubOrganization, x.GitHubRepository, x.PullRequestNumber });
+
             modelBuilder.Entity<ModelBuildAttempt>()
                 .HasIndex(x => new { x.ModelBuildId, x.Attempt })
                 .IsUnique();
