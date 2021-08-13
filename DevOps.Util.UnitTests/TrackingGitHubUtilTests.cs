@@ -14,12 +14,13 @@ using Xunit.Abstractions;
 
 namespace DevOps.Util.UnitTests
 {
+    [Collection(DatabaseCollection.Name)]
     public sealed class TrackingGitHubUtilTests : StandardTestBase
     {
         public TrackingGitHubUtil TrackingGitHubUtil { get; }
 
-        public TrackingGitHubUtilTests(ITestOutputHelper testOutputHelper)
-            : base(testOutputHelper)
+        public TrackingGitHubUtilTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper)
+            : base(databaseFixture, testOutputHelper)
         {
             TrackingGitHubUtil = new TrackingGitHubUtil(TestableGitHubClientFactory, Context, new SiteLinkUtil("localhost"), TestableLogger);
         }
@@ -41,8 +42,8 @@ namespace DevOps.Util.UnitTests
             var result = AddTrackingResult(tracking, attempt);
             await Context.SaveChangesAsync();
 
-            var expected = @"
-Runfo Tracking Issue: [Dog Search](https://localhost/tracking/issue/1)
+            var expected = $@"
+Runfo Tracking Issue: [Dog Search](https://localhost/tracking/issue/{tracking.Id})
 |Definition|Build|Kind|Job Name|
 |---|---|---|---|
 |[roslyn](https://dnceng.visualstudio.com/public/_build?definitionId=42)|[1](https://dev.azure.com/dnceng/public/_build/results?buildId=1)|Rolling|windows|
@@ -82,8 +83,8 @@ Build Result Summary
             await Context.SaveChangesAsync();
             await TriageAll();
 
-            var expected = @"
-Runfo Tracking Issue: [Test Search](https://localhost/tracking/issue/1)
+            var expected = $@"
+Runfo Tracking Issue: [Test Search](https://localhost/tracking/issue/{tracking.Id})
 |Build|Definition|Kind|Run Name|
 |---|---|---|---|
 |[7](https://dev.azure.com/dnceng/public/_build/results?buildId=7)|[roslyn](https://dnceng.visualstudio.com/public/_build?definitionId=42)|Rolling|windows|

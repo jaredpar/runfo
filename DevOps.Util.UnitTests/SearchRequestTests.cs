@@ -9,10 +9,11 @@ using Xunit.Abstractions;
 
 namespace DevOps.Util.UnitTests
 {
+    [Collection(DatabaseCollection.Name)]
     public class SearchRequestTests : StandardTestBase
     {
-        public SearchRequestTests(ITestOutputHelper testOutputHelper)
-            : base(testOutputHelper)
+        public SearchRequestTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper)
+            : base(databaseFixture, testOutputHelper)
         {
 
         }

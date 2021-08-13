@@ -10,10 +10,11 @@ using Xunit.Abstractions;
 
 namespace DevOps.Util.UnitTests
 {
+    [Collection(DatabaseCollection.Name)]
     public class TriageContextUtilTests : StandardTestBase
     {
-        public TriageContextUtilTests(ITestOutputHelper testOutputHelper)
-            : base(testOutputHelper)
+        public TriageContextUtilTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper)
+            : base(databaseFixture, testOutputHelper)
         {
         }
 
