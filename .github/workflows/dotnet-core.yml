@@ -27,7 +27,18 @@ jobs:
 
     - name: Restore
       run: dotnet restore
+
     - name: Build
       run: dotnet build --configuration Debug --no-restore
+
+    - name: Pull docker image
+      run: docker pull jaredpar/runfo:v0.1.0
+
+    - name: Run docker image
+      run: docker run --rm -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=password@0" -p 1433:1433 --name sql-runfo-test -h sql1 -d jaredpar/runfo:v0.1.0 
+
     - name: Test
       run: dotnet test --no-restore --verbosity normal
+
+    - name: Stop docker image
+      run: docker kill sql-runfo-test
