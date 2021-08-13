@@ -175,7 +175,7 @@ namespace Scratch
 
         internal async Task MeasureConnectionIssues()
         {
-            var request = new SearchTimelinesRequest(@"started:~7 text:""Failed to retrieve information""");
+            var request = new SearchTimelinesRequest(@"started:~30 text:""Failed to retrieve information""");
             var modelTimelineIssuess = await request.Filter(TriageContext.ModelTimelineIssues).Include(x => x.ModelBuild).ToListAsync();
             var map = new Dictionary<DateTime, List<(ModelBuild ModelBuild, bool IsConnectionReset, string? LogUri)>>();
             foreach (var modelTimelineIssue in modelTimelineIssuess)
@@ -199,7 +199,7 @@ namespace Scratch
                         if (record is object && record.Log is object)
                         {
                             var log = await DevOpsServer.GetBuildLogAsync(buildInfo.Project, buildInfo.Number, record.Log.Id);
-                            isConnectionReset = log.Contains("Unable to read data from the transport connection: Connection reset by peer");
+                            isConnectionReset = log.Contains("Response status code does not indicate success: 503");
                             logUrl = record.Log.Url;
                         }
                     }
@@ -235,7 +235,7 @@ namespace Scratch
                 foreach (var tuple in pair.Value)
                 {
                     var buildUri = tuple.ModelBuild.GetBuildInfo().BuildUri;
-                    var kind = tuple.IsConnectionReset ? "ConnectionReset" : "Other";
+                    var kind = tuple.IsConnectionReset ? "503" : "Other";
                     Console.WriteLine($"{pair.Key},{buildUri},{kind},{tuple.LogUri}");
                 }
             }
