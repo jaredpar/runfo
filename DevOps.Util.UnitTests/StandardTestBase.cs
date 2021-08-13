@@ -17,7 +17,7 @@ using Xunit.Abstractions;
 
 namespace DevOps.Util.UnitTests
 {
-    public class StandardTestBase : IDisposable
+    public abstract class StandardTestBase : IDisposable
     {
         public DatabaseFixture DatabaseFixture { get; }
         public TriageContextUtil TriageContextUtil { get; }
@@ -103,22 +103,41 @@ namespace DevOps.Util.UnitTests
         public ModelBuild AddBuild(string data, ModelBuildDefinition def)
         {
             var parts = data.Split("|");
-            var number = GetPartOrNull(parts, 0) is { } part ? int.Parse(part) : BuildCount++;
-            var br = GetPartOrNull(parts, 1);
-            var dt = GetPartOrNull(parts, 2);
-            var startTime = dt is object ? DateTime.ParseExact(dt, "yyyy-MM-dd", null) : DateTime.UtcNow;
+            ModelBuildResult? br = GetPartOrNull(parts, 1) is { } p ? Enum.Parse<ModelBuildResult>(p) : null;
+            return AddBuild(
+                def,
+                number: GetIntPartOrNull(parts, 0),
+                result: br,
+                gitHubOrganization: GetPartOrNull(parts, 3),
+                gitHubRepository: GetPartOrNull(parts, 4),
+                started: GetDatePartOrNull(parts, 2));
+        }
+
+        /// <summary>
+        /// | number | result | date | github org | github repo |
+        /// </summary>
+        public ModelBuild AddBuild(ModelBuildDefinition def,
+            int? number = null,
+            ModelBuildResult? result = null,
+            string? gitHubOrganization = null,
+            string? gitHubRepository = null,
+            DateTime? started = null)
+
+        {
+            number ??= BuildCount++;
+            started ??= DateTime.UtcNow;
 
             var build = new ModelBuild()
             {
-                NameKey = new BuildKey(def.AzureOrganization, def.AzureProject, number).NameKey,
-                BuildNumber = number,
-                GitHubOrganization = GetPartOrNull(parts, 1) ?? "dotnet",
-                GitHubRepository = GetPartOrNull(parts, 2) ?? "roslyn",
+                NameKey = new BuildKey(def.AzureOrganization, def.AzureProject, number.Value).NameKey,
+                BuildNumber = number.Value,
+                GitHubOrganization = gitHubOrganization ?? "dotnet",
+                GitHubRepository = gitHubRepository ?? "roslyn",
                 AzureOrganization = def.AzureOrganization,
                 AzureProject = def.AzureProject,
-                QueueTime = startTime,
-                StartTime = startTime,
-                BuildResult = br is object ? Enum.Parse<ModelBuildResult>(br) : default,
+                QueueTime = started.Value,
+                StartTime = started.Value,
+                BuildResult = result ?? default,
                 ModelBuildDefinition = def,
                 ModelBuildDefinitionId = def.Id,
                 DefinitionName = def.DefinitionName,
@@ -168,13 +187,27 @@ namespace DevOps.Util.UnitTests
         /// <returns></returns>
         public ModelBuildDefinition AddBuildDefinition(string data)
         {
+            if (!data.Contains('|'))
+            {
+                return AddBuildDefinition(data);
+            }
+
             var parts = data.Split("|");
+            return AddBuildDefinition(
+                parts[2],
+                azureOrganization: GetPartOrNull(parts, 0),
+                azureProject: GetPartOrNull(parts, 1),
+                definitionNumber: GetIntPartOrNull(parts, 3));
+        }
+
+        public ModelBuildDefinition AddBuildDefinition(string definitionName, string? azureOrganization, string? azureProject, int? definitionNumber)
+        {
             var def = new ModelBuildDefinition()
             {
-                AzureOrganization = GetPartOrNull(parts, 0) ?? "dnceng",
-                AzureProject = GetPartOrNull(parts, 1) ?? "public",
-                DefinitionName = parts[2],
-                DefinitionNumber = GetPartOrNull(parts, 3) is { } part ? int.Parse(part) : DefinitionCount++,
+                AzureOrganization = azureOrganization ?? "dnceng",
+                AzureProject = azureProject ?? "public",
+                DefinitionName = definitionName,
+                DefinitionNumber = definitionNumber ?? DefinitionCount++,
             };
 
             Context.ModelBuildDefinitions.Add(def);
@@ -212,17 +245,13 @@ namespace DevOps.Util.UnitTests
             return trackingIssue;
         }
 
-        /// <summary>
-        /// |name|test run id| 
-        /// </summary>
-        public ModelTestRun AddTestRun(string data, ModelBuildAttempt attempt)
+        public ModelTestRun AddTestRun(ModelBuildAttempt attempt, string name)
         {
-            var parts = data.Split("|");
             var testRun = new ModelTestRun()
             {
-                Name = parts[0],
+                Name = name,
                 Attempt = attempt.Attempt,
-                TestRunId = GetPartOrNull(parts, 1) is { }  part ? int.Parse(part) : TestRunCount++,
+                TestRunId = TestRunCount++,
                 ModelBuild = attempt.ModelBuild,
                 ModelBuildAttempt = attempt,
             };
@@ -305,6 +334,8 @@ namespace DevOps.Util.UnitTests
         }
 
         private static string? GetPartOrNull(string[] parts, int index) => parts.Length > index && !string.IsNullOrEmpty(parts[index]) ? parts[index] : null;
+        private static int? GetIntPartOrNull(string[] parts, int index) => GetPartOrNull(parts, index) is { } p ? int.Parse(p) : null;
+        private static DateTime? GetDatePartOrNull(string[] parts, int index) => GetPartOrNull(parts, index) is { } dt ? DateTime.ParseExact(dt, "yyyy-MM-dd", null) : null;
 
         public async Task TriageAll()
         {

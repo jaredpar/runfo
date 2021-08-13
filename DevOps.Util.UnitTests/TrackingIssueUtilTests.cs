@@ -104,7 +104,7 @@ namespace DevOps.Util.UnitTests
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
             var attempt = AddAttempt(1, AddBuild("1", def));
-            var testRun = AddTestRun("windows", attempt);
+            var testRun = AddTestRun(attempt, "windows");
             var testResult1 = AddTestResult("Util.Test1", testRun);
             var testResult2 = AddTestResult("Util.Test2", testRun);
             var tracking = AddTrackingIssue(
@@ -217,7 +217,7 @@ namespace DevOps.Util.UnitTests
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
             var attempt = AddAttempt(1, AddBuild("1", def));
-            var testRun = AddTestRun("windows", attempt);
+            var testRun = AddTestRun(attempt, "windows");
             var testResult1 = AddTestResult("Util.Test1", testRun);
             AddHelixLog(testResult1, kind, "the dog fetched the ball");
             var testResult2 = AddTestResult("Util.Test2", testRun);
@@ -267,18 +267,18 @@ namespace DevOps.Util.UnitTests
         {
             var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
             var attempt1 = AddAttempt(1, AddBuild("1", def1));
-            var testRun1 = AddTestRun("windows", attempt1);
+            var testRun1 = AddTestRun(attempt1, "windows");
             AddTestResult("test1|||failed dog", testRun1);
             AddTestResult("test2|||failed cat", testRun1);
 
             var attempt2 = AddAttempt(1, AddBuild("2", def1));
-            var testRun2 = AddTestRun("windows", attempt2);
+            var testRun2 = AddTestRun(attempt2, "windows");
             AddTestResult("test2|||failed dog", testRun2);
             AddTestResult("test2|||failed dog", testRun2);
 
             var def2 = AddBuildDefinition("dnceng|public|roslyn|13");
             var attempt3 = AddAttempt(1, AddBuild("3", def2));
-            var testRun3 = AddTestRun("windows", attempt3);
+            var testRun3 = AddTestRun(attempt3, "windows");
             AddTestResult("test1|||failed dog", testRun3);
             AddTestResult("test2|||failed dog", testRun3);
 

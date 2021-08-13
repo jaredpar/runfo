@@ -1,5 +1,4 @@
-﻿using DevOps.Util.DotNet;
-using DevOps.Util.DotNet.Triage;
+﻿using DevOps.Util.DotNet.Triage;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -11,20 +10,52 @@ using Xunit.Abstractions;
 
 namespace DevOps.Util.UnitTests
 {
-    public sealed class CodeHygieneTests
+    [Collection(DatabaseCollection.Name)]
+    public class TriageContextUtilTests : StandardTestBase
     {
-        /// <summary>
-        /// Make sure any temporary flips to use the production key vault in debug don't get checked
-        /// into the main code base
-        /// </summary>
-        [Fact]
-        public void KeyVaultStringTest()
+        public TriageContextUtilTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper)
+            : base(databaseFixture, testOutputHelper)
         {
-#if DEBUG
-            Assert.Equal(DotNetConstants.KeyVaultEndPointTest, DotNetConstants.KeyVaultEndPoint);
-#else
-            Assert.Equal(DotNetConstants.KeyVaultEndPointProduction, DotNetConstants.KeyVaultEndPoint);
-#endif
+        }
+
+        [Fact]
+        public async Task MarkMergedPullRequestTest()
+        {
+            var def = AddBuildDefinition("||roslyn|");
+            var build1 = CreateBuild("1");
+            var build2 = CreateBuild("2");
+            await TriageContextUtil.MarkAsMergedPullRequestAsync(build1);
+            await Verify(build1.Id, ModelBuildKind.MergedPullRequest);
+            await Verify(build2.Id, ModelBuildKind.Rolling);
+
+            async Task Verify(int modelBuildId, ModelBuildKind kind)
+            {
+                var attempts = await Context.ModelBuildAttempts.Where(x => x.ModelBuildId == modelBuildId).ToListAsync();
+                Assert.Equal(2, attempts.Count);
+                Assert.True(attempts.All(x => x.BuildKind == kind));
+
+                var issues = await Context.ModelTimelineIssues.Where(x => x.ModelBuildId == modelBuildId).ToListAsync();
+                Assert.Equal(2, issues.Count);
+                Assert.True(issues.All(x => x.BuildKind == kind));
+
+                var tests = await Context.ModelTestResults.Where(x => x.ModelBuildId == modelBuildId).ToListAsync();
+                Assert.Equal(3, tests.Count);
+                Assert.True(tests.All(x => x.BuildKind == kind));
+            }
+
+            ModelBuild CreateBuild(string buildId)
+            {
+                var build = AddBuild(buildId, def);
+                var attempt1 = AddAttempt(1, build);
+                var attempt2 = AddAttempt(2, build);
+                AddTimelineIssue("windows|failed", attempt1);
+                AddTimelineIssue("windows|blah", attempt2);
+                var testRun = AddTestRun(attempt1, "windows");
+                AddTestResult("xml", testRun);
+                AddTestResult("json", testRun);
+                AddTestResult("yaml", testRun);
+                return build;
+            }
         }
     }
 }

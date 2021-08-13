@@ -117,7 +117,7 @@ Build Result Summary
             void AddTestData(int buildNumber, string dateStr)
             {
                 var attempt = AddAttempt(1, AddBuild($"{buildNumber}||{dateStr}", def));
-                var testRun = AddTestRun("windows", attempt);
+                var testRun = AddTestRun(attempt, "windows");
                 AddTestResult("Util.Test1", testRun);
                 AddTestResult("Util.Test2", testRun);
             }
@@ -187,7 +187,7 @@ Build Result Summary
             void AddTestData(int buildNumber, string dateStr)
             {
                 var attempt = AddAttempt(1, AddBuild($"{buildNumber}||{dateStr}", def));
-                var testRun = AddTestRun("windows", attempt);
+                var testRun = AddTestRun(attempt, "windows");
                 var testResult = AddTestResult("Util.Test1", testRun);
                 AddHelixLog(testResult, kind, "The log data");
             }

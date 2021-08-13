@@ -170,76 +170,48 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            while (true)
+            await MeasureConnectionIssues();
+        }
+
+        internal async Task MeasureConnectionIssues()
+        {
+            var request = new SearchTimelinesRequest(@"started:~7 text:""Failed to retrieve information""");
+            var modelTimelineIssuess = await request.Filter(TriageContext.ModelTimelineIssues).Include(x => x.ModelBuild).ToListAsync();
+            var map = new Dictionary<DateTime, List<(ModelBuild ModelBuild, bool IsConnectionReset, string? LogUri)>>();
+            foreach (var modelTimelineIssue in modelTimelineIssuess)
             {
                 try
                 {
-                    var functionUtil = new FunctionUtil(CreateLogger());
-                    await functionUtil.DeleteOldBuilds(new TriageContext(TriageContextOptions), deleteMax: 25);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    if (ex.InnerException is object)
+                    var modelBuild = modelTimelineIssue.ModelBuild;
+                    var buildInfo = modelBuild.GetBuildInfo();
+                    Console.WriteLine($"Searching {buildInfo.BuildUri} {modelTimelineIssue.Id}");
+                    bool isConnectionReset = false;
+                    string? logUrl = null;
+                    var timeline = await DevOpsServer.GetTimelineAttemptAsync(buildInfo.Project, buildInfo.Number, modelTimelineIssue.Attempt);
+                    if (timeline is null)
                     {
-                        Console.WriteLine(ex.InnerException);
+                        timeline = await DevOpsServer.GetTimelineAsync(buildInfo.Project, buildInfo.Number);
                     }
-                }
-            }
-                /*
-            var helixApi = HelixServer.GetHelixApi();
-            await foreach (var build in DevOpsServer.EnumerateBuildsAsync("public"))
-            {
-                if (build.Status is not BuildStatus.Completed)
-                {
-                    continue;
-                }
 
-                if (build.Definition.Id is 15 or 686)
-                {
-                    var buildInfo = build.GetBuildInfo();
-                    Console.WriteLine(buildInfo.BuildUri);
-                    var map = await DevOpsServer.GetHelixMapAsync("public", buildInfo.Number, DevOpsUtil.FailedTestOutcomes, helixApi);
-                    foreach (var (helixInfo, helixLogInfo) in map)
+                    if (timeline is object)
                     {
-                        Console.WriteLine($"\t{helixInfo.JobId} - {helixInfo.WorkItemName}");
-                        foreach (var kind in Enum.GetValues(typeof(HelixLogKind)).Cast<HelixLogKind>())
-                        Console.WriteLine($"\t\t{kind} - {helixLogInfo.GetUri(kind)}");
+                        var record = timeline.Records.FirstOrDefault(x => x.Id == modelTimelineIssue.RecordId);
+                        if (record is object && record.Log is object)
+                        {
+                            var log = await DevOpsServer.GetBuildLogAsync(buildInfo.Project, buildInfo.Number, record.Log.Id);
+                            isConnectionReset = log.Contains("Unable to read data from the transport connection: Connection reset by peer");
+                            logUrl = record.Log.Url;
+                        }
                     }
-                }
-            }
-                */
 
-            // await MeasureTrackingIssuePerf();
-
-
-            // await Migrate();
-            //await PopulateDb(count: 100, definitionId: 15, includeTests: true, includeTriage: false);
-
-            /*
-            var limitDays = 90;
-            var limit = DateTime.UtcNow - TimeSpan.FromDays(limitDays);
-
-            var modelBuilds = await TriageContext
-                .ModelBuilds
-                .Where(x => x.StartTime < limit)
-                .OrderByDescending(x => x.StartTime)
-                .ToListAsync()
-                .ConfigureAwait(false);
-            int count = 0;
-            foreach (var build in modelBuilds)
-            {
-                try
-                {
-                    Console.WriteLine(build.GetBuildKey());
-                    TriageContext.Remove(build);
-                    count++;
-                    if (count == 100)
+                    var date = modelBuild.StartTime.Date;
+                    if (!map.TryGetValue(date, out var list))
                     {
-                        count = 0;
-                        Console.WriteLine("Saving");
-                        await TriageContext.SaveChangesAsync();
+                        list = new();
+                        map[date] = list;
                     }
+
+                    list.Add((modelBuild, isConnectionReset, logUrl));
                 }
                 catch (Exception ex)
                 {
@@ -247,80 +219,26 @@ namespace Scratch
                 }
             }
 
-            //await DeleteOldBuilds();
-            // await PopulateModelBuildDefinitionTable();
-
-            /*
-            var builds = new SearchBuildsRequest();
-            builds.ParseQueryString("started:~21 definition:runtime");
-
-
-            int page = 100;
-            int count = 0;
-            do
+            foreach (var pair in map.OrderBy(x => x.Key))
             {
-                Console.WriteLine($"Processing at {page * count}");
-                var all = await builds.Filter(TriageContext.ModelTestResults)
-                    .Where(x => x.JobName == "")
-                    .Include(x => x.ModelTestRun)
-                    .OrderByDescending(x => x.ModelBuild.BuildNumber)
-                    .Skip(count * page)
-                    .Take(page)
-                    .ToListAsync();
-                count++;
-
-                foreach (var item in all)
+                var crCount = pair.Value.Count(x => x.IsConnectionReset);
+                Console.WriteLine($"{pair.Key} Connection Reset {crCount} Other Count {pair.Value.Count - crCount}");
+                foreach (var tuple in pair.Value)
                 {
-                    item.JobName = item.ModelTestRun.Name;
+                    var suffix = tuple.IsConnectionReset ? "(ConnectionReset)" : "(Other)";
+                    Console.WriteLine($"\t{tuple.ModelBuild.GetBuildInfo().BuildUri} {suffix}");
                 }
-
-                await TriageContext.SaveChangesAsync();
             }
-            while (true);
-            */
 
-
-            /*
-            var buildInfo = (await DevOpsServer.GetBuildAsync("public", 906787)).GetBuildResultInfo();
-            var results = await DotNetQueryUtil.SearchBuildLogsAsync(
-                new[] { buildInfo },
-                new SearchBuildLogsRequest()
-                {
-                    LogName = "Test_Windows_CoreClr_Release",
-                    Text = "Internal CLR"
-                },
-                ex => Console.WriteLine(ex));
-
-            Console.WriteLine(results.Count(x =>  x.IsMatch));
-            Console.WriteLine(results.Count);
-            */
-
-/*
-
-            var buildRequest = new SearchBuildsRequest();
-            buildRequest.ParseQueryString("definition:runtime started:~3");
-            var timelineRequest = new SearchTimelinesRequest()
+            foreach (var pair in map.OrderBy(x => x.Key))
             {
-                Text = "Error",
-                TaskName = "CmdLine",
-            };
-
-            var query = timelineRequest.Filter(buildRequest.Filter(TriageContext.ModelTimelineIssues));
-            var results = await query.ToListAsync();
-                
-
-
-
-
-            // await MigrateTrackingToAssociatedIssues();
-            // await PopulateTestResultsWithNewData(15, 200);
-            // await TestTrackingIssueUtil(buildNumber: 865837, modelTrackingIssueId: 75);
-            // await DumpDarcPublishData();
-            await PopulateDb(count: 100, definitionId: 686, includeTests: false, includeTriage: false);
-            // await PopulateDefinitionColumns();
-            // await PopulateModelTrackingIssue("started:~2 result:failed", 85);
-            await RetriesWork();
-*/
+                foreach (var tuple in pair.Value)
+                {
+                    var buildUri = tuple.ModelBuild.GetBuildInfo().BuildUri;
+                    var kind = tuple.IsConnectionReset ? "ConnectionReset" : "Other";
+                    Console.WriteLine($"{pair.Key},{buildUri},{kind},{tuple.LogUri}");
+                }
+            }
         }
 
         internal async Task MeasureTrackingIssuePerf()
