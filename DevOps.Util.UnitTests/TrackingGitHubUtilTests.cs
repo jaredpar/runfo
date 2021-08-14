@@ -29,8 +29,11 @@ namespace DevOps.Util.UnitTests
         public async Task SimpleTimelineSearh()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt = AddAttempt(1, AddBuild("1|Succeeded|2020-12-01", def));
-            var timeline = AddTimelineIssue("windows|dog", attempt);
+            var attempt = await AddAttemptAsync(
+                await AddBuildAsync("1|Succeeded|2020-12-01", def),
+                attempt: 1,
+                ("windows", "dog", null));
+            var timeline = await Context.ModelTimelineIssues.SingleAsync();
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
                 title: "Dog Search",
@@ -64,13 +67,13 @@ Build Result Summary
         public async Task TestWithSummary()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            AddTestData(1, "2020-08-01");
-            AddTestData(2, "2020-08-01");
-            AddTestData(3, "2020-07-29");
-            AddTestData(4, "2020-07-29");
-            AddTestData(5, "2020-07-29");
-            AddTestData(6, "2020-07-29");
-            AddTestData(7, "2020-07-05");
+            await AddTestDataAsync(1, "2020-08-01");
+            await AddTestDataAsync(2, "2020-08-01");
+            await AddTestDataAsync(3, "2020-07-29");
+            await AddTestDataAsync(4, "2020-07-29");
+            await AddTestDataAsync(5, "2020-07-29");
+            await AddTestDataAsync(6, "2020-07-29");
+            await AddTestDataAsync(7, "2020-07-05");
             var tracking = AddTrackingIssue(
                 TrackingKind.Test,
                 title: "Test Search",
@@ -114,12 +117,14 @@ Build Result Summary
             var report = await TrackingGitHubUtil.GetTrackingIssueReport(tracking, includeMarkers: false, baseTime: new DateTime(year: 2020, month: 08, day: 1));
             Assert.Equal(expected.TrimNewlines(), report.TrimNewlines());
 
-            void AddTestData(int buildNumber, string dateStr)
+            async Task AddTestDataAsync(int buildNumber, string dateStr)
             {
-                var attempt = AddAttempt(1, AddBuild($"{buildNumber}||{dateStr}", def));
-                var testRun = AddTestRun("windows", attempt);
-                AddTestResult("Util.Test1", testRun);
-                AddTestResult("Util.Test2", testRun);
+                var attempt = await AddAttemptAsync(1, await AddBuildAsync($"{buildNumber}||{dateStr}", def));
+                await AddTestRunAsync(
+                    attempt,
+                    "windows",
+                    ("Util.Test1", null),
+                    ("Util.Test2", null));
             }
         }
 
@@ -131,7 +136,7 @@ Build Result Summary
 
             for (int i = 0; i < 5; i++)
             {
-                AddGitHubIssue(issueKey, AddBuild($"||2020-10-0{i + 1}", def));
+                AddGitHubIssue(issueKey, await AddBuildAsync($"||2020-10-0{i + 1}", def));
                 await Context.SaveChangesAsync();
             }
 
@@ -159,8 +164,8 @@ Build Result Summary
         public async Task SimpleHelixLogsReport(HelixLogKind kind, string columnText, string fileName)
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            AddTestData(1, "2020-08-01");
-            AddTestData(2, "2020-08-01");
+            await AddTestDataAsync(1, "2020-08-01");
+            await AddTestDataAsync(2, "2020-08-01");
             var tracking = AddTrackingIssue(
                 TrackingKind.HelixLogs,
                 title: "Helix Log",
@@ -184,12 +189,13 @@ Build Result Summary
             var report = await TrackingGitHubUtil.GetTrackingIssueReport(tracking, includeMarkers: false, baseTime: new DateTime(year: 2020, month: 08, day: 1));
             Assert.Equal(expected.TrimNewlines(), report.TrimNewlines());
 
-            void AddTestData(int buildNumber, string dateStr)
+            async Task AddTestDataAsync(int buildNumber, string dateStr)
             {
-                var attempt = AddAttempt(1, AddBuild($"{buildNumber}||{dateStr}", def));
-                var testRun = AddTestRun("windows", attempt);
-                var testResult = AddTestResult("Util.Test1", testRun);
-                AddHelixLog(testResult, kind, "The log data");
+                var attempt = await AddAttemptAsync(1, await AddBuildAsync($"{buildNumber}||{dateStr}", def));
+                await AddTestRunAsync(
+                    attempt,
+                    "windows",
+                    ("Util.Test1", null, kind, "The log data"));
             }
         }
     }

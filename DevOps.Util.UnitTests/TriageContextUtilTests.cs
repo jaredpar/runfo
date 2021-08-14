@@ -22,8 +22,8 @@ namespace DevOps.Util.UnitTests
         public async Task MarkMergedPullRequestTest()
         {
             var def = AddBuildDefinition("||roslyn|");
-            var build1 = CreateBuild("1");
-            var build2 = CreateBuild("2");
+            var build1 = await CreateBuildAsync("1");
+            var build2 = await CreateBuildAsync("2");
             await TriageContextUtil.MarkAsMergedPullRequestAsync(build1);
             await Verify(build1.Id, ModelBuildKind.MergedPullRequest);
             await Verify(build2.Id, ModelBuildKind.Rolling);
@@ -43,17 +43,23 @@ namespace DevOps.Util.UnitTests
                 Assert.True(tests.All(x => x.BuildKind == kind));
             }
 
-            ModelBuild CreateBuild(string buildId)
+            async Task<ModelBuild> CreateBuildAsync(string buildId)
             {
-                var build = AddBuild(buildId, def);
-                var attempt1 = AddAttempt(1, build);
-                var attempt2 = AddAttempt(2, build);
-                AddTimelineIssue("windows|failed", attempt1);
-                AddTimelineIssue("windows|blah", attempt2);
-                var testRun = AddTestRun("windows", attempt1);
-                AddTestResult("xml", testRun);
-                AddTestResult("json", testRun);
-                AddTestResult("yaml", testRun);
+                var build = await AddBuildAsync(buildId, def);
+                var attempt1 = await AddAttemptAsync(
+                    build,
+                    1,
+                    ("windows", "failed", null));
+                await AddAttemptAsync(
+                    build,
+                    2,
+                    ("windows", "blah", null));
+                await AddTestRunAsync(
+                    attempt1,
+                    "windows",
+                    ("xml", null),
+                    ("json", null),
+                    ("yaml", null));
                 return build;
             }
         }
