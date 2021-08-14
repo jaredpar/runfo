@@ -7,7 +7,7 @@ namespace DevOps.Util.DotNet
     public static class DotNetConstants
     {
         public const string KeyVaultEndPointProduction = "https://runfo-prod.vault.azure.net/";
-        public const string KeyVaultEndPointTest = "https://runfo-prod.vault.azure.net/";
+        public const string KeyVaultEndPointTest = "https://runfo-test.vault.azure.net/";
 #if DEBUG
         public const string KeyVaultEndPoint = KeyVaultEndPointTest;
 #else
