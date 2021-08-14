@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
@@ -22,10 +23,10 @@ namespace DevOps.Util.UnitTests
         public async Task BuildResultSearches()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            AddBuild("1|Failed|", def);
-            AddBuild("2|Failed", def);
-            AddBuild("3|Succeeded", def);
-            AddBuild("4|Canceled", def);
+            await AddBuildAsync("1|Failed|", def);
+            await AddBuildAsync("2|Failed", def);
+            await AddBuildAsync("3|Succeeded", def);
+            await AddBuildAsync("4|Canceled", def);
             await Context.SaveChangesAsync();
 
             await Test(2, "result:failed");
@@ -46,8 +47,8 @@ namespace DevOps.Util.UnitTests
         public async Task BuildIssuesSearches()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var build1 = AddBuild("1", def);
-            var build2 = AddBuild("2", def);
+            var build1 = await AddBuildAsync("1", def);
+            var build2 = await AddBuildAsync("2", def);
             await Test(2, "issues:false");
             await Test(0, "issues:true");
 
@@ -74,18 +75,24 @@ namespace DevOps.Util.UnitTests
         public async Task TestResultSearchMessage()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var build1 = AddBuild("1|Failed", def);
-            var testRun1 = AddTestRun(AddAttempt(1, build1), "windows");
-            AddTestResult("Test1||||cat", testRun1);
-            AddTestResult("Test2||||cat", testRun1);
-            AddTestResult("Test3||||dog", testRun1);
-            var build2 = AddBuild("2|Failed", def);
-            var testRun2 = AddTestRun(AddAttempt(1, build2), "windows");
-            AddTestResult("Test1||||fish", testRun1);
-            AddTestResult("Test2||||fish", testRun1);
-            AddTestResult("Test3||||cat", testRun1);
+            var build1 = await AddBuildAsync("1|Failed", def);
+            await AddTestRunAsync(
+                await AddAttemptAsync(1, build1),
+                "windows",
+                ("Test1", "cat"),
+                ("Test2", "cat"),
+                ("Test3", "dog"));
+            var build2 = await AddBuildAsync("2|Failed", def);
+            await AddTestRunAsync(
+                await AddAttemptAsync(1, build2),
+                "windows",
+                ("Test1", "fish"),
+                ("Test2", "fish"),
+                ("Test3", "cat"));
             await Context.SaveChangesAsync();
 
+            var testResults = await Context.ModelTestResults.ToListAsync();
+            var errorMessages = await Context.ModelTestResults.Select(x => x.ErrorMessage).ToListAsync();
             await Test(3, "message:#cat");
             await Test(1, "message:#dog");
             await Test(2, "message:#fish");
@@ -105,8 +112,11 @@ namespace DevOps.Util.UnitTests
         public async Task TimelineRespectsStartedOption()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var build = AddBuild("1|Failed|2020-01-01", def);
-            AddTimelineIssue("build|dog", AddAttempt(1, build));
+            var build = await AddBuildAsync("1|Failed|2020-01-01", def);
+            await AddAttemptAsync(
+                build,
+                attempt: 1,
+                ("build", "dog", null));
             await Context.SaveChangesAsync();
 
             var request = new SearchTimelinesRequest("text:#dog")

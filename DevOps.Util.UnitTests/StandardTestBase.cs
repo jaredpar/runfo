@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -53,101 +54,121 @@ namespace DevOps.Util.UnitTests
 
         public void Dispose() => DatabaseFixture.TestCompletion();
 
-        /// <summary>
-        /// |job name|message|record name|
-        /// </summary>
-        public ModelTimelineIssue AddTimelineIssue(string data, ModelBuildAttempt attempt)
-        {
-            var parts = data.Split("|");
-            var issue = new ModelTimelineIssue()
-            {
-                StartTime = attempt.StartTime,
-                Attempt = attempt.Attempt,
-                JobName = parts[0],
-                Message = parts[1],
-                RecordName = parts.Length > 2 ? parts[2] : "",
-                TaskName = "",
-                DefinitionNumber = attempt.ModelBuildDefinition.DefinitionNumber,
-                DefinitionName = attempt.ModelBuildDefinition.DefinitionName,
-                ModelBuild = attempt.ModelBuild,
-                ModelBuildAttempt = attempt,
-                ModelBuildDefinition = attempt.ModelBuildDefinition,
-                BuildKind = ModelBuildKind.Rolling,
-            };
-            Context.ModelTimelineIssues.Add(issue);
-            Context.SaveChanges();
-            return issue;
-        }
+        public async Task<ModelBuildAttempt> AddAttemptAsync(int attempt, ModelBuild build) => await AddAttemptAsync(build, attempt);
 
-        public ModelBuildAttempt AddAttempt(int attempt, ModelBuild build)
+        public async Task<ModelBuildAttempt> AddAttemptAsync(
+            ModelBuild build,
+            int attempt,
+            params (string? JobName, string? Message, string? RecordName)[]? timelineIssues) =>
+            await AddAttemptAsync(build, attempt, startTime: null, finishTime: null, timelineIssues: timelineIssues);
+
+        public async Task<ModelBuildAttempt> AddAttemptAsync(
+            ModelBuild build,
+            int attempt = 1,
+            DateTime? startTime = null,
+            DateTime? finishTime = null,
+            (string? JobName, string? Message, string? RecordName)[]? timelineIssues = null)
         {
-            var modelAttempt = new ModelBuildAttempt()
+            var records = new List<TimelineRecord>();
+            records.Add(new TimelineRecord()
             {
-                StartTime = build.StartTime,
                 Attempt = attempt,
-                NameKey = build.NameKey,
-                DefinitionName = build.DefinitionName,
-                ModelBuildDefinition = build.ModelBuildDefinition,
-                ModelBuild = build,
-                BuildKind = ModelBuildKind.Rolling, 
+                Id = Guid.NewGuid().ToString(),
+                StartTime = DevOpsUtil.ConvertToRestTime(startTime ?? build.StartTime),
+                FinishTime = DevOpsUtil.ConvertToRestTime(finishTime ?? build.FinishTime ?? build.StartTime)
+            });
+
+            if (timelineIssues is object)
+            {
+                foreach (var timelineIssue in timelineIssues)
+                {
+                    var jobRecord = new TimelineRecord()
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        Name = timelineIssue.JobName ?? "",
+                        Type = "Job",
+                    };
+                    records.Add(jobRecord);
+
+                    var issueRecord = new TimelineRecord()
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        Name = timelineIssue.JobName ?? "",
+                        ParentId = jobRecord.Id,
+                    };
+                    records.Add(issueRecord);
+
+                    issueRecord.Issues = new[]
+                    {
+                        new Issue()
+                        {
+                            Message = timelineIssue.Message ?? "",
+                            Type = IssueType.Error,
+                        }
+                    };
+                }
+            }
+
+            var timeline = new Timeline()
+            {
+                Records = records.ToArray(),
             };
 
-            Context.ModelBuildAttempts.Add(modelAttempt);
-            Context.SaveChanges();
-            return modelAttempt;
+            return await TriageContextUtil.EnsureBuildAttemptAsync(
+                build,
+                ModelBuildResult.Succeeded,
+                timeline);
         }
 
         /// <summary>
         /// | number | result | date | github org | github repo |
         /// </summary>
-        public ModelBuild AddBuild(string data, ModelBuildDefinition def)
+        public async Task<ModelBuild> AddBuildAsync(string data, ModelBuildDefinition def)
         {
             var parts = data.Split("|");
-            ModelBuildResult? br = GetPartOrNull(parts, 1) is { } p ? Enum.Parse<ModelBuildResult>(p) : null;
-            return AddBuild(
+            BuildResult? br = GetPartOrNull(parts, 1) is { } p ? Enum.Parse<BuildResult>(p) : null;
+            return await AddBuildAsync(
                 def,
                 number: GetIntPartOrNull(parts, 0),
                 result: br,
                 gitHubOrganization: GetPartOrNull(parts, 3),
                 gitHubRepository: GetPartOrNull(parts, 4),
-                started: GetDatePartOrNull(parts, 2));
+                queued: GetDatePartOrNull(parts, 2));
         }
 
-        /// <summary>
-        /// | number | result | date | github org | github repo |
-        /// </summary>
-        public ModelBuild AddBuild(ModelBuildDefinition def,
+        public async Task<ModelBuild> AddBuildAsync(ModelBuildDefinition def,
             int? number = null,
-            ModelBuildResult? result = null,
+            BuildResult? result = null,
             string? gitHubOrganization = null,
             string? gitHubRepository = null,
-            DateTime? started = null)
+            int? prNumber = null,
+            string? targetBranch = null,
+            DateTime? queued = null)
 
         {
-            number ??= BuildCount++;
-            started ??= DateTime.UtcNow;
-
-            var build = new ModelBuild()
+            GitHubBuildInfo? gitHubBuildInfo = null;
+            if (gitHubOrganization is object && gitHubRepository is object)
             {
-                NameKey = new BuildKey(def.AzureOrganization, def.AzureProject, number.Value).NameKey,
-                BuildNumber = number.Value,
-                GitHubOrganization = gitHubOrganization ?? "dotnet",
-                GitHubRepository = gitHubRepository ?? "roslyn",
-                AzureOrganization = def.AzureOrganization,
-                AzureProject = def.AzureProject,
-                QueueTime = started.Value,
-                StartTime = started.Value,
-                BuildResult = result ?? default,
-                ModelBuildDefinition = def,
-                ModelBuildDefinitionId = def.Id,
-                DefinitionName = def.DefinitionName,
-                DefinitionNumber = def.DefinitionNumber,
-                BuildKind = ModelBuildKind.Rolling,
-            };
+                gitHubBuildInfo = new(gitHubOrganization, gitHubRepository, prNumber, targetBranch);
+            }
 
-            Context.ModelBuilds.Add(build);
-            Context.SaveChanges();
-            return build;
+            var buildAndDefinitionInfo = new BuildAndDefinitionInfo(
+                def.AzureOrganization,
+                def.AzureProject,
+                number ?? BuildCount++,
+                def.DefinitionNumber,
+                def.DefinitionName,
+                gitHubBuildInfo);
+
+            var time = queued ?? DateTime.UtcNow;
+            var buildResultInfo = new BuildResultInfo(
+                buildAndDefinitionInfo,
+                time,
+                time,
+                time,
+                result ?? BuildResult.Succeeded);
+
+            return await TriageContextUtil.EnsureBuildAsync(buildResultInfo);
         }
 
         public ModelGitHubIssue AddGitHubIssue(GitHubIssueKey issueKey, ModelBuild build)
@@ -245,56 +266,66 @@ namespace DevOps.Util.UnitTests
             return trackingIssue;
         }
 
-        public ModelTestRun AddTestRun(ModelBuildAttempt attempt, string name)
-        {
-            var testRun = new ModelTestRun()
-            {
-                Name = name,
-                Attempt = attempt.Attempt,
-                TestRunId = TestRunCount++,
-                ModelBuild = attempt.ModelBuild,
-                ModelBuildAttempt = attempt,
-            };
-            Context.ModelTestRuns.Add(testRun);
-            Context.SaveChanges();
-            return testRun;
-        }
+        public async Task<ModelTestRun> AddTestRunAsync(
+            ModelBuildAttempt attempt,
+            string name) =>
+            await AddTestRunAsync(
+                attempt,
+                name,
+                new (string, string?, HelixLogKind?, string?)[] { });
 
-        /// <summary>
-        /// |test name|is helix|console uri|runclient uri|error message|
-        /// </summary>
-        public ModelTestResult AddTestResult(string data, ModelTestRun testRun)
-        {
-            var parts = data.Split("|");
-            var testResult = new ModelTestResult()
-            {
-                TestRunName = testRun.Name,
-                TestFullName = parts[0],
-                IsHelixTestResult = GetPartOrNull(parts, 1) is { } s ? bool.Parse(s) : false,
-                HelixConsoleUri = GetPartOrNull(parts, 2),
-                HelixRunClientUri = GetPartOrNull(parts, 3),
-                ErrorMessage = GetPartOrNull(parts, 4) ?? "",
-                Outcome = "",
-                ModelTestRun = testRun,
-                StartTime = testRun.ModelBuild.StartTime,
-                ModelBuild = testRun.ModelBuild,
-                ModelBuildAttempt = testRun.ModelBuildAttempt,
-                Attempt = testRun.Attempt,
-                DefinitionNumber = testRun.ModelBuild.DefinitionNumber,
-                DefinitionName = testRun.ModelBuild.DefinitionName,
-                ModelBuildDefinition = testRun.ModelBuild.ModelBuildDefinition,
-                BuildKind = ModelBuildKind.Rolling,
-            };
-            Context.ModelTestResults.Add(testResult);
-            Context.SaveChanges();
-            return testResult;
-        }
+        public async Task<ModelTestRun> AddTestRunAsync(
+            ModelBuildAttempt attempt,
+            string name,
+            params (string TestCaseName, string? ErrorMessage)[] testCaseInfos) =>
+            await AddTestRunAsync(
+                attempt,
+                name,
+                testCaseInfos.Select(x => (x.TestCaseName, x.ErrorMessage, (HelixLogKind?)null, (string?)null)).ToArray());
 
-        public void AddHelixLog(ModelTestResult testResult, HelixLogKind kind, string content)
+        public async Task<ModelTestRun> AddTestRunAsync(
+            ModelBuildAttempt attempt,
+            string name,
+            params (string TestCaseName, string? ErrorMessage, HelixLogKind? Kind, string? HelixContent)[] testCaseInfos)
         {
-            var uri = $"https://localhost/runfo/{HelixLogCount++}/{kind}";
-            testResult.SetHelixLogUri(kind, uri);
-            TestableHttpMessageHandler.AddRaw(uri, content);
+            Debug.Assert(attempt.ModelBuildDefinition?.AzureProject is object);
+
+            var map = new Dictionary<HelixInfo, HelixLogInfo>();
+            var testCaseResults = testCaseInfos
+                .Select(x =>
+                {
+                    HelixInfo? info = null;
+                    if (x.Kind is { } kind)
+                    {
+                        var uri = $"https://localhost/runfo/{HelixLogCount++}/{kind}";
+                        info = new HelixInfo(Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+                        var logInfo = new HelixLogInfo(kind, uri);
+                        map[info.Value] = logInfo;
+                        Debug.Assert(x.HelixContent is object);
+                        TestableHttpMessageHandler.AddRaw(uri, x.HelixContent);
+                    }
+
+                    var testCaseResult = new TestCaseResult()
+                    {
+                        TestCaseTitle = x.TestCaseName,
+                        ErrorMessage = x.ErrorMessage,
+                        Outcome = "",
+                    };
+
+                    return new DotNetTestCaseResult(testCaseResult, info);
+                })
+                .ToReadOnlyCollection();
+
+            var dotNetTestRun = new DotNetTestRun(
+                attempt.ModelBuildDefinition!.AzureProject,
+                TestRunCount++,
+                name,
+                testCaseResults);
+
+            return await TriageContextUtil.EnsureTestRunAsync(
+                attempt,
+                dotNetTestRun,
+                map);
         }
 
         public ModelTrackingIssueMatch AddTrackingMatch(

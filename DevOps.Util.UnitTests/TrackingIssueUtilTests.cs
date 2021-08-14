@@ -42,8 +42,11 @@ namespace DevOps.Util.UnitTests
         public async Task TimelineSearchSimple()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt = AddAttempt(1, AddBuild("1", def));
-            var timeline = AddTimelineIssue("windows|dog", attempt);
+            var attempt = await AddAttemptAsync(
+                await AddBuildAsync("1", def),
+                attempt: 1,
+                ("windows", "dog", null));
+            var timeline = await Context.ModelTimelineIssues.SingleAsync();
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
                 timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
@@ -58,16 +61,24 @@ namespace DevOps.Util.UnitTests
             Assert.True(result.IsPresent);
         }
 
+        /// <summary>
+        /// Triage attempts shouldn't create results for builds that are in a different 
+        /// build definition
+        /// </summary>
         [Fact]
         public async Task TimelineSearchFilterToDefinition()
         {
             var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
             var def2 = AddBuildDefinition("dnceng|public|runtime|13");
-            var attempt1 = AddAttempt(1, AddBuild("1", def1));
-            var timeline1 = AddTimelineIssue("windows|dog", attempt1);
-            var attempt2 = AddAttempt(1, AddBuild("2", def2));
-            var timeline2 = AddTimelineIssue("windows|dog", attempt2);
-            var tracking = AddTrackingIssue(
+            var attempt1 = await AddAttemptAsync(
+                await AddBuildAsync("1", def1),
+                attempt: 1,
+                ("windows", "dog", null));
+            var attempt2 = await AddAttemptAsync(
+                await AddBuildAsync("2", def2),
+                attempt: 1,
+                ("windows", "dog", null));
+            AddTrackingIssue(
                 TrackingKind.Timeline,
                 timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" },
                 definition: def2);
@@ -84,9 +95,11 @@ namespace DevOps.Util.UnitTests
         public async Task TimelineSavesJobName()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt = AddAttempt(1, AddBuild("1", def));
-            var timeline = AddTimelineIssue("windows|dog", attempt);
-            var tracking = AddTrackingIssue(
+            var attempt = await AddAttemptAsync(
+                await AddBuildAsync("1", def),
+                attempt: 1,
+                ("windows", "dog", null));
+            AddTrackingIssue(
                 TrackingKind.Timeline,
                 timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
             await Context.SaveChangesAsync();
@@ -103,10 +116,12 @@ namespace DevOps.Util.UnitTests
         public async Task SimpleTestSearch(string search, int count)
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt = AddAttempt(1, AddBuild("1", def));
-            var testRun = AddTestRun(attempt, "windows");
-            var testResult1 = AddTestResult("Util.Test1", testRun);
-            var testResult2 = AddTestResult("Util.Test2", testRun);
+            var attempt = await AddAttemptAsync(1, await AddBuildAsync("1", def));
+            await AddTestRunAsync(
+                attempt,
+                "windows",
+                ("Util.Test1", null),
+                ("Util.Test2", null));
             var tracking = AddTrackingIssue(
                 TrackingKind.Test,
                 testsRequest: new SearchTestsRequest() { Name = search });
@@ -126,10 +141,14 @@ namespace DevOps.Util.UnitTests
         {
             var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
             var def2 = AddBuildDefinition("dnceng|public|runtime|13");
-            var attempt1 = AddAttempt(1, AddBuild("1", def1));
-            var timeline1 = AddTimelineIssue("windows|dog", attempt1);
-            var attempt2 = AddAttempt(1, AddBuild("2", def2));
-            var timeline2 = AddTimelineIssue("windows|dog", attempt2);
+            var attempt1 = await AddAttemptAsync(
+                await AddBuildAsync("1", def1),
+                attempt: 1,
+                ("windows", "dog", null));
+            var attempt2 = await AddAttemptAsync(
+                await AddBuildAsync("2", def2),
+                attempt: 1,
+                ("windows", "dog", null));
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
                 timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" },
@@ -148,10 +167,14 @@ namespace DevOps.Util.UnitTests
         {
             var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
             var def2 = AddBuildDefinition("dnceng|public|runtime|13");
-            var attempt1 = AddAttempt(1, AddBuild("1", def1));
-            var timeline1 = AddTimelineIssue("windows|dog", attempt1);
-            var attempt2 = AddAttempt(1, AddBuild("2", def2));
-            var timeline2 = AddTimelineIssue("windows|dog", attempt2);
+            var attempt1 = await AddAttemptAsync(
+                await AddBuildAsync("1", def1),
+                attempt: 1,
+                ("windows", "dog", null));
+            var attempt2 = await AddAttemptAsync(
+                await AddBuildAsync("2", def1),
+                attempt: 1,
+                ("windows", "dog", null));
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
                 timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
@@ -172,10 +195,14 @@ namespace DevOps.Util.UnitTests
         public async Task TriageTimelineIssueAttemptOnly()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt1 = AddAttempt(1, AddBuild("1", def));
-            var timeline1 = AddTimelineIssue("windows|dog", attempt1);
-            var attempt2 = AddAttempt(1, AddBuild("2", def));
-            var timeline2 = AddTimelineIssue("windows|dog", attempt2);
+            var attempt1 = await AddAttemptAsync(
+                await AddBuildAsync("1", def),
+                attempt: 1,
+                ("windows", "dog", null));
+            var attempt2 = await AddAttemptAsync(
+                await AddBuildAsync("2", def),
+                attempt: 1,
+                ("windows", "dog", null));
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
                 timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
@@ -191,11 +218,18 @@ namespace DevOps.Util.UnitTests
         public async Task TriageTimelineIssueAttemptOnlyWithinBuild()
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt1 = AddAttempt(1, AddBuild("1", def));
-            var attempt2 = AddAttempt(2, attempt1.ModelBuild);
-            var attempt3 = AddAttempt(3, attempt1.ModelBuild);
-            var timeline1 = AddTimelineIssue("windows|dog", attempt1);
-            var timeline2 = AddTimelineIssue("windows|dog", attempt2);
+            var build = await AddBuildAsync("1", def);
+            var attempt1 = await AddAttemptAsync(
+                build,
+                attempt: 1,
+                ("windows", "dog", null));
+            var attempt2 = await AddAttemptAsync(
+                build,
+                attempt: 2,
+                ("windows", "dog", null));
+            var attempt3 = await AddAttemptAsync(
+                build,
+                attempt: 3);
             var tracking = AddTrackingIssue(
                 TrackingKind.Timeline,
                 timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
@@ -207,6 +241,8 @@ namespace DevOps.Util.UnitTests
             Assert.Equal(2, await Context.ModelTrackingIssueResults.CountAsync());
             await TrackingIssueUtil.TriageAsync(attempt2.GetBuildAttemptKey(), tracking.Id);
             Assert.Equal(2, await Context.ModelTrackingIssueResults.CountAsync());
+            await TrackingIssueUtil.TriageAsync(attempt3.GetBuildAttemptKey(), tracking.Id);
+            Assert.Equal(3, await Context.ModelTrackingIssueResults.CountAsync());
         }
 
         [Theory]
@@ -216,12 +252,12 @@ namespace DevOps.Util.UnitTests
         public async Task SimpleHelixLogTrackingIssue(HelixLogKind kind)
         {
             var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt = AddAttempt(1, AddBuild("1", def));
-            var testRun = AddTestRun(attempt, "windows");
-            var testResult1 = AddTestResult("Util.Test1", testRun);
-            AddHelixLog(testResult1, kind, "the dog fetched the ball");
-            var testResult2 = AddTestResult("Util.Test2", testRun);
-            AddHelixLog(testResult2, kind, "the tree grew");
+            var attempt = await AddAttemptAsync(1, await AddBuildAsync("1", def));
+            await AddTestRunAsync(
+                attempt,
+                "windows",
+                ("Util.Test1", null, kind, "the dog fetched the ball"),
+                ("Util.Test2", null, kind, "the tree grew"));
 
             var tracking1 = AddTrackingIssue(
                 TrackingKind.HelixLogs,
@@ -259,28 +295,33 @@ namespace DevOps.Util.UnitTests
                 var result = await Context.ModelTrackingIssueResults.Where(x => x.ModelTrackingIssueId == issue.Id).SingleAsync();
                 Assert.Equal(isPresent, result.IsPresent);
             }
-
         }
 
         [Fact]
         public async Task TestsSearchRespectsDefinition()
         {
             var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt1 = AddAttempt(1, AddBuild("1", def1));
-            var testRun1 = AddTestRun(attempt1, "windows");
-            AddTestResult("test1|||failed dog", testRun1);
-            AddTestResult("test2|||failed cat", testRun1);
+            var attempt1 = await AddAttemptAsync(1, await AddBuildAsync("1", def1));
+            await AddTestRunAsync(
+                attempt1,
+                "windows",
+                ("test1", "failed dog"),
+                ("test2", "failed cat"));
 
-            var attempt2 = AddAttempt(1, AddBuild("2", def1));
-            var testRun2 = AddTestRun(attempt2, "windows");
-            AddTestResult("test2|||failed dog", testRun2);
-            AddTestResult("test2|||failed dog", testRun2);
+            var attempt2 = await AddAttemptAsync(1, await AddBuildAsync("2", def1));
+            await AddTestRunAsync(
+                attempt2,
+                "windows",
+                ("test2", "failed dog"),
+                ("test2", "failed dog"));
 
             var def2 = AddBuildDefinition("dnceng|public|roslyn|13");
-            var attempt3 = AddAttempt(1, AddBuild("3", def2));
-            var testRun3 = AddTestRun(attempt3, "windows");
-            AddTestResult("test1|||failed dog", testRun3);
-            AddTestResult("test2|||failed dog", testRun3);
+            var attempt3 = await AddAttemptAsync(1, await AddBuildAsync("3", def2));
+            await AddTestRunAsync(
+                attempt3,
+                "windows",
+                ("test1", "failed dog"),
+                ("test2", "failed dog"));
 
             var tracking = AddTrackingIssue(
                 TrackingKind.Test,
