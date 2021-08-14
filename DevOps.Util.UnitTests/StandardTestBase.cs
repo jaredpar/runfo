@@ -189,7 +189,7 @@ namespace DevOps.Util.UnitTests
         {
             if (!data.Contains('|'))
             {
-                return AddBuildDefinition(data);
+                return AddBuildDefinition(definitionName: data);
             }
 
             var parts = data.Split("|");
@@ -200,7 +200,7 @@ namespace DevOps.Util.UnitTests
                 definitionNumber: GetIntPartOrNull(parts, 3));
         }
 
-        public ModelBuildDefinition AddBuildDefinition(string definitionName, string? azureOrganization, string? azureProject, int? definitionNumber)
+        public ModelBuildDefinition AddBuildDefinition(string definitionName, string? azureOrganization = null, string? azureProject = null, int? definitionNumber = null)
         {
             var def = new ModelBuildDefinition()
             {

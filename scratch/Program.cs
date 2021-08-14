@@ -177,6 +177,9 @@ namespace Scratch
         {
             var request = new SearchTimelinesRequest(@"started:~30 text:""Failed to retrieve information""");
             var modelTimelineIssuess = await request.Filter(TriageContext.ModelTimelineIssues).Include(x => x.ModelBuild).ToListAsync();
+            var buildCount = modelTimelineIssuess.Select(x => x.ModelBuildAttemptId).Distinct().Count();
+            var buildCountRuntime = modelTimelineIssuess.Where(x => x.ModelBuild.DefinitionNumber == 686).Select(x => x.ModelBuildAttemptId).Distinct().Count();
+            var buildTotalRuntime = await (new SearchBuildsRequest(@"started:~30 definition:runtime")).Filter(TriageContext.ModelBuilds).CountAsync();
 
             var map = new Dictionary<DateTime, List<(ModelBuild ModelBuild, bool IsConnectionReset, string? LogUri)>>();
             foreach (var modelTimelineIssue in modelTimelineIssuess)
