@@ -1,7 +1,10 @@
 ﻿using DevOps.Util.DotNet.Triage;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -21,6 +24,15 @@ namespace DevOps.Util.UnitTests
             var builder = new DbContextOptionsBuilder<TriageContext>();
             builder.UseSqlServer("Server=localhost;Database=runfo-test-db;User Id=sa;Password=password@0;");
             builder.EnableSensitiveDataLogging();
+            builder.UseLoggerFactory(LoggerFactory.Create(builder =>
+            {
+                var options = new DatabaseLoggerOptions();
+                builder.AddConfiguration();
+                builder.Services.TryAddEnumerable(
+                    ServiceDescriptor.Singleton<ILoggerProvider, DatabaseLoggerProvider>());
+                builder.Services.TryAddSingleton(options);
+
+            }));
             // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
             Options = builder.Options;
             TriageContext = new TriageContext(Options);
@@ -74,4 +86,5 @@ namespace DevOps.Util.UnitTests
     {
         public const string Name = "TriageContext Database Collection";
     }
+
 }
