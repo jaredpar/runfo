@@ -13,10 +13,14 @@ namespace DevOps.Util.UnitTests
 {
     public sealed class DatabaseLoggerOptions
     {
-        public void Log(string output)
-        {
+        public Action<string> LogAction { get; }
 
+        public DatabaseLoggerOptions(Action<string> logAction)
+        {
+            LogAction = logAction;
         }
+
+        public void Log(string output) => LogAction(output);
     }
 
     public sealed class DatabaseLoggerProvider : ILoggerProvider

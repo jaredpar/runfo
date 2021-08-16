@@ -16,6 +16,8 @@ namespace DevOps.Util.UnitTests
 {
     public class DatabaseFixture : IDisposable
     {
+        private readonly List<Action<string>> _loggerActions = new();
+
         public DbContextOptions<TriageContext> Options { get; }
         public TriageContext TriageContext { get; private set; }
 
@@ -26,7 +28,7 @@ namespace DevOps.Util.UnitTests
             builder.EnableSensitiveDataLogging();
             builder.UseLoggerFactory(LoggerFactory.Create(builder =>
             {
-                var options = new DatabaseLoggerOptions();
+                var options = new DatabaseLoggerOptions(LoggerAction);
                 builder.AddConfiguration();
                 builder.Services.TryAddEnumerable(
                     ServiceDescriptor.Singleton<ILoggerProvider, DatabaseLoggerProvider>());
@@ -38,6 +40,18 @@ namespace DevOps.Util.UnitTests
             TriageContext = new TriageContext(Options);
             TriageContext.Database.EnsureDeleted();
             TriageContext.Database.Migrate();
+        }
+
+        public void RegisterLoggerAction(Action<string> action) => _loggerActions.Add(action);
+
+        public void UnregisterLoggerAction(Action<string> action) => _loggerActions.Remove(action);
+
+        private void LoggerAction(string message)
+        {
+            foreach (var action in _loggerActions)
+            {
+                action(message);
+            }
         }
 
         /*
@@ -62,6 +76,18 @@ namespace DevOps.Util.UnitTests
             Assert.Equal(0, TriageContext.ModelBuildDefinitions.Count());
         }
 
+        public void DetachAllEntities()
+        {
+            var changedEntriesCopy = TriageContext.ChangeTracker.Entries()
+                .Where(e => e.State == EntityState.Added ||
+                            e.State == EntityState.Modified ||
+                            e.State == EntityState.Deleted)
+                .ToList();
+
+            foreach (var entry in changedEntriesCopy)
+                entry.State = EntityState.Detached;
+        }
+
         public void Dispose()
         {
             TriageContext.Database.EnsureDeleted();
@@ -70,6 +96,7 @@ namespace DevOps.Util.UnitTests
 
         public void TestCompletion()
         {
+            _loggerActions.Clear();
             TriageContext.ModelTrackingIssues.RemoveRange(TriageContext.ModelTrackingIssues);
             TriageContext.ModelTimelineIssues.RemoveRange(TriageContext.ModelTimelineIssues);
             TriageContext.ModelTestResults.RemoveRange(TriageContext.ModelTestResults);
