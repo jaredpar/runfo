@@ -50,7 +50,7 @@ namespace DevOps.Util.DotNet.Triage
 
         public async Task UpdateTrackingGitHubIssuesAsync()
         {
-            foreach (var modelTrackingIssue in Context.ModelTrackingIssues.Where(x => x.IsActive))
+            foreach (var modelTrackingIssue in await Context.ModelTrackingIssues.Where(x => x.IsActive).ToListAsync())
             {
                 try
                 {
@@ -93,36 +93,46 @@ namespace DevOps.Util.DotNet.Triage
 
             await EnsureGitHubIssueHasMarkers(gitHubClient, issueKey).ConfigureAwait(false);
             var report = await GetAssociatedIssueReportAsync(issueKey).ConfigureAwait(false);
-            var succeeded = await UpdateGitHubIssueReport(gitHubClient, issueKey, report);
-            Logger.LogInformation($"Updated {issueKey.IssueUri}");
-            return true;
+            var issue = await gitHubClient.Issue.Get(issueKey.Organization, issueKey.Repository, issueKey.Number).ConfigureAwait(false);
+            var succeeded = await UpdateGitHubIssueReport(gitHubClient, issue, issueKey, report);
+            Logger.LogInformation($"Updated {issueKey.IssueUri} {succeeded}");
+            return succeeded;
         }
 
         private async Task<bool> UpdateTrackingGitHubIssueAsync(ModelTrackingIssue modelTrackingIssue, GitHubIssueKey issueKey)
         {
+            Logger.LogInformation($"Updating {modelTrackingIssue.Id}");
             IGitHubClient? gitHubClient = await TryCreateForIssue(issueKey).ConfigureAwait(false);
             if (gitHubClient is null)
             {
+                Logger.LogError("Can't create GitHub client");
                 return false;
             }
 
+            var issue = await gitHubClient.Issue.Get(issueKey.Organization, issueKey.Repository, issueKey.Number).ConfigureAwait(false);
+            if (issue.State == ItemState.Closed)
+            {
+                Logger.LogInformation("Closing tracking issue as GitHub issue is closed");
+                modelTrackingIssue.IsActive = false;
+                await Context.SaveChangesAsync();
+                return true;
+            }
+
             var report = await GetTrackingIssueReport(modelTrackingIssue).ConfigureAwait(false);
-            var succeeded = await UpdateGitHubIssueReport(gitHubClient, issueKey, report).ConfigureAwait(false);
+            var succeeded = await UpdateGitHubIssueReport(gitHubClient, issue, issueKey, report).ConfigureAwait(false);
             Logger.LogInformation($"Updated {issueKey.IssueUri}");
             return succeeded;
         }
 
-        private async Task<bool> UpdateGitHubIssueReport(IGitHubClient gitHubClient, GitHubIssueKey issueKey, string reportBody)
+        private async Task<bool> UpdateGitHubIssueReport(IGitHubClient gitHubClient, Octokit.Issue issue, GitHubIssueKey issueKey, string reportBody)
         {
             try
             {
-                var issueClient = gitHubClient.Issue;
-                var issue = await issueClient.Get(issueKey.Organization, issueKey.Repository, issueKey.Number).ConfigureAwait(false);
                 if (TryUpdateIssueText(reportBody, issue.Body, out var newIssueBody))
                 {
                     var issueUpdate = issue.ToUpdate();
                     issueUpdate.Body = newIssueBody;
-                    await issueClient.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, issueUpdate).ConfigureAwait(false);
+                    await gitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, issueUpdate).ConfigureAwait(false);
                     return true;
                 }
                 else

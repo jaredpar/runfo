@@ -15,6 +15,8 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public void KeyVaultStringTest()
         {
+            Assert.Contains("runfo-test", DotNetConstants.KeyVaultEndPointTest);
+            Assert.Contains("runfo-prod", DotNetConstants.KeyVaultEndPointProduction);
 #if DEBUG
             Assert.Equal(DotNetConstants.KeyVaultEndPointTest, DotNetConstants.KeyVaultEndPoint);
 #else

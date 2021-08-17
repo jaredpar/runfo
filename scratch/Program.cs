@@ -88,7 +88,7 @@ namespace Scratch
 
     internal sealed class ScratchUtil
     {
-        public static string DefaultOrganization { get; set; } = "dnceng";
+        public const string DefaultOrganization = "dnceng";
 
         public DevOpsServer DevOpsServer { get; set; }
         public DbContextOptions<TriageContext> TriageContextOptions { get; set; }
@@ -100,17 +100,16 @@ namespace Scratch
         public BlobStorageUtil BlobStorageUtil { get; set; }
         public FunctionQueueUtil FunctionQueueUtil { get; set; }
 
-
 #pragma warning disable CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
         public ScratchUtil()
         {
-            Reset(DefaultOrganization);
+            Reset();
         }
 #pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
 
-        public void Reset(string organization)
+        public void Reset(string organization = DefaultOrganization, bool useProduction = false)
         {
-            var configuration = CreateConfiguration();
+            var configuration = CreateConfiguration(useProduction);
             var azureToken = configuration[DotNetConstants.ConfigurationAzdoToken];
             DevOpsServer = new DevOpsServer(organization, new AuthorizationToken(AuthorizationKind.PersonalAccessToken, azureToken));
 
@@ -146,12 +145,13 @@ namespace Scratch
             HelixServer = new HelixServer();
         }
 
-        internal static IConfiguration CreateConfiguration()
+        internal static IConfiguration CreateConfiguration(bool useProduction = false)
         {
+            var keyVault = useProduction ? DotNetConstants.KeyVaultEndPointProduction : DotNetConstants.KeyVaultEndPointTest;
             var config = new ConfigurationBuilder()
                 .AddUserSecrets<Program>()
                 .AddAzureKeyVault(
-                    DotNetConstants.KeyVaultEndPoint,
+                    keyVault,
                     new DefaultKeyVaultSecretManager())
                 .Build();
             return config;
@@ -170,7 +170,14 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await MeasureConnectionIssues();
+            await TestUpdateGitHubIssue();
+        }
+
+        internal async Task TestUpdateGitHubIssue()
+        {
+            Reset(useProduction: true);
+            var util = new TrackingGitHubUtil(GitHubClientFactory, TriageContext, SiteLinkUtil.Published, CreateLogger());
+            await util.UpdateTrackingGitHubIssuesAsync();
         }
 
         internal async Task MeasureConnectionIssues()
