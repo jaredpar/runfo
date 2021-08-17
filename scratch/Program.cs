@@ -170,6 +170,52 @@ namespace Scratch
 
         internal async Task Scratch()
         {
+            await FindMatchingSdkMissingBuilds();
+            // await FindLogMacBuildAsync();
+        }
+        internal async Task FindMatchingSdkMissingBuilds()
+        {
+            var count = 0;
+            var list = new List<string>();
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync("internal", definitions: new[] { 679 }, statusFilter: BuildStatus.Completed))
+            {
+                try
+                {
+                    var buildInfo = build.GetBuildInfo();
+                    Console.WriteLine($"Search {buildInfo.BuildUri}");
+                    var timeline = await DevOpsServer.GetTimelineAsync(build);
+                    if (timeline is null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var issue in timeline.Records.Select(x => x.Issues).Where(x => x is object).SelectMany(x => x))
+                    {
+                        if (issue.Message.Contains("sdk version matching") &&
+                            issue.Message.Contains("could not be found"))
+                        {
+                            list.Add(buildInfo.BuildUri);
+                            break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+
+                count++;
+                if (count == 30)
+                {
+                    break;
+                }
+            }
+
+            Console.WriteLine($"Hit {list.Count} builds");
+            foreach (var uri in list)
+            {
+                Console.WriteLine(uri);
+            }
         }
 
         internal async Task TestUpdateGitHubIssue()
@@ -243,7 +289,7 @@ namespace Scratch
                     foreach (var item in job)
                     {
                         var logUrl = item.TimelineRecord?.Log?.Url ?? "<log missing>";
-                        Console.WriteLine($"\t\t{logUrl}");
+                        Console.WriteLine($"\t\t{item.TimelineRecord?.Log?.Url}");
                     }
                 }
             }
