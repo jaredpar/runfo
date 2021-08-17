@@ -21,6 +21,7 @@ namespace DevOps.Util.UnitTests
     public abstract class StandardTestBase : IDisposable
     {
         public DatabaseFixture DatabaseFixture { get; }
+        public ITestOutputHelper TestOutputHelper { get; }
         public TriageContextUtil TriageContextUtil { get; }
         public DevOpsServer Server { get; set; }
         public DotNetQueryUtil QueryUtil { get; set; }
@@ -41,6 +42,8 @@ namespace DevOps.Util.UnitTests
         {
             databaseFixture.AssertEmpty();
             DatabaseFixture = databaseFixture;
+            DatabaseFixture.RegisterLoggerAction(testOutputHelper.WriteLine);
+            TestOutputHelper = testOutputHelper;
             TriageContextUtil = new TriageContextUtil(Context);
             TestableHttpMessageHandler = new TestableHttpMessageHandler();
             TestableLogger = new TestableLogger(testOutputHelper);
@@ -52,7 +55,11 @@ namespace DevOps.Util.UnitTests
             QueryUtil = new DotNetQueryUtil(Server);
         }
 
-        public void Dispose() => DatabaseFixture.TestCompletion();
+        public void Dispose()
+        {
+            DatabaseFixture.UnregisterLoggerAction(TestOutputHelper.WriteLine);
+            DatabaseFixture.TestCompletion();
+        }
 
         public async Task<ModelBuildAttempt> AddAttemptAsync(int attempt, ModelBuild build) => await AddAttemptAsync(build, attempt);
 
