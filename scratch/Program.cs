@@ -173,25 +173,83 @@ namespace Scratch
             await FindLogMacBuildAsync();
         }
 
-        internal record JobInfo(BuildInfo BuildInfo, TimelineRecord TimelineRecord)
+        internal record MacJobInfo(BuildInfo BuildInfo, TimelineRecord TimelineRecord, TimeSpan Duration)
         {
             public string JobName => TimelineRecord.Name;
+            public bool Succeeded = TimelineRecord.Result == TaskResult.Succeeded;
         }
+
+        internal record MacDefinitionInfo(
+            string ProjectName,
+            int DefinitionId,
+            string BranchName,
+            string FriendlyName,
+            int BuildCount,
+            List<MacJobInfo> SlowMacJobInfos);
 
         internal async Task FindLogMacBuildAsync()
         {
-            await FindLongMacBuildAsync("public", 364, "refs/heads/main", "linker-ci");
-            await FindLongMacBuildAsync("internal", 679, "refs/heads/main", "dotnet-runtime-official");
-            await FindLongMacBuildAsync("internal", 679, "refs/heads/release/5.0", "dotnet-runtime-official");
-            await FindLongMacBuildAsync("public", 686, "refs/heads/main", "runtime");
+            var list = new List<MacDefinitionInfo>();
+
+            PrintAndAdd(await GetMacDefinitionInfoAsync("public", 686, "refs/heads/main", "runtime"));
+            PrintAndAdd(await GetMacDefinitionInfoAsync("public", 924, "refs/heads/main", "runtime-staging"));
+            PrintAndAdd(await GetMacDefinitionInfoAsync("public", 364, "refs/heads/main", "linker-ci"));
+            PrintAndAdd(await GetMacDefinitionInfoAsync("internal", 679, "refs/heads/main", "dotnet-runtime-official"));
+            PrintAndAdd(await GetMacDefinitionInfoAsync("internal", 679, "refs/heads/release/5.0", "dotnet-runtime-official"));
+
+            void PrintAndAdd(MacDefinitionInfo info)
+            {
+                list.Add(info);
+
+                Console.WriteLine($"Definition: {info.FriendlyName}");
+                Console.WriteLine($"Branch Name: {info.BranchName}");
+                Console.WriteLine($"\tTotal Builds {info.BuildCount}");
+
+                var slowBuildCount = info
+                    .SlowMacJobInfos
+                    .Select(x => x.BuildInfo.BuildUri)
+                    .Distinct()
+                    .Count();
+                var slowBuildPercent = slowBuildCount / (double)info.BuildCount;
+                Console.WriteLine($"\tBuilds with at least one slow Mac build or test job {slowBuildCount} ({slowBuildPercent:p2})");
+
+                var slowBuildNoTestCount = info
+                    .SlowMacJobInfos
+                    .Where(x => !x.JobName.Contains("test", StringComparison.OrdinalIgnoreCase))
+                    .Select(x => x.BuildInfo.BuildUri)
+                    .Distinct()
+                    .Count();
+                var slowBuildNoTestPercent = slowBuildNoTestCount / (double)info.BuildCount;
+                Console.WriteLine($"\tBuilds with at least one slow Mac build only job {slowBuildNoTestCount} ({slowBuildNoTestPercent:p2})");
+
+                Console.WriteLine("Job Info");
+                foreach (var job in info.SlowMacJobInfos.GroupBy(x => x.JobName).OrderByDescending(x => x.Count()))
+                {
+                    var count = job.Count();
+                    var percent = count / (double)info.BuildCount;
+
+                    Console.WriteLine($"\t'{job.Key}' slow on {count} builds ({percent:p2})");
+                }
+
+                Console.WriteLine("Detailed Job Info");
+                foreach (var job in info.SlowMacJobInfos.GroupBy(x => x.JobName).OrderByDescending(x => x.Count()))
+                {
+                    Console.WriteLine($"\t{job.Key}");
+                    foreach (var item in job)
+                    {
+                        var logUrl = item.TimelineRecord?.Log?.Url ?? "<log missing>";
+                        Console.WriteLine($"\t\t{logUrl}");
+                    }
+                }
+            }
         }
 
-        internal async Task FindLongMacBuildAsync(string project, int definition, string branchName, string friendlyName)
+        internal async Task<MacDefinitionInfo> GetMacDefinitionInfoAsync(string project, int definition, string branchName, string friendlyName)
         {
-            Console.WriteLine($"Searching {project} {definition} {branchName} ({friendlyName})");
-            var map = new Dictionary<string, List<JobInfo>>();
-            var maxCount = 100;
+            Console.WriteLine($"Searching {friendlyName} {branchName}");
+            var maxCount = 200;
             var count = 0;
+            var jobInfoList = new List<MacJobInfo>();
 
             await foreach (var build in DevOpsServer.EnumerateBuildsAsync(project, definitions: new[] { definition }, statusFilter: BuildStatus.Completed, branchName: branchName))
             {
@@ -211,18 +269,11 @@ namespace Scratch
                         continue;
                     }
 
-                    var tree = TimelineTree.Create(timeline);
-                    foreach (var job in tree.JobNodes)
+                    foreach (var record in timeline.Records)
                     {
-                        if (IsMacName(job.Name))
+                        if (IsMacJob(record) && record.GetDuration() is { } duration)
                         {
-                            if (!map.TryGetValue(job.Name, out var list))
-                            {
-                                list = new();
-                                map[job.Name] = list;
-                            }
-
-                            list.Add(new JobInfo(buildInfo, job.TimelineRecord));
+                            jobInfoList.Add(new MacJobInfo(buildInfo, record, duration));
                         }
                     }
                 }
@@ -233,85 +284,83 @@ namespace Scratch
             }
 
             Console.WriteLine("");
-            Console.WriteLine($"Results for {project} {definition} {branchName} ({friendlyName})");
-            var builds = new HashSet<string>();
-            foreach (var pair in map)
-            {
-                Console.WriteLine($"Job {pair.Key}");
-                var average = pair
-                    .Value
-                    .Where(x => x.TimelineRecord.Result == TaskResult.Succeeded)
-                    .Select(x => x.TimelineRecord.GetDuration()?.TotalMinutes)
-                    .SelectNullableValue()
-                    .Average();
-                Console.WriteLine($"Average minutes when succeeded {(int)average}");
 
-                var limit = average * 1.50;
-                foreach (var item in pair.Value.Where(x => x.TimelineRecord.GetDuration()?.TotalMinutes > limit))
+            var slowJobInfoList = new List<MacJobInfo>();
+            foreach (var group in jobInfoList.GroupBy(x => x.JobName))
+            {
+                if (group.Count(x => x.Succeeded) == 0)
                 {
-                    builds.Add(item.BuildInfo.BuildUri);
-                    var minutes = item.TimelineRecord.GetDuration()!.Value.TotalMinutes;
-                    var tuple = await GetAgentInfo(item.BuildInfo.Number, item.TimelineRecord);
-                    Console.WriteLine($"{item.BuildInfo.BuildUri} {(int)minutes} minutes on machine {tuple.MachineName}");
+                    continue;
                 }
 
-                Console.WriteLine();
+                var average = group
+                    .Where(x => x.Succeeded)
+                    .Select(x => x.Duration.TotalMinutes)
+                    .Average();
+                var limit = average * 1.5;
+                slowJobInfoList.AddRange(group.Where(x => x.Duration.TotalMinutes > limit));
             }
 
-            Console.WriteLine();
-            Console.WriteLine($"Total builds {count}");
-            Console.WriteLine($"Builds with at least one slow job {builds.Count}");
-            Console.WriteLine();
+            return new MacDefinitionInfo(
+                project,
+                definition,
+                branchName,
+                friendlyName,
+                count,
+                slowJobInfoList);
 
-            bool IsMacName(string name) =>
+            static bool IsMacJob(TimelineRecord record) => record.Type == "Job" && IsMacName(record.Name);
+
+            static bool IsMacName(string name) =>
                 name.Contains("mac", StringComparison.OrdinalIgnoreCase) ||
                 name.Contains("osx", StringComparison.OrdinalIgnoreCase) ||
-                name.Contains("ios", StringComparison.OrdinalIgnoreCase);
+                name.Contains("ios", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("tvos", StringComparison.OrdinalIgnoreCase);
+        }
 
-            async Task<(string? MachineName, string? AgentName)> GetAgentInfo(int buildId, TimelineRecord record)
+        internal async Task<(string? MachineName, string? AgentName)> GetAgentInfo(string project, int buildId, TimelineRecord record)
+        {
+            try
             {
-                try
-                {
-                    if (record.Log?.Id is not { } logId)
-                    {
-                        return default;
-                    }
-
-                    string? agentName = null;
-                    string? machineName = null;
-                    var content = await DevOpsServer.GetBuildLogAsync(project, buildId, logId);
-                    if (content is null)
-                    {
-                        return default;
-                    }
-
-                    var reader = new StringReader(content);
-                    while (reader.ReadLine() is { } line)
-                    {
-                        var match = Regex.Match(line, $"Agent name: '(.*)'");
-                        if (match.Success)
-                        {
-                            agentName = match.Groups[1].Value;
-                        }
-
-                        match = Regex.Match(line, $"Agent machine name: '(.*)'");
-                        if (match.Success)
-                        {
-                            machineName = match.Groups[1].Value;
-                        }
-
-                        if (agentName is { } && machineName is { })
-                        {
-                            break;
-                        }
-                    }
-
-                    return (machineName, agentName);
-                }
-                catch
+                if (record.Log?.Id is not { } logId)
                 {
                     return default;
                 }
+
+                string? agentName = null;
+                string? machineName = null;
+                var content = await DevOpsServer.GetBuildLogAsync(project, buildId, logId);
+                if (content is null)
+                {
+                    return default;
+                }
+
+                var reader = new StringReader(content);
+                while (reader.ReadLine() is { } line)
+                {
+                    var match = Regex.Match(line, $"Agent name: '(.*)'");
+                    if (match.Success)
+                    {
+                        agentName = match.Groups[1].Value;
+                    }
+
+                    match = Regex.Match(line, $"Agent machine name: '(.*)'");
+                    if (match.Success)
+                    {
+                        machineName = match.Groups[1].Value;
+                    }
+
+                    if (agentName is { } && machineName is { })
+                    {
+                        break;
+                    }
+                }
+
+                return (machineName, agentName);
+            }
+            catch
+            {
+                return default;
             }
         }
 
