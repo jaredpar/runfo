@@ -170,7 +170,52 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await TestUpdateGitHubIssue();
+            await FindMatchingSdkMissingBuilds();
+            // await FindLogMacBuildAsync();
+        }
+        internal async Task FindMatchingSdkMissingBuilds()
+        {
+            var count = 0;
+            var list = new List<string>();
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync("internal", definitions: new[] { 679 }, statusFilter: BuildStatus.Completed))
+            {
+                try
+                {
+                    var buildInfo = build.GetBuildInfo();
+                    Console.WriteLine($"Search {buildInfo.BuildUri}");
+                    var timeline = await DevOpsServer.GetTimelineAsync(build);
+                    if (timeline is null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var issue in timeline.Records.Select(x => x.Issues).Where(x => x is object).SelectMany(x => x))
+                    {
+                        if (issue.Message.Contains("sdk version matching") &&
+                            issue.Message.Contains("could not be found"))
+                        {
+                            list.Add(buildInfo.BuildUri);
+                            break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+
+                count++;
+                if (count == 30)
+                {
+                    break;
+                }
+            }
+
+            Console.WriteLine($"Hit {list.Count} builds");
+            foreach (var uri in list)
+            {
+                Console.WriteLine(uri);
+            }
         }
 
         internal async Task TestUpdateGitHubIssue()
@@ -178,6 +223,196 @@ namespace Scratch
             Reset(useProduction: true);
             var util = new TrackingGitHubUtil(GitHubClientFactory, TriageContext, SiteLinkUtil.Published, CreateLogger());
             await util.UpdateTrackingGitHubIssuesAsync();
+        }
+        internal record MacJobInfo(BuildInfo BuildInfo, TimelineRecord TimelineRecord, TimeSpan Duration)
+        {
+            public string JobName => TimelineRecord.Name;
+            public bool Succeeded = TimelineRecord.Result == TaskResult.Succeeded;
+        }
+
+        internal record MacDefinitionInfo(
+            string ProjectName,
+            int DefinitionId,
+            string BranchName,
+            string FriendlyName,
+            int BuildCount,
+            List<MacJobInfo> SlowMacJobInfos);
+
+        internal async Task FindLogMacBuildAsync()
+        {
+            var list = new List<MacDefinitionInfo>();
+
+            PrintAndAdd(await GetMacDefinitionInfoAsync("public", 686, "refs/heads/main", "runtime"));
+            PrintAndAdd(await GetMacDefinitionInfoAsync("public", 924, "refs/heads/main", "runtime-staging"));
+            PrintAndAdd(await GetMacDefinitionInfoAsync("public", 364, "refs/heads/main", "linker-ci"));
+            PrintAndAdd(await GetMacDefinitionInfoAsync("internal", 679, "refs/heads/main", "dotnet-runtime-official"));
+            PrintAndAdd(await GetMacDefinitionInfoAsync("internal", 679, "refs/heads/release/5.0", "dotnet-runtime-official"));
+
+            void PrintAndAdd(MacDefinitionInfo info)
+            {
+                list.Add(info);
+
+                Console.WriteLine($"Definition: {info.FriendlyName}");
+                Console.WriteLine($"Branch Name: {info.BranchName}");
+                Console.WriteLine($"\tTotal Builds {info.BuildCount}");
+
+                var slowBuildCount = info
+                    .SlowMacJobInfos
+                    .Select(x => x.BuildInfo.BuildUri)
+                    .Distinct()
+                    .Count();
+                var slowBuildPercent = slowBuildCount / (double)info.BuildCount;
+                Console.WriteLine($"\tBuilds with at least one slow Mac build or test job {slowBuildCount} ({slowBuildPercent:p2})");
+
+                var slowBuildNoTestCount = info
+                    .SlowMacJobInfos
+                    .Where(x => !x.JobName.Contains("test", StringComparison.OrdinalIgnoreCase))
+                    .Select(x => x.BuildInfo.BuildUri)
+                    .Distinct()
+                    .Count();
+                var slowBuildNoTestPercent = slowBuildNoTestCount / (double)info.BuildCount;
+                Console.WriteLine($"\tBuilds with at least one slow Mac build only job {slowBuildNoTestCount} ({slowBuildNoTestPercent:p2})");
+
+                Console.WriteLine("Job Info");
+                foreach (var job in info.SlowMacJobInfos.GroupBy(x => x.JobName).OrderByDescending(x => x.Count()))
+                {
+                    var count = job.Count();
+                    var percent = count / (double)info.BuildCount;
+
+                    Console.WriteLine($"\t'{job.Key}' slow on {count} builds ({percent:p2})");
+                }
+
+                Console.WriteLine("Detailed Job Info");
+                foreach (var job in info.SlowMacJobInfos.GroupBy(x => x.JobName).OrderByDescending(x => x.Count()))
+                {
+                    Console.WriteLine($"\t{job.Key}");
+                    foreach (var item in job)
+                    {
+                        var logUrl = item.TimelineRecord?.Log?.Url ?? "<log missing>";
+                        Console.WriteLine($"\t\t{item.TimelineRecord?.Log?.Url}");
+                    }
+                }
+            }
+        }
+
+        internal async Task<MacDefinitionInfo> GetMacDefinitionInfoAsync(string project, int definition, string branchName, string friendlyName)
+        {
+            Console.WriteLine($"Searching {friendlyName} {branchName}");
+            var maxCount = 200;
+            var count = 0;
+            var jobInfoList = new List<MacJobInfo>();
+
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync(project, definitions: new[] { definition }, statusFilter: BuildStatus.Completed, branchName: branchName))
+            {
+                count++;
+                if (count == maxCount)
+                {
+                    break;
+                }
+
+                var buildInfo = build.GetBuildInfo();
+                try
+                {
+                    Console.Write(".");
+                    var timeline = await DevOpsServer.GetTimelineAsync(build);
+                    if (timeline is null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var record in timeline.Records)
+                    {
+                        if (IsMacJob(record) && record.GetDuration() is { } duration)
+                        {
+                            jobInfoList.Add(new MacJobInfo(buildInfo, record, duration));
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+
+            Console.WriteLine("");
+
+            var slowJobInfoList = new List<MacJobInfo>();
+            foreach (var group in jobInfoList.GroupBy(x => x.JobName))
+            {
+                if (group.Count(x => x.Succeeded) == 0)
+                {
+                    continue;
+                }
+
+                var average = group
+                    .Where(x => x.Succeeded)
+                    .Select(x => x.Duration.TotalMinutes)
+                    .Average();
+                var limit = average * 1.5;
+                slowJobInfoList.AddRange(group.Where(x => x.Duration.TotalMinutes > limit));
+            }
+
+            return new MacDefinitionInfo(
+                project,
+                definition,
+                branchName,
+                friendlyName,
+                count,
+                slowJobInfoList);
+
+            static bool IsMacJob(TimelineRecord record) => record.Type == "Job" && IsMacName(record.Name);
+
+            static bool IsMacName(string name) =>
+                name.Contains("mac", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("osx", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("ios", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("tvos", StringComparison.OrdinalIgnoreCase);
+        }
+
+        internal async Task<(string? MachineName, string? AgentName)> GetAgentInfo(string project, int buildId, TimelineRecord record)
+        {
+            try
+            {
+                if (record.Log?.Id is not { } logId)
+                {
+                    return default;
+                }
+
+                string? agentName = null;
+                string? machineName = null;
+                var content = await DevOpsServer.GetBuildLogAsync(project, buildId, logId);
+                if (content is null)
+                {
+                    return default;
+                }
+
+                var reader = new StringReader(content);
+                while (reader.ReadLine() is { } line)
+                {
+                    var match = Regex.Match(line, $"Agent name: '(.*)'");
+                    if (match.Success)
+                    {
+                        agentName = match.Groups[1].Value;
+                    }
+
+                    match = Regex.Match(line, $"Agent machine name: '(.*)'");
+                    if (match.Success)
+                    {
+                        machineName = match.Groups[1].Value;
+                    }
+
+                    if (agentName is { } && machineName is { })
+                    {
+                        break;
+                    }
+                }
+
+                return (machineName, agentName);
+            }
+            catch
+            {
+                return default;
+            }
         }
 
         internal async Task MeasureConnectionIssues()
@@ -251,6 +486,7 @@ namespace Scratch
                 }
             }
         }
+
 
         internal async Task MeasureTrackingIssuePerf()
         {

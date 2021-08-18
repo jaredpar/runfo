@@ -19,7 +19,6 @@ namespace DevOps.Util.UnitTests
         private readonly List<Action<string>> _loggerActions = new();
 
         public DbContextOptions<TriageContext> Options { get; }
-        public TriageContext TriageContext { get; private set; }
 
         public DatabaseFixture()
         {
@@ -37,9 +36,10 @@ namespace DevOps.Util.UnitTests
             }));
             // builder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
             Options = builder.Options;
-            TriageContext = new TriageContext(Options);
-            TriageContext.Database.EnsureDeleted();
-            TriageContext.Database.Migrate();
+
+            using var context = new TriageContext(Options);
+            context.Database.EnsureDeleted();
+            context.Database.Migrate();
         }
 
         public void RegisterLoggerAction(Action<string> action) => _loggerActions.Add(action);
@@ -70,41 +70,32 @@ namespace DevOps.Util.UnitTests
         }
         */
 
-        public void AssertEmpty()
-        {
-            Assert.Equal(0, TriageContext.ModelBuilds.Count());
-            Assert.Equal(0, TriageContext.ModelBuildDefinitions.Count());
-        }
-
-        public void DetachAllEntities()
-        {
-            var changedEntriesCopy = TriageContext.ChangeTracker.Entries()
-                .Where(e => e.State == EntityState.Added ||
-                            e.State == EntityState.Modified ||
-                            e.State == EntityState.Deleted)
-                .ToList();
-
-            foreach (var entry in changedEntriesCopy)
-                entry.State = EntityState.Detached;
-        }
-
         public void Dispose()
         {
-            TriageContext.Database.EnsureDeleted();
-            TriageContext.Dispose();
+            using var context = new TriageContext(Options);
+            context.Database.EnsureDeleted();
         }
 
         public void TestCompletion()
         {
             _loggerActions.Clear();
-            TriageContext.ModelTrackingIssues.RemoveRange(TriageContext.ModelTrackingIssues);
-            TriageContext.ModelTimelineIssues.RemoveRange(TriageContext.ModelTimelineIssues);
-            TriageContext.ModelTestResults.RemoveRange(TriageContext.ModelTestResults);
-            TriageContext.ModelTestRuns.RemoveRange(TriageContext.ModelTestRuns);
-            TriageContext.ModelBuilds.RemoveRange(TriageContext.ModelBuilds);
-            TriageContext.ModelBuildDefinitions.RemoveRange(TriageContext.ModelBuildDefinitions);
-            TriageContext.SaveChanges();
-            AssertEmpty();
+            using (var context = new TriageContext(Options))
+            {
+                context.ModelBuilds.RemoveRange(context.ModelBuilds);
+                context.SaveChanges();
+            }
+
+            using (var context = new TriageContext(Options))
+            {
+                context.ModelTrackingIssues.RemoveRange(context.ModelTrackingIssues);
+                context.SaveChanges();
+            }
+
+            using (var context = new TriageContext(Options))
+            {
+                context.ModelBuildDefinitions.RemoveRange(context.ModelBuildDefinitions);
+                context.SaveChanges();
+            }
         }
     }
 

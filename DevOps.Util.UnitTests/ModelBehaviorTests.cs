@@ -26,44 +26,50 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task DeleteModelBuild1()
         {
-            var def = AddBuildDefinition("roslyn");
+            var def = await AddBuildDefinitionAsync("roslyn");
             var build = await AddBuildAsync(def);
-            await AddAttemptAsync(1, build);
+            await AddAttemptAsync(build, 1);
+            ResetContext();
+
             Context.ModelBuilds.Remove(build);
             await Context.SaveChangesAsync();
             Assert.Equal(0, await Context.ModelBuilds.CountAsync());
             Assert.Equal(0, await Context.ModelBuildAttempts.CountAsync());
         }
 
-        [Fact(Skip = "Figure out cascade delete problem in tests")]
+        [Fact]
         public async Task DeleteModelBuild2()
         {
-            var def = AddBuildDefinition("roslyn");
+            var def = await AddBuildDefinitionAsync("roslyn");
             var build = await AddBuildAsync(def);
-            var attempt = await AddAttemptAsync(1, build);
+            var attempt = await AddAttemptAsync(build, 1);
             await AddTestRunAsync(
                 attempt,
                 "Windows Debug");
 
+            ResetContext();
+            build = await Context.ModelBuilds.Where(x => x.Id == build.Id).SingleAsync();
             Context.ModelBuilds.Remove(build);
             await Context.SaveChangesAsync();
             Assert.Equal(0, await Context.ModelBuilds.CountAsync());
             Assert.Equal(0, await Context.ModelBuildAttempts.CountAsync());
             Assert.Equal(0, await Context.ModelTestRuns.CountAsync());
-            Assert.Equal(0, await Context.ModelTestResults.CountAsync());
         }
 
-        [Fact(Skip = "Figure out cascade delete problem in tests")]
+        [Fact]
         public async Task DeleteModelBuild3()
         {
-            var def = AddBuildDefinition("roslyn");
+            var def = await AddBuildDefinitionAsync("roslyn");
             var build = await AddBuildAsync(def);
-            var attempt = await AddAttemptAsync(1, build);
+            var attempt = await AddAttemptAsync(build, 1);
             await AddTestRunAsync(
                 attempt,
                 "Windows Debug",
-                ("testCase1", null));
+                ("testCase1", "error"),
+                ("testCase2", "other error"));
 
+            ResetContext();
+            build = await Context.ModelBuilds.Where(x => x.Id == build.Id).SingleAsync();
             Context.ModelBuilds.Remove(build);
             await Context.SaveChangesAsync();
             Assert.Equal(0, await Context.ModelBuilds.CountAsync());

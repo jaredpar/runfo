@@ -191,7 +191,7 @@ namespace DevOps.Util
                 }
 
                 textWriter.WriteLine($"{indent}{record.Attempt}.{previousAttempt} {record.Type} {record.Name} {record.Id}");
-            } 
+            }
         }
 
         #endregion
@@ -210,6 +210,12 @@ namespace DevOps.Util
         public static DateTimeOffset? GetStartTime(this TimelineRecord record) => DevOpsUtil.ConvertFromRestTime(record.StartTime);
 
         public static DateTimeOffset? GetFinishTime(this TimelineRecord record) => DevOpsUtil.ConvertFromRestTime(record.FinishTime);
+
+        public static TimeSpan? GetDuration(this TimelineRecord record) =>
+            GetStartTime(record) is { } startTime &&
+            GetFinishTime(record) is { } finishTime
+                ? finishTime - startTime
+                : null;
 
         #endregion
 
