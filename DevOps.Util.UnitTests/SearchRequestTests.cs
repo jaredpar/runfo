@@ -22,7 +22,7 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task BuildResultSearches()
         {
-            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
             await AddBuildAsync("1|Failed|", def);
             await AddBuildAsync("2|Failed", def);
             await AddBuildAsync("3|Succeeded", def);
@@ -46,23 +46,22 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task BuildIssuesSearches()
         {
-            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
             var build1 = await AddBuildAsync("1", def);
             var build2 = await AddBuildAsync("2", def);
             await Test(2, "issues:false");
             await Test(0, "issues:true");
 
-            AddGitHubIssue("", build1);
+            await AddGitHubIssueAsync(build1);
             await Test(1, "issues:false");
             await Test(1, "issues:true");
 
-            AddGitHubIssue("", build2);
+            await AddGitHubIssueAsync(build2);
             await Test(0, "issues:false");
             await Test(2, "issues:true");
 
             async Task Test(int count, string value)
             {
-                await Context.SaveChangesAsync();
                 var request = new SearchBuildsRequest();
                 request.ParseQueryString(value);
                 var query = request.Filter(Context.ModelBuilds);
@@ -74,17 +73,17 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task TestResultSearchMessage()
         {
-            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
             var build1 = await AddBuildAsync("1|Failed", def);
             await AddTestRunAsync(
-                await AddAttemptAsync(1, build1),
+                await AddAttemptAsync(build1, 1),
                 "windows",
                 ("Test1", "cat"),
                 ("Test2", "cat"),
                 ("Test3", "dog"));
             var build2 = await AddBuildAsync("2|Failed", def);
             await AddTestRunAsync(
-                await AddAttemptAsync(1, build2),
+                await AddAttemptAsync(build2, 1),
                 "windows",
                 ("Test1", "fish"),
                 ("Test2", "fish"),
@@ -111,7 +110,7 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task TimelineRespectsStartedOption()
         {
-            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
             var build = await AddBuildAsync("1|Failed|2020-01-01", def);
             await AddAttemptAsync(
                 build,

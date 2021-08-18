@@ -47,7 +47,7 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task TimelineSearchSimple()
         {
-            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
             var attempt = await AddAttemptAsync(
                 await AddBuildAsync("1", def),
                 attempt: 1,
@@ -77,8 +77,8 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task TimelineSearchFilterToDefinition()
         {
-            var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
-            var def2 = AddBuildDefinition("dnceng|public|runtime|13");
+            var def1 = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
+            var def2 = await AddBuildDefinitionAsync("runtime", definitionNumber: 13);
             var attempt1 = await AddAttemptAsync(
                 await AddBuildAsync("1", def1),
                 attempt: 1,
@@ -103,7 +103,7 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task TimelineSavesJobName()
         {
-            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
             var attempt = await AddAttemptAsync(
                 await AddBuildAsync("1", def),
                 attempt: 1,
@@ -124,8 +124,8 @@ namespace DevOps.Util.UnitTests
         [InlineData("Test", 2)]
         public async Task SimpleTestSearch(string search, int count)
         {
-            var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt = await AddAttemptAsync(1, await AddBuildAsync("1", def));
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
+            var attempt = await AddAttemptAsync(await AddBuildAsync("1", def), 1);
             await AddTestRunAsync(
                 attempt,
                 "windows",
@@ -149,8 +149,8 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task TriageTrackingIssueWrongDefinition()
         {
-            var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
-            var def2 = AddBuildDefinition("dnceng|public|runtime|13");
+            var def1 = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
+            var def2 = await AddBuildDefinitionAsync("runtime", definitionNumber: 13);
             var attempt1 = await AddAttemptAsync(
                 await AddBuildAsync("1", def1),
                 attempt: 1,
@@ -175,8 +175,8 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task TriageTrackingIssueNoDefinition()
         {
-            var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
-            var def2 = AddBuildDefinition("dnceng|public|runtime|13");
+            var def1 = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
+            var def2 = await AddBuildDefinitionAsync("runtime", definitionNumber: 13);
             var attempt1 = await AddAttemptAsync(
                 await AddBuildAsync("1", def1),
                 attempt: 1,
@@ -204,7 +204,7 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task TriageTimelineIssueAttemptOnly()
         {
-            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
             var attempt1 = await AddAttemptAsync(
                 await AddBuildAsync("1", def),
                 attempt: 1,
@@ -227,7 +227,7 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task TriageTimelineIssueAttemptOnlyWithinBuild()
         {
-            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
             var build = await AddBuildAsync("1", def);
             var attempt1 = await AddAttemptAsync(
                 build,
@@ -261,8 +261,8 @@ namespace DevOps.Util.UnitTests
         [InlineData(HelixLogKind.TestResults)]
         public async Task SimpleHelixLogTrackingIssue(HelixLogKind kind)
         {
-            var def = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt = await AddAttemptAsync(1, await AddBuildAsync("1", def));
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
+            var attempt = await AddAttemptAsync(await AddBuildAsync("1", def), 1);
             await AddTestRunAsync(
                 attempt,
                 "windows",
@@ -310,23 +310,23 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task TestsSearchRespectsDefinition()
         {
-            var def1 = AddBuildDefinition("dnceng|public|roslyn|42");
-            var attempt1 = await AddAttemptAsync(1, await AddBuildAsync("1", def1));
+            var def1 = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
+            var attempt1 = await AddAttemptAsync(await AddBuildAsync("1", def1), 1);
             await AddTestRunAsync(
                 attempt1,
                 "windows",
                 ("test1", "failed dog"),
                 ("test2", "failed cat"));
 
-            var attempt2 = await AddAttemptAsync(1, await AddBuildAsync("2", def1));
+            var attempt2 = await AddAttemptAsync(await AddBuildAsync("2", def1), 1);
             await AddTestRunAsync(
                 attempt2,
                 "windows",
                 ("test2", "failed dog"),
                 ("test2", "failed dog"));
 
-            var def2 = AddBuildDefinition("dnceng|public|roslyn|13");
-            var attempt3 = await AddAttemptAsync(1, await AddBuildAsync("3", def2));
+            var def2 = await AddBuildDefinitionAsync("roslyn", definitionNumber: 13);
+            var attempt3 = await AddAttemptAsync(await AddBuildAsync("3", def2), 1);
             await AddTestRunAsync(
                 attempt3,
                 "windows",

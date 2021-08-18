@@ -21,7 +21,7 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task MarkMergedPullRequestTest()
         {
-            var def = AddBuildDefinition("||roslyn|");
+            var def = await AddBuildDefinitionAsync("roslyn");
             var build1 = await CreateBuildAsync("1");
             var build2 = await CreateBuildAsync("2");
             await TriageContextUtil.MarkAsMergedPullRequestAsync(build1);

@@ -26,9 +26,9 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task DeleteModelBuild1()
         {
-            var def = AddBuildDefinition("roslyn");
+            var def = await AddBuildDefinitionAsync("roslyn");
             var build = await AddBuildAsync(def);
-            await AddAttemptAsync(1, build);
+            await AddAttemptAsync(build, 1);
             ResetContext();
 
             Context.ModelBuilds.Remove(build);
@@ -40,9 +40,9 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task DeleteModelBuild2()
         {
-            var def = AddBuildDefinition("roslyn");
+            var def = await AddBuildDefinitionAsync("roslyn");
             var build = await AddBuildAsync(def);
-            var attempt = await AddAttemptAsync(1, build);
+            var attempt = await AddAttemptAsync(build, 1);
             await AddTestRunAsync(
                 attempt,
                 "Windows Debug");
@@ -59,9 +59,9 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task DeleteModelBuild3()
         {
-            var def = AddBuildDefinition("roslyn");
+            var def = await AddBuildDefinitionAsync("roslyn");
             var build = await AddBuildAsync(def);
-            var attempt = await AddAttemptAsync(1, build);
+            var attempt = await AddAttemptAsync(build, 1);
             await AddTestRunAsync(
                 attempt,
                 "Windows Debug",

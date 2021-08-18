@@ -28,7 +28,7 @@ namespace DevOps.Util.UnitTests
         [Fact]
         public async Task SimpleTimelineSearh()
         {
-            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
             var attempt = await AddAttemptAsync(
                 await AddBuildAsync("1|Succeeded|2020-12-01", def),
                 attempt: 1,
@@ -66,7 +66,7 @@ Build Result Summary
         [Fact]
         public async Task TestWithSummary()
         {
-            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
             await AddTestDataAsync(1, "2020-08-01");
             await AddTestDataAsync(2, "2020-08-01");
             await AddTestDataAsync(3, "2020-07-29");
@@ -119,7 +119,7 @@ Build Result Summary
 
             async Task AddTestDataAsync(int buildNumber, string dateStr)
             {
-                var attempt = await AddAttemptAsync(1, await AddBuildAsync($"{buildNumber}||{dateStr}", def));
+                var attempt = await AddAttemptAsync(await AddBuildAsync($"{buildNumber}||{dateStr}", def), 1);
                 await AddTestRunAsync(
                     attempt,
                     "windows",
@@ -131,12 +131,12 @@ Build Result Summary
         [Fact]
         public async Task AssociatedIssueReport()
         {
-            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
             var issueKey = new GitHubIssueKey("dotnet", "test", 13);
 
             for (int i = 0; i < 5; i++)
             {
-                AddGitHubIssue(issueKey, await AddBuildAsync($"||2020-10-0{i + 1}", def));
+                await AddGitHubIssueAsync(await AddBuildAsync($"||2020-10-0{i + 1}", def), issueKey);
                 await Context.SaveChangesAsync();
             }
 
@@ -163,7 +163,7 @@ Build Result Summary
         [InlineData(HelixLogKind.TestResults, "Test Results", "test results")]
         public async Task SimpleHelixLogsReport(HelixLogKind kind, string columnText, string fileName)
         {
-            var def = AddBuildDefinition("dnceng|public|roslyn|42");
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
             await AddTestDataAsync(1, "2020-08-01");
             await AddTestDataAsync(2, "2020-08-01");
             var tracking = AddTrackingIssue(
@@ -191,7 +191,7 @@ Build Result Summary
 
             async Task AddTestDataAsync(int buildNumber, string dateStr)
             {
-                var attempt = await AddAttemptAsync(1, await AddBuildAsync($"{buildNumber}||{dateStr}", def));
+                var attempt = await AddAttemptAsync(await AddBuildAsync($"{buildNumber}||{dateStr}", def), 1);
                 await AddTestRunAsync(
                     attempt,
                     "windows",

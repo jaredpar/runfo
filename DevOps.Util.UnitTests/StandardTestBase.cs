@@ -70,7 +70,7 @@ namespace DevOps.Util.UnitTests
             TriageContextUtil = new TriageContextUtil(Context);
         }
 
-        public async Task<ModelBuildAttempt> AddAttemptAsync(int attempt, ModelBuild build) => await AddAttemptAsync(build, attempt);
+        public async Task<ModelBuildAttempt> AddAttemptAsync(ModelBuild build, int attempt) => await AddAttemptAsync(build, attempt);
 
         public async Task<ModelBuildAttempt> AddAttemptAsync(
             ModelBuild build,
@@ -160,7 +160,6 @@ namespace DevOps.Util.UnitTests
             int? prNumber = null,
             string? targetBranch = null,
             DateTime? queued = null)
-
         {
             GitHubBuildInfo? gitHubBuildInfo = null;
             if (gitHubOrganization is object && gitHubRepository is object)
@@ -187,69 +186,21 @@ namespace DevOps.Util.UnitTests
             return await TriageContextUtil.EnsureBuildAsync(buildResultInfo);
         }
 
-        public ModelGitHubIssue AddGitHubIssue(GitHubIssueKey issueKey, ModelBuild build)
+        public async Task<ModelGitHubIssue> AddGitHubIssueAsync(ModelBuild build, GitHubIssueKey? issueKey = null)
         {
-            var issue = new ModelGitHubIssue()
-            {
-                Organization = issueKey.Organization,
-                Repository = issueKey.Repository,
-                Number = issueKey.Number,
-                ModelBuild = build,
-            };
-
-            Context.ModelGitHubIssues.Add(issue);
-            return issue;
+            var key = issueKey ?? new GitHubIssueKey(DotNetConstants.GitHubOrganization, "roslyn", GitHubIssueCount++);
+            return await TriageContextUtil.EnsureGitHubIssueAsync(build, key, saveChanges: true);
         }
 
-        public ModelGitHubIssue AddGitHubIssue(string data, ModelBuild build)
+        public async Task<ModelBuildDefinition> AddBuildDefinitionAsync(string definitionName, string? azureOrganization = null, string? azureProject = null, int? definitionNumber = null)
         {
-            var parts = data.Split("|");
+            var info = new DefinitionInfo(
+                azureOrganization ?? "dnceng",
+                azureProject ?? "public",
+                definitionNumber ?? DefinitionCount++,
+                definitionName);
 
-            var issue = new ModelGitHubIssue()
-            {
-                Organization = GetPartOrNull(parts, 0) ?? DotNetConstants.GitHubOrganization,
-                Repository = GetPartOrNull(parts, 1) ?? "roslyn",
-                Number = GetPartOrNull(parts, 2) is { } part ? int.Parse(part) : GitHubIssueCount++,
-                ModelBuild = build,
-            };
-
-            Context.ModelGitHubIssues.Add(issue);
-            return issue;
-        }
-
-        /// <summary>
-        /// |azure org|azure project|name|number|
-        /// </summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
-        public ModelBuildDefinition AddBuildDefinition(string data)
-        {
-            if (!data.Contains('|'))
-            {
-                return AddBuildDefinition(definitionName: data);
-            }
-
-            var parts = data.Split("|");
-            return AddBuildDefinition(
-                parts[2],
-                azureOrganization: GetPartOrNull(parts, 0),
-                azureProject: GetPartOrNull(parts, 1),
-                definitionNumber: GetIntPartOrNull(parts, 3));
-        }
-
-        public ModelBuildDefinition AddBuildDefinition(string definitionName, string? azureOrganization = null, string? azureProject = null, int? definitionNumber = null)
-        {
-            var def = new ModelBuildDefinition()
-            {
-                AzureOrganization = azureOrganization ?? "dnceng",
-                AzureProject = azureProject ?? "public",
-                DefinitionName = definitionName,
-                DefinitionNumber = definitionNumber ?? DefinitionCount++,
-            };
-
-            Context.ModelBuildDefinitions.Add(def);
-            Context.SaveChanges();
-            return def;
+            return await TriageContextUtil.EnsureBuildDefinitionAsync(info);
         }
 
         public ModelTrackingIssue AddTrackingIssue(
