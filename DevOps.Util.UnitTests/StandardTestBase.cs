@@ -70,7 +70,8 @@ namespace DevOps.Util.UnitTests
             TriageContextUtil = new TriageContextUtil(Context);
         }
 
-        public async Task<ModelBuildAttempt> AddAttemptAsync(ModelBuild build, int attempt) => await AddAttemptAsync(build, attempt);
+        public async Task<ModelBuildAttempt> AddAttemptAsync(ModelBuild build, int attempt) => 
+            await AddAttemptAsync(build, attempt, timelineIssues: new (string?, string?, string?)[] { });
 
         public async Task<ModelBuildAttempt> AddAttemptAsync(
             ModelBuild build,
