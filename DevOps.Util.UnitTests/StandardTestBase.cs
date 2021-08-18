@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -22,7 +23,8 @@ namespace DevOps.Util.UnitTests
     {
         public DatabaseFixture DatabaseFixture { get; }
         public ITestOutputHelper TestOutputHelper { get; }
-        public TriageContextUtil TriageContextUtil { get; }
+        public TriageContext Context { get; private set; }
+        public TriageContextUtil TriageContextUtil { get; private set; }
         public DevOpsServer Server { get; set; }
         public DotNetQueryUtil QueryUtil { get; set; }
         public HelixServer HelixServer { get; set; }
@@ -36,15 +38,12 @@ namespace DevOps.Util.UnitTests
         private int GitHubIssueCount { get; set; }
         private int HelixLogCount { get; set; }
 
-        public TriageContext Context => DatabaseFixture.TriageContext;
-
         public StandardTestBase(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper)
         {
-            databaseFixture.AssertEmpty();
             DatabaseFixture = databaseFixture;
             DatabaseFixture.RegisterLoggerAction(testOutputHelper.WriteLine);
             TestOutputHelper = testOutputHelper;
-            TriageContextUtil = new TriageContextUtil(Context);
+            ResetContext();
             TestableHttpMessageHandler = new TestableHttpMessageHandler();
             TestableLogger = new TestableLogger(testOutputHelper);
             TestableGitHubClientFactory = new TestableGitHubClientFactory();
@@ -57,8 +56,18 @@ namespace DevOps.Util.UnitTests
 
         public void Dispose()
         {
+            Context.Dispose();
             DatabaseFixture.UnregisterLoggerAction(TestOutputHelper.WriteLine);
             DatabaseFixture.TestCompletion();
+        }
+
+        [MemberNotNull(nameof(Context))]
+        [MemberNotNull(nameof(TriageContextUtil))]
+        protected virtual void ResetContext()
+        {
+            Context?.Dispose();
+            Context = new TriageContext(DatabaseFixture.Options);
+            TriageContextUtil = new TriageContextUtil(Context);
         }
 
         public async Task<ModelBuildAttempt> AddAttemptAsync(int attempt, ModelBuild build) => await AddAttemptAsync(build, attempt);

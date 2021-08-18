@@ -29,13 +29,15 @@ namespace DevOps.Util.UnitTests
             var def = AddBuildDefinition("roslyn");
             var build = await AddBuildAsync(def);
             await AddAttemptAsync(1, build);
+            ResetContext();
+
             Context.ModelBuilds.Remove(build);
             await Context.SaveChangesAsync();
             Assert.Equal(0, await Context.ModelBuilds.CountAsync());
             Assert.Equal(0, await Context.ModelBuildAttempts.CountAsync());
         }
 
-        [Fact(Skip = "Figure out cascade delete problem in tests")]
+        [Fact]
         public async Task DeleteModelBuild2()
         {
             var def = AddBuildDefinition("roslyn");
@@ -45,15 +47,16 @@ namespace DevOps.Util.UnitTests
                 attempt,
                 "Windows Debug");
 
+            ResetContext();
+            build = await Context.ModelBuilds.Where(x => x.Id == build.Id).SingleAsync();
             Context.ModelBuilds.Remove(build);
             await Context.SaveChangesAsync();
             Assert.Equal(0, await Context.ModelBuilds.CountAsync());
             Assert.Equal(0, await Context.ModelBuildAttempts.CountAsync());
             Assert.Equal(0, await Context.ModelTestRuns.CountAsync());
-            Assert.Equal(0, await Context.ModelTestResults.CountAsync());
         }
 
-        [Fact(Skip = "Figure out cascade delete problem in tests")]
+        [Fact]
         public async Task DeleteModelBuild3()
         {
             var def = AddBuildDefinition("roslyn");
@@ -62,8 +65,11 @@ namespace DevOps.Util.UnitTests
             await AddTestRunAsync(
                 attempt,
                 "Windows Debug",
-                ("testCase1", null));
+                ("testCase1", "error"),
+                ("testCase2", "other error"));
 
+            ResetContext();
+            build = await Context.ModelBuilds.Where(x => x.Id == build.Id).SingleAsync();
             Context.ModelBuilds.Remove(build);
             await Context.SaveChangesAsync();
             Assert.Equal(0, await Context.ModelBuilds.CountAsync());

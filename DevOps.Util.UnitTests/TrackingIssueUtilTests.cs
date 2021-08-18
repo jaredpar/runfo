@@ -18,11 +18,17 @@ namespace DevOps.Util.UnitTests
     [Collection(DatabaseCollection.Name)]
     public sealed class TrackingIssueUtilTests : StandardTestBase
     {
-        public TrackingIssueUtil TrackingIssueUtil { get; }
+        public TrackingIssueUtil TrackingIssueUtil { get; private set; }
 
         public TrackingIssueUtilTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper)
             : base(databaseFixture, testOutputHelper)
         {
+            TrackingIssueUtil = new TrackingIssueUtil(HelixServer, QueryUtil, TriageContextUtil, TestableLogger);
+        }
+
+        protected override void ResetContext()
+        {
+            base.ResetContext();
             TrackingIssueUtil = new TrackingIssueUtil(HelixServer, QueryUtil, TriageContextUtil, TestableLogger);
         }
 
@@ -51,8 +57,11 @@ namespace DevOps.Util.UnitTests
                 TrackingKind.Timeline,
                 timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
             await Context.SaveChangesAsync();
+            ResetContext();
 
             await TrackingIssueUtil.TriageAsync(attempt);
+
+            ResetContext();
             var match = await Context.ModelTrackingIssueMatches.SingleAsync();
             Assert.Equal(tracking.Id, match.ModelTrackingIssueId);
             Assert.Equal(timeline.Id, match.ModelTimelineIssueId);
@@ -128,6 +137,7 @@ namespace DevOps.Util.UnitTests
             await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt);
+
             var matches = await Context.ModelTrackingIssueMatches.ToListAsync();
             Assert.Equal(count, matches.Count);
             Assert.True(matches.All(x => x.JobName == "windows"));

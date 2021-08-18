@@ -1,7 +1,9 @@
-﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
+﻿using DevOps.Util.DotNet.Triage;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace DevOps.Util.UnitTests
@@ -14,6 +16,20 @@ namespace DevOps.Util.UnitTests
             where T : class
         {
             dbSet.RemoveRange(dbSet);
+        }
+
+        internal static void DetachAllEntities(this TriageContext context)
+        {
+            var changedEntriesCopy = context.ChangeTracker.Entries()
+                .Where(e => e.State == EntityState.Added ||
+                            e.State == EntityState.Modified ||
+                            e.State == EntityState.Deleted)
+                .ToList();
+
+            foreach (var entry in changedEntriesCopy)
+            {
+                entry.State = EntityState.Detached;
+            }
         }
     }
 }
