@@ -34,16 +34,15 @@ namespace DevOps.Util.UnitTests
                 attempt: 1,
                 ("windows", "dog", null));
             var timeline = await Context.ModelTimelineIssues.SingleAsync();
-            var tracking = AddTrackingIssue(
+            var tracking = await AddTrackingIssueAsync(
                 TrackingKind.Timeline,
                 title: "Dog Search",
                 timelinesRequest: new SearchTimelinesRequest()
                 {
                     Message = "dog",
                 });
-            var match = AddTrackingMatch(tracking, attempt, timelineIssue: timeline);
-            var result = AddTrackingResult(tracking, attempt);
-            await Context.SaveChangesAsync();
+            var match = await AddTrackingMatchAsync(tracking, attempt, timelineIssue: timeline);
+            var result = await AddTrackingResultAsync(tracking, attempt);
 
             var expected = $@"
 Runfo Tracking Issue: [Dog Search](https://localhost/tracking/issue/{tracking.Id})
@@ -74,7 +73,7 @@ Build Result Summary
             await AddTestDataAsync(5, "2020-07-29");
             await AddTestDataAsync(6, "2020-07-29");
             await AddTestDataAsync(7, "2020-07-05");
-            var tracking = AddTrackingIssue(
+            var tracking = await AddTrackingIssueAsync(
                 TrackingKind.Test,
                 title: "Test Search",
                 testsRequest: new SearchTestsRequest()
@@ -83,7 +82,6 @@ Build Result Summary
                     Name = "Util",
                 });
 
-            await Context.SaveChangesAsync();
             await TriageAll();
 
             var expected = $@"
@@ -166,7 +164,7 @@ Build Result Summary
             var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
             await AddTestDataAsync(1, "2020-08-01");
             await AddTestDataAsync(2, "2020-08-01");
-            var tracking = AddTrackingIssue(
+            var tracking = await AddTrackingIssueAsync(
                 TrackingKind.HelixLogs,
                 title: "Helix Log",
                 helixLogsRequest: new SearchHelixLogsRequest()

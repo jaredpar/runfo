@@ -53,10 +53,9 @@ namespace DevOps.Util.UnitTests
                 attempt: 1,
                 ("windows", "dog", null));
             var timeline = await Context.ModelTimelineIssues.SingleAsync();
-            var tracking = AddTrackingIssue(
+            var tracking = await AddTrackingIssueAsync(
                 TrackingKind.Timeline,
                 timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
-            await Context.SaveChangesAsync();
             ResetContext();
 
             await TrackingIssueUtil.TriageAsync(attempt);
@@ -87,11 +86,10 @@ namespace DevOps.Util.UnitTests
                 await AddBuildAsync("2", def2),
                 attempt: 1,
                 ("windows", "dog", null));
-            AddTrackingIssue(
+            await AddTrackingIssueAsync(
                 TrackingKind.Timeline,
                 timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" },
                 definition: def2);
-            await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt1);
             await TrackingIssueUtil.TriageAsync(attempt2);
@@ -108,10 +106,9 @@ namespace DevOps.Util.UnitTests
                 await AddBuildAsync("1", def),
                 attempt: 1,
                 ("windows", "dog", null));
-            AddTrackingIssue(
+            await AddTrackingIssueAsync(
                 TrackingKind.Timeline,
                 timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
-            await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt);
             var match = await Context.ModelTrackingIssueMatches.SingleAsync();
@@ -131,10 +128,9 @@ namespace DevOps.Util.UnitTests
                 "windows",
                 ("Util.Test1", null),
                 ("Util.Test2", null));
-            var tracking = AddTrackingIssue(
+            var tracking = await AddTrackingIssueAsync(
                 TrackingKind.Test,
                 testsRequest: new SearchTestsRequest() { Name = search });
-            await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt);
 
@@ -159,11 +155,10 @@ namespace DevOps.Util.UnitTests
                 await AddBuildAsync("2", def2),
                 attempt: 1,
                 ("windows", "dog", null));
-            var tracking = AddTrackingIssue(
+            var tracking = await AddTrackingIssueAsync(
                 TrackingKind.Timeline,
                 timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" },
                 definition: def2);
-            await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt1.GetBuildAttemptKey(), tracking.Id);
             await TrackingIssueUtil.TriageAsync(attempt2.GetBuildAttemptKey(), tracking.Id);
@@ -185,10 +180,9 @@ namespace DevOps.Util.UnitTests
                 await AddBuildAsync("2", def1),
                 attempt: 1,
                 ("windows", "dog", null));
-            var tracking = AddTrackingIssue(
+            var tracking = await AddTrackingIssueAsync(
                 TrackingKind.Timeline,
                 timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
-            await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt1.GetBuildAttemptKey(), tracking.Id);
             await TrackingIssueUtil.TriageAsync(attempt2.GetBuildAttemptKey(), tracking.Id);
@@ -213,10 +207,9 @@ namespace DevOps.Util.UnitTests
                 await AddBuildAsync("2", def),
                 attempt: 1,
                 ("windows", "dog", null));
-            var tracking = AddTrackingIssue(
+            var tracking = await AddTrackingIssueAsync(
                 TrackingKind.Timeline,
                 timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
-            await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt1.GetBuildAttemptKey(), tracking.Id);
             Assert.Equal(1, await Context.ModelTrackingIssueResults.CountAsync());
@@ -240,7 +233,7 @@ namespace DevOps.Util.UnitTests
             var attempt3 = await AddAttemptAsync(
                 build,
                 attempt: 3);
-            var tracking = AddTrackingIssue(
+            var tracking = await AddTrackingIssueAsync(
                 TrackingKind.Timeline,
                 timelinesRequest: new SearchTimelinesRequest() { Message = "#dog" });
             await Context.SaveChangesAsync();
@@ -269,7 +262,7 @@ namespace DevOps.Util.UnitTests
                 ("Util.Test1", null, kind, "the dog fetched the ball"),
                 ("Util.Test2", null, kind, "the tree grew"));
 
-            var tracking1 = AddTrackingIssue(
+            var tracking1 = await AddTrackingIssueAsync(
                 TrackingKind.HelixLogs,
                 helixLogsRequest: new SearchHelixLogsRequest()
                 {
@@ -278,7 +271,7 @@ namespace DevOps.Util.UnitTests
                 });
             await TestSearch(tracking1, matchCount: 2, isPresent: true);
 
-            var tracking2 = AddTrackingIssue(
+            var tracking2 = await AddTrackingIssueAsync(
                 TrackingKind.HelixLogs,
                 helixLogsRequest: new SearchHelixLogsRequest()
                 {
@@ -287,7 +280,7 @@ namespace DevOps.Util.UnitTests
                 });
             await TestSearch(tracking2, matchCount: 1, isPresent: true);
 
-            var tracking3 = AddTrackingIssue(
+            var tracking3 = await AddTrackingIssueAsync(
                 TrackingKind.HelixLogs,
                 helixLogsRequest: new SearchHelixLogsRequest()
                 {
@@ -333,11 +326,10 @@ namespace DevOps.Util.UnitTests
                 ("test1", "failed dog"),
                 ("test2", "failed dog"));
 
-            var tracking = AddTrackingIssue(
+            var tracking = await AddTrackingIssueAsync(
                 TrackingKind.Test,
                 testsRequest: new SearchTestsRequest() { Name = "test2" },
                 definition: def1);
-            await Context.SaveChangesAsync();
 
             await TrackingIssueUtil.TriageAsync(attempt1);
             await TrackingIssueUtil.TriageAsync(attempt2);

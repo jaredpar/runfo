@@ -203,7 +203,7 @@ namespace DevOps.Util.UnitTests
             return await TriageContextUtil.EnsureBuildDefinitionAsync(info);
         }
 
-        public ModelTrackingIssue AddTrackingIssue(
+        public async Task<ModelTrackingIssue> AddTrackingIssueAsync(
             TrackingKind trackingKind,
             string? title = null,
             SearchTestsRequest? testsRequest = null,
@@ -229,7 +229,7 @@ namespace DevOps.Util.UnitTests
             };
 
             Context.ModelTrackingIssues.Add(trackingIssue);
-            Context.SaveChanges();
+            await Context.SaveChangesAsync();
             return trackingIssue;
         }
 
@@ -295,7 +295,7 @@ namespace DevOps.Util.UnitTests
                 map);
         }
 
-        public ModelTrackingIssueMatch AddTrackingMatch(
+        public async Task<ModelTrackingIssueMatch> AddTrackingMatchAsync(
             ModelTrackingIssue trackingIssue,
             ModelBuildAttempt attempt,
             ModelTimelineIssue? timelineIssue = null,
@@ -312,11 +312,11 @@ namespace DevOps.Util.UnitTests
                 JobName = "",
             };
             Context.ModelTrackingIssueMatches.Add(match);
-            Context.SaveChanges();
+            await Context.SaveChangesAsync();
             return match;
         }
 
-        public ModelTrackingIssueResult AddTrackingResult(
+        public async Task<ModelTrackingIssueResult> AddTrackingResultAsync(
             ModelTrackingIssue trackingIssue,
             ModelBuildAttempt attempt,
             bool isPresent = true)
@@ -328,6 +328,7 @@ namespace DevOps.Util.UnitTests
                 IsPresent = isPresent,
             };
             Context.ModelTrackingIssueResults.Add(result);
+            await Context.SaveChangesAsync();
             return result;
         }
 
