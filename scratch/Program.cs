@@ -136,7 +136,7 @@ namespace Scratch
             }
             GitHubClientFactory = new FakeGitHubClientFactory(gitHubClient);
 
-            BlobStorageUtil = new BlobStorageUtil(organization, configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
+            // BlobStorageUtil = new BlobStorageUtil(organization, configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
 
             DotNetQueryUtil = new DotNetQueryUtil(
                 DevOpsServer,
@@ -170,9 +170,119 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await FindMatchingSdkMissingBuilds();
-            // await FindLogMacBuildAsync();
+            await GetJanStats();
         }
+
+        internal record JobStatInfo(TimelineRecord TimelineRecord, TimeSpan Duration, MachineInfo? MachineInfo);
+
+        internal async Task GetJanStats()
+        {
+            const int maxCount = 1_000;
+            var count = 0;
+            var machineCount = 0;
+
+            var map = new Dictionary<string, List<JobStatInfo>>();
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync("public", definitions: new[] { 686 }, statusFilter: BuildStatus.Completed, queryOrder: BuildQueryOrder.QueueTimeDescending))
+            {
+                var buildInfo = build.GetBuildInfo();
+                try
+                {
+                    if (buildInfo.PullRequestKey is null)
+                    {
+                        continue;
+                    }
+
+                    Console.WriteLine(buildInfo.BuildUri);
+                    var timeline = await DevOpsServer.GetTimelineAsync(build);
+                    if (timeline is null)
+                    {
+                        continue;
+                    }
+
+                    var attempt = timeline.GetAttempt();
+
+                    // After about 10 builds we don't need any more machine info.
+                    List<MachineInfo> machines;
+                    if (++machineCount < 50)
+                    {
+                        machines = await DotNetQueryUtil.ListBuildMachineInfoAsync("public", buildInfo.Number, attempt, includeAzure: true);
+                    }
+                    else
+                    {
+                        machines = new();
+                    }
+
+                    foreach (var record in timeline.Records)
+                    {
+                        if (record.Type == "Job" && record.GetDuration() is { } duration)
+                        {
+                            if (!map.TryGetValue(record.Name, out var list))
+                            {
+                                list = new();
+                                map[record.Name] = list;
+                            }
+
+                            var machineInfo = machines.SingleOrDefault(x => x.JobName == record.Name);
+                            list.Add(new JobStatInfo(record, duration, machineInfo));
+                        }
+                    }
+
+                    if (++count == maxCount)
+                    {
+                        break;
+                    }
+
+                    if (count % 50 == 0)
+                    {
+                        Console.WriteLine(count);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"{buildInfo.BuildUri} {ex.Message}");
+                }
+            }
+
+            var targetDate = (new DateTime(year: 2021, month: 8, day: 20)).Date;
+            Console.WriteLine("Job Name,Average succeeded time (minutes),Average time (minutes),Total time per day (minutes),Queue,Container");
+            foreach (var pair in map.OrderBy(x => x.Key))
+            {
+                var list = pair.Value;
+                var jobSuccessAverage = Average(list.Where(x => x.TimelineRecord.Result == TaskResult.Succeeded));
+                var jobAverage = Average(list);
+                var dateTotal = NormalizeDouble(list.Where(x => x.TimelineRecord.GetStartTime()?.Date == targetDate).Sum(x => x.Duration.TotalMinutes));
+                var machine = list.Select(x => x.MachineInfo).FirstOrDefault(x => x != null);
+
+                Console.WriteLine($"{Normalize(pair.Key)},{jobSuccessAverage},{jobAverage},{dateTotal:N2},{Normalize(machine?.QueueName)},{Normalize(machine?.ContainerImage)}");
+            }
+
+            static string Average(IEnumerable<JobStatInfo> e)
+            {
+                if (e.Any())
+                {
+                    return NormalizeDouble(e.Average(x => x.Duration.TotalMinutes));
+                }
+
+                return "N/A";
+            }
+
+            static string NormalizeDouble(double value)
+            {
+                value = Math.Round(value, 2);
+                return value.ToString();
+            }
+
+            static string Normalize(string? name)
+            {
+                if (name is object)
+                {
+                    return name.Replace(',', '_');
+                }
+
+                return "null";
+            }
+        }
+
         internal async Task FindMatchingSdkMissingBuilds()
         {
             var count = 0;
