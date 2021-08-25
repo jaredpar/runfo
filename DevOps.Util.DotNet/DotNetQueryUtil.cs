@@ -112,6 +112,8 @@ namespace DevOps.Util.DotNet
 
         public HelixJobTimelineInfo HelixJob { get; }
 
+        public string AzureJobName => HelixJob.AzureJobName;
+
         public HelixTimelineResult(
             TimelineRecordItem record,
             HelixJobTimelineInfo helixJob)
@@ -663,14 +665,19 @@ namespace DevOps.Util.DotNet
             // core-eng to find a more robust way of detecting this
             var comparer = StringComparer.OrdinalIgnoreCase;
             var comparison = StringComparison.OrdinalIgnoreCase;
-            var sentRegex = new Regex(@"Sent Helix Job ([\d\w-]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            var sentRegex = new Regex(@"Sent Helix Job; see work items at https:\/\/helix.dot.net\/api\/jobs\/([\d\w-]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
             var queueRegex = new Regex(@"Sending Job to (.*)\.\.\.", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            var completedRegex = new Regex(@"Job ([\d\w-]+).*is completed", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
             var list = new List<HelixTimelineResult>();
             var helixRecords = timelineTree.Records.Where(x => 
                 comparer.Equals(x.Name, "Send to Helix") ||
                 comparer.Equals(x.Name, "Send tests to Helix") ||
                 x.Name.StartsWith("Run native crossgen and compare", comparison));
+
+            MachineInfo? lastMachine = null;
+            var runningList = new List<(string JobId, DateTime StartTime, MachineInfo MachineInfo)>();
+
             foreach (var record in helixRecords)
             {
                 if (record.Log is null)
@@ -690,9 +697,6 @@ namespace DevOps.Util.DotNet
                     ? job.Name
                     : "";
 
-                string? queueName = null;
-                string? containerName = null;
-                string? containerImage = null;
                 using var reader = new StreamReader(stream);
                 do
                 {
@@ -705,15 +709,17 @@ namespace DevOps.Util.DotNet
                     var match = queueRegex.Match(line);
                     if (match.Success)
                     {
-                        queueName = match.Groups[1].Value;
-                        containerImage = null;
-                        containerName = null;
+                        var queueName = match.Groups[1].Value;
                         match = Regex.Match(queueName, @"\(([\w\d.-]+)\)?([\w\d.-]+)@(.*)");
                         if (match.Success)
                         {
                             queueName = match.Groups[2].Value;
-                            containerName = match.Groups[1].Value;
-                            containerImage = match.Groups[3].Value;
+                            lastMachine = new MachineInfo(
+                                queueName ?? MachineInfo.UnknownHelixQueueName,
+                                jobName.Trim(),
+                                containerName: match.Groups[1].Value,
+                                containerImage: match.Groups[3].Value,
+                                isHelixSubmission: true);
                         }
                         continue;
                     }
@@ -721,17 +727,35 @@ namespace DevOps.Util.DotNet
                     match = sentRegex.Match(line);
                     if (match.Success)
                     {
+                        if (lastMachine is null)
+                        {
+                            onError?.Invoke(new Exception("Could not find machine info"));
+                        }
+                        else
+                        {
+                            var id = match.Groups[1].Value;
+                            var startTime = DateTime.Parse(line.Split(new char[] { ' ', '\t' })[0]);
+                            runningList.Add((id, startTime, lastMachine));
+                        }
+                    }
+
+                    match = completedRegex.Match(line);
+                    if (match.Success)
+                    {
                         var id = match.Groups[1].Value;
-                        var machineInfo = new MachineInfo(
-                            queueName ?? MachineInfo.UnknownHelixQueueName,
-                            jobName.Trim(),
-                            containerName,
-                            containerImage,
-                            isHelixSubmission: true);
-                        var info = new HelixJobTimelineInfo(id, machineInfo);
-                        list.Add(new HelixTimelineResult(
-                            new TimelineRecordItem(record, timelineTree),
-                            info));
+                        var tuple = runningList.Find(x => x.JobId == id);
+                        if (tuple.MachineInfo is null)
+                        {
+                            onError?.Invoke(new Exception("Could not find job info"));
+                        }
+                        else
+                        {
+                            var finishTime = DateTime.Parse(line.Split(new char[] { ' ', '\t' })[0]);
+                            var info = new HelixJobTimelineInfo(id, tuple.MachineInfo, finishTime - tuple.StartTime);
+                            list.Add(new HelixTimelineResult(
+                                new TimelineRecordItem(record, timelineTree),
+                                info));
+                        }
                     }
                 } while (true);
             }
