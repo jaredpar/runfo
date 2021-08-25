@@ -170,24 +170,62 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await GetJanStats();
+            await FindThatJob();
+            await GetPullRequestStatsAsync("public", 686, new DateTime(year: 2021, month: 8, day: 20));
+            await GetPullRequestStatsAsync("public", 686, new DateTime(year: 2021, month: 8, day: 19));
         }
 
-        internal record JobStatInfo(TimelineRecord TimelineRecord, TimeSpan Duration, MachineInfo? MachineInfo);
-
-        internal async Task GetJanStats()
+        internal async Task FindThatJob()
         {
-            const int maxCount = 1_000;
-            var count = 0;
-            var machineCount = 0;
-
-            var map = new Dictionary<string, List<JobStatInfo>>();
-            await foreach (var build in DevOpsServer.EnumerateBuildsAsync("public", definitions: new[] { 686 }, statusFilter: BuildStatus.Completed, queryOrder: BuildQueryOrder.QueueTimeDescending))
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync("public", definitions: new[] { 686 }, statusFilter: BuildStatus.Completed))
             {
-                var buildInfo = build.GetBuildInfo();
+                var buildResultInfo = build.GetBuildResultInfo();
+                var buildInfo = buildResultInfo.BuildInfo;
                 try
                 {
-                    if (buildInfo.PullRequestKey is null)
+                    Console.WriteLine(buildInfo.BuildUri);
+                    var timeline = await DevOpsServer.GetTimelineAsync(build);
+                    if (timeline is null)
+                    {
+                        continue;
+                    }
+
+                    var attempt = timeline.GetAttempt();
+                    var newJobNames = new List<string>();
+
+                    foreach (var record in timeline.Records)
+                    {
+                        if (record.Type == "Job" && record.Name.Contains("Windows_NT arm64"))
+                        {
+
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+
+                }
+            }
+        }
+
+        internal record JobStatInfo(TimelineRecord TimelineRecord, TimeSpan Duration)
+        {
+            internal string JobName => TimelineRecord.Name;
+        }
+
+        internal async Task GetPullRequestStatsAsync(string project, int definitionId, DateTime targetDate)
+        {
+            const int maxCount = 500;
+            var count = 0;
+            var jobMachineMap = new Dictionary<string, MachineInfo>();
+            var map = new Dictionary<string, List<JobStatInfo>>();
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync(project, definitions: new[] { definitionId }, statusFilter: BuildStatus.Completed, maxTime: targetDate + TimeSpan.FromDays(1), minTime: targetDate - TimeSpan.FromDays(1)))
+            {
+                var buildResultInfo = build.GetBuildResultInfo();
+                var buildInfo = buildResultInfo.BuildInfo;
+                try
+                {
+                    if (buildInfo.PullRequestKey is null || buildResultInfo.QueueTime.Date != targetDate)
                     {
                         continue;
                     }
@@ -200,17 +238,7 @@ namespace Scratch
                     }
 
                     var attempt = timeline.GetAttempt();
-
-                    // After about 10 builds we don't need any more machine info.
-                    List<MachineInfo> machines;
-                    if (++machineCount < 50)
-                    {
-                        machines = await DotNetQueryUtil.ListBuildMachineInfoAsync("public", buildInfo.Number, attempt, includeAzure: true);
-                    }
-                    else
-                    {
-                        machines = new();
-                    }
+                    var newJobNames = new List<string>();
 
                     foreach (var record in timeline.Records)
                     {
@@ -222,13 +250,27 @@ namespace Scratch
                                 map[record.Name] = list;
                             }
 
-                            var machineInfo = machines.SingleOrDefault(x => x.JobName == record.Name);
-                            list.Add(new JobStatInfo(record, duration, machineInfo));
+                            if (!jobMachineMap.ContainsKey(record.Name))
+                            {
+                                newJobNames.Add(record.Name);
+                            }
+
+                            list.Add(new JobStatInfo(record, duration));
+                        }
+                    }
+
+                    if (newJobNames.Count > 0)
+                    {
+                        var machines = await DotNetQueryUtil.ListBuildMachineInfoAsync(project, buildInfo.Number, attempt, includeAzure: true);
+                        foreach (var machine in machines)
+                        {
+                            jobMachineMap[machine.JobName] = machine;
                         }
                     }
 
                     if (++count == maxCount)
                     {
+                        Console.WriteLine("Error: max count hit");
                         break;
                     }
 
@@ -243,17 +285,23 @@ namespace Scratch
                 }
             }
 
-            var targetDate = (new DateTime(year: 2021, month: 8, day: 20)).Date;
-            Console.WriteLine("Job Name,Average succeeded time (minutes),Average time (minutes),Total time per day (minutes),Queue,Container");
+            Console.WriteLine($"Total builds {count}");
+            Console.WriteLine("Job Name,Average succeeded time (minutes),Average time (minutes),Total time per day (minutes),Count per day,Queue,Container");
             foreach (var pair in map.OrderBy(x => x.Key))
             {
                 var list = pair.Value;
                 var jobSuccessAverage = Average(list.Where(x => x.TimelineRecord.Result == TaskResult.Succeeded));
                 var jobAverage = Average(list);
-                var dateTotal = NormalizeDouble(list.Where(x => x.TimelineRecord.GetStartTime()?.Date == targetDate).Sum(x => x.Duration.TotalMinutes));
-                var machine = list.Select(x => x.MachineInfo).FirstOrDefault(x => x != null);
 
-                Console.WriteLine($"{Normalize(pair.Key)},{jobSuccessAverage},{jobAverage},{dateTotal:N2},{Normalize(machine?.QueueName)},{Normalize(machine?.ContainerImage)}");
+                var dayJobs = list.Where(x => x.TimelineRecord.GetStartTime()?.Date == targetDate).ToList();
+                var dateTotal = NormalizeDouble(dayJobs.Sum(x => x.Duration.TotalMinutes));
+
+                if (!jobMachineMap.TryGetValue(pair.Key, out var machine))
+                {
+                    machine = null;
+                }
+
+                Console.WriteLine($"{Normalize(pair.Key)},{jobSuccessAverage},{jobAverage},{dateTotal:N2},{dayJobs.Count},{Normalize(machine?.QueueName)},{Normalize(machine?.ContainerImage)}");
             }
 
             static string Average(IEnumerable<JobStatInfo> e)

@@ -724,7 +724,7 @@ namespace DevOps.Util.DotNet
                         var id = match.Groups[1].Value;
                         var machineInfo = new MachineInfo(
                             queueName ?? MachineInfo.UnknownHelixQueueName,
-                            jobName,
+                            jobName.Trim(),
                             containerName,
                             containerImage,
                             isHelixSubmission: true);
@@ -817,7 +817,7 @@ namespace DevOps.Util.DotNet
                     {
                         list.Add(new MachineInfo(
                             queue,
-                            jobName,
+                            jobName.Trim(),
                             container,
                             container,
                             isHelixSubmission: false));
