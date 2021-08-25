@@ -279,7 +279,7 @@ namespace Scratch
                             var jobName = $"{helixJob.AzureJobName} Helix {suffix}";
                             var jobKey = new JobKey(definitionInfo.Id, jobName, IsHelixJob: true);
                             jobMachineMap[jobKey] = helixJob.HelixJob.MachineInfo;
-                            AddJobStatInfo(new JobStatInfo(jobKey, helixJob.HelixJob.Duration, helixJob.Record.Record.IsAnySuccess()));
+                            AddJobStatInfo(new JobStatInfo(jobKey, helixJob.HelixJob.Duration, helixJob.HelixRecord.IsAnySuccess()));
                         }
                     }
                 }
@@ -1444,7 +1444,7 @@ namespace Scratch
                         continue;
                     }
 
-                    if (helixJobs.Any(x => x.Record.JobName == job.Name))
+                    if (helixJobs.Any(x => x.JobRecord.Name == job.Name))
                     {
                         testFailCount++;
                     }
@@ -1578,7 +1578,7 @@ namespace Scratch
 
             foreach (var result in list)
             {
-                Console.WriteLine($"{result.HelixJob} - {result.Record.JobName}");
+                Console.WriteLine($"{result.HelixJob} - {result.AzureJobName}");
             }
         }
 

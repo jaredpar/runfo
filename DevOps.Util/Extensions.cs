@@ -135,6 +135,21 @@ namespace DevOps.Util
 
         public static int GetAttempt(this Timeline timeline) => timeline.Records.Max(x => x.Attempt);
 
+        public static TimelineRecord? FindParentJob(this Timeline timeline, TimelineRecord record)
+        {
+            var current = record;
+            while (current is object)
+            {
+                if (current.IsJob())
+                {
+                    return current;
+                }
+
+                current = timeline.Records.FirstOrDefault(x => x.Id == current.ParentId);
+            }
+
+            return null;
+        }
 
         public static void DumpRecordTree(this Timeline timeline, string filePath)
         {
@@ -216,6 +231,10 @@ namespace DevOps.Util
             GetFinishTime(record) is { } finishTime
                 ? finishTime - startTime
                 : null;
+
+        public static bool IsJob(this TimelineRecord record) => record.Type == "Job";
+
+        public static bool IsPhase(this TimelineRecord record) => record.Type == "Phase";
 
         #endregion
 

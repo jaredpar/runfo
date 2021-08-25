@@ -34,10 +34,10 @@ namespace DevOps.Status.Controllers
                     return new HelixJobRestInfo()
                     {
                         JobId = x.HelixJob.JobId,
-                        TimelineCoreRecordId = x.Record.Record.Id,
-                        TimelineCoreRecordName = x.Record.RecordName,
-                        TimelineJobRecordId = x.Record.JobRecord?.Id,
-                        TimelineJobRecordName = x.Record.JobName
+                        TimelineCoreRecordId = x.HelixRecord.Id,
+                        TimelineCoreRecordName = x.HelixRecord.Name,
+                        TimelineJobRecordId = x.JobRecord.Id,
+                        TimelineJobRecordName = x.AzureJobName
                     };
                 })
                 .ToList();

@@ -444,7 +444,7 @@ namespace Runfo
             {
                 Console.WriteLine(build.GetBuildResultInfo().BuildUri);
                 var jobs = await QueryUtil.ListHelixJobsAsync(build.Project.Name, build.Id);
-                foreach (var group in jobs.GroupBy(x => x.Record.JobName ?? "<unknown>"))
+                foreach (var group in jobs.GroupBy(x => x.AzureJobName ?? "<unknown>"))
                 {
                     Console.WriteLine(group.Key);
                     foreach (var item in group)

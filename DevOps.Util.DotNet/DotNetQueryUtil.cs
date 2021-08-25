@@ -108,17 +108,19 @@ namespace DevOps.Util.DotNet
 
     public sealed class HelixTimelineResult
     {
-        public TimelineRecordItem Record { get; }
-
+        public TimelineRecord JobRecord { get; }
+        public TimelineRecord HelixRecord { get; }
         public HelixJobTimelineInfo HelixJob { get; }
 
-        public string AzureJobName => HelixJob.AzureJobName;
+        public string AzureJobName => JobRecord.Name;
 
         public HelixTimelineResult(
-            TimelineRecordItem record,
+            TimelineRecord jobRecord,
+            TimelineRecord helixRecord,
             HelixJobTimelineInfo helixJob)
         {
-            Record = record;
+            JobRecord = jobRecord;
+            HelixRecord = helixRecord;
             HelixJob = helixJob;
         }
     }
@@ -659,106 +661,136 @@ namespace DevOps.Util.DotNet
             Timeline timeline,
             Action<Exception>? onError = null)
         {
-            var timelineTree = TimelineTree.Create(timeline);
-
             // TODO: this scheme really relies on this name. This is pretty fragile. Should work with
             // core-eng to find a more robust way of detecting this
             var comparer = StringComparer.OrdinalIgnoreCase;
             var comparison = StringComparison.OrdinalIgnoreCase;
+            var helixRecords = timeline.Records.Where(x => 
+                x.Name.StartsWith("Send to Helix", comparison) ||
+                x.Name.StartsWith("Send tests to Helix", comparison) ||
+                x.Name.StartsWith("Run native crossgen and compare", comparison));
+
+            var list = new List<HelixTimelineResult>();
+            foreach (var helixRecord in helixRecords)
+            {
+                var jobRecord = timeline.FindParentJob(helixRecord);
+                if (jobRecord is null || helixRecord.Log is null)
+                {
+                    continue;
+                }
+
+                list.AddRange(await ListHelixJobsFromBuildLogAsync(jobRecord, helixRecord, onError).ConfigureAwait(false));
+            }
+
+            return list;
+        }
+
+        public async Task<List<HelixTimelineResult>> ListHelixJobsFromBuildLogAsync(
+            TimelineRecord jobRecord,
+            TimelineRecord helixRecord,
+            Action<Exception>? onError = null)
+        {
+            // TODO: this scheme really relies on this name. This is pretty fragile. Should work with
+            // core-eng to find a more robust way of detecting this
+            var comparer = StringComparer.OrdinalIgnoreCase;
             var sentRegex = new Regex(@"Sent Helix Job; see work items at https:\/\/helix.dot.net\/api\/jobs\/([\d\w-]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
             var queueRegex = new Regex(@"Sending Job to (.*)\.\.\.", RegexOptions.Compiled | RegexOptions.IgnoreCase);
             var completedRegex = new Regex(@"Job ([\d\w-]+).*is completed", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
             var list = new List<HelixTimelineResult>();
-            var helixRecords = timelineTree.Records.Where(x => 
-                comparer.Equals(x.Name, "Send to Helix") ||
-                comparer.Equals(x.Name, "Send tests to Helix") ||
-                x.Name.StartsWith("Run native crossgen and compare", comparison));
-
             MachineInfo? lastMachine = null;
             var runningList = new List<(string JobId, DateTime StartTime, MachineInfo MachineInfo)>();
+            var jobName = jobRecord.Name.Trim();
 
-            foreach (var record in helixRecords)
+            if (helixRecord.Log is null || helixRecord.Log.Url is null)
             {
-                if (record.Log is null)
+                return list;
+            }
+
+            using var stream = await Server.DownloadFileStreamAsync(
+                helixRecord.Log.Url,
+                onError).ConfigureAwait(false);
+            if (stream is null)
+            {
+                onError?.Invoke(new Exception("No log"));
+                return list;
+            }
+
+            using var reader = new StreamReader(stream);
+            do
+            {
+                var line = reader.ReadLine();
+                if (line is null)
                 {
+                    break;
+                }
+
+                var match = queueRegex.Match(line);
+                if (match.Success)
+                {
+                    var queueName = match.Groups[1].Value;
+                    if (Regex.Match(queueName, @"\(([\w\d.-]+)\)?([\w\d.-]+)@(.*)") is { Success: true } match1)
+                    {
+                        queueName = match1.Groups[2].Value;
+                        lastMachine = new MachineInfo(
+                            queueName ?? MachineInfo.UnknownHelixQueueName,
+                            jobName,
+                            containerName: match1.Groups[1].Value,
+                            containerImage: match1.Groups[3].Value,
+                            isHelixSubmission: true);
+                    }
+                    else if (Regex.Match(queueName, @"([\w\d.-]+)") is { Success: true } match2)
+                    {
+                        queueName = match2.Groups[1].Value;
+                        lastMachine = new MachineInfo(
+                            queueName ?? MachineInfo.UnknownHelixQueueName,
+                            jobName,
+                            containerName: null,
+                            containerImage: null,
+                            isHelixSubmission: true);
+                    }
+                    else
+                    {
+                        onError?.Invoke(new Exception("Can't detect machine name"));
+                    }
                     continue;
                 }
- 
-                using var stream = await Server.DownloadFileStreamAsync(
-                    record.Log.Url,
-                    onError).ConfigureAwait(false);
-                if (stream is null)
+
+                match = sentRegex.Match(line);
+                if (match.Success)
                 {
-                    continue;
-                }
-
-                var jobName = timelineTree.TryGetJob(record, out var job)
-                    ? job.Name
-                    : "";
-
-                using var reader = new StreamReader(stream);
-                do
-                {
-                    var line = reader.ReadLine();
-                    if (line is null)
+                    if (lastMachine is null)
                     {
-                        break;
+                        onError?.Invoke(new Exception("Could not find machine info"));
                     }
-
-                    var match = queueRegex.Match(line);
-                    if (match.Success)
-                    {
-                        var queueName = match.Groups[1].Value;
-                        match = Regex.Match(queueName, @"\(([\w\d.-]+)\)?([\w\d.-]+)@(.*)");
-                        if (match.Success)
-                        {
-                            queueName = match.Groups[2].Value;
-                            lastMachine = new MachineInfo(
-                                queueName ?? MachineInfo.UnknownHelixQueueName,
-                                jobName.Trim(),
-                                containerName: match.Groups[1].Value,
-                                containerImage: match.Groups[3].Value,
-                                isHelixSubmission: true);
-                        }
-                        continue;
-                    }
-
-                    match = sentRegex.Match(line);
-                    if (match.Success)
-                    {
-                        if (lastMachine is null)
-                        {
-                            onError?.Invoke(new Exception("Could not find machine info"));
-                        }
-                        else
-                        {
-                            var id = match.Groups[1].Value;
-                            var startTime = DateTime.Parse(line.Split(new char[] { ' ', '\t' })[0]);
-                            runningList.Add((id, startTime, lastMachine));
-                        }
-                    }
-
-                    match = completedRegex.Match(line);
-                    if (match.Success)
+                    else
                     {
                         var id = match.Groups[1].Value;
-                        var tuple = runningList.Find(x => x.JobId == id);
-                        if (tuple.MachineInfo is null)
-                        {
-                            onError?.Invoke(new Exception("Could not find job info"));
-                        }
-                        else
-                        {
-                            var finishTime = DateTime.Parse(line.Split(new char[] { ' ', '\t' })[0]);
-                            var info = new HelixJobTimelineInfo(id, tuple.MachineInfo, finishTime - tuple.StartTime);
-                            list.Add(new HelixTimelineResult(
-                                new TimelineRecordItem(record, timelineTree),
-                                info));
-                        }
+                        var startTime = DateTime.Parse(line.Split(new char[] { ' ', '\t' })[0]);
+                        runningList.Add((id, startTime, lastMachine));
                     }
-                } while (true);
-            }
+                }
+
+                match = completedRegex.Match(line);
+                if (match.Success)
+                {
+                    var id = match.Groups[1].Value;
+                    var tuple = runningList.Find(x => x.JobId == id);
+                    if (tuple.MachineInfo is null)
+                    {
+                        onError?.Invoke(new Exception("Could not find job info"));
+                    }
+                    else
+                    {
+                        var finishTime = DateTime.Parse(line.Split(new char[] { ' ', '\t' })[0]);
+                        var info = new HelixJobTimelineInfo(id, tuple.MachineInfo, finishTime - tuple.StartTime);
+                        list.Add(new HelixTimelineResult(
+                            jobRecord,
+                            helixRecord,
+                            info));
+                    }
+                }
+            } while (true);
 
             return list;
         }

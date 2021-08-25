@@ -89,11 +89,11 @@ namespace DevOps.Util
 
         public bool IsJob(string id) =>
             IdToNodeMap.TryGetValue(id, out var node) &&
-            node.TimelineRecord.Type == "Job";
+            node.TimelineRecord.IsJob();
 
         public bool IsPhase(string id) =>
             IdToNodeMap.TryGetValue(id, out var node) &&
-            node.TimelineRecord.Type == "Phase";
+            node.TimelineRecord.IsPhase();
 
         public bool TryGetParent(TimelineRecord record, [NotNullWhen(true)] out TimelineRecord? parent)
         {
