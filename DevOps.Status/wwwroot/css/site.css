@@ -69,3 +69,8 @@ body {
   white-space: nowrap;
   line-height: 60px; /* Vertically center the text there */
 }
+
+/* Allow tooltips to be wider than the default bootstrap version */
+.tooltip-inner {
+    max-width: 400px;
+}
