@@ -24,10 +24,37 @@
             <thead>
                 <tr>
                     <th scope="col">Days</th>
-                    <th scope="col">Rolling</th>
-                    <th title="Merged Pull Requests" scope="col">Merged PR</th>
-                    <th title="Merged Pull Requests Attempt 1" scope="col">Merged PR Attempt 1</th>
-                    <th scope="col">Total</th>
+                    <th scope="col">
+                        Rolling
+                        <a href="#" data-toggle="tooltip" data-html="true" data-container="body"
+                        title="The pass rate for builds triggered after a commit was checked-in to the main repo. 
+<p>Failures here generally indicate issues in CI as these are supposedly `good` changes.</p>">
+                            &#9432; <!-- ⓘ -->
+                        </a>
+                    </th>
+                    <th scope="col">
+                        Merged PR
+                        <a href="#" data-toggle="tooltip" data-html="true" data-container="body"
+                        title="The pass rate for the final PR build prior to merging the PR. 
+<p>For required checks, this will be 100% (or close to it) as the build must pass to merge the PR.</p>">
+                            &#9432; <!-- ⓘ -->
+                        </a>
+                    </th>
+                    <th title="Merged Pull Requests Attempt 1" scope="col">
+                        Merged PR Attempt 1
+                        <a href="#" data-toggle="tooltip" data-html="true" data-container="body"
+                        title="The pass rate of the <b>first</b> attempt for the final PR build prior to merging the PR.
+<p>For required checks this column may be more useful than the 'Merged PR' column since it shows flakiness in builds that were eventually merged ('good' builds).</p>">
+                            &#9432; <!-- ⓘ -->
+                        </a>
+                    </th>
+                    <th scope="col">
+                        Total
+                        <a href="#" data-toggle="tooltip" 
+                        title="The pass rate for any build triggered by this pipeline - pull request, rolling, or manual.">
+                            &#9432; <!-- ⓘ -->
+                        </a>
+                    </th>
                 </tr>
             </thead>
             <tbody>
