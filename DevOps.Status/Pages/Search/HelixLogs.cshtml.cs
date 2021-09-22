@@ -117,8 +117,11 @@ namespace DevOps.Status.Pages.Search
                     .ToListAsync();
 
                 var modelBuildIds = modelBuildInfoList.Select(x => x.Id).ToList();
-                var modelResults = await TriageContextUtil.Context.ModelTestResults
-                    .Where(x => modelBuildIds.Contains(x.ModelBuildId))
+
+                var modelResultsQuery = TriageContextUtil.Context.ModelTestResults.Where(x => modelBuildIds.Contains(x.ModelBuildId));
+                modelResultsQuery = logsRequest.Filter(modelResultsQuery);
+
+                var modelResults = await modelResultsQuery
                     .Select(x => new
                     {
                         x.ModelBuildId,

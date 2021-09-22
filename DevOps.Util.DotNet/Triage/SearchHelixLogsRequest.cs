@@ -1,5 +1,8 @@
 ﻿using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
+
+using Microsoft.EntityFrameworkCore;
+
 using Octokit;
 using System;
 using System.Collections.Generic;
@@ -33,6 +36,11 @@ namespace DevOps.Util.DotNet.Triage
         /// </summary>
         public int Limit { get; set; } = DefaultLimit;
 
+        /// <summary>
+        /// Restricts the log search to only work items with names containing this string.
+        /// </summary>
+        public string? WorkItemName { get; set; }
+
         public SearchHelixLogsRequest(string queryString)
         {
             ParseQueryString(queryString);
@@ -47,6 +55,11 @@ namespace DevOps.Util.DotNet.Triage
         {
             query = FilterCore(query);
             query = query.Where(x => x.IsHelixTestResult);
+            
+            if (!string.IsNullOrEmpty(WorkItemName))
+            {
+                query = query.Where(x => EF.Functions.Like(x.HelixWorkItemName, $"%{WorkItemName}%"));
+            }
 
             foreach (var kind in HelixLogKinds)
             {
@@ -94,6 +107,11 @@ namespace DevOps.Util.DotNet.Triage
                 Append($"limit:{Limit}");
             }
 
+            if (!string.IsNullOrEmpty(WorkItemName))
+            {
+                Append($"workItemName:{WorkItemName}");
+            }
+
             return builder.ToString();
 
             void Append(string message)
@@ -132,6 +150,9 @@ namespace DevOps.Util.DotNet.Triage
                         break;
                     case "limit":
                         Limit = int.Parse(tuple.Value);
+                        break;
+                    case "workitemname":
+                        WorkItemName = tuple.Value.Trim('"');
                         break;
                     default:
                         if (!ParseQueryStringTuple(tuple.Name, tuple.Value))
