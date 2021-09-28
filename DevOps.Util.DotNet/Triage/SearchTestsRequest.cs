@@ -18,6 +18,7 @@ namespace DevOps.Util.DotNet.Triage
         public string? Name { get; set; }
         public string? JobName { get; set; }
         public string? Message { get; set; }
+        public string? WorkItemName { get; set; }
 
         public SearchTestsRequest(string queryString)
         {
@@ -41,6 +42,11 @@ namespace DevOps.Util.DotNet.Triage
             if (!string.IsNullOrEmpty(Name))
             {
                 query = query.Where(x => x.TestFullName.Contains(Name));
+            }
+
+            if (!string.IsNullOrEmpty(WorkItemName))
+            {
+                query = query.Where(x => EF.Functions.Like(x.HelixWorkItemName, $"%{WorkItemName}%"));
             }
 
             // Keep this in sync with logic in SearchTimelineRequest
@@ -88,6 +94,11 @@ namespace DevOps.Util.DotNet.Triage
                 Append($"message:\"{Message}\"");
             }
 
+            if (!string.IsNullOrEmpty(WorkItemName))
+            {
+                Append($"workItemName:{WorkItemName}");
+            }
+
             return builder.ToString();
 
             void Append(string message)
@@ -122,6 +133,9 @@ namespace DevOps.Util.DotNet.Triage
                     case "text":
                     case "message":
                         Message = tuple.Value.Trim('"');
+                        break;
+                    case "workitemname":
+                        WorkItemName = tuple.Value.Trim('"');
                         break;
                     default:
                         if (!ParseQueryStringTuple(tuple.Name, tuple.Value))
