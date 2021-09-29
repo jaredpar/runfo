@@ -157,6 +157,10 @@
                             <td class="font-weight-bold">message:error</td>
                             <td>Filters to the tests where error message matches error. Prefix with ^ for CONTAINS and # for CHARINDEX.</td>
                         </tr>
+                        <tr>
+                            <td class="font-weight-bold">workItemName:"JIT"</td>
+                            <td>Filter to test results where the helix work item name contains the specified string</td>
+                        </tr>
                     </tbody>
                 </table>
 
@@ -210,6 +214,10 @@
                         <tr>
                             <td class="font-weight-bold">limit:200</td>
                             <td>By default only the first 100 logs will be searched. Can be increased but be mindful of exceeding Helix rate limiting.</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">workItemName:"JIT"</td>
+                            <td>Filter to logs where the helix work item name contains the specified string</td>
                         </tr>
                     </tbody>
                 </table>
