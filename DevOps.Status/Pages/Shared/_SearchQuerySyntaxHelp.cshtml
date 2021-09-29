@@ -1,0 +1,272 @@
+﻿@*If the accordion should be expanded by default.*@
+@model bool
+
+<div class "accordion" id="searchSyntaxAccordion">
+    <div class="card">
+        <div class="card-header" id="header1">
+            <a class="accordion-toggle @(Model ? string.Empty : "collapsed")" data-toggle="collapse" data-parent="#searchSyntaxAccordion" href="#searchSyntax" aria-expanded="@Model.ToString().ToLower()" aria-controls="searchSyntax">
+                See the search syntax for allowed syntax and examples
+            </a>
+        </div>
+
+        <div class="collapse @(Model ? "show" : string.Empty)" id="searchSyntax" aria-labelledby="header1" data-parent="#searchSyntaxAccordion">
+            <div class=card-body>
+                <h1><a id="build" href="#build" class="text-reset">Build Search</a></h1>
+
+                <p>These are the various ways in which you can restrict the set of builds that are searched.</p>
+
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th class="column">Qualifier</th>
+                            <th class="column">Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-weight-bold">started:~7</td>
+                            <td>Filter to builds starting after the <a href="#date-query" class="text-reset">specified date</a></td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">definition:runtime</td>
+                            <td>Filter to builds against the build definition named <a href="https://dnceng.visualstudio.com/public/_build?definitionId=686">runtime</a></td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">kind:rolling</td>
+                            <td>Filter to rolling builds only. Valid options are rolling, pullrequest and mergedpullrequest</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">result:failed</td>
+                            <td>Filter to builds which the result Failed. Valid options are succeeded, failed, canceled and partiallysucceeded.</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">targetBranch:main</td>
+                            <td>Filter to builds against branches that contain main. Use =main for exact match.</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">finished:~7</td>
+                            <td>Filter to builds finished after the <a href="#date-query" class="text-reset">specified date</a></td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">queued:~7</td>
+                            <td>Filter to builds finished after the <a href="#date-query" class="text-reset">specified date</a></td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">issues:false</td>
+                            <td>Filter to builds that don't have any issues assigned to them.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h1 class="mt-5"><a id="timeline" href="#timeline" class="text-reset">Timeline Search</a></h1>
+
+                <p>These are the various ways in which you can restrict the timeline issues returned</p>
+
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th class="column">Qualifier</th>
+                            <th class="column">Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-weight-bold">started:~7</td>
+                            <td>Filter to builds starting after the <a href="#date-query" class="text-reset">specified date</a></td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">definition:runtime</td>
+                            <td>Filter to builds against the build definition named <a href="https://dnceng.visualstudio.com/public/_build?definitionId=686">runtime</a></td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">kind:rolling</td>
+                            <td>Filter to rolling builds only. Valid options are rolling, pullrequest and mergedpullrequest</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">result:failed</td>
+                            <td>Filter to builds which the result Failed. Valid options are succeeded, failed, canceled and partiallysucceeded.</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">targetBranch:main</td>
+                            <td>Filter to builds against branches that contain main. Use =main for exact match.</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">message:error</td>
+                            <td>Filters to the logs where issue message matches error. Prefix with ^ for CONTAINS and # for CHARINDEX.</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">type:error</td>
+                            <td>Filters to error issues only. Valid options are warning and error</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">jobName:"Windows CoreClr"</td>
+                            <td>Filter to issues on jobs whose name which contain the specified string</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">displayName:Installer</td>
+                            <td>Filter to issues on tasks whose display name contains the specified string</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">taskName:CmdLine</td>
+                            <td>Filter to issues on tasks whose task name contains the specified string</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h1 class="mt-5"><a id="test" href="#test" class="text-reset">Tests Search</a></h1>
+
+                <p>These are the various ways in which you can restrict the tests returned</p>
+
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th class="column">Qualifier</th>
+                            <th class="column">Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-weight-bold">started:~7</td>
+                            <td>Filter to builds starting after the <a href="#date-query" class="text-reset">specified date</a></td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">definition:runtime</td>
+                            <td>Filter to builds against the build definition named <a href="https://dnceng.visualstudio.com/public/_build?definitionId=686">runtime</a></td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">kind:rolling</td>
+                            <td>Filter to rolling builds only. Valid options are rolling, pullrequest and mergedpullrequest</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">result:failed</td>
+                            <td>Filter to builds which the result Failed. Valid options are succeeded, failed, canceled and partiallysucceeded.</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">targetBranch:main</td>
+                            <td>Filter to builds against branches that contain main. Use =main for exact match.</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">name:TestCanceled</td>
+                            <td>Filter to tests whoes name contain the string "TestCanceled"</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">jobName:"Windows CoreClr"</td>
+                            <td>Filter to tests on jobs whose name which contain the specified string</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">message:error</td>
+                            <td>Filters to the tests where error message matches error. Prefix with ^ for CONTAINS and # for CHARINDEX.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h1 class="mt-5"><a id="build-log" href="#build-log" class="text-reset">Build Log Search</a></h1>
+
+                <p>These are the various ways in which you can restrict the set of log files</p>
+
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th class="column">Qualifier</th>
+                            <th class="column">Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-weight-bold">logName:.*build</td>
+                            <td>Filters to the logs where the name matches the regex ".*build"</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">text:.*StackOverflow</td>
+                            <td>Filters to the logs where the text matches the regex ".*StackOverflow"</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">limit:200</td>
+                            <td>By default only the first 100 logs will be searched. Can be increased but be mindful of exceeding Azure rate limiting.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h1 class="mt-5"><a id="helix-log" href="#helix-log" class="text-reset">Helix Log Search</a></h1>
+
+                <p>These are the various ways in which you can restrict the set of log files</p>
+
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th class="column">Qualifier</th>
+                            <th class="column">Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-weight-bold">logKind:console</td>
+                            <td>Can be console, runclient or testresults. Restricts the log kinds that are searched</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">text:.*StackOverflow</td>
+                            <td>Filters to the logs where the text matches the regex ".*StackOverflow"</td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">limit:200</td>
+                            <td>By default only the first 100 logs will be searched. Can be increased but be mindful of exceeding Helix rate limiting.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h1 class="mt-5"><a id="tracking" href="#timeline" class="text-reset">Tracking Issue Search</a></h1>
+
+                <p>These are the various ways in which you can restrict the set of tracking issues</p>
+
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th class="column">Qualifier</th>
+                            <th class="column">Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-weight-bold">definition:roslyn-ci</td>
+                            <td>Filter to tracking issues against Roslyn</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h1 class="mt-5"><a id="date-query" href="#date-query" class="text-reset">Date Queries</a></h1>
+
+                <p>All date queries such as started and finished can be configured in the following ways</p>
+
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th class="column">Syntax</th>
+                            <th class="column">Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-weight-bold">started:YYYY-MM-DD</td>
+                            <td>Filter to builds after the <a href="#date-query" class="text-reset">specified date</a></td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">started:>YYYY-MM-DD</td>
+                            <td>Filter to builds after the <a href="#date-query" class="text-reset">specified date</a></td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">started:&lt;YYYY-MM-DD</td>
+                            <td>Filter to builds before the <a href="#date-query" class="text-reset">specified date</a></td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-bold">started:~1</td>
+                            <td>Filter to builds after 1 day ago. Any numeric value can appear after the ~</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+

@@ -74,3 +74,20 @@ body {
 .tooltip-inner {
     max-width: 400px;
 }
+
+/* Defines the styling for the opened card icon  */
+.card-header .accordion-toggle:after {
+    content: "-";
+    float: left;
+    color: black;
+    margin-right: 5px;
+    font-weight: bold;
+    font-size: xx-large;
+    display: inline-block;
+    line-height: 50%;
+}
+
+/* Sets the content for the closed card icon (inherits above style)  */
+.card-header .accordion-toggle.collapsed:after {
+    content: "+";
+}
