@@ -251,10 +251,18 @@ namespace DevOps.Util.UnitTests
                 name,
                 testCaseInfos.Select(x => (x.TestCaseName, x.ErrorMessage, (HelixLogKind?)null, (string?)null)).ToArray());
 
-        public async Task<ModelTestRun> AddTestRunAsync(
+        public Task<ModelTestRun> AddTestRunAsync(
             ModelBuildAttempt attempt,
             string name,
             params (string TestCaseName, string? ErrorMessage, HelixLogKind? Kind, string? HelixContent)[] testCaseInfos)
+        {
+            return AddTestRunAsync(attempt, name, testCaseInfos.Select(x => (x.TestCaseName, x.ErrorMessage, Guid.NewGuid().ToString(), x.Kind, x.HelixContent)).ToArray());
+        }
+
+        public async Task<ModelTestRun> AddTestRunAsync(
+            ModelBuildAttempt attempt,
+            string name,
+            params (string TestCaseName, string? ErrorMessage, string HelixWorkItemName, HelixLogKind? Kind, string? HelixContent)[] testCaseInfos)
         {
             Debug.Assert(attempt.ModelBuildDefinition?.AzureProject is object);
 
@@ -266,7 +274,7 @@ namespace DevOps.Util.UnitTests
                     if (x.Kind is { } kind)
                     {
                         var uri = $"https://localhost/runfo/{HelixLogCount++}/{kind}";
-                        info = new HelixInfo(Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+                        info = new HelixInfo(Guid.NewGuid().ToString(), x.HelixWorkItemName);
                         var logInfo = new HelixLogInfo(kind, uri);
                         map[info.Value] = logInfo;
                         Debug.Assert(x.HelixContent is object);

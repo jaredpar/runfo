@@ -451,6 +451,7 @@ namespace DevOps.Util.DotNet.Triage
                         testResult.HelixCoreDumpUri = helixLogInfo.CoreDumpUri;
                         testResult.HelixRunClientUri = helixLogInfo.RunClientUri;
                         testResult.HelixTestResultsUri = helixLogInfo.TestResultsUri;
+                        testResult.HelixWorkItemName = helixInfo.WorkItemName;
                     }
                 }
 

@@ -130,5 +130,42 @@ namespace DevOps.Util.UnitTests
             request = new SearchTimelinesRequest("text:#dog");
             Assert.Equal(0, await request.Filter(Context.ModelTimelineIssues).CountAsync());
         }
+
+        [Fact]
+        public async Task TestSearchWithHelixWorkItem()
+        {
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
+            var build1 = await AddBuildAsync("1|Failed", def);
+            await AddTestRunAsync(
+                await AddAttemptAsync(build1, 1),
+                "windows",
+                ("Test1", "cat", "helixWorkItem1", DotNet.HelixLogKind.Console, "cat logs"),
+                ("Test2", "cat", "helixWorkItem1", DotNet.HelixLogKind.Console, "cat logs"),
+                ("Test3", "dog", "helixWorkItem2", DotNet.HelixLogKind.Console, "dog logs"));
+            var build2 = await AddBuildAsync("2|Failed", def);
+            await AddTestRunAsync(
+                await AddAttemptAsync(build2, 1),
+                "windows",
+                ("Test1", "fish", "helixWorkItem3", DotNet.HelixLogKind.Console, "fish logs"),
+                ("Test2", "fish", "helixWorkItem3", DotNet.HelixLogKind.Console, "fish logs"),
+                ("Test3", "cat", "helixWorkItem4", DotNet.HelixLogKind.Console, "cat logs"));
+            await Context.SaveChangesAsync();
+
+            var testResults = await Context.ModelTestResults.ToListAsync();
+            var errorMessages = await Context.ModelTestResults.Select(x => x.ErrorMessage).ToListAsync();
+            await Test(2, "message:#cat workitemname:helixWorkItem1");
+            await Test(1, "message:#cat workitemname:helixWorkItem4");
+            await Test(1, "message:#dog workitemname:helixWorkItem2");
+            await Test(2, "message:#fish workitemname:helixWorkItem3");
+
+            async Task Test(int count, string value)
+            {
+                var request = new SearchTestsRequest();
+                request.ParseQueryString(value);
+                var query = request.Filter(Context.ModelTestResults);
+                var queryCount = await query.CountAsync();
+                Assert.Equal(count, queryCount);
+            }
+        }
     }
 }

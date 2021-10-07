@@ -269,7 +269,7 @@ namespace DevOps.Util.UnitTests
                     HelixLogKinds = { kind },
                     Text = "the",
                 });
-            await TestSearch(tracking1, matchCount: 2, isPresent: true);
+            await TestSearch(attempt, tracking1, matchCount: 2, isPresent: true);
 
             var tracking2 = await AddTrackingIssueAsync(
                 TrackingKind.HelixLogs,
@@ -278,7 +278,7 @@ namespace DevOps.Util.UnitTests
                     HelixLogKinds = { kind },
                     Text = "dog",
                 });
-            await TestSearch(tracking2, matchCount: 1, isPresent: true);
+            await TestSearch(attempt, tracking2, matchCount: 1, isPresent: true);
 
             var tracking3 = await AddTrackingIssueAsync(
                 TrackingKind.HelixLogs,
@@ -287,17 +287,62 @@ namespace DevOps.Util.UnitTests
                     HelixLogKinds = { kind },
                     Text = "fish",
                 });
-            await TestSearch(tracking3, matchCount: 0, isPresent: false);
+            await TestSearch(attempt, tracking3, matchCount: 0, isPresent: false);
+        }
 
-            async Task TestSearch(ModelTrackingIssue issue, int matchCount, bool isPresent)
-            {
-                await Context.SaveChangesAsync();
-                await TrackingIssueUtil.TriageAsync(attempt.GetBuildAttemptKey(), issue);
-                var matches = await Context.ModelTrackingIssueMatches.Where(x => x.ModelTrackingIssueId == issue.Id).ToListAsync();
-                Assert.Equal(matchCount, matches.Count);
-                var result = await Context.ModelTrackingIssueResults.Where(x => x.ModelTrackingIssueId == issue.Id).SingleAsync();
-                Assert.Equal(isPresent, result.IsPresent);
-            }
+        [Theory]
+        [InlineData(HelixLogKind.Console)]
+        [InlineData(HelixLogKind.RunClient)]
+        [InlineData(HelixLogKind.TestResults)]
+        public async Task HelixLogWithWorkItemNameTrackingIssue(HelixLogKind kind)
+        {
+            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
+            var attempt = await AddAttemptAsync(await AddBuildAsync("1", def), 1);
+            await AddTestRunAsync(
+                attempt,
+                "windows",
+                ("Util.Test1", null, "FirstWorkItem", kind, "the dog fetched the ball"),
+                ("Util.Test2", null, "SecondWorkItem", kind, "the tree grew"));
+
+            var tracking1 = await AddTrackingIssueAsync(
+                TrackingKind.HelixLogs,
+                helixLogsRequest: new SearchHelixLogsRequest()
+                {
+                    HelixLogKinds = { kind },
+                    Text = "the",
+                    WorkItemName = "First",
+                });
+            await TestSearch(attempt, tracking1, matchCount: 1, isPresent: true);
+
+            var tracking2 = await AddTrackingIssueAsync(
+                TrackingKind.HelixLogs,
+                helixLogsRequest: new SearchHelixLogsRequest()
+                {
+                    HelixLogKinds = { kind },
+                    Text = "the",
+                    WorkItemName = "SecondWorkItem",
+                });
+            await TestSearch(attempt, tracking2, matchCount: 1, isPresent: true);
+
+            var tracking3 = await AddTrackingIssueAsync(
+                TrackingKind.HelixLogs,
+                helixLogsRequest: new SearchHelixLogsRequest()
+                {
+                    HelixLogKinds = { kind },
+                    Text = "the",
+                    WorkItemName = "SomeOtherWorkItem",
+                });
+            await TestSearch(attempt, tracking3, matchCount: 0, isPresent: false);
+
+            var tracking4 = await AddTrackingIssueAsync(
+                TrackingKind.HelixLogs,
+                helixLogsRequest: new SearchHelixLogsRequest()
+                {
+                    HelixLogKinds = { kind },
+                    Text = "the",
+                    WorkItemName = "workitem",
+                });
+            await TestSearch(attempt, tracking4, matchCount: 2, isPresent: true);
         }
 
         [Fact]
@@ -337,6 +382,16 @@ namespace DevOps.Util.UnitTests
             Assert.Equal(1, await GetMatchCountAsync(tracking, attempt1));
             Assert.Equal(2, await GetMatchCountAsync(tracking, attempt2));
             Assert.Equal(0, await GetMatchCountAsync(tracking, attempt3));
+        }
+
+        async Task TestSearch(ModelBuildAttempt attempt, ModelTrackingIssue issue, int matchCount, bool isPresent)
+        {
+            await Context.SaveChangesAsync();
+            await TrackingIssueUtil.TriageAsync(attempt.GetBuildAttemptKey(), issue);
+            var matches = await Context.ModelTrackingIssueMatches.Where(x => x.ModelTrackingIssueId == issue.Id).ToListAsync();
+            Assert.Equal(matchCount, matches.Count);
+            var result = await Context.ModelTrackingIssueResults.Where(x => x.ModelTrackingIssueId == issue.Id).SingleAsync();
+            Assert.Equal(isPresent, result.IsPresent);
         }
     }
 }

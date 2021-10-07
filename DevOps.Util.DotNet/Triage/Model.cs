@@ -438,6 +438,8 @@ namespace DevOps.Util.DotNet.Triage
 
         public string? HelixTestResultsUri { get; set; }
 
+        public string? HelixWorkItemName { get; set; }
+
         [Required]
         public string ErrorMessage { get; set; }
 
