@@ -14,5 +14,7 @@ namespace DevOps.Util.DotNet
             JobId = jobId;
             MachineInfo = machineInfo;
         }
+
+        public override string ToString() => $"{JobId}@{MachineInfo}";
     }
 }

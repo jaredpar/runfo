@@ -302,7 +302,7 @@ namespace DevOps.Util.DotNet
                     if (result.Query.Tree.TryGetJob(result.Query.TimelineRecord, out var jobRecord))
                     {
                         jobName = jobRecord.Name;
-                    }    
+                    }
 
                     results.Add(new SearchBuildLogsResult(result.Query.BuildInfo, jobName, result.Query.TimelineRecord, result.Query.BuildLogReference, result.Line));
                 }
@@ -476,15 +476,15 @@ namespace DevOps.Util.DotNet
                 minTime: after);
             await foreach (var build in builds)
             {
-                var isUserDriven = 
-                    build.Reason == BuildReason.PullRequest || 
+                var isUserDriven =
+                    build.Reason == BuildReason.PullRequest ||
                     build.Reason == BuildReason.Manual;
                 if (isUserDriven && !includePullRequests)
                 {
                     continue;
                 }
 
-                // In the case before / after is specified we have to remove the status filter hence 
+                // In the case before / after is specified we have to remove the status filter hence
                 // it's possible to get back jobs that aren't completed. Filter them out here.
                 if (build.Status != BuildStatus.Completed)
                 {
@@ -598,11 +598,11 @@ namespace DevOps.Util.DotNet
         // TODO: this should really be in a diff type
         [return: NotNullIfNotNull("pattern")]
         public static Regex? CreateSearchRegex(string? pattern) =>
-            pattern is null 
+            pattern is null
                 ? null
                 : new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-        // TODO: need to get rid of all these overloads that take project + build number or 
+        // TODO: need to get rid of all these overloads that take project + build number or
         // Build or BuildInfo. Need a type that combines them together. Also should consider one
         // that encapsulates the attempt
         public async Task<List<DotNetTestRun>> ListDotNetTestRunsAsync(Build build, bool includeSubResults, params TestOutcome[] outcomes)
@@ -650,7 +650,7 @@ namespace DevOps.Util.DotNet
         /// Find the mapping between TimelineRecord instances and the HelixJobs. It's possible and
         /// expected that a single TimelineRecord will map to multiple HelixJobs.
         ///
-        /// TODO: this method works by knowing the display name of timeline records. That is very 
+        /// TODO: this method works by knowing the display name of timeline records. That is very
         /// fragile and we should find a better way to do this.
         /// </summary>
         public async Task<List<HelixTimelineResult>> ListHelixJobsAsync(
@@ -663,13 +663,13 @@ namespace DevOps.Util.DotNet
             // core-eng to find a more robust way of detecting this
             var comparer = StringComparer.OrdinalIgnoreCase;
             var comparison = StringComparison.OrdinalIgnoreCase;
-            var sentRegex = new Regex(@"Sent Helix Job ([\d\w-]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            var sentRegex = new Regex(@"Sent Helix Job.*([0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{12})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
             var queueRegex = new Regex(@"Sending Job to (.*)\.\.\.", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
             var list = new List<HelixTimelineResult>();
-            var helixRecords = timelineTree.Records.Where(x => 
+            var helixRecords = timelineTree.Records.Where(x =>
                 comparer.Equals(x.Name, "Send to Helix") ||
-                comparer.Equals(x.Name, "Send tests to Helix") ||
+                x.Name.StartsWith("Send tests to Helix") ||
                 x.Name.StartsWith("Run native crossgen and compare", comparison));
             foreach (var record in helixRecords)
             {
@@ -677,7 +677,7 @@ namespace DevOps.Util.DotNet
                 {
                     continue;
                 }
- 
+
                 using var stream = await Server.DownloadFileStreamAsync(
                     record.Log.Url,
                     onError).ConfigureAwait(false);
