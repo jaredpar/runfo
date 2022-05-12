@@ -61,10 +61,15 @@ namespace DevOps.Util
             string jobListJson = await reader.ReadToEndAsync().ConfigureAwait(false);
 
             WorkItemInfo[] workItemsInfo = JsonConvert.DeserializeObject<WorkItemInfo[]>(jobListJson);
+            
+            Directory.CreateDirectory(downloadDir);
+            string jobListSaveFile = Path.Combine(downloadDir, "joblist.json");
+
+            Console.WriteLine($"Job List => {jobListSaveFile}");
+            File.WriteAllText(jobListSaveFile, jobListJson);
 
             if (workItemsInfo.Length > 0)
             {
-                Directory.CreateDirectory(downloadDir);
                 string correlationDir = Path.Combine(downloadDir, "correlation-payload");
                 Directory.CreateDirectory(correlationDir);
 
