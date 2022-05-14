@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -61,7 +62,7 @@ namespace DevOps.Util
             long totalReads = 0L;
             byte[] buffer = new byte[8192];
             const double mbdividend = 1000000.0;
-            double sizeInMbs = long.Parse(response.Content.Headers.GetValues("Content-Length").First()) / mbdividend;
+            double sizeInMbs = (response.Content.Headers.ContentLength ?? 0) / mbdividend;
 
             while (true)
             {
@@ -74,7 +75,7 @@ namespace DevOps.Util
                 totalRead += read;
                 totalReads += 1;
 
-                if (totalReads % 500 == 0)
+                if (sizeInMbs != 0 && totalReads % 500 == 0)
                 {
                     output = $"\rDownloading... {totalRead / mbdividend:0,0.00}/{sizeInMbs:0,0.00}MBs";
                     lastLineLength = output.Length;
@@ -84,10 +85,29 @@ namespace DevOps.Util
             textWriter.Write($"\r{new string(' ', lastLineLength)}\b\r"); // clear status line in text writer.
         }
 
-        internal async Task DownloadFileAsync(string uri, Stream destinationStream, bool showProgress = false, TextWriter? writer = null)
+        internal async Task DownloadFileAsync(string uri, Stream destinationStream, bool showProgress = false, TextWriter? writer = null, bool resume = false)
         {
             var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
+
+            if (resume)
+            {
+                long startAt = destinationStream.Length;
+                destinationStream.Position = startAt;
+                message.Headers.Range = new RangeHeaderValue(startAt, null);
+            }
+
             using var response = await HttpClient.SendAsync(message, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+
+            if (resume && response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
+            {
+                var responseContentRange = response.Content.Headers.ContentRange;
+                if (responseContentRange != null && responseContentRange.HasLength && responseContentRange.Length == destinationStream.Length)
+                {
+                    // if the file is already complete treat as success
+                    return;
+                }
+            }
+
             response.EnsureSuccessStatusCode();
 
             if (!showProgress)
@@ -104,14 +124,33 @@ namespace DevOps.Util
 
         }
 
-        internal Task DownloadFileAsync(string uri, string destinationFilePath, bool showProgress = false, TextWriter? writer = null) =>
-            WithFileStream(destinationFilePath, fileStream => DownloadFileAsync(uri, fileStream, showProgress, writer));
+        internal Task DownloadFileAsync(string uri, string destinationFilePath, bool showProgress = false, TextWriter? writer = null, bool resume = false) =>
+            WithFileStream(destinationFilePath, resume, fileStream => DownloadFileAsync(uri, fileStream, showProgress, writer));
 
-        internal async Task DownloadZipFileAsync(string uri, Stream destinationStream, bool showProgress = false, TextWriter? writer = null)
+        internal async Task DownloadZipFileAsync(string uri, Stream destinationStream, bool showProgress = false, TextWriter? writer = null, bool resume = false)
         {
             var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/zip"));
+
+            if (resume)
+            {
+                long startAt = destinationStream.Length;
+                destinationStream.Position = startAt;
+                message.Headers.Range = new RangeHeaderValue(startAt, null);
+            }
+
             using var response = await HttpClient.SendAsync(message, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+
+            if (resume && response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
+            {
+                var responseContentRange = response.Content.Headers.ContentRange;
+                if (responseContentRange != null && responseContentRange.HasLength && responseContentRange.Length == destinationStream.Length)
+                {
+                    // if the file is already complete treat as success
+                    return;
+                }
+            }
+
             response.EnsureSuccessStatusCode();
 
             if (!showProgress)
@@ -127,12 +166,12 @@ namespace DevOps.Util
             }
         }
 
-        internal Task DownloadZipFileAsync(string uri, string destinationFilePath, bool showProgress = false, TextWriter? writer = null) =>
-            WithFileStream(destinationFilePath, fileStream => DownloadZipFileAsync(uri, fileStream, showProgress, writer));
+        internal Task DownloadZipFileAsync(string uri, string destinationFilePath, bool showProgress = false, TextWriter? writer = null, bool resume = false) =>
+            WithFileStream(destinationFilePath, resume, fileStream => DownloadZipFileAsync(uri, fileStream, showProgress, writer, resume));
 
-        internal async Task WithFileStream(string destinationFilePath, Func<FileStream, Task> func)
+        internal async Task WithFileStream(string destinationFilePath, bool resume, Func<FileStream, Task> func)
         {
-            using var fileStream = new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write);
+            using var fileStream = new FileStream(destinationFilePath, resume ? FileMode.OpenOrCreate : FileMode.Create,FileAccess.Write);
             await func(fileStream).ConfigureAwait(false);
         }
 

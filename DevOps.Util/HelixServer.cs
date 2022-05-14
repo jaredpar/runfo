@@ -45,7 +45,7 @@ namespace DevOps.Util
             return ApiFactory.GetAuthenticated(helixBaseUri, authToken.Token);
         }
 
-        public async ValueTask GetHelixPayloads(string jobId, List<string> workItems, string downloadDir, bool ignoreDumps, bool extract)
+        public async ValueTask GetHelixPayloads(string jobId, List<string> workItems, string downloadDir, bool ignoreDumps, bool extract, bool resume)
         {
             if (!Path.IsPathFullyQualified(downloadDir))
             {
@@ -127,7 +127,7 @@ namespace DevOps.Util
 
                 async Task DownloadAndExtractFile(string uri, string destinationFile, string extractDirectory)
                 {
-                    await _client.DownloadZipFileAsync(uri, destinationFile, showProgress: true, writer: Console.Out).ConfigureAwait(false);
+                    await _client.DownloadZipFileAsync(uri, destinationFile, showProgress: true, writer: Console.Out, resume).ConfigureAwait(false);
 
                     if (extract)
                     {
@@ -174,7 +174,7 @@ namespace DevOps.Util
                         }
 
                         Console.WriteLine($"{file.Name} => {destFile}");
-                        await _client.DownloadFileAsync(file.Link, destFile, showProgress: true, writer: Console.Out).ConfigureAwait(false);
+                        await _client.DownloadFileAsync(file.Link, destFile, showProgress: true, writer: Console.Out, resume).ConfigureAwait(false);
                     }
 
                     return itemDir;
