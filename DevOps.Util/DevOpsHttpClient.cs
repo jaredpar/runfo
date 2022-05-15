@@ -85,9 +85,14 @@ namespace DevOps.Util
             textWriter.Write($"\r{new string(' ', lastLineLength)}\b\r"); // clear status line in text writer.
         }
 
-        internal async Task DownloadFileAsync(string uri, Stream destinationStream, bool showProgress = false, TextWriter? writer = null, bool resume = false)
+        internal async Task DownloadFileAsync(string uri, Stream destinationStream, bool showProgress = false, TextWriter? writer = null, string? mimeType = null, bool resume = false)
         {
             var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
+
+            if (mimeType != null)
+            {
+                message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(mimeType));
+            }
 
             if (resume)
             {
@@ -127,44 +132,8 @@ namespace DevOps.Util
         internal Task DownloadFileAsync(string uri, string destinationFilePath, bool showProgress = false, TextWriter? writer = null, bool resume = false) =>
             WithFileStream(destinationFilePath, resume, fileStream => DownloadFileAsync(uri, fileStream, showProgress, writer));
 
-        internal async Task DownloadZipFileAsync(string uri, Stream destinationStream, bool showProgress = false, TextWriter? writer = null, bool resume = false)
-        {
-            var message = CreateHttpRequestMessage(HttpMethod.Get, uri);
-            message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/zip"));
-
-            if (resume)
-            {
-                long startAt = destinationStream.Length;
-                destinationStream.Position = startAt;
-                message.Headers.Range = new RangeHeaderValue(startAt, null);
-            }
-
-            using var response = await HttpClient.SendAsync(message, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
-
-            if (resume && response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
-            {
-                var responseContentRange = response.Content.Headers.ContentRange;
-                if (responseContentRange != null && responseContentRange.HasLength && responseContentRange.Length == destinationStream.Length)
-                {
-                    // if the file is already complete treat as success
-                    return;
-                }
-            }
-
-            response.EnsureSuccessStatusCode();
-
-            if (!showProgress)
-            {
-                await response.Content.CopyToAsync(destinationStream).ConfigureAwait(false);
-            }
-            else
-            {
-                if (writer == null)
-                    throw new ArgumentNullException(nameof(writer), $"Should not be null when {nameof(showProgress)} is true.");
-
-                await DownloadWithProgress(response, destinationStream, writer).ConfigureAwait(false);
-            }
-        }
+        internal Task DownloadZipFileAsync(string uri, Stream destinationStream, bool showProgress = false, TextWriter? writer = null, bool resume = false) =>
+            DownloadFileAsync(uri, destinationStream, showProgress, writer, mimeType: "application/zip", resume);
 
         internal Task DownloadZipFileAsync(string uri, string destinationFilePath, bool showProgress = false, TextWriter? writer = null, bool resume = false) =>
             WithFileStream(destinationFilePath, resume, fileStream => DownloadZipFileAsync(uri, fileStream, showProgress, writer, resume));
