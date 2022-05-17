@@ -1122,7 +1122,7 @@ namespace Runfo
                 return ReturnWithFailureMessage("Output directory should not be empty");
             }
 
-            await HelixServer.GetHelixPayloads(optionSet.JobId, optionSet.WorkItems, optionSet.DownloadDir, optionSet.IgnoreDumps, optionSet.Extract, optionSet.Resume).ConfigureAwait(false);
+            await HelixServer.GetHelixPayloads(optionSet.JobId, optionSet.WorkItems, optionSet.DownloadDir, optionSet.IgnoreDumps, optionSet.Resume, optionSet.Extract).ConfigureAwait(false);
 
             int ReturnWithFailureMessage(string message)
             {

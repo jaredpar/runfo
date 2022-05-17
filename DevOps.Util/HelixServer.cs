@@ -45,7 +45,11 @@ namespace DevOps.Util
             return ApiFactory.GetAuthenticated(helixBaseUri, authToken.Token);
         }
 
-        public async ValueTask GetHelixPayloads(string jobId, List<string> workItems, string downloadDir, bool ignoreDumps, bool extract, bool resume)
+#if NET7_0_OR_GREATER
+        public async ValueTask GetHelixPayloads(string jobId, List<string> workItems, string downloadDir, bool ignoreDumps, bool resume = false, bool extract = false)
+#else
+        public async ValueTask GetHelixPayloads(string jobId, List<string> workItems, string downloadDir, bool ignoreDumps, bool resume = false)
+#endif
         {
             if (!Path.IsPathFullyQualified(downloadDir))
             {
@@ -129,6 +133,7 @@ namespace DevOps.Util
                 {
                     await _client.DownloadZipFileAsync(uri, destinationFile, showProgress: true, writer: Console.Out, resume).ConfigureAwait(false);
 
+#if NET7_0_OR_GREATER
                     if (extract)
                     {
                         if (destinationFile.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
@@ -137,13 +142,10 @@ namespace DevOps.Util
                         }
                         else if (destinationFile.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
                         {
-#if NET7_0_OR_GREATER
                             TarFile.ExtractToDirectory(destinationFile, extractDirectory, overwriteFiles: true);
-#else
-                            // do nothing -- could shell out to tar -xf {destinationFile} -C {extractDirectory}
-#endif
                         }
                     }
+#endif
                 }
 
                 async Task<string> DownloadWorkitemFiles(string workItemId, string payloadUri)
