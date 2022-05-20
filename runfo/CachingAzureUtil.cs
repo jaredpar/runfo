@@ -11,25 +11,25 @@ namespace Runfo
 {
     public sealed class CachingAzureUtil : IAzureUtil
     {
-        public IAzureStorageUtil MainAzureStorageUtil { get; }
+        public LocalAzureStorageUtil LocalAzureStorageUtil { get; }
         public IAzureUtil BackupAzureUtil { get; }
 
-        public string Organization => MainAzureStorageUtil.Organization;
+        public string Organization => LocalAzureStorageUtil.Organization;
 
-        public CachingAzureUtil(IAzureStorageUtil mainAzureStorageUtil, DevOpsServer server)
-            : this(mainAzureStorageUtil, new AzureUtil(server))
+        public CachingAzureUtil(LocalAzureStorageUtil localAzureStorageUtil, DevOpsServer server)
+            : this(localAzureStorageUtil, new AzureUtil(server))
         {
 
         }
 
-        public CachingAzureUtil(IAzureStorageUtil mainAzureStorageUtil, IAzureUtil backupAzureUtil)
+        public CachingAzureUtil(LocalAzureStorageUtil localAzureStorageUtil, IAzureUtil backupAzureUtil)
         {
-            if (mainAzureStorageUtil.Organization != backupAzureUtil.Organization)
+            if (localAzureStorageUtil.Organization != backupAzureUtil.Organization)
             {
-                throw new ArgumentException($"Organization values {mainAzureStorageUtil.Organization} and {backupAzureUtil.Organization} do not match");
+                throw new ArgumentException($"Organization values {localAzureStorageUtil.Organization} and {backupAzureUtil.Organization} do not match");
             }
 
-            MainAzureStorageUtil = mainAzureStorageUtil;
+            LocalAzureStorageUtil = localAzureStorageUtil;
             BackupAzureUtil = backupAzureUtil;
         }
 
@@ -38,7 +38,7 @@ namespace Runfo
             Timeline timeline;
             try
             {
-                timeline = await MainAzureStorageUtil.GetTimelineAttemptAsync(project, buildNumber, attempt, cancellationToken).ConfigureAwait(false);
+                timeline = await LocalAzureStorageUtil.GetTimelineAttemptAsync(project, buildNumber, attempt, cancellationToken).ConfigureAwait(false);
                 if (timeline is object)
                 {
                     return timeline;
@@ -58,7 +58,7 @@ namespace Runfo
             Timeline timeline;
             try
             {
-                timeline = await MainAzureStorageUtil.GetTimelineAsync(project, buildNumber, cancellationToken).ConfigureAwait(false);
+                timeline = await LocalAzureStorageUtil.GetTimelineAsync(project, buildNumber, cancellationToken).ConfigureAwait(false);
                 if (timeline is object)
                 {
                     return timeline;
@@ -79,7 +79,7 @@ namespace Runfo
         {
             try
             {
-                return await MainAzureStorageUtil.ListTestRunsAsync(project, buildNumber, cancellationToken).ConfigureAwait(false);
+                return await LocalAzureStorageUtil.ListTestRunsAsync(project, buildNumber, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -93,7 +93,7 @@ namespace Runfo
         {
             try
             {
-                return await MainAzureStorageUtil.ListTestResultsAsync(project, testRunId, outcomes, cancellationToken).ConfigureAwait(false);
+                return await LocalAzureStorageUtil.ListTestResultsAsync(project, testRunId, outcomes, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -106,21 +106,21 @@ namespace Runfo
         private async Task<List<TestRun>> ListAndCacheTestRunsAsync(string project, int buildNumber, CancellationToken cancellationToken)
         {
             var list = await BackupAzureUtil.ListTestRunsAsync(project, buildNumber, cancellationToken).ConfigureAwait(false);
-            await MainAzureStorageUtil.SaveTestRunsAsync(project, buildNumber, list, cancellationToken).ConfigureAwait(false);
+            await LocalAzureStorageUtil.SaveTestRunsAsync(project, buildNumber, list, cancellationToken).ConfigureAwait(false);
             return list;
         }
 
         private async Task<List<Timeline>> ListAndCacheTimelinesAsync(string project, int buildNumber, CancellationToken cancellationToken)
         {
             var list = await BackupAzureUtil.ListTimelineAttemptsAsync(project, buildNumber).ConfigureAwait(false);
-            await MainAzureStorageUtil.SaveTimelineAsync(project, buildNumber, list, cancellationToken).ConfigureAwait(false);
+            await LocalAzureStorageUtil.SaveTimelineAsync(project, buildNumber, list, cancellationToken).ConfigureAwait(false);
             return list;
         }
 
         private async Task<List<TestCaseResult>> ListAndCacheTestResultsAsync(string project, int testRunId, TestOutcome[]? outcomes, CancellationToken cancellationToken)
         {
             var list = await BackupAzureUtil.ListTestResultsAsync(project, testRunId, outcomes).ConfigureAwait(false);
-            await MainAzureStorageUtil.SaveTestResultsAsync(project, testRunId, outcomes, list, cancellationToken).ConfigureAwait(false);
+            await LocalAzureStorageUtil.SaveTestResultsAsync(project, testRunId, outcomes, list, cancellationToken).ConfigureAwait(false);
             return list;
         }
     }

@@ -19,14 +19,7 @@ using DevOps.Util;
 
 namespace Runfo
 {
-    public interface IAzureStorageUtil : IAzureUtil
-    {
-        Task SaveTimelineAsync(string project, int buildNumber, List<Timeline> timelineList, CancellationToken cancellationToken = default);
-        Task SaveTestRunsAsync(string project, int buildNumber, List<TestRun> testRunList, CancellationToken cancellationToken = default);
-        Task SaveTestResultsAsync(string project, int testRunId, TestOutcome[]? outcomes, List<TestCaseResult> testResults, CancellationToken cancellationToken = default);
-    }
-
-    public sealed class LocalAzureStorageUtil : IAzureStorageUtil
+    public sealed class LocalAzureStorageUtil
     {
         public string Organization { get; }
         public string CacheDirectory { get; }
