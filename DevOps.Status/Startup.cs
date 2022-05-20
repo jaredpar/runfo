@@ -60,13 +60,6 @@ namespace DevOps.Status
             services.AddScoped<DotNetQueryUtilFactory>();
             services.AddScoped<IGitHubClientFactory>(_ => new GitHubClientFactory(Configuration));
 
-            services.AddScoped<BlobStorageUtil>(_ =>
-            {
-                return new BlobStorageUtil(
-                    DotNetConstants.AzureOrganization,
-                    Configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
-            });
-
             services.AddScoped(_ => new FunctionQueueUtil(Configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]));
 
             services.AddDbContext<TriageContext>(options => 

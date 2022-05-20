@@ -97,7 +97,6 @@ namespace Scratch
         public IGitHubClientFactory GitHubClientFactory { get; set; }
         public DotNetQueryUtil DotNetQueryUtil { get; set; }
         public HelixServer HelixServer { get; set; }
-        public BlobStorageUtil BlobStorageUtil { get; set; }
         public FunctionQueueUtil FunctionQueueUtil { get; set; }
 
 #pragma warning disable CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
@@ -135,8 +134,6 @@ namespace Scratch
                 gitHubClient.Credentials = new Credentials(both[0], both[1]);
             }
             GitHubClientFactory = new FakeGitHubClientFactory(gitHubClient);
-
-            BlobStorageUtil = new BlobStorageUtil(organization, configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
 
             DotNetQueryUtil = new DotNetQueryUtil(
                 DevOpsServer,

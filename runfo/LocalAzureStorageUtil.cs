@@ -15,10 +15,11 @@ using System.Threading.Tasks;
 using System.Security.Cryptography;
 using DevOps.Util.DotNet;
 using System.IO.Compression;
+using DevOps.Util;
 
-namespace DevOps.Util.DotNet
+namespace Runfo
 {
-    public sealed class LocalAzureStorageUtil : IAzureStorageUtil
+    public sealed class LocalAzureStorageUtil
     {
         public string Organization { get; }
         public string CacheDirectory { get; }

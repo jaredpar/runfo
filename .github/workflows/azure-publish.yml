@@ -21,10 +21,10 @@ jobs:
       with:
         dotnet-version: 3.1.101
 
-    - name: Setup .NET Core 5.0
+    - name: Setup .NET Core 6.0
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 5.0.100
+        dotnet-version: 6.0.100
 
     - name: 'Build Functions'
       run: dotnet build DevOps.Functions/DevOps.Functions.csproj --configuration Release --output ./artifacts/func
