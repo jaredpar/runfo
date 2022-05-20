@@ -5,7 +5,6 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
-using Azure.Storage.Blobs.Models;
 using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
