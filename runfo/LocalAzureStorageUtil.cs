@@ -15,9 +15,17 @@ using System.Threading.Tasks;
 using System.Security.Cryptography;
 using DevOps.Util.DotNet;
 using System.IO.Compression;
+using DevOps.Util;
 
-namespace DevOps.Util.DotNet
+namespace Runfo
 {
+    public interface IAzureStorageUtil : IAzureUtil
+    {
+        Task SaveTimelineAsync(string project, int buildNumber, List<Timeline> timelineList, CancellationToken cancellationToken = default);
+        Task SaveTestRunsAsync(string project, int buildNumber, List<TestRun> testRunList, CancellationToken cancellationToken = default);
+        Task SaveTestResultsAsync(string project, int testRunId, TestOutcome[]? outcomes, List<TestCaseResult> testResults, CancellationToken cancellationToken = default);
+    }
+
     public sealed class LocalAzureStorageUtil : IAzureStorageUtil
     {
         public string Organization { get; }
