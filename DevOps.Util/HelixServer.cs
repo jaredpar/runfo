@@ -117,9 +117,12 @@ namespace DevOps.Util
                     Console.WriteLine();
                     Console.WriteLine($"----- To execute: {workItemInfo.WorkItemId} -----");
                     Console.WriteLine();
-                    string setPrefix = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "set " : "";
-                    Console.WriteLine($"{setPrefix}HELIX_CORRELATION_PAYLOAD={correlationDir}");
-                    Console.WriteLine($"{setPrefix}HELIX_PYTHONPATH=echo skipping python");
+                    string SetVariable(string name, string value) =>
+                        RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
+                            $"set {name}={value}" :
+                            $"name=\"{value}\"";
+                    Console.WriteLine(SetVariable("HELIX_CORRELATION_PAYLOAD", correlationDir));
+                    Console.WriteLine(SetVariable("HELIX_PYTHONPATH", "echo skipping python"));
                     Console.WriteLine($"pushd {itemDir} && {workItemInfo.Command} && popd");
                     Console.WriteLine();
 
