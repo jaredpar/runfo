@@ -4,9 +4,14 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+#if NET7_0_OR_GREATER
+using System.Formats.Tar;
+#endif
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -40,7 +45,11 @@ namespace DevOps.Util
             return ApiFactory.GetAuthenticated(helixBaseUri, authToken.Token);
         }
 
-        public async ValueTask GetHelixPayloads(string jobId, List<string> workItems, string downloadDir, bool ignoreDumps)
+#if NET7_0_OR_GREATER
+        public async ValueTask GetHelixPayloads(string jobId, List<string> workItems, string downloadDir, bool ignoreDumps, bool resume = false, bool extract = false)
+#else
+        public async ValueTask GetHelixPayloads(string jobId, List<string> workItems, string downloadDir, bool ignoreDumps, bool resume = false)
+#endif
         {
             if (!Path.IsPathFullyQualified(downloadDir))
             {
@@ -61,23 +70,27 @@ namespace DevOps.Util
             string jobListJson = await reader.ReadToEndAsync().ConfigureAwait(false);
 
             WorkItemInfo[] workItemsInfo = JsonConvert.DeserializeObject<WorkItemInfo[]>(jobListJson);
+            
+            Directory.CreateDirectory(downloadDir);
+            string jobListSaveFile = Path.Combine(downloadDir, "joblist.json");
+
+            Console.WriteLine($"Job List => {jobListSaveFile}");
+            File.WriteAllText(jobListSaveFile, jobListJson);
 
             if (workItemsInfo.Length > 0)
             {
-                Directory.CreateDirectory(downloadDir);
                 string correlationDir = Path.Combine(downloadDir, "correlation-payload");
                 Directory.CreateDirectory(correlationDir);
 
                 // download correlation payload
-                JObject correlationPayload = workItemsInfo[0].CorrelationPayloadUrisWithDestinations ?? new JObject();
-                foreach (JProperty property in correlationPayload.Children())
+                var correlationPayloads = workItemsInfo[0].CorrelationPayloadUrisWithDestinations ?? new();
+                foreach (var (url, extractFolder) in correlationPayloads)
                 {
-                    string url = property.Name;
-                    Uri uri = new Uri(url);
-                    string fileName = uri.Segments[^1];
+                    string fileName = new Uri(url).Segments[^1];
                     string destinationFile = Path.Combine(correlationDir, fileName);
+                    string extractDirectory = Path.Combine(correlationDir, extractFolder);
                     Console.WriteLine($"Payload {fileName} => {destinationFile}");
-                    await _client.DownloadZipFileAsync(url, destinationFile, showProgress: true, writer: Console.Out).ConfigureAwait(false);
+                    await DownloadAndExtractFile(url, destinationFile, extractDirectory).ConfigureAwait(false);
                 }
 
                 string workItemsDir = Path.Combine(downloadDir, "workitems");
@@ -99,7 +112,19 @@ namespace DevOps.Util
                     if (string.IsNullOrEmpty(workItemInfo.PayloadUri))
                         continue;
 
-                    await DownloadWorkitemFiles(workItemInfo.WorkItemId!, workItemInfo.PayloadUri).ConfigureAwait(false);
+                    string itemDir = await DownloadWorkitemFiles(workItemInfo.WorkItemId!, workItemInfo.PayloadUri).ConfigureAwait(false);
+
+                    Console.WriteLine();
+                    Console.WriteLine($"----- To execute: {workItemInfo.WorkItemId} -----");
+                    Console.WriteLine();
+                    string SetVariable(string name, string value) =>
+                        RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
+                            $"set {name}={value}" :
+                            $"name=\"{value}\"";
+                    Console.WriteLine(SetVariable("HELIX_CORRELATION_PAYLOAD", correlationDir));
+                    Console.WriteLine(SetVariable("HELIX_PYTHONPATH", "echo skipping python"));
+                    Console.WriteLine($"pushd {itemDir} && {workItemInfo.Command} && popd");
+                    Console.WriteLine();
 
                     // if no workitems specified, download the first one,
                     // usefull to download any workitem and inspect the payload structure for debugging
@@ -107,7 +132,26 @@ namespace DevOps.Util
                         return;
                 }
 
-                async Task DownloadWorkitemFiles(string workItemId, string payloadUri)
+                async Task DownloadAndExtractFile(string uri, string destinationFile, string extractDirectory)
+                {
+                    await _client.DownloadZipFileAsync(uri, destinationFile, showProgress: true, writer: Console.Out, resume).ConfigureAwait(false);
+
+#if NET7_0_OR_GREATER
+                    if (extract)
+                    {
+                        if (destinationFile.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                        {
+                            ZipFile.ExtractToDirectory(destinationFile, extractDirectory, overwriteFiles: true);
+                        }
+                        else if (destinationFile.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
+                        {
+                            TarFile.ExtractToDirectory(destinationFile, extractDirectory, overwriteFiles: true);
+                        }
+                    }
+#endif
+                }
+
+                async Task<string> DownloadWorkitemFiles(string workItemId, string payloadUri)
                 {
                     string itemDir = Path.Combine(workItemsDir, workItemId);
                     Directory.CreateDirectory(itemDir);
@@ -116,11 +160,10 @@ namespace DevOps.Util
                     Console.WriteLine($"------ Downloading files for: {workItemId} -------");
                     Console.WriteLine();
 
-                    string fileName = Path.Combine(workItemsDir, itemDir, $"{workItemId}.zip");
+                    string fileName = Path.Combine(itemDir, $"{workItemId}.zip");
 
                     Console.WriteLine($"WorkItem {workItemId} => {fileName}");
-
-                    await _client.DownloadZipFileAsync(payloadUri, fileName, showProgress: true, writer: Console.Out).ConfigureAwait(false);
+                    await DownloadAndExtractFile(payloadUri, fileName, extractDirectory: itemDir);
 
                     IEnumerable<UploadedFile> workitemFiles = await helixApi.WorkItem.ListFilesAsync(workItemId, jobId);
                     foreach (var file in workitemFiles)
@@ -136,8 +179,10 @@ namespace DevOps.Util
                         }
 
                         Console.WriteLine($"{file.Name} => {destFile}");
-                        await _client.DownloadFileAsync(file.Link, destFile, showProgress: true, writer: Console.Out).ConfigureAwait(false);
+                        await _client.DownloadFileAsync(file.Link, destFile, showProgress: true, writer: Console.Out, resume).ConfigureAwait(false);
                     }
+
+                    return itemDir;
                 }
             }
         }
@@ -155,7 +200,8 @@ namespace DevOps.Util
 
         private class WorkItemInfo
         {
-            public JObject? CorrelationPayloadUrisWithDestinations { get; set; }
+            public string? Command { get; set; }
+            public Dictionary<string, string>? CorrelationPayloadUrisWithDestinations { get; set; }
             public string? PayloadUri { get; set; }
             public string? WorkItemId { get; set; }
         }

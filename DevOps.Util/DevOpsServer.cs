@@ -164,6 +164,7 @@ namespace DevOps.Util
         public Task DownloadBuildLogAsync(string project, int buildId, int logId, string destinationFilePath) =>
             _client.WithFileStream(
                 destinationFilePath,
+                resume: false,
                 stream => DownloadBuildLogAsync(project, buildId, logId, stream));
 
         public Task<MemoryStream> DownloadBuildLogAsync(string project, int buildId, int logId) =>
@@ -428,7 +429,7 @@ namespace DevOps.Util
             int testCaseResultId,
             int attachmentId,
             string destinationFilePath) =>
-            _client.WithFileStream(destinationFilePath, s => DownloadTestCaseResultAttachmentZipAsync(project, runId, testCaseResultId, attachmentId, s));
+            _client.WithFileStream(destinationFilePath, resume:false, s => DownloadTestCaseResultAttachmentZipAsync(project, runId, testCaseResultId, attachmentId, s));
 
         private RequestBuilder GetBuilder(string? project, string apiPath) => new RequestBuilder(Organization, project, apiPath);
 

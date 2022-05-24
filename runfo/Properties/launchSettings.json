@@ -2,7 +2,7 @@
   "profiles": {
     "runfo": {
       "commandName": "Project",
-      "commandLineArgs": "search-helix -d runtime -c 10 -v \"mono_threads_pthread_kill: pthread_kill failed with error 11\" -m"
+      "commandLineArgs": "get-helix-payload -j c415d1d1-78c5-404d-914e-e1641c1e240f -w Common.Tests -x -o \\scratch\\runfodl -r"
     }
   }
 }
