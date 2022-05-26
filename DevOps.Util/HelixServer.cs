@@ -122,6 +122,7 @@ namespace DevOps.Util
                             $"set {name}={value}" :
                             $"export {name}=\"{value}\"";
                     Console.WriteLine(SetVariable("HELIX_CORRELATION_PAYLOAD", correlationDir));
+                    Console.WriteLine(SetVariable("HELIX_WORKITEM_ROOT", itemDir));
                     Console.WriteLine(SetVariable("HELIX_PYTHONPATH", "echo skipping python"));
                     if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
