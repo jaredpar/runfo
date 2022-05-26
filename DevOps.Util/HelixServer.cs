@@ -120,9 +120,14 @@ namespace DevOps.Util
                     string SetVariable(string name, string value) =>
                         RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
                             $"set {name}={value}" :
-                            $"name=\"{value}\"";
+                            $"export {name}=\"{value}\"";
                     Console.WriteLine(SetVariable("HELIX_CORRELATION_PAYLOAD", correlationDir));
+                    Console.WriteLine(SetVariable("HELIX_WORKITEM_ROOT", itemDir));
                     Console.WriteLine(SetVariable("HELIX_PYTHONPATH", "echo skipping python"));
+                    if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        Console.WriteLine($"chmod +x {workItemInfo.Command}");
+                    }
                     Console.WriteLine($"pushd {itemDir} && {workItemInfo.Command} && popd");
                     Console.WriteLine();
 
