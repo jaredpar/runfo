@@ -631,8 +631,8 @@ namespace DevOps.Util.DotNet
             Action<Exception>? onError = null) =>
             Server.GetDotNetTestRunAsync(build.Project.Name, testRun.Id, testRun.Name, outcomes, includeSubResults, onError);
 
-        public Task<List<HelixInfo>> ListHelixInfosAsync(Build build, params TestOutcome[] outcomes) =>
-            Server.ListHelixInfosAsync(build.Project.Name, build.Id, outcomes);
+        public Task<List<HelixInfoWorkItem>> ListHelixWorkItemsAsync(Build build, params TestOutcome[] outcomes) =>
+            Server.ListHelixWorkItemsAsync(build.Project.Name, build.Id, outcomes);
 
         public async Task<List<HelixTimelineResult>> ListHelixJobsAsync(string project, int buildNumber, int? attempt = null)
         {

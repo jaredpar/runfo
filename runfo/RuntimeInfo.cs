@@ -161,7 +161,7 @@ namespace Runfo
                 {
                     var helixApi = HelixServer.GetHelixApi();
                     var workItems = await queryUtil
-                        .ListHelixInfosAsync(build, DotNetUtil.FailedTestOutcomes)
+                        .ListHelixWorkItemsAsync(build, DotNetUtil.FailedTestOutcomes)
                         .ConfigureAwait(false);
                     foreach (var workItem in workItems)
                     {
@@ -514,15 +514,15 @@ namespace Runfo
             var logs = buildTestInfo
                 .GetHelixWorkItems()
                 .AsParallel()
-                .Select(async (HelixInfo helixInfo) =>
+                .Select(async (HelixInfoWorkItem workItem) =>
                 {
                     string? consoleText = null;
                     if (includeConsoleText)
                     {
-                        consoleText = await HelixUtil.GetHelixConsoleText(helixApi, helixInfo);
+                        consoleText = await HelixUtil.GetHelixConsoleText(helixApi, workItem);
                     }
 
-                    var helixLogInfo = await HelixUtil.GetHelixLogInfoAsync(helixApi, helixInfo);
+                    var helixLogInfo = await HelixUtil.GetHelixLogInfoAsync(helixApi, workItem);
                     return (helixLogInfo, consoleText);
                 });
 
@@ -1166,7 +1166,7 @@ namespace Runfo
                 .AsOrdered()
                 .Select(async result =>
                 {
-                    var helixLogInfo = await GetHelixLogInfoAsync(result.TestCaseResult.HelixInfo!.Value);
+                    var helixLogInfo = await GetHelixLogInfoAsync(result.TestCaseResult.HelixWorkItem!.Value);
                     return (result.Build, helixLogInfo);
                 });
             var list = await RuntimeInfoUtil.ToListAsync(query);
@@ -1175,7 +1175,7 @@ namespace Runfo
 
         // The logs for the failure always exist on the associated work item, not on the 
         // individual test result
-        private async Task<HelixLogInfo> GetHelixLogInfoAsync(HelixInfo helixInfo) => await HelixUtil.GetHelixLogInfoAsync(HelixServer.GetHelixApi(), helixInfo);
+        private async Task<HelixLogInfo> GetHelixLogInfoAsync(HelixInfoWorkItem workItem) => await HelixUtil.GetHelixLogInfoAsync(HelixServer.GetHelixApi(), workItem);
 
         private static string GetIndent(int level) => level == 0 ? string.Empty : new string(' ', level * 2);
 

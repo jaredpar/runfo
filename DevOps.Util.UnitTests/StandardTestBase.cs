@@ -266,17 +266,17 @@ namespace DevOps.Util.UnitTests
         {
             Debug.Assert(attempt.ModelBuildDefinition?.AzureProject is object);
 
-            var map = new Dictionary<HelixInfo, HelixLogInfo>();
+            var map = new Dictionary<HelixInfoWorkItem, HelixLogInfo>();
             var testCaseResults = testCaseInfos
                 .Select(x =>
                 {
-                    HelixInfo? info = null;
+                    HelixInfoWorkItem? workItem = null;
                     if (x.Kind is { } kind)
                     {
                         var uri = $"https://localhost/runfo/{HelixLogCount++}/{kind}";
-                        info = new HelixInfo(Guid.NewGuid().ToString(), x.HelixWorkItemName);
+                        workItem = new HelixInfoWorkItem(Guid.NewGuid().ToString(), x.HelixWorkItemName);
                         var logInfo = new HelixLogInfo(kind, uri);
-                        map[info.Value] = logInfo;
+                        map[workItem.Value] = logInfo;
                         Debug.Assert(x.HelixContent is object);
                         TestableHttpMessageHandler.AddRaw(uri, x.HelixContent);
                     }
@@ -288,7 +288,7 @@ namespace DevOps.Util.UnitTests
                         Outcome = "",
                     };
 
-                    return new DotNetTestCaseResult(testCaseResult, info);
+                    return new DotNetTestCaseResult(testCaseResult, workItem);
                 })
                 .ToReadOnlyCollection();
 

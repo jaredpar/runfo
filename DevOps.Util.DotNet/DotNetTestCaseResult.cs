@@ -13,7 +13,7 @@ namespace DevOps.Util.DotNet
         /// <summary>
         /// Helix information for the test case if this was executed in Helix
         /// </summary>
-        public HelixInfo? HelixInfo { get; }
+        public HelixInfoWorkItem? HelixWorkItem { get; }
 
         /// <summary>
         /// Is this the test case result that represents the helix work item. There is one of these 
@@ -21,15 +21,15 @@ namespace DevOps.Util.DotNet
         /// </summary>
         public bool IsHelixWorkItem { get; }
 
-        public bool IsHelixTestResult => HelixInfo.HasValue;
+        public bool IsHelixTestResult => HelixWorkItem.HasValue;
 
         public string TestCaseTitle => TestCaseResult.TestCaseTitle;
 
-        public DotNetTestCaseResult(TestCaseResult testCaseResult, HelixInfo? helixInfo = null, bool isHelixWorkItem = false)
+        public DotNetTestCaseResult(TestCaseResult testCaseResult, HelixInfoWorkItem? helixWorkItem = null, bool isHelixWorkItem = false)
         {
-            Debug.Assert(!isHelixWorkItem || (helixInfo is { } info && info == HelixUtil.TryGetHelixInfo(testCaseResult)));
+            Debug.Assert(!isHelixWorkItem || (helixWorkItem is { } info && info == HelixUtil.TryGetHelixWorkItem(testCaseResult)));
             TestCaseResult = testCaseResult;
-            HelixInfo = helixInfo;
+            HelixWorkItem = helixWorkItem;
             IsHelixWorkItem = IsHelixWorkItem;
         }
     }
