@@ -50,9 +50,9 @@ namespace Runfo
             .Where(x => x.TestRunName == testRunName)
             .SelectMany(x => x.TestCaseResults);
 
-        internal IEnumerable<HelixInfo> GetHelixWorkItems() => DataList
+        internal IEnumerable<HelixInfoWorkItem> GetHelixWorkItems() => DataList
             .SelectMany(x => x.TestCaseResults)
-            .SelectNullableValue(x => x.HelixInfo)
+            .SelectNullableValue(x => x.HelixWorkItem)
             .GroupBy(x => x.WorkItemName)
             .Select(x => x.First())
             .OrderBy(x => x.JobId);

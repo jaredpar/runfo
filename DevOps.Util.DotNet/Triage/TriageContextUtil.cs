@@ -383,7 +383,7 @@ namespace DevOps.Util.DotNet.Triage
                 x.Organization == issueKey.Organization &&
                 x.Repository == issueKey.Repository);
 
-        public async Task<ModelTestRun> EnsureTestRunAsync(ModelBuildAttempt modelBuildAttempt, DotNetTestRun testRun, Dictionary<HelixInfo, HelixLogInfo> helixMap)
+        public async Task<ModelTestRun> EnsureTestRunAsync(ModelBuildAttempt modelBuildAttempt, DotNetTestRun testRun, Dictionary<HelixInfoWorkItem, HelixLogInfo> helixMap)
         {
             var modelTestRun = await FindModelTestRunAsync(modelBuildAttempt.ModelBuildId, testRun.TestRunId).ConfigureAwait(false);
             if (modelTestRun is object)
@@ -443,7 +443,7 @@ namespace DevOps.Util.DotNet.Triage
 
                 void AddHelixInfo(ModelTestResult testResult)
                 {
-                    if (dotnetTestCaseResult.HelixInfo is { } helixInfo &&
+                    if (dotnetTestCaseResult.HelixWorkItem is { } helixInfo &&
                         helixMap.TryGetValue(helixInfo, out var helixLogInfo))
                     {
                         testResult.IsHelixTestResult = true;

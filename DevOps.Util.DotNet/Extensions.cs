@@ -93,7 +93,7 @@ namespace DevOps.Util.DotNet
                 var list = new List<DotNetTestCaseResult>();
                 foreach (var testCaseResult in testCaseResults)
                 {
-                    var helixInfo = HelixUtil.TryGetHelixInfo(testCaseResult);
+                    var helixInfo = HelixUtil.TryGetHelixWorkItem(testCaseResult);
                     if (helixInfo is null)
                     {
                         list.Add(new DotNetTestCaseResult(testCaseResult));
@@ -128,7 +128,7 @@ namespace DevOps.Util.DotNet
             return list.Select(x => x.Result).ToList();
         }
 
-        public static async Task<List<HelixInfo>> ListHelixInfosAsync(
+        public static async Task<List<HelixInfoWorkItem>> ListHelixWorkItemsAsync(
             this DevOpsServer server,
             string project,
             int buildNumber,
@@ -140,13 +140,13 @@ namespace DevOps.Util.DotNet
             var testRuns = await server.ListDotNetTestRunsAsync(project, buildNumber, outcomes, includeSubResults: false, onError).ConfigureAwait(false);
             return testRuns
                 .SelectMany(x => x.TestCaseResults)
-                .SelectNullableValue(x => x.HelixInfo)
+                .SelectNullableValue(x => x.HelixWorkItem)
                 .ToHashSet()
                 .OrderBy(x => (x.JobId, x.WorkItemName))
                 .ToList();
         }
 
-        public static async Task<Dictionary<HelixInfo, HelixLogInfo>> GetHelixMapAsync(
+        public static async Task<Dictionary<HelixInfoWorkItem, HelixLogInfo>> GetHelixMapAsync(
             this DevOpsServer server,
             string project,
             int buildNumber,
@@ -164,13 +164,13 @@ namespace DevOps.Util.DotNet
 
         #region IHelixApi
 
-        public static Task<Dictionary<HelixInfo, HelixLogInfo>> GetHelixMapAsync(this IHelixApi helixApi, DotNetTestRun testRun) =>
+        public static Task<Dictionary<HelixInfoWorkItem, HelixLogInfo>> GetHelixMapAsync(this IHelixApi helixApi, DotNetTestRun testRun) =>
             GetHelixMapAsync(helixApi, testRun.TestCaseResults);
 
-        public static async Task<Dictionary<HelixInfo, HelixLogInfo>> GetHelixMapAsync(this IHelixApi helixApi, IEnumerable<DotNetTestCaseResult> testCaseResults)
+        public static async Task<Dictionary<HelixInfoWorkItem, HelixLogInfo>> GetHelixMapAsync(this IHelixApi helixApi, IEnumerable<DotNetTestCaseResult> testCaseResults)
         {
             var query = testCaseResults
-                .SelectNullableValue(x => x.HelixInfo)
+                .SelectNullableValue(x => x.HelixWorkItem)
                 .Distinct()
                 .ToList()
                 .AsParallel()

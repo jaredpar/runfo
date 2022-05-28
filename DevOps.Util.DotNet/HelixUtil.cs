@@ -20,21 +20,21 @@ namespace DevOps.Util.DotNet
     public static class HelixUtil
     {
         public static bool IsHelixWorkItem(TestCaseResult testCaseResult) =>
-            TryGetHelixInfo(testCaseResult) is HelixInfo info &&
+            TryGetHelixWorkItem(testCaseResult) is HelixInfoWorkItem info &&
             testCaseResult.TestCaseTitle == $"{info.WorkItemName} Work Item";
 
         public static bool IsHelixTestCaseResult(TestCaseResult testCaseResult) =>
-            TryGetHelixInfo(testCaseResult) is HelixInfo info &&
+            TryGetHelixWorkItem(testCaseResult) is HelixInfoWorkItem info &&
             testCaseResult.TestCaseTitle != $"{info.WorkItemName} Work Item";
 
         public static bool IsHelixWorkItemAndTestCaseResult(TestCaseResult workItem, TestCaseResult test) =>
             IsHelixWorkItem(workItem) &&
             !IsHelixWorkItem(test) &&
-            TryGetHelixInfo(workItem) is HelixInfo left &&
-            TryGetHelixInfo(test) is HelixInfo right &&
+            TryGetHelixWorkItem(workItem) is HelixInfoWorkItem left &&
+            TryGetHelixWorkItem(test) is HelixInfoWorkItem right &&
             left == right;
 
-        public static HelixInfo? TryGetHelixInfo(TestCaseResult testCaseResult)
+        public static HelixInfoWorkItem? TryGetHelixWorkItem(TestCaseResult testCaseResult)
         {
             try
             {
@@ -48,7 +48,7 @@ namespace DevOps.Util.DotNet
                 var workItemName = (string)obj.HelixWorkItemName;
                 if (!string.IsNullOrEmpty(jobId) && !string.IsNullOrEmpty(workItemName))
                 {
-                    return new HelixInfo(jobId: jobId, workItemName: workItemName);
+                    return new HelixInfoWorkItem(JobId: jobId, WorkItemName: workItemName);
                 }
             }
             catch
@@ -93,9 +93,9 @@ namespace DevOps.Util.DotNet
 
         public static async Task<HelixLogInfo> GetHelixLogInfoAsync(
             IHelixApi helixApi,
-            HelixInfo helixInfo)
+            HelixInfoWorkItem helixWorkItem)
         {
-            var details = await helixApi.WorkItem.DetailsAsync(id: helixInfo.WorkItemName, job: helixInfo.JobId).ConfigureAwait(false);
+            var details = await helixApi.WorkItem.DetailsAsync(id: helixWorkItem.WorkItemName, job: helixWorkItem.JobId).ConfigureAwait(false);
             var runClientUri = details.Logs.FirstOrDefault(x => x.Module.StartsWith("run_client"))?.Uri;
             string? dumpUri = null;
             string? testResultsUri = null;
@@ -128,11 +128,11 @@ namespace DevOps.Util.DotNet
 
         public static async Task<string> GetHelixConsoleText(
             IHelixApi helixApi,
-            HelixInfo helixInfo)
+            HelixInfoWorkItem helixWorkItem)
         {
             try
             {
-                using var stream = await helixApi.WorkItem.ConsoleLogAsync(id: helixInfo.WorkItemName, job: helixInfo.JobId).ConfigureAwait(false);
+                using var stream = await helixApi.WorkItem.ConsoleLogAsync(id: helixWorkItem.WorkItemName, job: helixWorkItem.JobId).ConfigureAwait(false);
                 using var reader = new StreamReader(stream);
                 return await reader.ReadToEndAsync();
             }
