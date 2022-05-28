@@ -167,9 +167,90 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await FindMatchingSdkMissingBuilds();
-            // await FindLogMacBuildAsync();
+            await DownloadHelixLogs();
         }
+
+        internal async Task DownloadHelixLogs()
+        {
+            var helixApi = HelixServer.HelixApi;
+            var project = DotNetConstants.DefaultAzureProject;
+            var outputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), @"temp\helix");
+            var maxCount = 100;
+            var count = 0;
+            Directory.CreateDirectory(outputDir);
+
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync(project, statusFilter: BuildStatus.Completed))
+            {
+                try
+                {
+                    var buildInfo = build.GetBuildInfo();
+                    Console.WriteLine(buildInfo.BuildUri);
+                    var buildDir = Path.Combine(outputDir, buildInfo.Number.ToString());
+                    var hadData = false;
+
+                    var helixWorkItems = await DevOpsServer.ListHelixWorkItemsAsync(project, buildInfo.Number, DevOpsUtil.FailedTestOutcomes);
+                    foreach (var workItem in helixWorkItems)
+                    {
+                        var files = await helixApi.WorkItem.ListFilesAsync(workItem.WorkItemName, workItem.JobId);
+                        var workItemDir = Path.Combine(buildDir, workItem.JobId, workItem.WorkItemName);
+                        foreach (var file in files)
+                        {
+                            Console.Write($"\t{file.Name} ... ");
+                            if (file.Name.EndsWith("dmp") || file.Name.StartsWith("core"))
+                            {
+                                Console.WriteLine("SKIPPED");
+                                continue;
+                            }
+
+                            Directory.CreateDirectory(workItemDir);
+                            hadData = true;
+                            using var stream = await helixApi.WorkItem.GetFileAsync(file.Name, workItem.WorkItemName, workItem.JobId);
+                            using var fileStream = File.Create(Path.Combine(workItemDir, file.Name));
+                            await stream.CopyToAsync(fileStream);
+                            Console.WriteLine("COMPLETED");
+                        }
+                    }
+
+                    if (hadData)
+                    {
+                        await File.WriteAllTextAsync(Path.Combine(buildDir, "metadata.txt"), GetMetadata());
+
+                        count++;
+                        if (count > maxCount)
+                        {
+                            break;
+                        }
+                    }
+
+                    string GetMetadata()
+                    {
+                        var metadata = @$"
+Build Url: {buildInfo.BuildUri}
+Build: {buildInfo.Number}
+Project: {buildInfo.Project}
+";
+
+                        if (buildInfo.GitHubBuildInfo is { } info)
+                        {
+                            metadata += $@"
+
+GitHub Repo: {info.Repository}
+GitHub Pull Request: {info.PullRequestNumber}
+GitHub Pull Url: {info.PullRequestUri}
+";
+
+                        }
+
+                        return metadata;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error: {ex.Message}");
+                }
+            }
+        }
+        
         internal async Task FindMatchingSdkMissingBuilds()
         {
             var count = 0;

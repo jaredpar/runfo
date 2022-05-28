@@ -13,6 +13,10 @@ namespace DevOps.Util
             ? new GitHubPullRequestKey(Organization, Repository, number)
             : (GitHubPullRequestKey?)null;
 
+        public string? PullRequestUri => PullRequestNumber is { } number
+            ? GitHubPullRequestKey.GetPullRequestUri(Organization, Repository, number)
+            : null;
+
         public GitHubBuildInfo(
             string organization,
             string repository,
