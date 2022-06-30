@@ -72,6 +72,7 @@ namespace DevOps.Util.DotNet.Function
 
                 try
                 {
+                    await ShrinkBuild(modelBuild);
                     triageContext.Remove(modelBuild);
                     await triageContext.SaveChangesAsync().ConfigureAwait(false);
                     count++;
@@ -89,6 +90,44 @@ namespace DevOps.Util.DotNet.Function
 
             Logger.LogInformation($"Deleted {count} builds");
             return count;
+
+            async Task ShrinkBuild(ModelBuild modelBuild)
+            {
+                var testCountMax = 100;
+                var testCount = await triageContext
+                    .ModelTestResults
+                    .Where(x => x.ModelBuildId == modelBuild.Id)
+                    .CountAsync()
+                    .ConfigureAwait(false);
+                if (testCount <= testCountMax)
+                {
+                    return;
+                }
+
+                Logger.LogInformation($"{modelBuild.GetBuildKey()} has too many test resultts ({testCount})");
+
+                do
+                {
+                    var testResults = await triageContext
+                        .ModelTestResults
+                        .Where(x => x.ModelBuildId == modelBuild.Id)
+                        .Take(100)
+                        .ToListAsync()
+                        .ConfigureAwait(false);
+                    if (testResults.Count == 0)
+                    {
+                        break;
+                    }
+
+                    Logger.LogInformation($"Deleting {testResults.Count} test results from {modelBuild.GetBuildKey()}");
+                    foreach (var testResult in testResults)
+                    {
+                        triageContext.Remove(testResult);
+                    }
+
+                    await triageContext.SaveChangesAsync().ConfigureAwait(false);
+                } while (true);
+            }
         }
     }
 }

@@ -167,7 +167,9 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await FindMatchingSdkMissingBuilds();
+            Reset(useProduction: true);
+            await DeleteOldBuilds();
+            // await FindMatchingSdkMissingBuilds();
             // await FindLogMacBuildAsync();
         }
         internal async Task FindMatchingSdkMissingBuilds()
