@@ -102,7 +102,7 @@ namespace Scratch
 #pragma warning disable CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
         public ScratchUtil()
         {
-            Reset();
+            Reset(useProduction: true);
         }
 #pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
 
@@ -167,8 +167,7 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            Reset(useProduction: true);
-            await DeleteOldBuilds();
+            await DeleteOldBuilds(useProduction: true);
             // await FindMatchingSdkMissingBuilds();
             // await FindLogMacBuildAsync();
         }
@@ -616,27 +615,35 @@ namespace Scratch
             await util.Migrate(@"c:\users\jaredpar\temp\migrate");
         }
 
-        internal async Task DeleteOldBuilds()
+        internal async Task DeleteOldBuilds(bool useProduction)
         {
             var functionUtil = new FunctionUtil(CreateLogger());
 
-            var data = await GetCounts();
-            for (int i = 0; i < 100; i++)
+            var originalData = await GetCounts();
+            while (true)
             {
-                await functionUtil.DeleteOldBuilds(TriageContext, deleteMax: 100);
+                try
+                {
+                    Reset(useProduction: useProduction);
+                    await functionUtil.DeleteOldBuilds(TriageContext, deleteMax: 100);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error: {ex.Message}");
+                }
+
                 var newData = await GetCounts();
-                Console.WriteLine($"Builds {newData.BuildCount} (-{data.BuildCount - newData.BuildCount})");
-                Console.WriteLine($"Test Runs {newData.TestRunCount} (-{data.TestRunCount - newData.TestRunCount})");
-                Console.WriteLine($"Test Results {newData.TestCount} (-{data.TestCount - newData.TestCount})");
+                Console.WriteLine($"Builds {newData.BuildCount} (-{originalData.BuildCount - newData.BuildCount})");
+                Console.WriteLine($"Test Runs {newData.TestRunCount} (-{originalData.TestRunCount - newData.TestRunCount})");
+                Console.WriteLine($"Test Results {newData.TestCount} (-{originalData.TestCount - newData.TestCount})");
                 await Task.Delay(TimeSpan.FromSeconds(2));
-                data = newData;
             }
 
             async Task<(int BuildCount, int TestRunCount, int TestCount)> GetCounts()
             {
                 var buildCount = await TriageContext.ModelBuilds.CountAsync();
-                var testRunsCount = 0;// await TriageContext.ModelTestRuns.CountAsync();
-                var testCount = 0; // await TriageContext.ModelTestResults.CountAsync();
+                var testRunsCount = await TriageContext.ModelTestRuns.CountAsync();
+                var testCount = await TriageContext.ModelTestResults.CountAsync();
                 return (buildCount, testRunsCount, testCount);
             }
         }

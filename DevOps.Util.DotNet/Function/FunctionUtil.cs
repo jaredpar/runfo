@@ -56,24 +56,26 @@ namespace DevOps.Util.DotNet.Function
             var limit = DateTime.UtcNow - TimeSpan.FromDays(limitDays);
             var count = 0;
 
-            var modelBuilds = await triageContext
+            var builds = await triageContext
                 .ModelBuilds
                 .Where(x => x.StartTime < limit)
                 .OrderBy(x => x.StartTime)
                 .Take(deleteMax)
                 .ToListAsync()
                 .ConfigureAwait(false);
-            foreach (var modelBuild in modelBuilds)
+            foreach (var build in builds)
             {
-                if (modelBuild.AzureProject is object)
+                if (build.AzureProject is object)
                 {
-                    Logger.LogInformation($"Deleting {modelBuild.GetBuildKey()} ran at {modelBuild.StartTime}");
+                    Logger.LogInformation($"Deleting {build.GetBuildKey()} ran at {build.StartTime}");
                 }
 
                 try
                 {
-                    await ShrinkBuild(modelBuild);
-                    triageContext.Remove(modelBuild);
+                    await DeleteTrackingIssueMatches(build);
+                    await DeleteTimelineIssues(build);
+                    await DeleteTestResults(build);
+                    triageContext.Remove(build);
                     await triageContext.SaveChangesAsync().ConfigureAwait(false);
                     count++;
                 }
@@ -85,17 +87,72 @@ namespace DevOps.Util.DotNet.Function
                         message += $" (Inner {ex.InnerException.Message})";
                     }
                     Logger.LogError(message);
+                    throw;
                 }
             }
 
             Logger.LogInformation($"Deleted {count} builds");
             return count;
 
-            async Task ShrinkBuild(ModelBuild modelBuild)
+            async Task DeleteTimelineIssues(ModelBuild modelBuild)
+            {
+                var count = await triageContext
+                    .ModelTimelineIssues
+                    .Where(x => x.ModelBuildId == modelBuild.Id)
+                    .CountAsync()
+                    .ConfigureAwait(false);
+                if (count < 100)
+                {
+                    return;
+                }
+
+                var timelineIssues = await triageContext
+                    .ModelTimelineIssues
+                    .Where(x => x.ModelBuildId == modelBuild.Id)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+                Logger.LogInformation($"Deleting {timelineIssues.Count} timeline issues");
+                triageContext.RemoveRange(timelineIssues);
+                await triageContext.SaveChangesAsync().ConfigureAwait(false);
+            }
+
+            async Task DeleteTrackingIssueMatches(ModelBuild modelBuild)
+            {
+                var buildAttemptIds = await triageContext
+                    .ModelBuildAttempts
+                    .AsNoTracking()
+                    .Where(x => x.ModelBuildId == modelBuild.Id)
+                    .Select(x => x.Id)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+                var count = 0;
+                foreach (var buildAttemptId in buildAttemptIds)
+                {
+                    var trackingIssues = await triageContext
+                        .ModelTrackingIssueMatches
+                        .Where(x => x.ModelBuildAttemptId == buildAttemptId)
+                        .ToListAsync()
+                        .ConfigureAwait(false);
+                    if (trackingIssues.Count > 0)
+                    {
+                        count += trackingIssues.Count;
+                        triageContext.RemoveRange(trackingIssues);
+                    }
+                }
+
+                if (count > 0)
+                {
+                    Logger.LogInformation($"Deleting {count} tracking issue matches");
+                    await triageContext.SaveChangesAsync().ConfigureAwait(false);
+                }
+            }
+
+            async Task DeleteTestResults(ModelBuild modelBuild)
             {
                 var testCountMax = 100;
                 var testCount = await triageContext
                     .ModelTestResults
+                    .AsNoTracking()
                     .Where(x => x.ModelBuildId == modelBuild.Id)
                     .CountAsync()
                     .ConfigureAwait(false);
@@ -105,6 +162,8 @@ namespace DevOps.Util.DotNet.Function
                 }
 
                 Logger.LogInformation($"{modelBuild.GetBuildKey()} has too many test resultts ({testCount})");
+
+                var total = 0;
 
                 do
                 {
@@ -119,11 +178,9 @@ namespace DevOps.Util.DotNet.Function
                         break;
                     }
 
-                    Logger.LogInformation($"Deleting {testResults.Count} test results from {modelBuild.GetBuildKey()}");
-                    foreach (var testResult in testResults)
-                    {
-                        triageContext.Remove(testResult);
-                    }
+                    triageContext.RemoveRange(testResults);
+                    total += testResults.Count;
+                    Logger.LogInformation($"Deleted {total} test resuts out of {testCount} from {modelBuild.GetBuildKey()}");
 
                     await triageContext.SaveChangesAsync().ConfigureAwait(false);
                 } while (true);
