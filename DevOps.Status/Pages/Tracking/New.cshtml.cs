@@ -115,22 +115,6 @@ namespace DevOps.Status.Pages.Tracking
 
             switch (TrackingKindData)
             {
-                case TrackingKind.HelixLogs:
-                    {
-                        if (TryParseQueryString<SearchHelixLogsRequest>(out var request))
-                        {
-                            if (request.HelixLogKinds.Count == 0)
-                            {
-                                ErrorMessage = "Need to specify at least one log kind to search";
-                                return Page();
-                            }
-                        }
-                        else
-                        {
-                            return Page();
-                        }
-                    }
-                    break;
                 case TrackingKind.Test:
                     if (!TryParseQueryString<SearchTestsRequest>(out _))
                     {
@@ -276,12 +260,6 @@ namespace DevOps.Status.Pages.Tracking
                 case TrackingKind.Timeline:
                     {
                         var request = new SearchTimelinesRequest(searchText);
-                        Sanitize(request);
-                        return request.GetQueryString();
-                    }
-                case TrackingKind.HelixLogs:
-                    {
-                        var request = new SearchHelixLogsRequest(searchText);
                         Sanitize(request);
                         return request.GetQueryString();
                     }

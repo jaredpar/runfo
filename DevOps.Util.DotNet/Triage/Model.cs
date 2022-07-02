@@ -464,6 +464,7 @@ namespace DevOps.Util.DotNet.Triage
 
         Timeline,
 
+        [Obsolete("Not Supported")]
         HelixLogs,
     }
 

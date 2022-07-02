@@ -135,9 +135,6 @@ namespace DevOps.Util.DotNet.Triage
                 case TrackingKind.Timeline:
                     isPresent = await TriageTimelineAsync(attemptKey, modelBuildAttemptId, modelBuildId, modelTrackingIssue).ConfigureAwait(false);
                     break;
-                case TrackingKind.HelixLogs:
-                    isPresent = await TriageHelixLogsAsync(attemptKey, modelBuildAttemptId, modelBuildId, modelTrackingIssue).ConfigureAwait(false);
-                    break;
                 default:
                     throw new Exception($"Unknown value {modelTrackingIssue.TrackingKind}");
             }
@@ -237,53 +234,6 @@ namespace DevOps.Util.DotNet.Triage
                 any = true;
             }
 
-            return any;
-        }
-
-        private async Task<bool> TriageHelixLogsAsync(BuildAttemptKey attemptKey, int modelBuildAttemptId, int modelBuildId, ModelTrackingIssue modelTrackingIssue)
-        {
-            Debug.Assert(modelTrackingIssue.IsActive);
-            Debug.Assert(modelTrackingIssue.SearchQuery is object);
-
-            var request = new SearchHelixLogsRequest(modelTrackingIssue.SearchQuery)
-            {
-                Limit = 100,
-            };
-            CleanupTrackingRequest(request);
-
-            var query = request.Filter(Context.ModelTestResults)
-                .Where(x => x.ModelBuildId == modelBuildId && x.Attempt == attemptKey.Attempt);
-
-            // TODO: selecting a lot of info here. Can improve perf by selecting only the needed 
-            // columns. The search helix logs page already optimizes this. Consider factoring out
-            // the shared code.
-            var testResultList = await query.ToListAsync().ConfigureAwait(false);
-
-            var modelBuild = await Context.ModelBuilds.Where(x => x.Id == modelBuildId).SingleAsync().ConfigureAwait(false);
-            var buildInfo = modelBuild.GetBuildInfo();
-            var helixLogInfos = testResultList
-                .Select(x => x.GetHelixLogInfo())
-                .SelectNotNull()
-                .Select(x => (buildInfo, x));
-
-            var results = await HelixServer.SearchHelixLogsAsync(
-                helixLogInfos,
-                request,
-                onError: x => Logger.LogWarning(x.Message)).ConfigureAwait(false);
-            var any = false;
-            foreach (var result in results.Where(x => x.IsMatch))
-            {
-                any = true;
-                var modelMatch = new ModelTrackingIssueMatch()
-                {
-                    ModelBuildAttemptId = modelBuildAttemptId,
-                    ModelTrackingIssue = modelTrackingIssue,
-                    HelixLogKind = result.HelixLogKind,
-                    HelixLogUri = result.HelixLogUri,
-                    JobName = "",
-                };
-                Context.ModelTrackingIssueMatches.Add(modelMatch);
-            }
             return any;
         }
 

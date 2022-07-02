@@ -209,12 +209,10 @@ namespace DevOps.Util.UnitTests
             string? title = null,
             SearchTestsRequest? testsRequest = null,
             SearchTimelinesRequest? timelinesRequest = null,
-            SearchHelixLogsRequest? helixLogsRequest = null,
             ModelBuildDefinition? definition = null)
         {
             var query = testsRequest?.GetQueryString();
             query ??= timelinesRequest?.GetQueryString();
-            query ??= helixLogsRequest?.GetQueryString();
 
             var trackingIssue = new ModelTrackingIssue()
             {

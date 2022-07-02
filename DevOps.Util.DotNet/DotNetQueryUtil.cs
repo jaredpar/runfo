@@ -65,25 +65,6 @@ namespace DevOps.Util.DotNet
         }
     }
 
-    public sealed class SearchHelixLogsResult
-    {
-        public BuildInfo BuildInfo { get; }
-        public HelixLogKind HelixLogKind { get;  }
-        public string HelixLogUri { get; }
-        public string? Line { get; }
-
-        [MemberNotNullWhen(true, nameof(Line))]
-        public bool IsMatch => Line is object;
-
-        public SearchHelixLogsResult(BuildInfo buildInfo, HelixLogKind helixLogKind, string helixLogUri, string? line = null)
-        {
-            BuildInfo = buildInfo;
-            HelixLogKind = helixLogKind;
-            HelixLogUri = helixLogUri;
-            Line = line;
-        }
-    }
-
     public sealed class HelixTimelineResult
     {
         public TimelineRecordItem Record { get; }
