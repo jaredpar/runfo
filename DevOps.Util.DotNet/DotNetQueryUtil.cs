@@ -65,27 +65,6 @@ namespace DevOps.Util.DotNet
         }
     }
 
-    public sealed class SearchBuildLogsResult
-    {
-        public BuildResultInfo BuildInfo { get; }
-        public string JobName { get; }
-        public TimelineRecord Record { get; }
-        public BuildLogReference BuildLogReference { get; }
-        public string? Line { get; }
-
-        [MemberNotNullWhen(true, nameof(Line))]
-        public bool IsMatch => Line is object;
-
-        public SearchBuildLogsResult(BuildResultInfo buildInfo, string jobName, TimelineRecord record, BuildLogReference buildLogReference, string? line = null)
-        {
-            BuildInfo = buildInfo;
-            JobName = jobName;
-            Record = record;
-            BuildLogReference = buildLogReference;
-            Line = line;
-        }
-    }
-
     public sealed class SearchHelixLogsResult
     {
         public BuildInfo BuildInfo { get; }
@@ -234,84 +213,6 @@ namespace DevOps.Util.DotNet
                         line);
                 }
             }
-        }
-
-        public async Task<List<SearchBuildLogsResult>> SearchBuildLogsAsync(
-            IEnumerable<BuildResultInfo> builds,
-            SearchBuildLogsRequest request,
-            Action<Exception>? onError = null)
-        {
-            if (request.Text is null)
-            {
-                throw new ArgumentException("Need text to search for", nameof(request));
-            }
-
-            var nameRegex = CreateSearchRegex(request.LogName);
-            var textRegex = CreateSearchRegex(request.Text);
-
-            var logSet = new HashSet<string>();
-            var list = new List<(BuildResultInfo BuildInfo, TimelineTree Tree, TimelineRecord TimelineRecord, BuildLogReference BuildLogReference)>();
-            foreach (var buildInfo in builds)
-            {
-                try
-                {
-                    foreach (var timeline in await Server.GetTimelineAttemptsAsync(buildInfo.Project, buildInfo.Number))
-                    {
-                        var tree = TimelineTree.Create(timeline);
-                        var records = timeline.Records.Where(r => nameRegex is null || nameRegex.IsMatch(r.Name));
-                        foreach (var record in records)
-                        {
-                            if (record.Log is { } log)
-                            {
-                                list.Add((buildInfo, tree, record, log));
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    onError?.Invoke(ex);
-                }
-            }
-
-            if (list.Count > request.Limit)
-            {
-                onError?.Invoke(new Exception($"Limiting the {list.Count} logs to first {request.Limit}"));
-                list = list.Take(request.Limit).ToList();
-            }
-
-            var resultTasks = list
-                .AsParallel()
-                .Select(async x =>
-                {
-                    var match = await SearchFileForFirstMatchAsync(x.BuildLogReference.Url, textRegex, onError).ConfigureAwait(false);
-                    var line = match is object && match.Success
-                        ? match.Value
-                        : null;
-                    return (Query: x, Line: line);
-                });
-
-            var results = new List<SearchBuildLogsResult>();
-            foreach (var task in resultTasks)
-            {
-                try
-                {
-                    var result = await task.ConfigureAwait(false);
-                    string jobName = "";
-                    if (result.Query.Tree.TryGetJob(result.Query.TimelineRecord, out var jobRecord))
-                    {
-                        jobName = jobRecord.Name;
-                    }
-
-                    results.Add(new SearchBuildLogsResult(result.Query.BuildInfo, jobName, result.Query.TimelineRecord, result.Query.BuildLogReference, result.Line));
-                }
-                catch (Exception ex)
-                {
-                    onError?.Invoke(ex);
-                }
-            }
-
-            return results;
         }
 
         public async IAsyncEnumerable<Match> SearchFileAsync(
