@@ -4,6 +4,7 @@ using System.Linq;
 using System.IO;
 using System.Threading.Tasks;
 using Mono.Options;
+using YamlDotNet.Serialization.TypeResolvers;
 
 namespace Runfo
 {
@@ -12,7 +13,8 @@ namespace Runfo
         internal const int ExitSuccess = 0;
         internal const int ExitFailure = 1;
 
-        internal static readonly string CacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "runfo", "json");
+        internal static readonly string RunfoDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "runfo");
+        internal static readonly string CacheDirectory = Path.Combine(RunfoDirectory, "json");
 
         internal static TimeSpan? TryGetDuration(string startTime, string finishTime)
         {
