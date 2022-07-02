@@ -15,32 +15,31 @@ namespace Runfo
     {
         internal static async Task<int> Main(string[] args)
         {
-            var token = Environment.GetEnvironmentVariable("RUNFO_AZURE_TOKEN");
-            var helixToken = Environment.GetEnvironmentVariable("RUNFO_HELIX_TOKEN");
-            var helixBaseUri = "https://helix.dot.net/";
+            var settingsData = await SettingsData.ReadAsync();
             var disableCache = false;
             var optionSet = new OptionSet()
-        {
-            { "token=", "The Azure DevOps personal access token", t => token = t },
-            { "helix-token=", "The helix personal access token", ht => helixToken = ht},
-            { "helix-base-uri=", "The helix base URI, defaults to production: https://helix.dot.net/", hb => helixBaseUri = hb.EndsWith("/") ? hb : hb + "/"},
-            { "dc|disable-cache", "Disable caching", dc => disableCache = dc is object }
-        };
+            {
+                { "azdo-token=", "The Azure DevOps personal access token", t => settingsData.AzureToken = t },
+                { "helix-token=", "The helix personal access token", ht => settingsData.HelixToken = ht},
+                { "helix-base-uri=", "The helix base URI, defaults to production: https://helix.dot.net/", hb => settingsData.HelixBaseUri = hb.EndsWith("/") ? hb : hb + "/"},
+                { "dc|disable-cache", "Disable caching", dc => disableCache = dc is object }
+            };
 
             try
             {
                 args = optionSet.Parse(args).ToArray();
-                if (token is null)
+
+                if (string.IsNullOrEmpty(settingsData.AzureToken))
                 {
-                    token = await GetPersonalAccessTokenFromFile(DotNetUtil.AzureOrganization);
+                    Console.WriteLine("No Azure DevOps token found, use `runfo settings` to set one");
                 }
 
-                var devopsServer = new DevOpsServer(DotNetUtil.AzureOrganization, new AuthorizationToken(AuthorizationKind.PersonalAccessToken, token!));
+                var devopsServer = new DevOpsServer(DotNetUtil.AzureOrganization, new AuthorizationToken(AuthorizationKind.PersonalAccessToken, settingsData.AzureToken!));
                 var azureUtil = new CachingAzureUtil(
                     new LocalAzureStorageUtil(DotNetUtil.AzureOrganization, RuntimeInfoUtil.CacheDirectory),
                     new AzureUtil(devopsServer));
 
-                var runtimeInfo = new RuntimeInfo(devopsServer, new HelixServer(helixBaseUri, helixToken), azureUtil);
+                var runtimeInfo = new RuntimeInfo(devopsServer, new HelixServer(settingsData.HelixBaseUri, settingsData.HelixToken), azureUtil);
 
                 // Kick off a collection of the file system cache
                 var collectTask = runtimeInfo.CollectCache();
@@ -84,23 +83,24 @@ namespace Runfo
                         return await runtimeInfo.PrintBuilds(commandArgs);
                     case "pr-builds":
                         return await runtimeInfo.PrintPullRequestBuilds(commandArgs);
-                    case "tests":
-                    case "search-tests":
-                        return await runtimeInfo.PrintFailedTests(commandArgs);
                     case "helix":
                         return await runtimeInfo.PrintHelix(commandArgs);
                     case "helix-jobs":
                         return await runtimeInfo.PrintHelixJobs(commandArgs);
                     case "get-helix-payload":
                         return await runtimeInfo.GetHelixPayload(commandArgs);
-                    case "timeline":
-                        return await runtimeInfo.PrintTimeline(commandArgs);
+                    case "search-buildlog":
+                        return await runtimeInfo.PrintSearchBuildLogs(commandArgs);
+                    case "search-tests":
+                        return await runtimeInfo.PrintFailedTests(commandArgs);
                     case "search-timeline":
                         return await runtimeInfo.PrintSearchTimeline(commandArgs);
                     case "search-helix":
                         return await runtimeInfo.PrintSearchHelix(commandArgs);
-                    case "search-buildlog":
-                        return await runtimeInfo.PrintSearchBuildLogs(commandArgs);
+                    case "settings":
+                        return await runtimeInfo.RunSettingsAsync();
+                    case "timeline":
+                        return await runtimeInfo.PrintTimeline(commandArgs);
                     case "yml":
                     case "yaml":
                         return await runtimeInfo.PrintBuildYaml(commandArgs);
@@ -138,44 +138,6 @@ namespace Runfo
                 Console.WriteLine();
                 Console.WriteLine("=== Global Options ===");
                 optionSet.WriteOptionDescriptions(Console.Out);
-            }
-
-            /*
-            static GitHubClient CreateGitHubClient()
-            {
-                var gitHubClient = new GitHubClient(new ProductHeaderValue("runfo-app"));
-                var value = Environment.GetEnvironmentVariable("RUNFO_GITHUB_TOKEN");
-                if (value is object)
-                {
-                    var both = value.Split(new[] { ':' }, count: 2);
-                    gitHubClient.Credentials = new Credentials(both[0], both[1]);
-                }
-
-                return gitHubClient;
-            }
-            */
-        }
-
-        // TODO: need to make this usable by others
-        internal static async Task<string?> GetPersonalAccessTokenFromFile(string name)
-        {
-            try
-            {
-                var lines = await File.ReadAllLinesAsync(@"p:\tokens.txt");
-                foreach (var line in lines)
-                {
-                    var split = line.Split(':', count: 2);
-                    if (name == split[0])
-                    {
-                        return split[1];
-                    }
-                }
-
-                return null;
-            }
-            catch
-            {
-                return null;
             }
         }
     }
