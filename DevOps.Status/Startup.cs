@@ -5,7 +5,6 @@ using System.Reflection.Metadata.Ecma335;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using AspNet.Security.OAuth.GitHub;
-using AspNet.Security.OAuth.VisualStudio;
 using DevOps.Status.Util;
 using DevOps.Util;
 using DevOps.Util.DotNet;
@@ -44,8 +43,6 @@ namespace DevOps.Status
                 .AddRazorPagesOptions(options =>
                 {
                     options.Conventions.AuthorizeFolder("/Tracking", Constants.TriagePolicy);
-                    options.Conventions.AuthorizePage("/Search/BuildLogs", Constants.VsoPolicy);
-
                 });
             services.AddControllers();
 
@@ -101,23 +98,6 @@ namespace DevOps.Status
                         context.Identity.AddClaim(new Claim(context.Identity.RoleClaimType, Constants.TriageRole));
                     }
                 };
-            })
-            .AddVisualStudio(options =>
-            {
-                options.ClientId = Configuration[DotNetConstants.ConfigurationVsoClientId];
-                options.ClientSecret = Configuration[DotNetConstants.ConfigurationVsoClientSecret];
-                options.SaveTokens = true;
-
-                options.Events.OnCreatingTicket = context =>
-                {
-                    context.Identity.AddClaim(new Claim(context.Identity.RoleClaimType, Constants.VsoRole));
-                    return Task.CompletedTask;
-                };
-
-                options.Scope.Add("vso.build_execute");
-                options.Scope.Add("vso.identity");
-                options.Scope.Add("vso.test_write");
-                options.Scope.Add("vso.work");
             });
 
             services.AddAuthorization(options =>
@@ -127,11 +107,6 @@ namespace DevOps.Status
                     policy => policy
                        .RequireRole(Constants.TriageRole)
                        .AddAuthenticationSchemes(GitHubAuthenticationDefaults.AuthenticationScheme));
-                options.AddPolicy(
-                    Constants.VsoPolicy,
-                    policy => policy
-                       .RequireRole(Constants.VsoRole)
-                       .AddAuthenticationSchemes(VisualStudioAuthenticationDefaults.AuthenticationScheme));
             });
         }
 
