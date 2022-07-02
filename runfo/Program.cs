@@ -120,21 +120,21 @@ namespace Runfo
             {
                 Console.WriteLine("runfo");
                 Console.WriteLine("=== Commands ===");
-                Console.WriteLine("  status             Print build definition status");
-                Console.WriteLine("  definitions        Print build definition info");
                 Console.WriteLine("  artifacts          Print artifact info for a given build");
                 Console.WriteLine("  builds             Print builds");
+                Console.WriteLine("  clear-cache        Clear out the cache");
+                Console.WriteLine("  definitions        Print build definition info");
                 Console.WriteLine("  get-helix-payload  Download helix payload for a given job and workitems");
-                Console.WriteLine("  pr-builds          Print builds for a given pull request");
-                Console.WriteLine("  tests              Print build test failures");
                 Console.WriteLine("  helix              Print helix logs for build");
                 Console.WriteLine("  helix-jobs         Print helix jobs for builds");
+                Console.WriteLine("  pr-builds          Print builds for a given pull request");
+                Console.WriteLine("  status             Print build definition status");
                 Console.WriteLine("  search-timeline    Search timeline info");
                 Console.WriteLine("  search-helix       Search helix logs");
                 Console.WriteLine("  search-buildlog    Search build logs");
+                Console.WriteLine("  tests              Print build test failures");
                 Console.WriteLine("  timeline           Dump the timeline");
                 Console.WriteLine("  yaml               Dump the YML for a build");
-                Console.WriteLine("  clear-cache        Clear out the cache");
                 Console.WriteLine();
                 Console.WriteLine("=== Global Options ===");
                 optionSet.WriteOptionDescriptions(Console.Out);
