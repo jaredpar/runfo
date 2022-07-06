@@ -289,7 +289,6 @@ namespace DevOps.Util.DotNet.Triage
             {
                 TrackingKind.Test => GetReportForTestAsync(modelTrackingIssue, limit, time),
                 TrackingKind.Timeline => GetReportForTimelineAsync(modelTrackingIssue, limit, time),
-                TrackingKind.HelixLogs => GetReportForHelixAsync(modelTrackingIssue, limit),
                 _ => throw new Exception($"Invalid value {modelTrackingIssue.TrackingKind}"),
             };
 
@@ -394,59 +393,6 @@ namespace DevOps.Util.DotNet.Triage
             AppendFooter(builder, matches.Select(x => (x.BuildNumber, x.QueueTime)), baseTime);
 
             return builder.ToString();
-        }
-
-        private async Task<string> GetReportForHelixAsync(ModelTrackingIssue modelTrackingIssue, int limit)
-        {
-            Debug.Assert(modelTrackingIssue.TrackingKind == TrackingKind.HelixLogs);
-            var matches = await Context
-                .ModelTrackingIssueMatches
-                .Where(x => x.ModelTrackingIssueId == modelTrackingIssue.Id)
-                .OrderByDescending(x => x.ModelBuildAttempt.ModelBuild.BuildNumber)
-                .Take(limit)
-                .Select(x => new
-                {
-                    AzureOrganization = x.ModelBuildAttempt.ModelBuild.AzureOrganization,
-                    AzureProject = x.ModelBuildAttempt.ModelBuild.AzureProject,
-                    DefinitionId = x.ModelBuildAttempt.ModelBuild.DefinitionNumber,
-                    DefinitionName = x.ModelBuildAttempt.ModelBuild.DefinitionName,
-                    GitHubOrganization = x.ModelBuildAttempt.ModelBuild.GitHubOrganization,
-                    GitHubRepository = x.ModelBuildAttempt.ModelBuild.GitHubRepository,
-                    GitHubPullRequestNumber = x.ModelBuildAttempt.ModelBuild.PullRequestNumber,
-                    GitHubTargetBranch = x.ModelBuildAttempt.ModelBuild.GitHubTargetBranch,
-                    BuildNumber = x.ModelBuildAttempt.ModelBuild.BuildNumber,
-                    HelixLogKind = x.HelixLogKind,
-                    HelixLogUri = x.HelixLogUri,
-                })
-                .ToListAsync().ConfigureAwait(false);
-
-            var map = new Dictionary<BuildKey, (BuildInfo BuildInfo, HelixLogInfo? HelixLogInfo)>();
-            var set = new HashSet<HelixLogKind>();
-            foreach (var item in matches)
-            {
-                var key = new BuildKey(item.AzureOrganization, item.AzureProject, item.BuildNumber);
-                if (!map.TryGetValue(key, out var tuple))
-                {
-                    var buildInfo = new BuildInfo(
-                        key.Organization,
-                        key.Project,
-                        key.Number,
-                        new GitHubBuildInfo(item.GitHubOrganization, item.GitHubRepository, item.GitHubPullRequestNumber, item.GitHubTargetBranch));
-                    tuple = (buildInfo, null);
-                }
-
-                set.Add(item.HelixLogKind);
-                tuple.HelixLogInfo = tuple.HelixLogInfo is { } log
-                    ? log.SetUri(item.HelixLogKind, item.HelixLogUri)
-                    : new HelixLogInfo(item.HelixLogKind, item.HelixLogUri);
-                map[key] = tuple;
-            }
-
-            var reportBuilder = new ReportBuilder();
-            return reportBuilder.BuildSearchHelix(
-                map.Values.OrderByDescending(x => x.BuildInfo.Number),
-                set.ToArray(),
-                markdown: true);
         }
 
         /// <summary>

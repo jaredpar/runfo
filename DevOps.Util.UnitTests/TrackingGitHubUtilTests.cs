@@ -154,47 +154,5 @@ Build Result Summary
             var report = await TrackingGitHubUtil.GetAssociatedIssueReportAsync(issueKey);
             Assert.Equal(expected.TrimNewlines(), report.TrimNewlines());
         }
-
-        [Theory]
-        [InlineData(HelixLogKind.Console, "Console", "console.log")]
-        [InlineData(HelixLogKind.RunClient, "Run Client", "runclient.py")]
-        [InlineData(HelixLogKind.TestResults, "Test Results", "test results")]
-        public async Task SimpleHelixLogsReport(HelixLogKind kind, string columnText, string fileName)
-        {
-            var def = await AddBuildDefinitionAsync("roslyn", definitionNumber: 42);
-            await AddTestDataAsync(1, "2020-08-01");
-            await AddTestDataAsync(2, "2020-08-01");
-            var tracking = await AddTrackingIssueAsync(
-                TrackingKind.HelixLogs,
-                title: "Helix Log",
-                helixLogsRequest: new SearchHelixLogsRequest()
-                {
-                    Started = null,
-                    HelixLogKinds = { kind },
-                    Text = "data",
-                });
-
-            await Context.SaveChangesAsync();
-            await TriageAll();
-
-            var expected = @$"
-|Build|Kind|{columnText}|
-|---|---|---|
-|[2](https://dev.azure.com/dnceng/public/_build/results?buildId=2)|Rolling|[{fileName}](https://localhost/runfo/1/{kind})|
-|[1](https://dev.azure.com/dnceng/public/_build/results?buildId=1)|Rolling|[{fileName}](https://localhost/runfo/0/{kind})|
-";
-
-            var report = await TrackingGitHubUtil.GetTrackingIssueReport(tracking, includeMarkers: false, baseTime: new DateTime(year: 2020, month: 08, day: 1));
-            Assert.Equal(expected.TrimNewlines(), report.TrimNewlines());
-
-            async Task AddTestDataAsync(int buildNumber, string dateStr)
-            {
-                var attempt = await AddAttemptAsync(await AddBuildAsync($"{buildNumber}||{dateStr}", def), 1);
-                await AddTestRunAsync(
-                    attempt,
-                    "windows",
-                    ("Util.Test1", null, kind, "The log data"));
-            }
-        }
     }
 }

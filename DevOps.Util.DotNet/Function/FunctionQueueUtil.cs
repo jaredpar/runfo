@@ -115,14 +115,6 @@ namespace DevOps.Util.DotNet.Function
                             var query = request.Filter(context.ModelTestResults).Select(x => x.ModelBuild);
                             return (query, request);
                         }
-                    case TrackingKind.HelixLogs:
-                        {
-                            var request = new SearchHelixLogsRequest(modelTrackingIssue.SearchQuery);
-                            request.ParseQueryString(extraQuery);
-                            UpdateRequest(request);
-                            var query = request.Filter(context.ModelTestResults).Select(x => x.ModelBuild);
-                            return (query, request);
-                        }
                     default:
                         throw new InvalidOperationException($"Invalid kind {modelTrackingIssue.TrackingKind}");
                 }

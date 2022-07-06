@@ -1,5 +1,4 @@
 ﻿using AspNet.Security.OAuth.GitHub;
-using AspNet.Security.OAuth.VisualStudio;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Function;
@@ -23,9 +22,6 @@ namespace DevOps.Status.Util
     {
         public static ClaimsIdentity? GetGitHubIdentity(this ClaimsPrincipal principal) =>
             principal.Identities.FirstOrDefault(x => x.AuthenticationType == GitHubAuthenticationDefaults.AuthenticationScheme);
-
-        public static ClaimsIdentity? GetVsoIdentity(this ClaimsPrincipal principal) =>
-            principal.Identities.FirstOrDefault(x => x.AuthenticationType == VisualStudioAuthenticationDefaults.AuthenticationScheme);
 
         public static async Task<IGitHubClient> CreateForUserAsync(this IGitHubClientFactory gitHubClientFactory, HttpContext httpContext)
         {

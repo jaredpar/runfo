@@ -1,5 +1,4 @@
-﻿using AspNet.Security.OAuth.VisualStudio;
-using DevOps.Util;
+﻿using DevOps.Util;
 using DevOps.Util.DotNet;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
@@ -23,13 +22,6 @@ namespace DevOps.Status.Util
             HttpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<DevOpsServer> CreateDevOpsServerForUserAsync()
-        {
-            var accessToken = await HttpContextAccessor.HttpContext.GetTokenAsync(VisualStudioAuthenticationDefaults.AuthenticationScheme, "access_token");
-            var token = new AuthorizationToken(AuthorizationKind.BearerToken, accessToken);
-            return new DevOpsServer(DotNetConstants.AzureOrganization, token);
-        }
-
         public DevOpsServer CreateDevOpsServerForApp()
         {
             var azdoToken = Configuration[DotNetConstants.ConfigurationAzdoToken];
@@ -40,8 +32,6 @@ namespace DevOps.Status.Util
         public DevOpsServer CreateDevOpsServerForAnonymous() => new DevOpsServer(DotNetConstants.AzureOrganization);
 
         public HelixServer CreateHelixServerForAnonymous() => new HelixServer();
-
-        public async Task<DotNetQueryUtil> CreateDotNetQueryUtilForUserAsync() => CreateForServer(await CreateDevOpsServerForUserAsync());
 
         public DotNetQueryUtil CreateDotNetQueryUtilForApp() => CreateForServer(CreateDevOpsServerForApp());
 

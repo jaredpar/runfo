@@ -3,5 +3,6 @@
     <RepoPath>$(MSBuildThisFileDirectory)</RepoPath>
     <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
+    <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
   </PropertyGroup>
 </Project>
