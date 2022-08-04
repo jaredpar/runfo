@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using YamlDotNet.RepresentationModel;
 
 namespace DevOps.Util.DotNet
 {
@@ -200,6 +201,36 @@ namespace DevOps.Util.DotNet
             HelixLogKind.TestResults => "Test Results",
             _ => throw new InvalidOperationException($"Invalid kind {kind}")
         };
+
+        #endregion
+
+        #region Yaml
+
+        public static bool TryGetNode<T>(this YamlMappingNode node, string name, out T childNode)
+            where T : YamlNode
+        {
+            if (node.Children.TryGetValue(name, out var n) &&
+                n is T t)
+            {
+                childNode = t;
+                return true;
+            }
+
+            childNode = null!;
+            return false;
+        }
+
+        public static bool TryGetScalarValue(this YamlMappingNode node, string name, out string value)
+        {
+            if (TryGetNode<YamlScalarNode>(node, name, out var scalarNode))
+            {
+                value = scalarNode.Value!;
+                return true;
+            }
+
+            value = null!;
+            return false;
+        }
 
         #endregion
     }

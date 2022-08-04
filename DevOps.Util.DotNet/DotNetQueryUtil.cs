@@ -655,12 +655,12 @@ namespace DevOps.Util.DotNet
 
                 foreach (var mapping in document.AllNodes.OfType<YamlMappingNode>())
                 {
-                    if (!TryGetScalarValue(mapping, "job", out var jobName))
+                    if (!mapping.TryGetScalarValue("job", out var jobName))
                     {
                         continue;
                     }
 
-                    if (TryGetScalarValue(mapping, "displayName", out var displayNameValue))
+                    if (mapping.TryGetScalarValue("displayName", out var displayNameValue))
                     {
                         jobName = displayNameValue;
                     }
@@ -671,20 +671,20 @@ namespace DevOps.Util.DotNet
                     }
 
                     string? container = null;
-                    if (TryGetNode<YamlMappingNode>(mapping, "container", out var containerNode) &&
-                        TryGetScalarValue(containerNode, "alias", out var alias))
+                    if (mapping.TryGetNode<YamlMappingNode>("container", out var containerNode) &&
+                        containerNode.TryGetScalarValue("alias", out var alias))
                     {
                         container = alias;
                     }
 
                     string? queue = null;
-                    if (TryGetNode<YamlMappingNode>(mapping, "pool", out var poolNode))
+                    if (mapping.TryGetNode<YamlMappingNode>("pool", out var poolNode))
                     {
-                        if (TryGetScalarValue(poolNode, "vmImage", out var vmName))
+                        if (poolNode.TryGetScalarValue("vmImage", out var vmName))
                         {
                             queue = vmName;
                         }
-                        else if (TryGetScalarValue(poolNode, "queue", out var queueName))
+                        else if (poolNode.TryGetScalarValue("queue", out var queueName))
                         {
                             queue = queueName;
                         }
@@ -703,32 +703,6 @@ namespace DevOps.Util.DotNet
                             container,
                             isHelixSubmission: false));
                     }
-                }
-
-                bool TryGetNode<T>(YamlMappingNode node, string name, out T childNode)
-                    where T : YamlNode
-                {
-                    if (node.Children.TryGetValue(name, out var n) &&
-                        n is T t)
-                    {
-                        childNode = t;
-                        return true;
-                    }
-
-                    childNode = null!;
-                    return false;
-                }
-
-                bool TryGetScalarValue(YamlMappingNode node, string name, out string value)
-                {
-                    if (TryGetNode<YamlScalarNode>(node, name, out var scalarNode))
-                    {
-                        value = scalarNode.Value!;
-                        return true;
-                    }
-
-                    value = null!;
-                    return false;
                 }
             }
 
