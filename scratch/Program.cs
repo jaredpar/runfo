@@ -28,6 +28,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using YamlDotNet.Core;
+using YamlDotNet.RepresentationModel;
 
 // [assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsId("67c4a872-5dd7-422a-acad-fdbe907ace33")]
 
@@ -167,10 +169,114 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await DeleteOldBuilds(useProduction: true);
+            await GetHelixWaitTimes();
             // await FindMatchingSdkMissingBuilds();
             // await FindLogMacBuildAsync();
         }
+
+        internal async Task GetHelixWaitTimes()
+        {
+            var project = "public";
+            var count = 0;
+            var map = new Dictionary<string, List<TimeSpan>>();
+
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync(project, definitions: new[] { 15 }, statusFilter: BuildStatus.Completed))
+            {
+                var buildInfo = build.GetBuildInfo();
+                try
+                {
+                    var timeline = await DevOpsServer.GetTimelineAsync(project, buildInfo.Number);
+                    if (timeline is null)
+                    {
+                        continue;
+                    }
+                    var yaml = await DevOpsServer.GetYamlAsync(project, buildInfo.Number);
+                    var tree = TimelineTree.Create(timeline!);
+                    var helixNodes = tree
+                        .JobNodes
+                        .Where(x => x.Name.StartsWith("Test_"))
+                        .ToList();
+
+                    foreach (var jobNode in helixNodes)
+                    {
+                        if (jobNode.TimelineRecord?.Log?.Id is not { } logId)
+                        {
+                            continue;
+                        }
+
+                        if (await GetHelixWaitTimeAsync(logId) is not { } time)
+                        {
+                            continue;
+                        }
+
+                        if (!map.TryGetValue(jobNode.Name, out var list))
+                        {
+                            list = new();
+                            map[jobNode.Name] = list;
+                        }
+
+                        list.Add(time);
+                    }
+
+                    if (++count == 100)
+                    {
+                        break;
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error processing build: {buildInfo.BuildUri}");
+                    Console.WriteLine(ex.Message);
+                }
+
+                async Task<TimeSpan?> GetHelixWaitTimeAsync(int logId)
+                {
+                    try
+                    {
+                        var content = await DevOpsServer.GetBuildLogAsync(project, buildInfo.Number, logId);
+                        using var reader = new StringReader(content);
+                        DateTime? start = null; ;
+                        while (reader.ReadLine() is { } line)
+                        {
+                            var parts = line.Split(new[] { ' ' }, count: 2);
+                            var message = parts[1].Trim();
+                            if (start is null && message.StartsWith("Starting Azure Pipelines Test"))
+                            {
+                                start = DateTime.Parse(parts[0]);
+                            }
+                            else if (message.StartsWith("Stopping Azure Pipelines Test"))
+                            {
+                                var end = DateTime.Parse(parts[0]);
+                                return end - start;
+                            }
+                        }
+
+                        return null;
+                    }
+                    catch
+                    {
+                        return null;
+                    }
+                }
+            }
+
+            Console.WriteLine("|Job Name|Average Wasted Time (minutes)| Total Wasted Time (minutes)|");
+            Console.WriteLine("|---|---|---|");
+            foreach (var pair in map)
+            {
+                var average = pair.Value.Average(x => x.TotalSeconds) / 60;
+                var total = pair.Value.Sum(x => x.TotalSeconds) / 60;
+                Console.WriteLine($"|{pair.Key}|{average:N2}|{total:N2}|");
+            }
+
+            var all = map
+                .Values
+                .SelectMany(x => x)
+                .Sum(x => x.TotalSeconds) / 60;
+            Console.WriteLine($"Total Wasted minutes {all:N2}");
+        }
+
         internal async Task FindMatchingSdkMissingBuilds()
         {
             var count = 0;
