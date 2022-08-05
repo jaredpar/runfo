@@ -141,6 +141,7 @@ namespace DevOps.Util.DotNet.Triage
                     var issueUpdate = issue.ToUpdate();
                     issueUpdate.Body = newIssueBody;
                     await gitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, issueUpdate).ConfigureAwait(false);
+                    Logger.LogInformation("Completed GitHub Issue Update");
                     return true;
                 }
                 else
