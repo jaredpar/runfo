@@ -132,7 +132,7 @@ namespace DevOps.Util.DotNet.Triage
                 {
                     // Don't actually update the issue if there is no change. This pollutes issue history
                     // and takes up storage.
-                    if (issue.Body == newIssueBody)
+                    if (issue.Body.Trim() == newIssueBody.Trim())
                     {
                         Logger.LogInformation("No change in body, skipping update");
                         return true;
