@@ -24,6 +24,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net.Http;
+using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -177,10 +178,11 @@ namespace Scratch
         internal async Task GetHelixWaitTimes()
         {
             var project = "public";
+            var definition = 686;
             var count = 0;
             var map = new Dictionary<string, List<TimeSpan>>();
 
-            await foreach (var build in DevOpsServer.EnumerateBuildsAsync(project, definitions: new[] { 15 }, statusFilter: BuildStatus.Completed))
+            await foreach (var build in DevOpsServer.EnumerateBuildsAsync(project, definitions: new[] { definition }, statusFilter: BuildStatus.Completed))
             {
                 var buildInfo = build.GetBuildInfo();
                 try
@@ -190,29 +192,18 @@ namespace Scratch
                     {
                         continue;
                     }
-                    var yaml = await DevOpsServer.GetYamlAsync(project, buildInfo.Number);
-                    var tree = TimelineTree.Create(timeline!);
-                    var helixNodes = tree
-                        .JobNodes
-                        .Where(x => x.Name.StartsWith("Test_"))
-                        .ToList();
 
-                    foreach (var jobNode in helixNodes)
+                    foreach (var (jobName, logId) in GetHelixLogIds(timeline))
                     {
-                        if (jobNode.TimelineRecord?.Log?.Id is not { } logId)
-                        {
-                            continue;
-                        }
-
                         if (await GetHelixWaitTimeAsync(logId) is not { } time)
                         {
                             continue;
                         }
 
-                        if (!map.TryGetValue(jobNode.Name, out var list))
+                        if (!map.TryGetValue(jobName, out var list))
                         {
                             list = new();
-                            map[jobNode.Name] = list;
+                            map[jobName] = list;
                         }
 
                         list.Add(time);
@@ -257,6 +248,45 @@ namespace Scratch
                     catch
                     {
                         return null;
+                    }
+                }
+
+                IEnumerable<(string, int)> GetHelixLogIds(Timeline timeline)
+                {
+                    var tree = TimelineTree.Create(timeline);
+                    if (definition == 15)
+                    {
+                        var helixNodes = tree
+                            .JobNodes
+                            .Where(x => x.Name.StartsWith("Test_"))
+                            .ToList();
+                        foreach (var jobNode in helixNodes)
+                        {
+                            if (jobNode.TimelineRecord?.Log?.Id is not { } logId)
+                            {
+                                continue;
+                            }
+
+                            yield return (jobNode.Name, logId);
+                        }
+                    }
+                    else if (definition == 686)
+                    {
+                        foreach (var record in timeline.Records)
+                        {
+                            if (record.Name != "Send to Helix" ||
+                                record.Log?.Id is not { } logId ||
+                                !tree.TryGetJob(record, out var jobNode))
+                            {
+                                continue;
+                            }
+
+                            yield return (jobNode.Name, logId);
+                        }
+                    }
+                    else
+                    {
+                        throw new Exception("Unknown build definition");
                     }
                 }
             }
