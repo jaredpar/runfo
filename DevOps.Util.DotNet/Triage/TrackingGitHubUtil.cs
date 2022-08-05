@@ -132,7 +132,7 @@ namespace DevOps.Util.DotNet.Triage
                 {
                     // Don't actually update the issue if there is no change. This pollutes issue history
                     // and takes up storage.
-                    if (issue.Body == newIssueBody)
+                    if (issue.Body.Trim() == newIssueBody.Trim())
                     {
                         Logger.LogInformation("No change in body, skipping update");
                         return true;
@@ -141,6 +141,7 @@ namespace DevOps.Util.DotNet.Triage
                     var issueUpdate = issue.ToUpdate();
                     issueUpdate.Body = newIssueBody;
                     await gitHubClient.Issue.Update(issueKey.Organization, issueKey.Repository, issueKey.Number, issueUpdate).ConfigureAwait(false);
+                    Logger.LogInformation("Completed GitHub Issue Update");
                     return true;
                 }
                 else

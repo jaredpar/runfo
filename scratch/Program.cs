@@ -169,9 +169,16 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await GetHelixWaitTimes();
+            await TestSmartUpdateAsync();
             // await FindMatchingSdkMissingBuilds();
             // await FindLogMacBuildAsync();
+        }
+
+        internal async Task TestSmartUpdateAsync()
+        {
+            Reset(useProduction: true);
+            var tracking = new TrackingGitHubUtil(GitHubClientFactory, TriageContext, SiteLinkUtil.Published, CreateLogger());
+            await tracking.UpdateTrackingGitHubIssueAsync(415);
         }
 
         internal async Task GetHelixWaitTimes()
