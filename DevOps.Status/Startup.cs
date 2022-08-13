@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
@@ -55,13 +56,13 @@ namespace DevOps.Status
 
             services.AddHttpContextAccessor();
             services.AddScoped<DotNetQueryUtilFactory>();
-            services.AddScoped<IGitHubClientFactory>(_ => new GitHubClientFactory(Configuration));
+            services.AddScoped<IGitHubClientFactory>(_ => GitHubClientFactory.Create(Configuration));
 
             services.AddScoped(_ => new FunctionQueueUtil(Configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]));
 
             services.AddDbContext<TriageContext>(options => 
             {
-                var connectionString = Configuration[DotNetConstants.ConfigurationSqlConnectionString];
+                var connectionString = Configuration.GetNonNull(DotNetConstants.ConfigurationSqlConnectionString);
 #if DEBUG
                 options.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
                 options.EnableSensitiveDataLogging();
@@ -82,8 +83,14 @@ namespace DevOps.Status
             })
             .AddGitHub(options =>
             {
-                options.ClientId = Configuration[DotNetConstants.ConfigurationGitHubClientId];
-                options.ClientSecret = Configuration[DotNetConstants.ConfigurationGitHubClientSecret];
+                // If we are going to impersonate the logged in user rather than use the GH app
+                // then we need some additional permissions to manage GH issues
+                if (Configuration[DotNetConstants.ConfigurationGitHubImpersonateUser] == "true")
+                {
+                    options.Scope.Add("public_repo");
+                }
+                options.ClientId = Configuration.GetNonNull(DotNetConstants.ConfigurationGitHubClientId);
+                options.ClientSecret = Configuration.GetNonNull(DotNetConstants.ConfigurationGitHubClientSecret);
                 options.SaveTokens = true;
 
                 options.ClaimActions.MapJsonKey(Constants.GitHubAvatarUrl, Constants.GitHubAvatarUrl);
@@ -131,6 +138,21 @@ namespace DevOps.Status
 
             app.UseAuthentication();
             app.UseAuthorization();
+
+            // At the time the ClientFactory was created we hadn't done authentication yet. Now that we have
+            // associate the user's GH access token with the factory in case we need it to impersonate them.
+            // This is only necessary when the app is configured to use the logged in user's identity rather
+            // than the dedicated GH runfo app identity.
+            app.Use(async (context, next) =>
+            {
+                if(context.User.Identity.IsAuthenticated)
+                {
+                    string accessToken = await context.GetTokenAsync("access_token");
+                    IGitHubClientFactory gitHubClientFactory = context.RequestServices.GetService<IGitHubClientFactory>();
+                    gitHubClientFactory.SetUserOAuthToken(accessToken);
+                }
+                await next();
+            });
 
             app.UseEndpoints(endpoints =>
             {

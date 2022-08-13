@@ -33,10 +33,10 @@ namespace DevOps.Functions
         public TriageContextUtil TriageContextUtil { get; }
         public DevOpsServer Server { get; }
         public HelixServer HelixServer { get; }
-        public GitHubClientFactory GitHubClientFactory { get; }
+        public IGitHubClientFactory GitHubClientFactory { get; }
         public SiteLinkUtil SiteLinkUtil { get; }
 
-        public Functions(DevOpsServer server, TriageContext context, GitHubClientFactory gitHubClientFactory)
+        public Functions(DevOpsServer server, TriageContext context, IGitHubClientFactory gitHubClientFactory)
         {
             Server = server;
             Context = context;
