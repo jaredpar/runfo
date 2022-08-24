@@ -164,64 +164,6 @@
                     </tbody>
                 </table>
 
-                <h1 class="mt-5"><a id="build-log" href="#build-log" class="text-reset">Build Log Search</a></h1>
-
-                <p>These are the various ways in which you can restrict the set of log files</p>
-
-                <table class="table table-striped table-bordered">
-                    <thead>
-                        <tr>
-                            <th class="column">Qualifier</th>
-                            <th class="column">Example</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="font-weight-bold">logName:.*build</td>
-                            <td>Filters to the logs where the name matches the regex ".*build"</td>
-                        </tr>
-                        <tr>
-                            <td class="font-weight-bold">text:.*StackOverflow</td>
-                            <td>Filters to the logs where the text matches the regex ".*StackOverflow"</td>
-                        </tr>
-                        <tr>
-                            <td class="font-weight-bold">limit:200</td>
-                            <td>By default only the first 100 logs will be searched. Can be increased but be mindful of exceeding Azure rate limiting.</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <h1 class="mt-5"><a id="helix-log" href="#helix-log" class="text-reset">Helix Log Search</a></h1>
-
-                <p>These are the various ways in which you can restrict the set of log files</p>
-
-                <table class="table table-striped table-bordered">
-                    <thead>
-                        <tr>
-                            <th class="column">Qualifier</th>
-                            <th class="column">Example</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="font-weight-bold">logKind:console</td>
-                            <td>Can be console, runclient or testresults. Restricts the log kinds that are searched</td>
-                        </tr>
-                        <tr>
-                            <td class="font-weight-bold">text:.*StackOverflow</td>
-                            <td>Filters to the logs where the text matches the regex ".*StackOverflow"</td>
-                        </tr>
-                        <tr>
-                            <td class="font-weight-bold">limit:200</td>
-                            <td>By default only the first 100 logs will be searched. Can be increased but be mindful of exceeding Helix rate limiting.</td>
-                        </tr>
-                        <tr>
-                            <td class="font-weight-bold">workItemName:"JIT"</td>
-                            <td>Filter to logs where the helix work item name contains the specified string</td>
-                        </tr>
-                    </tbody>
-                </table>
-
                 <h1 class="mt-5"><a id="tracking" href="#timeline" class="text-reset">Tracking Issue Search</a></h1>
 
                 <p>These are the various ways in which you can restrict the set of tracking issues</p>
