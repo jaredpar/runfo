@@ -90,8 +90,6 @@ namespace Scratch
 
     internal sealed class ScratchUtil
     {
-        public const string DefaultOrganization = "dnceng";
-
         public DevOpsServer DevOpsServer { get; set; }
         public DbContextOptions<TriageContext> TriageContextOptions { get; set; }
         public TriageContext TriageContext { get; set; }
@@ -108,8 +106,9 @@ namespace Scratch
         }
 #pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
 
-        public void Reset(string organization = DefaultOrganization, bool useProduction = false)
+        public void Reset(string? organization = null, bool useProduction = false)
         {
+            organization ??= DotNetConstants.AzureOrganization;
             var configuration = CreateConfiguration(useProduction);
             var azureToken = configuration[DotNetConstants.ConfigurationAzdoToken];
             DevOpsServer = new DevOpsServer(organization, new AuthorizationToken(AuthorizationKind.PersonalAccessToken, azureToken));
@@ -1847,7 +1846,7 @@ namespace Scratch
 
         private static async Task DumpBuild(string project, int buildId)
         {
-            var server = new DevOpsServer(DefaultOrganization);
+            var server = new DevOpsServer(DotNetConstants.AzureOrganization);
             var output = @"e:\temp\logs";
             Directory.CreateDirectory(output);
             foreach (var log in await server.GetBuildLogsAsync(project, buildId))
@@ -1862,7 +1861,7 @@ namespace Scratch
 
         private static async Task Fun()
         { 
-            var server = new DevOpsServer(DefaultOrganization);
+            var server = new DevOpsServer(DotNetConstants.AzureOrganization);
             var project = "public";
             var builds = await server.ListBuildsAsync(project, definitions: new[] { 15 }, top: 10);
             foreach (var build in builds)

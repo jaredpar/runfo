@@ -1,16 +1,44 @@
 using System;
+using System.Text;
 
 namespace DevOps.Util
 {
     public readonly struct BuildKey : IEquatable<BuildKey>
     {
+        private const char EscapeChar = '.';
+        private const char SeparatorChar = '-';
+
         public string Organization { get; }
         public string Project { get; }
         public int Number { get; }
 
         public string BuildUri => DevOpsUtil.GetBuildUri(Organization, Project, Number);
 
-        public string NameKey => $"{Organization}-{Project}-{Number}";
+        public string NameKey
+        {
+            get
+            {
+                var builder = new StringBuilder();
+                AppendEscaped(Organization);
+                builder.Append(SeparatorChar);
+                AppendEscaped(Project);
+                builder.Append(SeparatorChar);
+                builder.Append(Number);
+                return builder.ToString();
+
+                void AppendEscaped(string word)
+                {
+                    foreach (var c in word)
+                    {
+                        if (c == SeparatorChar || c == EscapeChar)
+                        {
+                            builder.Append(EscapeChar);
+                        }
+                        builder.Append(c);
+                    }
+                }
+            }
+        }
 
         public BuildKey(string organization, string project, int number)
         {
@@ -36,8 +64,33 @@ namespace DevOps.Util
 
         public static BuildKey FromNameKey(string nameKey)
         {
-            var parts = nameKey.Split('-');
-            return new BuildKey(parts[0], parts[1], int.Parse(parts[2]));
+            var builder = new StringBuilder();
+            var index = 0;
+
+            return new BuildKey(ParseWord(), ParseWord(), int.Parse(ParseWord()));
+            string ParseWord()
+            {
+                builder.Length = 0;
+                while (index < nameKey.Length)
+                {
+                    switch (nameKey[index])
+                    {
+                        case EscapeChar:
+                            builder.Append(nameKey[index + 1]);
+                            index += 2;
+                            break;
+                        case SeparatorChar:
+                            index++;
+                            return builder.ToString();
+                        default:
+                            builder.Append(nameKey[index]);
+                            index++;
+                            break;
+                    }
+                }
+
+                return builder.ToString();
+            }
         }
 
         public static bool operator==(BuildKey left, BuildKey right) => left.Equals(right); 
