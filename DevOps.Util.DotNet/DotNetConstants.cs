@@ -23,7 +23,7 @@ namespace DevOps.Util.DotNet
         public const string ConfigurationAzureBlobConnectionString = "AzureWebJobsStorage";
 
         public static string GitHubOrganization => "dotnet";
-        public static string AzureOrganization => "dnceng";
+        public static string AzureOrganization => "dnceng-public";
         public static string DefaultAzureProject => "public";
 
     }

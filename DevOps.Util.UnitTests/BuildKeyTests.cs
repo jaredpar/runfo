@@ -14,6 +14,8 @@ namespace DevOps.Util.UnitTests
         [InlineData("dnceng", "public", 42, "dnceng-public-42")]
         [InlineData("dnceng", "internal", 42, "dnceng-internal-42")]
         [InlineData("test", "internal", 13, "test-internal-13")]
+        [InlineData("dnceng-public", "internal", 13, "dnceng.-public-internal-13")]
+        [InlineData("dnceng.public", "internal", 13, "dnceng..public-internal-13")]
         public void NameKeyRoundTrip(string organization, string project, int buildNumber, string nameKey)
         {
             var buildKey = new BuildKey(organization, project, buildNumber);
