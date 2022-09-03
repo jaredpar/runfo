@@ -168,9 +168,10 @@ namespace Scratch
 
         internal async Task Scratch()
         {
-            await TestSmartUpdateAsync();
-            // await FindMatchingSdkMissingBuilds();
-            // await FindLogMacBuildAsync();
+            Reset(useProduction: true);
+            var util = new ModelDataUtil(DotNetQueryUtil, TriageContextUtil, CreateLogger());
+            var build = await DevOpsServer.GetBuildAsync("public", 3861);
+            await util.EnsureModelInfoAsync(build, includeTests: true, includeAllAttempts: false);
         }
 
         internal async Task TestSmartUpdateAsync()

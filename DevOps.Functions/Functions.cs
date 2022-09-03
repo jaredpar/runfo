@@ -79,6 +79,19 @@ namespace DevOps.Functions
             logger.LogInformation(requestBody);
 
             dynamic data = JsonConvert.DeserializeObject(requestBody);
+            try
+            {
+                string url = data.resource.url;
+                if (url.Contains("https://dev.azure.com/dnceng/"))
+                {
+                    return new OkResult();
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning($"Error looking for old hook: {ex.Message}");
+            }
+
             var message = new BuildInfoMessage()
             {
                 BuildNumber = data.resource.id,
