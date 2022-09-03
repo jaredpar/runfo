@@ -31,11 +31,11 @@ namespace DevOps.Functions
                 new DevOpsServer(
                     DotNetConstants.AzureOrganization,
                     new AuthorizationToken(AuthorizationKind.PersonalAccessToken, azdoToken)));
-            builder.Services.AddScoped<GitHubClientFactory>(_ =>
+            builder.Services.AddScoped<IGitHubClientFactory>(_ =>
             {
                 var appId = int.Parse(config[DotNetConstants.ConfigurationGitHubAppId]);
                 var appPrivateKey = config[DotNetConstants.ConfigurationGitHubAppPrivateKey];
-                return new GitHubClientFactory(appId, appPrivateKey);
+                return new GitHubAppClientFactory(appId, appPrivateKey);
             });
         }
     }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.DotNet.Helix.Client;
+using Microsoft.Extensions.Configuration;
 using Octokit;
 using System;
 using System.Collections.Generic;
@@ -232,6 +233,17 @@ namespace DevOps.Util.DotNet
             return false;
         }
 
+        #endregion
+
+        #region IConfiguration
+        public static string GetNonNull(this IConfiguration config, string key)
+        {
+            if (config[key]==null)
+            {
+                throw new Exception($"No {key} configuration set");
+            }
+            return config[key];
+        }
         #endregion
     }
 }

@@ -40,7 +40,17 @@ namespace Scratch
         public static async Task Main(string[] args)
         {
             var scratchUtil = new ScratchUtil();
-            await scratchUtil.Scratch();
+            if(args.Length > 0)
+            {
+                if (args[0].Equals("populateDb", StringComparison.OrdinalIgnoreCase))
+                {
+                    await scratchUtil.PopulateDb();
+                }
+            }
+            else
+            {
+                await scratchUtil.Scratch();
+            }
         }
 
         // This entry point exists so that `dotnet ef database` and `migrations` has an 
@@ -85,6 +95,7 @@ namespace Scratch
             GitHubClient = gitHubClient;
         }
 
+        public void SetUserOAuthToken(string token) { }
         public Task<IGitHubClient> CreateForAppAsync(string owner, string repository) => Task.FromResult<IGitHubClient>(GitHubClient);
     }
 
@@ -110,11 +121,11 @@ namespace Scratch
         {
             organization ??= DotNetConstants.AzureOrganization;
             var configuration = CreateConfiguration(useProduction);
-            var azureToken = configuration[DotNetConstants.ConfigurationAzdoToken];
+            var azureToken = configuration.GetNonNull(DotNetConstants.ConfigurationAzdoToken);
             DevOpsServer = new DevOpsServer(organization, new AuthorizationToken(AuthorizationKind.PersonalAccessToken, azureToken));
 
             var builder = new DbContextOptionsBuilder<TriageContext>();
-            var connectionString = configuration[DotNetConstants.ConfigurationSqlConnectionString];
+            var connectionString = configuration.GetNonNull(DotNetConstants.ConfigurationSqlConnectionString);
             var message = connectionString.Contains("triage-scratch-dev")
                 ? "Using sql developer"
                 : "Using sql production";
@@ -147,12 +158,14 @@ namespace Scratch
         {
             var keyVault = useProduction ? DotNetConstants.KeyVaultEndPointProduction : DotNetConstants.KeyVaultEndPointTest;
             var config = new ConfigurationBuilder()
-                .AddUserSecrets<Program>()
-                .AddAzureKeyVault(
-                    keyVault,
-                    new DefaultKeyVaultSecretManager())
-                .Build();
-            return config;
+                .AddUserSecrets<Program>();
+
+            // We can disable using key vault with this env var. See ..\Documentation\DevWithoutKeyVault.md
+            if (Environment.GetEnvironmentVariable("USE_KEYVAULT") != "0")
+            {
+                config = config.AddAzureKeyVault(keyVault, new DefaultKeyVaultSecretManager());
+            }
+            return config.Build();
         }
 
         internal static ILogger CreateLogger() => LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Scratch");
