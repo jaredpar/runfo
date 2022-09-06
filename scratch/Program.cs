@@ -169,9 +169,7 @@ namespace Scratch
         internal async Task Scratch()
         {
             Reset(useProduction: true);
-            var util = new ModelDataUtil(DotNetQueryUtil, TriageContextUtil, CreateLogger());
-            var build = await DevOpsServer.GetBuildAsync("public", 3861);
-            await util.EnsureModelInfoAsync(build, includeTests: true, includeAllAttempts: false);
+            await PopulateDb();
         }
 
         internal async Task TestSmartUpdateAsync()
