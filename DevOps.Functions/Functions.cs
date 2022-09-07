@@ -36,14 +36,14 @@ namespace DevOps.Functions
         public GitHubClientFactory GitHubClientFactory { get; }
         public SiteLinkUtil SiteLinkUtil { get; }
 
-        public Functions(DevOpsServer server, TriageContext context, GitHubClientFactory gitHubClientFactory)
+        public Functions(DevOpsServer server, HelixServer helixServer, TriageContext context, GitHubClientFactory gitHubClientFactory)
         {
             Server = server;
             Context = context;
             TriageContextUtil = new TriageContextUtil(context);
             GitHubClientFactory = gitHubClientFactory;
             SiteLinkUtil = SiteLinkUtil.Published;
-            HelixServer = new HelixServer();
+            HelixServer = helixServer;
         }
 
         [FunctionName("status")]
@@ -56,9 +56,11 @@ namespace DevOps.Functions
             {
                 _ = await GitHubClientFactory.CreateForAppAsync("dotnet", "runtime");
                 status.CreatedGitHubApp = true;
+                logger.LogInformation("Created GitHub Client");
             }
             catch (Exception ex)
             {
+                logger.LogError($"Could not create GitHub client: {ex.Message}");
                 status.CreatedGitHubApp = false;
                 status.CreatedGitHubAppException = ex.Message;
             }

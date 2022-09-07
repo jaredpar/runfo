@@ -31,6 +31,12 @@ namespace DevOps.Status.Util
 
         public DevOpsServer CreateDevOpsServerForAnonymous() => new DevOpsServer(DotNetConstants.AzureOrganization);
 
+        public HelixServer CreateHelixServerForApp()
+        {
+            var helixToken = Configuration[DotNetConstants.ConfigurationHelixToken];
+            return new HelixServer(token: helixToken);
+        }
+
         public HelixServer CreateHelixServerForAnonymous() => new HelixServer();
 
         public DotNetQueryUtil CreateDotNetQueryUtilForApp() => CreateForServer(CreateDevOpsServerForApp());
