@@ -53,7 +53,7 @@ namespace DevOps.Status.Controllers
             }
 
             var queryUtil = QueryUtilFactory.CreateDotNetQueryUtilForAnonymous();
-            var helixApi = QueryUtilFactory.CreateHelixServerForAnonymous().HelixApi;
+            var helixApi = QueryUtilFactory.CreateHelixServerForApp().HelixApi;
             var build = await queryUtil.Server.GetBuildAsync(project, buildNumber);
             var helixInfos = await queryUtil.ListHelixWorkItemsAsync(build, DevOpsUtil.FailedTestOutcomes);
             var list = new List<HelixWorkItemRestInfo>();

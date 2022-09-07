@@ -140,7 +140,8 @@ namespace Scratch
                 DevOpsServer,
                 new AzureUtil(DevOpsServer));
             FunctionQueueUtil = new FunctionQueueUtil(configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
-            HelixServer = new HelixServer();
+            var helixToken = configuration[DotNetConstants.ConfigurationHelixToken];
+            HelixServer = new HelixServer(token: helixToken);
         }
 
         internal static IConfiguration CreateConfiguration(bool useProduction = false)
