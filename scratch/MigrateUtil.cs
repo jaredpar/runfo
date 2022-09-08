@@ -27,12 +27,13 @@ namespace Scratch
 
         public MigrateUtil(
             DotNetQueryUtil queryUtil,
+            HelixServer helixServer,
             TriageContextUtil triageContextUtil,
             ILogger logger)
         {
             DotNetQueryUtil = queryUtil;
             TriageContextUtil = triageContextUtil;
-            ModelDataUtil = new ModelDataUtil(queryUtil, triageContextUtil, logger);
+            ModelDataUtil = new ModelDataUtil(queryUtil, helixServer, triageContextUtil, logger);
         }
 
         private async Task SaveNewId(ModelMigrationKind kind, int oldId, int? newId)

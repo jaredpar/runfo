@@ -15,19 +15,20 @@ namespace DevOps.Util.DotNet.Triage
     public sealed class ModelDataUtil
     {
         internal DevOpsServer Server { get; }
-
         internal DotNetQueryUtil QueryUtil { get; }
-
+        internal HelixServer HelixServer { get; }
         internal TriageContextUtil TriageContextUtil { get; }
 
         internal ILogger Logger { get; }
 
         public ModelDataUtil(
             DotNetQueryUtil queryUtil,
+            HelixServer helixServer,
             TriageContextUtil triageContextUtil, 
             ILogger logger)
         {
             Server = queryUtil.Server;
+            HelixServer = helixServer;
             QueryUtil = queryUtil;
             TriageContextUtil = triageContextUtil;
             Logger = logger;
@@ -142,7 +143,7 @@ namespace DevOps.Util.DotNet.Triage
                             dotNetTestRun.TestCaseResults.Take(maxTestCaseResultCount).ToReadOnlyCollection());
                     }
 
-                    var helixApi = HelixServer.GetHelixApi();
+                    var helixApi = HelixServer.HelixApi;
                     var helixMap = await helixApi.GetHelixMapAsync(dotNetTestRun).ConfigureAwait(false);
 
                     await TriageContextUtil.EnsureTestRunAsync(modelBuildAttempt, dotNetTestRun, helixMap).ConfigureAwait(false);

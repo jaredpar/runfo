@@ -141,7 +141,10 @@ namespace Scratch
                 new AzureUtil(DevOpsServer));
             FunctionQueueUtil = new FunctionQueueUtil(configuration[DotNetConstants.ConfigurationAzureBlobConnectionString]);
             var helixToken = configuration[DotNetConstants.ConfigurationHelixToken];
-            HelixServer = new HelixServer(token: helixToken);
+
+            // Using anonymous Helix for now as it has a higher API rate limit than authenticated
+            // https://github.com/dotnet/arcade/issues/10764
+            HelixServer = new HelixServer(token: null);
         }
 
         internal static IConfiguration CreateConfiguration(bool useProduction = false)
@@ -685,7 +688,7 @@ namespace Scratch
                 }
 
                 Console.WriteLine($"Getting data for {uri}");
-                list.Add(ProcessBuildAsync(build, TriageContextOptions, DotNetQueryUtil, logger));
+                list.Add(ProcessBuildAsync(build, TriageContextOptions, DotNetQueryUtil, HelixServer, logger));
                 if (list.Count >= maxParallel)
                 {
                     await Task.WhenAny(list);
@@ -701,12 +704,12 @@ namespace Scratch
                 }
             }
 
-            static async Task ProcessBuildAsync(Build build, DbContextOptions<TriageContext> options, DotNetQueryUtil queryUtil, ILogger logger)
+            static async Task ProcessBuildAsync(Build build, DbContextOptions<TriageContext> options, DotNetQueryUtil queryUtil, HelixServer helixServer, ILogger logger)
             {
                 try
                 {
                     var triageContextUtil = new TriageContextUtil(new TriageContext(options));
-                    var modelDataUtil = new ModelDataUtil(queryUtil, triageContextUtil, logger);
+                    var modelDataUtil = new ModelDataUtil(queryUtil, helixServer, triageContextUtil, logger);
                     await modelDataUtil.EnsureModelInfoAsync(build, includeTests: true, includeAllAttempts: true);
                 }
                 catch (Exception ex)
@@ -723,7 +726,7 @@ namespace Scratch
 
         internal async Task Migrate()
         {
-            var util = new MigrateUtil(DotNetQueryUtil, TriageContextUtil, CreateLogger());
+            var util = new MigrateUtil(DotNetQueryUtil, HelixServer, TriageContextUtil, CreateLogger());
             await util.Migrate(@"c:\users\jaredpar\temp\migrate");
         }
 
@@ -1090,7 +1093,7 @@ namespace Scratch
                 {
                     var uri = build.GetBuildResultInfo().BuildUri;
                     Console.WriteLine($"Getting data for {uri}");
-                    var modelDataUtil = new ModelDataUtil(DotNetQueryUtil, TriageContextUtil, logger);
+                    var modelDataUtil = new ModelDataUtil(DotNetQueryUtil, HelixServer, TriageContextUtil, logger);
                     var buildAttemptKey = await modelDataUtil.EnsureModelInfoAsync(build, includeTests: includeTests);
 
                     if (includeTriage)

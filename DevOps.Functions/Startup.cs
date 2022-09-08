@@ -35,7 +35,10 @@ namespace DevOps.Functions
                 new DevOpsServer(
                     DotNetConstants.AzureOrganization,
                     new AuthorizationToken(AuthorizationKind.PersonalAccessToken, azdoToken)));
-            builder.Services.AddScoped(_ => new HelixServer(token: helixToken));
+
+            // Using anonymous Helix for now as it has a higher API rate limit than authenticated
+            // https://github.com/dotnet/arcade/issues/10764
+            builder.Services.AddScoped(_ => new HelixServer(token: null));
 
             builder.Services.AddScoped<GitHubClientFactory>(_ =>
             {
