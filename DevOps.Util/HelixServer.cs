@@ -24,12 +24,13 @@ namespace DevOps.Util
         private readonly string? _token;
         private readonly string? _helixBaseUri;
 
+        public string? Token => _token;
         public IHelixApi HelixApi => GetHelixApi(_helixBaseUri, _token);
 
         public HelixServer(string? helixBaseUri = null, string? token = null, HttpClient? httpClient = null)
         {
             _helixBaseUri = helixBaseUri;
-            _token = token;
+            _token = string.IsNullOrEmpty(token) ? null : token;
             _client = new DevOpsHttpClient(httpClient: httpClient);
         }
 

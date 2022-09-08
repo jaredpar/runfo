@@ -139,7 +139,7 @@ namespace DevOps.Functions
 
             var build = await Server.GetBuildAsync(projectName, buildNumber);
             var queryUtil = new DotNetQueryUtil(Server);
-            var modelDataUtil = new ModelDataUtil(queryUtil, TriageContextUtil, logger);
+            var modelDataUtil = new ModelDataUtil(queryUtil, HelixServer, TriageContextUtil, logger);
             var buildAttemptKey = await modelDataUtil.EnsureModelInfoAsync(build);
 
             await triageCollector.AddAsync(JsonConvert.SerializeObject(new BuildMessage(buildAttemptKey.BuildKey)));
