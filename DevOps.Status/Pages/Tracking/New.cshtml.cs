@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Octokit;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
@@ -45,6 +46,8 @@ namespace DevOps.Status.Pages.Tracking
         public string? GitHubRepository { get; set; }
         [BindProperty]
         public string? GitHubIssueUri { get; set; }
+        [BindProperty]
+        public string? AzureOrganization { get; set; } = DotNetConstants.AzureOrganization;
 
         public string? ErrorMessage { get; set; }
 
@@ -102,10 +105,16 @@ namespace DevOps.Status.Pages.Tracking
                 return Page();
             }
 
+            if (string.IsNullOrEmpty(AzureOrganization))
+            {
+                ErrorMessage = "Must provide an Azure Organization";
+                return Page();
+            }
+
             ModelBuildDefinition? modelBuildDefinition = null;
             if (!string.IsNullOrEmpty(DefinitionData))
             {
-                modelBuildDefinition = await TriageContextUtil.FindModelBuildDefinitionAsync(DefinitionData);
+                modelBuildDefinition = await TriageContextUtil.FindModelBuildDefinitionAsync(AzureOrganization, DefinitionData);
                 if (modelBuildDefinition is null)
                 {
                     ErrorMessage = $"Cannot find build definition with name or ID: {DefinitionData}";
