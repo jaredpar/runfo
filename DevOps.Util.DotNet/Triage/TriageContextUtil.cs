@@ -358,21 +358,21 @@ namespace DevOps.Util.DotNet.Triage
         public Task<ModelBuildDefinition> GetModelBuildDefinitionAsync(int id) =>
             GetModelBuildDefinitionQueryAsync(id).SingleOrDefaultAsync();
 
-        public async Task<ModelBuildDefinition?> FindModelBuildDefinitionAsync(string nameOrId)
+        public async Task<ModelBuildDefinition?> FindModelBuildDefinitionAsync(string azureOrganization, string nameOrId)
         {
             if (int.TryParse(nameOrId, out var id))
             {
                 return await Context
                     .ModelBuildDefinitions
-                    .Where(x => x.DefinitionNumber == id)
-                    .FirstOrDefaultAsync()
+                    .Where(x => x.DefinitionNumber == id && x.AzureOrganization == azureOrganization)
+                    .SingleOrDefaultAsync()
                     .ConfigureAwait(false);
             }
 
             return await Context
                 .ModelBuildDefinitions
-                .Where(x => x.DefinitionName == nameOrId)
-                .FirstOrDefaultAsync()
+                .Where(x => x.DefinitionName == nameOrId && x.AzureOrganization == azureOrganization)
+                .SingleOrDefaultAsync()
                 .ConfigureAwait(false);
         }
 

@@ -172,8 +172,49 @@ namespace Scratch
 
         internal async Task Scratch()
         {
+            await FixTrackingIssuesAsync();
+        }
+
+        /// <summary>
+        /// When we moved from dnceng to dnceng-public all of our tracking issues retained the 
+        /// <see cref="ModelBuildDefinition"/> on dnceng. This means they're not tracking any new builds
+        /// that are coming through. This moves all the existing issues to their equivalent 
+        /// definition in dnceng-public
+        /// </summary>
+        /// <returns></returns>
+        internal async Task FixTrackingIssuesAsync()
+        {
             Reset(useProduction: true);
-            await PopulateDb();
+
+            // First migrate the issues and save the ids
+            var query = await TriageContext
+                .ModelTrackingIssues
+                .Include(x => x.ModelBuildDefinition)
+                .Where(x => x.IsActive && x.ModelBuildDefinition!.AzureOrganization == "dnceng")
+                .ToListAsync();
+
+            var ids = new List<int>();
+            foreach (var issue in query)
+            {
+                Console.WriteLine($"Migrating {issue.Id}");
+                var newDefinition = await TriageContextUtil.FindModelBuildDefinitionAsync(
+                    azureOrganization: "dnceng-public",
+                    issue.ModelBuildDefinition!.DefinitionName);
+
+                if (newDefinition is object)
+                {
+                    issue.ModelBuildDefinition = newDefinition;
+                    ids.Add(issue.Id);
+                }
+            }
+
+            await TriageContext.SaveChangesAsync();
+
+            Reset(useProduction: true);
+            foreach (var id in ids)
+            {
+                await PopulateModelTrackingIssue("started:~7", id);
+            }
         }
 
         internal async Task TestSmartUpdateAsync()
@@ -879,6 +920,7 @@ namespace Scratch
             request.ParseQueryString(buildQuery);
 
             var query = request.Filter(TriageContext.ModelBuilds)
+                .Include(x => x.ModelBuildDefinition)
                 .Include(x => x.ModelBuildAttempts);
             var logger = CreateLogger();
 
