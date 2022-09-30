@@ -1,3 +1,5 @@
+using Microsoft.DotNet.Helix.Client;
+using Microsoft.DotNet.Helix.Client.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -7,6 +9,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DevOps.Util
@@ -358,5 +361,25 @@ namespace DevOps.Util
         }
 
         #endregion
+
+        #region IWorkItem
+
+        /// <summary>
+        /// Work around the fact that Helix truncates work item names
+        /// 
+        /// https://github.com/dotnet/arcade/issues/11079
+        /// </summary>
+        public static Task<WorkItemDetails> DetailsExAsync(this IWorkItem @this, string id, string job, CancellationToken cancellationToken = default)
+        {
+            if (id.Length > 200)
+            {
+                id = id.Substring(0, 197);
+                id = id + "...";
+            }
+            return @this.DetailsAsync(id: id, job: job, cancellationToken);
+        }
+
+        #endregion
+
     }
 }

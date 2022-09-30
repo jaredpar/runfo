@@ -95,7 +95,7 @@ namespace DevOps.Util.DotNet
             IHelixApi helixApi,
             HelixInfoWorkItem helixWorkItem)
         {
-            var details = await helixApi.WorkItem.DetailsAsync(id: helixWorkItem.WorkItemName, job: helixWorkItem.JobId).ConfigureAwait(false);
+            var details = await helixApi.WorkItem.DetailsExAsync(id: helixWorkItem.WorkItemName, job: helixWorkItem.JobId).ConfigureAwait(false);
             var runClientUri = details.Logs.FirstOrDefault(x => x.Module.StartsWith("run_client"))?.Uri;
             string? dumpUri = null;
             string? testResultsUri = null;
