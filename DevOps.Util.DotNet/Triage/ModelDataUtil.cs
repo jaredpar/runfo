@@ -34,6 +34,12 @@ namespace DevOps.Util.DotNet.Triage
             Logger = logger;
         }
 
+        public async Task<BuildAttemptKey> EnsureModelInfoAsync(string project, int buildNumber, bool includeTests = true, bool includeAllAttempts = false)
+        {
+            var build = await Server.GetBuildAsync(project, buildNumber).ConfigureAwait(false);
+            return await EnsureModelInfoAsync(build, includeTests, includeAllAttempts).ConfigureAwait(false);
+        }
+
         public async Task<BuildAttemptKey> EnsureModelInfoAsync(Build build, bool includeTests = true, bool includeAllAttempts = false)
         {
             var buildInfo = build.GetBuildResultInfo();
