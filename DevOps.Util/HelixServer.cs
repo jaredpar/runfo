@@ -144,13 +144,16 @@ namespace DevOps.Util
 #if NET7_0_OR_GREATER
                     if (extract)
                     {
+                        Directory.CreateDirectory(extractDirectory);
                         if (destinationFile.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
                         {
                             ZipFile.ExtractToDirectory(destinationFile, extractDirectory, overwriteFiles: true);
                         }
                         else if (destinationFile.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
                         {
-                            TarFile.ExtractToDirectory(destinationFile, extractDirectory, overwriteFiles: true);
+                            using FileStream fileStream = File.OpenRead(destinationFile);
+                            using GZipStream decompressedFileStream = new(fileStream, CompressionMode.Decompress);
+                            TarFile.ExtractToDirectory(decompressedFileStream, extractDirectory, overwriteFiles: true);
                         }
                     }
 #endif
