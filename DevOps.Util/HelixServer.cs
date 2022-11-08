@@ -122,9 +122,16 @@ namespace DevOps.Util
                         RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
                             $"set {name}={value}" :
                             $"export {name}=\"{value}\"";
+                    Console.WriteLine(SetVariable("HELIX_CORRELATION_ID", jobId));
                     Console.WriteLine(SetVariable("HELIX_CORRELATION_PAYLOAD", correlationDir));
-                    Console.WriteLine(SetVariable("HELIX_WORKITEM_ROOT", itemDir));
                     Console.WriteLine(SetVariable("HELIX_PYTHONPATH", "echo skipping python"));
+                    Console.WriteLine(SetVariable("HELIX_WORKITEM_FRIENDLYNAME", workItemInfo.WorkItemId!));
+                    Console.WriteLine(SetVariable("HELIX_WORKITEM_ID ", workItemInfo.WorkItemId!));
+                    Console.WriteLine(SetVariable("HELIX_WORKITEM_PAYLOAD", itemDir));
+                    Console.WriteLine(SetVariable("HELIX_WORKITEM_ROOT", itemDir));
+                    Console.WriteLine(SetVariable("HELIX_WORKITEM_UPLOAD_ROOT", itemDir));
+                    Console.WriteLine(SetVariable("HELIX_DUMP_FOLDER", itemDir));
+                    Console.WriteLine(SetVariable("HELIX_CURRENT_LOG ", Path.Combine(itemDir, "log.txt")));
                     if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         Console.WriteLine($"chmod +x {workItemInfo.Command}");
@@ -145,13 +152,16 @@ namespace DevOps.Util
 #if NET7_0_OR_GREATER
                     if (extract)
                     {
+                        Directory.CreateDirectory(extractDirectory);
                         if (destinationFile.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
                         {
                             ZipFile.ExtractToDirectory(destinationFile, extractDirectory, overwriteFiles: true);
                         }
                         else if (destinationFile.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
                         {
-                            TarFile.ExtractToDirectory(destinationFile, extractDirectory, overwriteFiles: true);
+                            using FileStream fileStream = File.OpenRead(destinationFile);
+                            using GZipStream decompressedFileStream = new(fileStream, CompressionMode.Decompress);
+                            TarFile.ExtractToDirectory(decompressedFileStream, extractDirectory, overwriteFiles: true);
                         }
                     }
 #endif
