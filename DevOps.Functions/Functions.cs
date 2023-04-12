@@ -269,7 +269,7 @@ namespace DevOps.Functions
 
         [FunctionName("issues-update-manual")]
         public async Task IssuesUpdateManualAsync(
-            [QueueTrigger(QueueNameIssueUpdateManual, Connection = ConfigurationAzureBlobConnectionString)] string message,
+            [QueueTrigger(QueueNameIssueUpdateManual, Connection = ConfigurationAzureBlobConnectionString)] string message)
         {
             var logger = LoggerFactory.CreateLogger(nameof(IssuesUpdateManualAsync));
             var updateMessage = JsonConvert.DeserializeObject<IssueUpdateManualMessage>(message);
