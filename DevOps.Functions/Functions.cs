@@ -24,6 +24,7 @@ using System.Diagnostics;
 using DevOps.Util.DotNet.Function;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using Org.BouncyCastle.Crypto.Prng;
 
 namespace DevOps.Functions
 {
@@ -35,8 +36,9 @@ namespace DevOps.Functions
         public HelixServer HelixServer { get; }
         public GitHubClientFactory GitHubClientFactory { get; }
         public SiteLinkUtil SiteLinkUtil { get; }
+        public ILoggerFactory LoggerFactory { get; }
 
-        public Functions(DevOpsServer server, HelixServer helixServer, TriageContext context, GitHubClientFactory gitHubClientFactory)
+        public Functions(DevOpsServer server, HelixServer helixServer, TriageContext context, GitHubClientFactory gitHubClientFactory, ILoggerFactory loggerFactory)
         {
             Server = server;
             Context = context;
@@ -44,13 +46,14 @@ namespace DevOps.Functions
             GitHubClientFactory = gitHubClientFactory;
             SiteLinkUtil = SiteLinkUtil.Published;
             HelixServer = helixServer;
+            LoggerFactory = loggerFactory;
         }
 
         [FunctionName("status")]
         public async Task<IActionResult> OnStatusAsync(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
-            ILogger logger)
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req)
         {
+            var logger = LoggerFactory.CreateLogger(nameof(OnStatusAsync));
             dynamic status = new ExpandoObject();
             try
             {
@@ -74,9 +77,9 @@ namespace DevOps.Functions
         [FunctionName("build")]
         public async Task<IActionResult> OnBuild(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
-            [Queue(QueueNameBuildComplete, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> completeCollector,
-            ILogger logger)
+            [Queue(QueueNameBuildComplete, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> completeCollector)
         {
+            var logger = LoggerFactory.CreateLogger(nameof(OnBuild));
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync().ConfigureAwait(false);
             logger.LogInformation(requestBody);
 
@@ -112,9 +115,9 @@ namespace DevOps.Functions
         public async Task BuildCompleteAsync(
             [QueueTrigger(QueueNameBuildComplete, Connection = ConfigurationAzureBlobConnectionString)] string message,
             [Queue(QueueNameTriageBuild, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> triageCollector,
-            [Queue(QueueNameBuildRetry, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> retryCollector,
-            ILogger logger)
+            [Queue(QueueNameBuildRetry, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> retryCollector)
         {
+            var logger = LoggerFactory.CreateLogger(nameof(BuildCompleteAsync));
             var buildInfoMessage = JsonConvert.DeserializeObject<BuildInfoMessage>(message);
             var projectName = buildInfoMessage.ProjectName;
             var buildNumber = buildInfoMessage.BuildNumber;
@@ -148,9 +151,9 @@ namespace DevOps.Functions
 
         [FunctionName("build-retry")]
         public async Task BuildRetryAsync(
-            [QueueTrigger(QueueNameBuildRetry, Connection = ConfigurationAzureBlobConnectionString)] string message,
-            ILogger logger)
+            [QueueTrigger(QueueNameBuildRetry, Connection = ConfigurationAzureBlobConnectionString)] string message)
         {
+            var logger = LoggerFactory.CreateLogger(nameof(BuildRetryAsync));
             var buildAttemptMessage = JsonConvert.DeserializeObject<BuildAttemptMessage>(message);
             if (buildAttemptMessage.BuildAttemptKey is { } buildAttemptKey)
             {
@@ -168,9 +171,9 @@ namespace DevOps.Functions
         /// </summary>
         [FunctionName("triage-tracking-issue")]
         public async Task TriageTrackingIssueAsync(
-            [QueueTrigger(QueueNameTriageTrackingIssue, Connection = ConfigurationAzureBlobConnectionString)] string message,
-            ILogger logger)
+            [QueueTrigger(QueueNameTriageTrackingIssue, Connection = ConfigurationAzureBlobConnectionString)] string message)
         {
+            var logger = LoggerFactory.CreateLogger(nameof(TriageTrackingIssueAsync));
             var issueMessage = JsonConvert.DeserializeObject<TriageTrackingIssueMessage>(message);
             if (issueMessage.BuildMessage?.BuildKey is { } buildKey && issueMessage.ModelTrackingIssueId is { } trackingIssueId)
             {
@@ -191,9 +194,9 @@ namespace DevOps.Functions
         [FunctionName("triage-tracking-issue-range")]
         public async Task TriageTrackingIssueRangeAsync(
             [QueueTrigger(QueueNameTriageTrackingIssueRange, Connection = ConfigurationAzureBlobConnectionString)] string message,
-            [Queue(QueueNameTriageTrackingIssue, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> triageCollector,
-            ILogger logger)
+            [Queue(QueueNameTriageTrackingIssue, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> triageCollector)
         {
+            var logger = LoggerFactory.CreateLogger(nameof(TriageTrackingIssueRangeAsync));
             var rangeMessage = JsonConvert.DeserializeObject<TriageTrackingIssueRangeMessage>(message);
             if (rangeMessage.ModelTrackingIssueId is { } issueId && rangeMessage.BuildMessages is { } buildMessages)
             {
@@ -224,9 +227,9 @@ namespace DevOps.Functions
         [FunctionName("triage-build")]
         public async Task TriageBuildAsync(
             [QueueTrigger(QueueNameTriageBuild, Connection = ConfigurationAzureBlobConnectionString)] string message,
-            [Queue(QueueNameTriageTrackingIssue, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> triageCollector,
-            ILogger logger)
+            [Queue(QueueNameTriageTrackingIssue, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> triageCollector)
         {
+            var logger = LoggerFactory.CreateLogger(nameof(TriageBuildAsync));
             var buildMessage = JsonConvert.DeserializeObject<BuildMessage>(message);
             if (buildMessage.BuildKey is { } buildKey)
             {
@@ -248,18 +251,18 @@ namespace DevOps.Functions
 
         [FunctionName("issues-update-timer")]
         public async Task IssuesUpdateTimerAsync(
-            [TimerTrigger("0 */15 15-23 * * 1-5")] TimerInfo timerInfo,
-            ILogger logger)
+            [TimerTrigger("0 */15 15-23 * * 1-5")] TimerInfo timerInfo)
         {
+            var logger = LoggerFactory.CreateLogger(nameof(IssuesUpdateTimerAsync));
             var util = new TrackingGitHubUtil(GitHubClientFactory, Context, SiteLinkUtil, logger);
             await util.UpdateTrackingGitHubIssuesAsync();
         }
 
         [FunctionName("issues-update-status-page")]
         public async Task IssuesUpdateStatusPageAsync(
-            [TimerTrigger("0 */30 15-23 * * 1-5")] TimerInfo timerInfo,
-            ILogger logger)
+            [TimerTrigger("0 */30 15-23 * * 1-5")] TimerInfo timerInfo)
         {
+            var logger = LoggerFactory.CreateLogger(nameof(IssuesUpdateStatusPageAsync));
             var util = new StatusPageUtil(GitHubClientFactory, Context, logger);
             await util.UpdateStatusIssue();
         }
@@ -267,8 +270,8 @@ namespace DevOps.Functions
         [FunctionName("issues-update-manual")]
         public async Task IssuesUpdateManualAsync(
             [QueueTrigger(QueueNameIssueUpdateManual, Connection = ConfigurationAzureBlobConnectionString)] string message,
-            ILogger logger)
-        { 
+        {
+            var logger = LoggerFactory.CreateLogger(nameof(IssuesUpdateManualAsync));
             var updateMessage = JsonConvert.DeserializeObject<IssueUpdateManualMessage>(message);
             if (updateMessage.ModelTrackingIssueId is { } id)
             {
@@ -284,9 +287,9 @@ namespace DevOps.Functions
         [FunctionName("webhook-github")]
         public async Task<IActionResult> OnGitHubEvent(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest request,
-            [Queue(QueueNamePullRequestMerged, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> collector,
-            ILogger logger)
+            [Queue(QueueNamePullRequestMerged, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> collector)
         {
+            var logger = LoggerFactory.CreateLogger(nameof(OnGitHubEvent));
             request.Headers.TryGetValue("X-GitHub-Event", out StringValues eventName);
             logger.LogInformation(eventName);
             if (eventName == "pull_request")
@@ -326,9 +329,9 @@ namespace DevOps.Functions
 
         [FunctionName("pull-request-merged")]
         public async Task OnPullRequestMergedAsync(
-            [QueueTrigger(QueueNamePullRequestMerged, Connection = ConfigurationAzureBlobConnectionString)] string message,
-            ILogger logger)
+            [QueueTrigger(QueueNamePullRequestMerged, Connection = ConfigurationAzureBlobConnectionString)] string message)
         {
+            var logger = LoggerFactory.CreateLogger(nameof(OnPullRequestMergedAsync));
             var functionUtil = new FunctionUtil(logger);
             var prMessage = JsonConvert.DeserializeObject<PullRequestMergedMessage>(message);
             var prKey = new GitHubPullRequestKey(prMessage.Organization!, prMessage.Repository!, prMessage.PullRequestNumber);
@@ -341,9 +344,9 @@ namespace DevOps.Functions
 
         [FunctionName("delete-old-builds")]
         public async Task DeleteOldBuilds(
-            [TimerTrigger("0 */5 * * * *")] TimerInfo timerInfo,
-            ILogger logger)
+            [TimerTrigger("0 */5 * * * *")] TimerInfo timerInfo)
         {
+            var logger = LoggerFactory.CreateLogger(nameof(DeleteOldBuilds));
             var functionUtil = new FunctionUtil(logger);
             await functionUtil.DeleteOldBuilds(TriageContextUtil.Context, deleteMax: 25);
         }
