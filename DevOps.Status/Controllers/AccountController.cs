@@ -12,27 +12,23 @@ namespace DevOps.Status.Controllers
     public class AccountController : Controller
     {
         [HttpGet("signin")]
-        public IActionResult SignIn(string? returnUrl = null)
-        {
-            return Challenge(
+        public IActionResult UserSignIn(string? returnUrl = null) =>
+            Challenge(
                 new AuthenticationProperties
                 {
                     RedirectUri = "/" + returnUrl
                 },
                 GitHubAuthenticationDefaults.AuthenticationScheme
             );
-        }
 
         [HttpGet("signout")]
         [HttpPost("signout")]
-        public IActionResult SignOut()
-        {
-            return SignOut(
+        public IActionResult UserSignOut() =>
+            SignOut(
                 new AuthenticationProperties
                 {
                     RedirectUri = "/"
                 },
                 CookieAuthenticationDefaults.AuthenticationScheme);
-        }
     }
 }

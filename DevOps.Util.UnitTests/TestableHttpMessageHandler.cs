@@ -15,7 +15,7 @@ namespace DevOps.Util.UnitTests
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            if (MessageMap.TryGetValue(request.RequestUri, out var response))
+            if (request.RequestUri is not null && MessageMap.TryGetValue(request.RequestUri, out var response))
             {
                 return Task.FromResult(response());
             }

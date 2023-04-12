@@ -1,7 +1,6 @@
 ﻿using DevOps.Util;
 using DevOps.Util.DotNet.Triage;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.VisualStudio.Web.CodeGeneration.Contracts.Messaging;
 using Octokit;
 using Org.BouncyCastle.Math.EC.Rfc7748;
 using System;
