@@ -9,8 +9,7 @@ namespace DevOps.Util.DotNet
         public const string KeyVaultEndPointProduction = "https://runfo-prod.vault.azure.net/";
         public const string KeyVaultEndPointTest = "https://runfo-test.vault.azure.net/";
 #if DEBUG
-        public const string KeyVaultEndPoint = KeyVaultEndPointProduction;
-        //public const string KeyVaultEndPoint = KeyVaultEndPointTest;
+        public const string KeyVaultEndPoint = KeyVaultEndPointTest;
 #else
         public const string KeyVaultEndPoint = KeyVaultEndPointProduction;
 #endif
