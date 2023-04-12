@@ -1,13 +1,11 @@
 using System;
+using Azure.Identity;
 using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
-using Microsoft.Azure.KeyVault;
-using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.AzureKeyVault;
 using Microsoft.Extensions.Configuration.UserSecrets;
 using Microsoft.Extensions.DependencyInjection;
 using Octokit;
@@ -20,14 +18,12 @@ namespace DevOps.Functions
     {
         public override void Configure(IFunctionsHostBuilder builder)
         {
-            var azureServiceTokenProvider = new AzureServiceTokenProvider();
-            var keyVaultClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(azureServiceTokenProvider.KeyVaultTokenCallback));
             var config = new ConfigurationBuilder()
-                .AddAzureKeyVault(DotNetConstants.KeyVaultEndPoint, keyVaultClient, new DefaultKeyVaultSecretManager())
+                .AddAzureKeyVault(new Uri(DotNetConstants.KeyVaultEndPoint), new DefaultAzureCredential())
                 .Build();
 
             var connectionString = config[DotNetConstants.ConfigurationSqlConnectionString];
-            var azdoToken = config[DotNetConstants.ConfigurationAzdoToken];
+            var azdoToken = config[DotNetConstants.ConfigurationAzdoToken]!;
             var helixToken = config[DotNetConstants.ConfigurationAzdoToken];
             builder.Services.AddDbContext<TriageContext>(
                 options => options.UseSqlServer(connectionString, o => o.CommandTimeout((int)TimeSpan.FromMinutes(10).TotalSeconds)));
@@ -42,8 +38,8 @@ namespace DevOps.Functions
 
             builder.Services.AddScoped<GitHubClientFactory>(_ =>
             {
-                var appId = int.Parse(config[DotNetConstants.ConfigurationGitHubAppId]);
-                var appPrivateKey = config[DotNetConstants.ConfigurationGitHubAppPrivateKey];
+                var appId = int.Parse(config[DotNetConstants.ConfigurationGitHubAppId]!);
+                var appPrivateKey = config[DotNetConstants.ConfigurationGitHubAppPrivateKey]!;
                 return new GitHubClientFactory(appId, appPrivateKey);
             });
         }
