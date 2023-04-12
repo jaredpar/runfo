@@ -58,13 +58,13 @@
                                 {
                                     <img src="@avatarUrl.Value"
                                          class="mr-1"
-                                         alt="@Context.User.Identity.Name"
+                                         alt="@Context.User!.Identity!.Name"
                                          style="border-radius: 50%"
                                          width="20"
                                          height="20" />
                                 }
                             }
-                            @Context.User.Identity.Name
+                            @Context.User!.Identity!.Name
                         </button>
                         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                             <a class="dropdown-item" href="/signout">Sign out</a>

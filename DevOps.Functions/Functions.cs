@@ -83,11 +83,11 @@ namespace DevOps.Functions
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync().ConfigureAwait(false);
             logger.LogInformation(requestBody);
 
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
+            dynamic? data = JsonConvert.DeserializeObject(requestBody);
             try
             {
-                string url = data.resource.url;
-                if (url.Contains("https://dev.azure.com/dnceng/"))
+                var url = data?.resource.url;
+                if (url is not null && url.Contains("https://dev.azure.com/dnceng/"))
                 {
                     return new OkResult();
                 }
@@ -99,8 +99,8 @@ namespace DevOps.Functions
 
             var message = new BuildInfoMessage()
             {
-                BuildNumber = data.resource.id,
-                ProjectId = data.resourceContainers.project.id
+                BuildNumber = data!.resource.id,
+                ProjectId = data!.resourceContainers.project.id
             };
 
             await completeCollector.AddAsync(JsonConvert.SerializeObject(message));
@@ -119,8 +119,8 @@ namespace DevOps.Functions
         {
             var logger = LoggerFactory.CreateLogger(nameof(BuildCompleteAsync));
             var buildInfoMessage = JsonConvert.DeserializeObject<BuildInfoMessage>(message);
-            var projectName = buildInfoMessage.ProjectName;
-            var buildNumber = buildInfoMessage.BuildNumber;
+            var projectName = buildInfoMessage!.ProjectName;
+            var buildNumber = buildInfoMessage!.BuildNumber;
             if (projectName is null)
             {
                 var projectId = buildInfoMessage.ProjectId;
@@ -154,7 +154,7 @@ namespace DevOps.Functions
             [QueueTrigger(QueueNameBuildRetry, Connection = ConfigurationAzureBlobConnectionString)] string message)
         {
             var logger = LoggerFactory.CreateLogger(nameof(BuildRetryAsync));
-            var buildAttemptMessage = JsonConvert.DeserializeObject<BuildAttemptMessage>(message);
+            var buildAttemptMessage = JsonConvert.DeserializeObject<BuildAttemptMessage>(message)!;
             if (buildAttemptMessage.BuildAttemptKey is { } buildAttemptKey)
             {
                 var util = new BuildRetryUtil(Server, Context, logger);
@@ -174,7 +174,7 @@ namespace DevOps.Functions
             [QueueTrigger(QueueNameTriageTrackingIssue, Connection = ConfigurationAzureBlobConnectionString)] string message)
         {
             var logger = LoggerFactory.CreateLogger(nameof(TriageTrackingIssueAsync));
-            var issueMessage = JsonConvert.DeserializeObject<TriageTrackingIssueMessage>(message);
+            var issueMessage = JsonConvert.DeserializeObject<TriageTrackingIssueMessage>(message)!;
             if (issueMessage.BuildMessage?.BuildKey is { } buildKey && issueMessage.ModelTrackingIssueId is { } trackingIssueId)
             {
                 logger.LogInformation($"Triaging issue {trackingIssueId} against build {buildKey}");
@@ -197,7 +197,7 @@ namespace DevOps.Functions
             [Queue(QueueNameTriageTrackingIssue, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> triageCollector)
         {
             var logger = LoggerFactory.CreateLogger(nameof(TriageTrackingIssueRangeAsync));
-            var rangeMessage = JsonConvert.DeserializeObject<TriageTrackingIssueRangeMessage>(message);
+            var rangeMessage = JsonConvert.DeserializeObject<TriageTrackingIssueRangeMessage>(message)!;
             if (rangeMessage.ModelTrackingIssueId is { } issueId && rangeMessage.BuildMessages is { } buildMessages)
             {
                 var list = new List<Task>();
@@ -230,7 +230,7 @@ namespace DevOps.Functions
             [Queue(QueueNameTriageTrackingIssue, Connection = ConfigurationAzureBlobConnectionString)] IAsyncCollector<string> triageCollector)
         {
             var logger = LoggerFactory.CreateLogger(nameof(TriageBuildAsync));
-            var buildMessage = JsonConvert.DeserializeObject<BuildMessage>(message);
+            var buildMessage = JsonConvert.DeserializeObject<BuildMessage>(message)!;
             if (buildMessage.BuildKey is { } buildKey)
             {
                 logger.LogInformation($"Triaging build: {buildKey}");
@@ -272,7 +272,7 @@ namespace DevOps.Functions
             [QueueTrigger(QueueNameIssueUpdateManual, Connection = ConfigurationAzureBlobConnectionString)] string message)
         {
             var logger = LoggerFactory.CreateLogger(nameof(IssuesUpdateManualAsync));
-            var updateMessage = JsonConvert.DeserializeObject<IssueUpdateManualMessage>(message);
+            var updateMessage = JsonConvert.DeserializeObject<IssueUpdateManualMessage>(message)!;
             if (updateMessage.ModelTrackingIssueId is { } id)
             {
                 var util = new TrackingGitHubUtil(GitHubClientFactory, Context, SiteLinkUtil, logger);
@@ -295,7 +295,7 @@ namespace DevOps.Functions
             if (eventName == "pull_request")
             {
                 string requestBody = await new StreamReader(request.Body).ReadToEndAsync().ConfigureAwait(false);
-                dynamic prInfo = JsonConvert.DeserializeObject(requestBody);
+                dynamic prInfo = JsonConvert.DeserializeObject(requestBody)!;
                 if (prInfo.action == "closed" &&
                     prInfo.pull_request != null &&
                     prInfo.pull_request.merged == true)
@@ -333,7 +333,7 @@ namespace DevOps.Functions
         {
             var logger = LoggerFactory.CreateLogger(nameof(OnPullRequestMergedAsync));
             var functionUtil = new FunctionUtil(logger);
-            var prMessage = JsonConvert.DeserializeObject<PullRequestMergedMessage>(message);
+            var prMessage = JsonConvert.DeserializeObject<PullRequestMergedMessage>(message)!;
             var prKey = new GitHubPullRequestKey(prMessage.Organization!, prMessage.Repository!, prMessage.PullRequestNumber);
             await functionUtil.OnPullRequestMergedAsync(
                 Server,

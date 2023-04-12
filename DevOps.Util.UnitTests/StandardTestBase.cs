@@ -1,6 +1,5 @@
 ﻿using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;

@@ -15,11 +15,11 @@ namespace DevOps.Util.UnitTests
             TestOutputHelper = testOutputHelper;
         }
 
-        public IDisposable? BeginScope<TState>(TState state) => default;
+        public IDisposable BeginScope<TState>(TState state) => default!;
 
         public bool IsEnabled(LogLevel logLevel) => TestOutputHelper is object;
 
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
             TestOutputHelper.WriteLine($"{logLevel} {eventId}: {formatter(state, exception)}");
         }

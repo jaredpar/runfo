@@ -5,7 +5,6 @@ using DevOps.Util.DotNet.Function;
 using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
 using Octokit;
 using System;
@@ -26,6 +25,11 @@ namespace DevOps.Status.Util
         public static async Task<IGitHubClient> CreateForUserAsync(this IGitHubClientFactory gitHubClientFactory, HttpContext httpContext)
         {
             var accessToken = await httpContext.GetTokenAsync("access_token");
+            if (accessToken is null)
+            {
+                throw new Exception("Cannot get access_token for user");
+            }
+
             return GitHubClientFactory.CreateForToken(accessToken, AuthenticationType.Oauth);
         }
 

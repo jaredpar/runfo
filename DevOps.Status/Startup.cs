@@ -89,13 +89,15 @@ namespace DevOps.Status
                 options.ClaimActions.MapJsonKey(Constants.GitHubAvatarUrl, Constants.GitHubAvatarUrl);
                 options.Events.OnCreatingTicket = async context =>
                 {
-                    var userName = context.Identity.Name.ToLower();
-                    var gitHubClient = GitHubClientFactory.CreateForToken(context.AccessToken, AuthenticationType.Oauth);
-                    var organizations = await gitHubClient.Organization.GetAllForUser(userName);
-                    var microsoftOrg = organizations.FirstOrDefault(x => x.Login.ToLower() == "microsoft");
-                    if (microsoftOrg is object)
+                    if (context is { Identity: {  Name: string userName }, AccessToken: string accessToken })
                     {
-                        context.Identity.AddClaim(new Claim(context.Identity.RoleClaimType, Constants.TriageRole));
+                        var gitHubClient = GitHubClientFactory.CreateForToken(accessToken, AuthenticationType.Oauth);
+                        var organizations = await gitHubClient.Organization.GetAllForUser(userName.ToLower());
+                        var microsoftOrg = organizations.FirstOrDefault(x => x.Login.ToLower() == "microsoft");
+                        if (microsoftOrg is object)
+                        {
+                            context.Identity.AddClaim(new Claim(context.Identity.RoleClaimType, Constants.TriageRole));
+                        }
                     }
                 };
             });
