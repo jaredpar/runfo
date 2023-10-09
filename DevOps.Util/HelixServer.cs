@@ -126,7 +126,7 @@ namespace DevOps.Util
                     Console.WriteLine(SetVariable("HELIX_CORRELATION_PAYLOAD", correlationDir));
                     Console.WriteLine(SetVariable("HELIX_PYTHONPATH", "echo skipping python"));
                     Console.WriteLine(SetVariable("HELIX_WORKITEM_FRIENDLYNAME", workItemInfo.WorkItemId!));
-                    Console.WriteLine(SetVariable("HELIX_WORKITEM_ID ", workItemInfo.WorkItemId!));
+                    Console.WriteLine(SetVariable("HELIX_WORKITEM_ID", workItemInfo.WorkItemId!));
                     Console.WriteLine(SetVariable("HELIX_WORKITEM_PAYLOAD", itemDir));
                     Console.WriteLine(SetVariable("HELIX_WORKITEM_ROOT", itemDir));
                     Console.WriteLine(SetVariable("HELIX_WORKITEM_UPLOAD_ROOT", itemDir));
