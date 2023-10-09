@@ -131,7 +131,7 @@ namespace DevOps.Util
                     Console.WriteLine(SetVariable("HELIX_WORKITEM_ROOT", itemDir));
                     Console.WriteLine(SetVariable("HELIX_WORKITEM_UPLOAD_ROOT", itemDir));
                     Console.WriteLine(SetVariable("HELIX_DUMP_FOLDER", itemDir));
-                    Console.WriteLine(SetVariable("HELIX_CURRENT_LOG ", Path.Combine(itemDir, "log.txt")));
+                    Console.WriteLine(SetVariable("HELIX_CURRENT_LOG", Path.Combine(itemDir, "log.txt")));
                     if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         Console.WriteLine($"chmod +x {workItemInfo.Command}");
