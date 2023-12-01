@@ -46,7 +46,7 @@ namespace DevOps.Util.DotNet.Triage
 
             if (!string.IsNullOrEmpty(WorkItemName))
             {
-                query = query.Where(x => EF.Functions.Like(x.HelixWorkItemName, $"%{WorkItemName}%"));
+                query = query.Where(x => EF.Functions.Like(x.HelixWorkItemName!, $"%{WorkItemName}%"));
             }
 
             // Keep this in sync with logic in SearchTimelineRequest

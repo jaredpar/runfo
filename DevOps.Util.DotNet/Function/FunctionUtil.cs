@@ -52,12 +52,13 @@ namespace DevOps.Util.DotNet.Function
         /// </summary>
         public async Task<int> DeleteOldBuilds(TriageContext triageContext, int deleteMax = 25)
         {
-            var limitDays = 30;
+            var limitDays = 21;
             var limit = DateTime.UtcNow - TimeSpan.FromDays(limitDays);
             var count = 0;
 
             var builds = await triageContext
                 .ModelBuilds
+                .AsNoTracking()
                 .Where(x => x.StartTime < limit)
                 .OrderBy(x => x.StartTime)
                 .Take(deleteMax)
@@ -96,24 +97,40 @@ namespace DevOps.Util.DotNet.Function
 
             async Task DeleteTimelineIssues(ModelBuild modelBuild)
             {
-                var count = await triageContext
+                var max = 100;
+                var totalCount = await triageContext
                     .ModelTimelineIssues
+                    .AsNoTracking()
                     .Where(x => x.ModelBuildId == modelBuild.Id)
                     .CountAsync()
                     .ConfigureAwait(false);
-                if (count < 100)
+                if (totalCount < max)
                 {
                     return;
                 }
 
-                var timelineIssues = await triageContext
-                    .ModelTimelineIssues
-                    .Where(x => x.ModelBuildId == modelBuild.Id)
-                    .ToListAsync()
-                    .ConfigureAwait(false);
-                Logger.LogInformation($"Deleting {timelineIssues.Count} timeline issues");
-                triageContext.RemoveRange(timelineIssues);
-                await triageContext.SaveChangesAsync().ConfigureAwait(false);
+                Logger.LogInformation($"{modelBuild.GetBuildKey()} has too many timeline issues ({totalCount})");
+                var deleted = 0;
+                do
+                {
+                    var timelineIssueIds = await triageContext
+                        .ModelTimelineIssues
+                        .AsNoTracking()
+                        .Where(x => x.ModelBuildId == modelBuild.Id)
+                        .Take(max)
+                        .Select(x => x.Id)
+                        .ToListAsync()
+                        .ConfigureAwait(false);
+                    if (timelineIssueIds.Count == 0)
+                    {
+                        break;
+                    }
+
+                    triageContext.RemoveRange(timelineIssueIds.Select(x => new ModelTimelineIssue() { Id = x }));
+                    deleted += timelineIssueIds.Count;
+                    Logger.LogInformation($"Deleted {deleted} timeline issues of {totalCount}");
+                    await triageContext.SaveChangesAsync().ConfigureAwait(false);
+                } while (true);
             }
 
             async Task DeleteTrackingIssueMatches(ModelBuild modelBuild)
@@ -128,15 +145,16 @@ namespace DevOps.Util.DotNet.Function
                 var count = 0;
                 foreach (var buildAttemptId in buildAttemptIds)
                 {
-                    var trackingIssues = await triageContext
+                    var trackingIssueIds = await triageContext
                         .ModelTrackingIssueMatches
                         .Where(x => x.ModelBuildAttemptId == buildAttemptId)
+                        .Select(x => x.Id)
                         .ToListAsync()
                         .ConfigureAwait(false);
-                    if (trackingIssues.Count > 0)
+                    if (trackingIssueIds.Count > 0)
                     {
-                        count += trackingIssues.Count;
-                        triageContext.RemoveRange(trackingIssues);
+                        count += trackingIssueIds.Count;
+                        triageContext.RemoveRange(trackingIssueIds.Select(x => new ModelTrackingIssueMatch() { Id = x }));
                     }
                 }
 
@@ -161,25 +179,27 @@ namespace DevOps.Util.DotNet.Function
                     return;
                 }
 
-                Logger.LogInformation($"{modelBuild.GetBuildKey()} has too many test resultts ({testCount})");
+                Logger.LogInformation($"{modelBuild.GetBuildKey()} has too many test results ({testCount})");
 
                 var total = 0;
 
                 do
                 {
-                    var testResults = await triageContext
+                    var testResultIds = await triageContext
                         .ModelTestResults
+                        .AsNoTracking()
                         .Where(x => x.ModelBuildId == modelBuild.Id)
-                        .Take(100)
+                        .Take(testCountMax)
+                        .Select(x => x.Id)
                         .ToListAsync()
                         .ConfigureAwait(false);
-                    if (testResults.Count == 0)
+                    if (testResultIds.Count == 0)
                     {
                         break;
                     }
 
-                    triageContext.RemoveRange(testResults);
-                    total += testResults.Count;
+                    triageContext.RemoveRange(testResultIds.Select(x => new ModelTestResult() { Id = x }));
+                    total += testResultIds.Count;
                     Logger.LogInformation($"Deleted {total} test resuts out of {testCount} from {modelBuild.GetBuildKey()}");
 
                     await triageContext.SaveChangesAsync().ConfigureAwait(false);

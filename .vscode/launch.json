@@ -26,7 +26,7 @@
         "type": "coreclr",
         "request": "launch",
         "preLaunchTask": "build",
-        "program": "${workspaceFolder}/scratch/bin/Debug/netcoreapp3.1/scratch.dll",
+        "program": "${workspaceFolder}/scratch/bin/Debug/net6.0/scratch.dll",
         "args": [
         ],
         "cwd": "${workspaceFolder}/scratch",

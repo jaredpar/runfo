@@ -68,6 +68,11 @@ namespace DevOps.Util.DotNet.Triage
             header.AppendLine("Please use these queries to discover issues");
 
             var runtimeDefinition = await TriageContextUtil.GetModelBuildDefinitionAsync(id: 686).ConfigureAwait(false);
+            if (runtimeDefinition is null)
+            {
+                return "Could not find definition";
+            }
+
             var runtimeDefinitionKey = runtimeDefinition.GetDefinitionKey();
 
             await BuildOne("Blocking CI", "blocking-clean-ci", runtimeDefinitionKey);

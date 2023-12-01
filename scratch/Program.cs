@@ -173,8 +173,9 @@ namespace Scratch
         internal async Task Scratch()
         {
             Reset(useProduction: true);
-            var util = new ModelDataUtil(DotNetQueryUtil, HelixServer, TriageContextUtil, CreateLogger());
-            await util.EnsureModelInfoAsync("public", 35950, includeTests: true);
+            await DeleteOldBuilds(useProduction: true);
+            // var util = new ModelDataUtil(DotNetQueryUtil, HelixServer, TriageContextUtil, CreateLogger());
+            // await util.EnsureModelInfoAsync("public", 35950, includeTests: true);
         }
 
         /// <summary>

@@ -354,7 +354,7 @@ namespace DevOps.Util.DotNet.Triage
         public Task<ModelBuildDefinition?> FindModelBuildDefinitionAsync(int id) =>
             GetModelBuildDefinitionQueryAsync(id).FirstOrDefaultAsync()!;
 
-        public Task<ModelBuildDefinition> GetModelBuildDefinitionAsync(int id) =>
+        public Task<ModelBuildDefinition?> GetModelBuildDefinitionAsync(int id) =>
             GetModelBuildDefinitionQueryAsync(id).SingleOrDefaultAsync();
 
         public async Task<ModelBuildDefinition?> FindModelBuildDefinitionAsync(string azureOrganization, string nameOrId)
@@ -405,11 +405,11 @@ namespace DevOps.Util.DotNet.Triage
                 var testCaseResult = dotnetTestCaseResult.TestCaseResult;
                 var testResult = new ModelTestResult()
                 {
-                    TestFullName = testCaseResult.TestCaseTitle,
+                    TestFullName = NormalizeString(testCaseResult.TestCaseTitle),
                     Outcome = testCaseResult.Outcome,
                     ModelTestRun = modelTestRun,
                     TestRunName = modelTestRun.Name,
-                    ErrorMessage = testCaseResult.ErrorMessage ?? "",
+                    ErrorMessage = NormalizeString(testCaseResult.ErrorMessage),
                     IsSubResultContainer = testCaseResult.SubResults?.Length > 0,
                     IsSubResult = false,
                     StartTime = modelBuildAttempt.StartTime,
@@ -467,6 +467,22 @@ namespace DevOps.Util.DotNet.Triage
                     testResult.ModelBuildAttemptId = modelBuildAttempt.Id;
                     testResult.ModelBuildDefinitionId = modelBuildAttempt.ModelBuildDefinitionId;
                 }
+            }
+
+            string NormalizeString(string? value)
+            {
+                if (value is null)
+                {
+                    return "";
+                }
+
+                var maxLen = 4096;
+                if (value.Length > maxLen)
+                {
+                    value = $"{value.AsSpan().Slice(0, maxLen)}...";
+                }
+
+                return value;
             }
 
             await Context.SaveChangesAsync().ConfigureAwait(false);
