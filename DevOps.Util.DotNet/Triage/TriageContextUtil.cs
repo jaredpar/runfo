@@ -400,8 +400,16 @@ namespace DevOps.Util.DotNet.Triage
             };
             Context.ModelTestRuns.Add(modelTestRun);
 
+            const int maxTestCaseCount = 200;
+            int count = 0;
             foreach (var dotnetTestCaseResult in testRun.TestCaseResults)
             {
+                count++;
+                if (count >= maxTestCaseCount)
+                {
+                    break;
+                }
+
                 var testCaseResult = dotnetTestCaseResult.TestCaseResult;
                 var testResult = new ModelTestResult()
                 {
