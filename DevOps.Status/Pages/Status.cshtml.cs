@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Triage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -32,7 +33,7 @@ namespace DevOps.Status.Pages
 
             var todayLimit = DateTime.UtcNow - TimeSpan.FromDays(1);
             TodayCount = await context.ModelBuilds.Where(x => x.StartTime > todayLimit).CountAsync();
-            var expiredLimit = DateTime.UtcNow - TimeSpan.FromDays(30);
+            var expiredLimit = DateTime.UtcNow - TimeSpan.FromDays(DotNetConstants.MaxBuildDays);
             ExpiredCount = await context.ModelBuilds.Where(x => x.StartTime < expiredLimit).CountAsync();
         }
     }

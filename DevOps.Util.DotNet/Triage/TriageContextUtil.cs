@@ -14,6 +14,7 @@ using DevOps.Util.DotNet;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Options;
+using Microsoft.VisualBasic;
 
 namespace DevOps.Util.DotNet.Triage
 {
@@ -400,8 +401,15 @@ namespace DevOps.Util.DotNet.Triage
             };
             Context.ModelTestRuns.Add(modelTestRun);
 
+            int count = 0;
             foreach (var dotnetTestCaseResult in testRun.TestCaseResults)
             {
+                count++;
+                if (count >= DotNetConstants.MaxTestCaseCount)
+                {
+                    break;
+                }
+
                 var testCaseResult = dotnetTestCaseResult.TestCaseResult;
                 var testResult = new ModelTestResult()
                 {
@@ -476,10 +484,9 @@ namespace DevOps.Util.DotNet.Triage
                     return "";
                 }
 
-                var maxLen = 4096;
-                if (value.Length > maxLen)
+                if (value.Length > DotNetConstants.MaxStringLength)
                 {
-                    value = $"{value.AsSpan().Slice(0, maxLen)}...";
+                    value = $"{value.AsSpan().Slice(0, DotNetConstants.MaxStringLength)}...";
                 }
 
                 return value;

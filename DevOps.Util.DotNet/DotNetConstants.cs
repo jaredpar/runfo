@@ -27,5 +27,8 @@ namespace DevOps.Util.DotNet
         public static string AzureOrganization => "dnceng-public";
         public static string DefaultAzureProject => "public";
 
+        public const int MaxBuildDays = 14;
+        public const int MaxTestCaseCount = 200;
+        public const int MaxStringLength = 4096;
     }
 }
