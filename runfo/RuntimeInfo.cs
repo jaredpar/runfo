@@ -893,6 +893,7 @@ namespace Runfo
         {
             bool verbose = false;
             bool markdown = false;
+            string? playlist = null;
             bool includeAllTests = false;
             string? name = null;
             string grouping = "tests";
@@ -900,6 +901,7 @@ namespace Runfo
         {
             { "g|grouping=", "output grouping: tests*, builds, jobs", g => grouping = g },
             { "m|markdown", "output in markdown", m => markdown = m  is object },
+            { "playlist=", "save VS test playlist to a file", p => playlist = p },
             { "n|name=", "name regex to match in results", n => name = n },
             { "at|all-tests", "include all tests", at => includeAllTests = at is object },
             { "v|verbose", "verbose output", d => verbose = d is object },
@@ -908,7 +910,7 @@ namespace Runfo
             ParseAll(optionSet, args);
 
             var collection = await QueryUtil.ListBuildTestInfosAsync(optionSet, includeAllTests);
-            await PrintFailureInfo(collection, grouping, name, verbose, markdown);
+            await PrintFailureInfo(collection, grouping, name, verbose, markdown, playlist);
             return ExitSuccess;
         }
 
@@ -917,20 +919,21 @@ namespace Runfo
             string grouping,
             string? name,
             bool verbose,
-            bool markdown)
+            bool markdown,
+            string? playlist)
         {
+            FilterToTestName();
+            SavePlaylist();
+
             switch (grouping)
             {
                 case "tests":
-                    FilterToTestName();
                     await GroupByTests();
                     break;
                 case "builds":
-                    FilterToTestName();
                     GroupByBuilds();
                     break;
                 case "jobs":
-                    FilterToTestName();
                     GroupByJobs();
                     break;
                 default:
@@ -943,6 +946,21 @@ namespace Runfo
                 {
                     var regex = new Regex(name, RegexOptions.Compiled | RegexOptions.IgnoreCase);
                     collection = collection.FilterToTestCaseTitle(regex);
+                }
+            }
+
+            void SavePlaylist()
+            {
+                if (!string.IsNullOrEmpty(playlist))
+                {
+                    // Test playlist file format docs: https://learn.microsoft.com/en-us/visualstudio/test/run-unit-tests-with-test-explorer?view=vs-2022#create-custom-playlists
+                    using var writer = File.CreateText(playlist);
+                    writer.WriteLine("<Playlist Version=\"2.0\"><Rule Match=\"Any\">");
+                    foreach (var testName in collection.GetTestCaseTitles())
+                    {
+                        writer.WriteLine($"<Property Name=\"TestWithNormalizedFullyQualifiedName\" Value=\"{testName}\" />");
+                    }
+                    writer.WriteLine("</Rule></Playlist>");
                 }
             }
 

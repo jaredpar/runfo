@@ -132,7 +132,7 @@ namespace Runfo
                 Console.WriteLine("  search-timeline    Search timeline info");
                 Console.WriteLine("  search-helix       Search helix logs");
                 Console.WriteLine("  search-buildlog    Search build logs");
-                Console.WriteLine("  tests              Print build test failures");
+                Console.WriteLine("  search-tests       Print build test failures");
                 Console.WriteLine("  timeline           Dump the timeline");
                 Console.WriteLine("  yaml               Dump the YML for a build");
                 Console.WriteLine();
