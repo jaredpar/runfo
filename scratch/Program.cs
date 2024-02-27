@@ -4,6 +4,7 @@ using DevOps.Util;
 using DevOps.Util.DotNet;
 using DevOps.Util.DotNet.Function;
 using DevOps.Util.DotNet.Triage;
+using Microsoft.Azure.Documents.SystemFunctions;
 using Microsoft.DotNet.Helix.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
@@ -173,9 +174,31 @@ namespace Scratch
         internal async Task Scratch()
         {
             Reset(useProduction: true);
-            await DeleteOldBuilds(useProduction: true);
+            // await DeleteOldBuilds(useProduction: true);
             // var util = new ModelDataUtil(DotNetQueryUtil, HelixServer, TriageContextUtil, CreateLogger());
             // await util.EnsureModelInfoAsync("public", 35950, includeTests: true);
+
+            foreach(var pipeline in await DevOpsServer.ListPipelinesAsync("public"))
+            {
+                Console.WriteLine($"{pipeline.Folder}\\{pipeline.Name}");
+
+                try
+                {
+                    var content = await DevOpsServer.GetTextAsync(pipeline.Url);
+                    if (content.Contains("perfview"))
+                    {
+                        Console.WriteLine("Found perfview");
+                    }
+                    if (content.Contains("roslyn"))
+                    {
+                        Console.WriteLine("Found roslyn");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
         }
 
         /// <summary>

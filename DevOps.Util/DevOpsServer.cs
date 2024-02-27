@@ -431,7 +431,16 @@ namespace DevOps.Util
             string destinationFilePath) =>
             _client.WithFileStream(destinationFilePath, resume:false, s => DownloadTestCaseResultAttachmentZipAsync(project, runId, testCaseResultId, attachmentId, s));
 
-        private RequestBuilder GetBuilder(string? project, string apiPath) => new RequestBuilder(Organization, project, apiPath);
+
+        public async Task<List<Pipeline>> ListPipelinesAsync(string project)
+        {
+            var builder = GetBuilderEx(project, "pipelines", apiVersion: null);
+            return await ListItemsCore<Pipeline>(builder).ConfigureAwait(false);
+        }
+
+        private RequestBuilder GetBuilderEx(string? project, string apiPath, string? apiVersion) => new RequestBuilder(Organization, project, apiPath, apiVersion);
+
+        private RequestBuilder GetBuilder(string? project, string apiPath) => new RequestBuilder(Organization, project, apiPath, RequestBuilder.DefaultApiVersion);
 
         private Task<T> GetJsonAsync<T>(RequestBuilder builder) =>
             GetJsonAsync<T>(builder.ToString());
@@ -505,7 +514,7 @@ namespace DevOps.Util
             }
         }
 
-        private async Task<string> GetTextAsync(string uri)
+        public async Task<string> GetTextAsync(string uri)
         {
             using var response = await _client.SendAsync(HttpMethod.Get, uri).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();

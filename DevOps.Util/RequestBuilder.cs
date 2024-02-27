@@ -7,6 +7,8 @@ namespace DevOps.Util
 {
     internal sealed class RequestBuilder
     {
+        internal const string DefaultApiVersion = "5.0";
+
         internal string Organization { get; }
 
         internal string? Project { get; }
@@ -18,14 +20,14 @@ namespace DevOps.Util
 
         internal string? ContinuationToken { get; set; }
 
-        internal string ApiVersion { get; set; } = "5.0";
+        internal string? ApiVersion { get; set; }
 
         /// <summary>
         /// The query parameters for the request excluding the API version and the continuation token.
         /// </summary>
         internal StringBuilder QueryBuilder { get; } = new StringBuilder();
 
-        internal RequestBuilder(string organization, string? project, string apiPath)
+        internal RequestBuilder(string organization, string? project, string apiPath, string? apiVersion)
         {
             Organization = organization;
             Project = project;
@@ -39,6 +41,8 @@ namespace DevOps.Util
             {
                 ApiPath = ApiPath.Substring(0, ApiPath.Length - 1);
             }
+
+            ApiVersion = apiVersion;
         }
 
         internal void AppendList<T>(string name, IEnumerable<T>? values)
@@ -124,7 +128,7 @@ namespace DevOps.Util
         {
             var builder = new StringBuilder();
             builder.Append("https://dev.azure.com/");
-            if (Project is object)
+            if (Project is not null)
             {
                 builder.Append($"{Organization}/{Project}/_apis/{ApiPath}");
             }
@@ -144,7 +148,10 @@ namespace DevOps.Util
                 builder.Append($"continuationToken={ContinuationToken}&");
             }
 
-            builder.Append($"api-version={ApiVersion}");
+            if (ApiVersion is not null)
+            {
+                builder.Append($"api-version={ApiVersion}");
+            }
             return builder.ToString();
         }
     }

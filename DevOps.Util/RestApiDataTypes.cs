@@ -1648,4 +1648,36 @@ namespace DevOps.Util
         ConsoleLog,
         GeneralAttachment,
     }
+
+    public sealed class Pipeline
+    {
+        [JsonProperty("_links")]
+        public ReferenceLinks Links { get; set; }
+
+        public PipelineConfiguration Configuration { get; set; }
+
+        public string Folder { get; set; }
+
+        public int Id { get; set; }
+
+        public string Name { get; set; } 
+
+        public int Revision { get; set; }
+
+        public string Url { get; set; }
+    }
+
+    public sealed class PipelineConfiguration
+    {
+        public ConfigurationType Type { get; set; }
+    }
+
+    public enum ConfigurationType
+    {
+        DesignerHyphenJson,
+        DesignerJSON,
+        JustInTime,
+        Unknown,
+        Yaml
+    }
 }
