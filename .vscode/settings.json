@@ -5,7 +5,7 @@
         "Runfo",
         "nuget"
     ],
-    "azureFunctions.deploySubpath": "DevOps.Functions/bin/Release/netcoreapp3.1/publish",
+    "azureFunctions.deploySubpath": "DevOps.Functions/bin/Release/net8.0/publish",
     "azureFunctions.projectLanguage": "C#",
     "azureFunctions.projectRuntime": "~3",
     "debug.internalConsoleOptions": "neverOpen",

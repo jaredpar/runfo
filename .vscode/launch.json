@@ -9,7 +9,7 @@
         "type": "coreclr",
         "request": "launch",
         "preLaunchTask": "build",
-        "program": "${workspaceFolder}/runfo/bin/Debug/netcoreapp3.1/runfo.dll",
+        "program": "${workspaceFolder}/runfo/bin/Debug/net8.0/runfo.dll",
         "args": [
             "timeline",
             "-b",
@@ -26,7 +26,7 @@
         "type": "coreclr",
         "request": "launch",
         "preLaunchTask": "build",
-        "program": "${workspaceFolder}/scratch/bin/Debug/net6.0/scratch.dll",
+        "program": "${workspaceFolder}/scratch/bin/Debug/net8.0/scratch.dll",
         "args": [
         ],
         "cwd": "${workspaceFolder}/scratch",
@@ -39,7 +39,7 @@
         "type": "coreclr",
         "request": "launch",
         "preLaunchTask": "build",
-        "program": "${workspaceFolder}/triage/bin/Debug/netcoreapp3.1/triage.dll",
+        "program": "${workspaceFolder}/triage/bin/Debug/net8.0/triage.dll",
         "args": [
             "scratch"
         ],
@@ -52,7 +52,7 @@
         "type": "coreclr",
         "request": "launch",
         "preLaunchTask": "build",
-        "program": "${workspaceFolder}/DevOps.Status/bin/Debug/netcoreapp3.1/DevOps.Status.dll",
+        "program": "${workspaceFolder}/DevOps.Status/bin/Debug/net8.0/DevOps.Status.dll",
         "args": [],
         "cwd": "${workspaceFolder}/DevOps.Status",
         "stopAtEntry": false,
