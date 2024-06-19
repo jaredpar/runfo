@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <RollForward>Major</RollForward>
 
     <!-- NuGet Information -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>runfo</ToolCommandName>
-    <PackageVersion>0.7.0</PackageVersion>
+    <PackageVersion>0.8.0</PackageVersion>
     <PackageDescription>Tool for quickly analyzing Azure Pipelines Build failures.</PackageDescription>
     <PackageLongDescription>
     
