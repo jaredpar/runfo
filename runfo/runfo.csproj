@@ -7,7 +7,7 @@
     <!-- NuGet Information -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>runfo</ToolCommandName>
-    <PackageVersion>0.8.0</PackageVersion>
+    <PackageVersion>0.9.0</PackageVersion>
     <PackageDescription>Tool for quickly analyzing Azure Pipelines Build failures.</PackageDescription>
     <PackageLongDescription>
     
