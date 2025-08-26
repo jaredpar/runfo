@@ -81,13 +81,16 @@ internal sealed class SettingsData
 
     internal static readonly string SettingsFilePath = Path.Combine(RuntimeInfoUtil.RunfoDirectory, "settings.txt");
     internal static readonly string SettingsContent = @"
-; The azdo token can be overriden by using %RUNFO_AZURE_TOKEN% or passing 
+; The azdo token can be overridden by using %RUNFO_AZURE_TOKEN% or passing 
 ; --azdo-token to the command line 
 ;
 ; Create new tokens here: https://dev.azure.com/dnceng/_usersSettings/tokens
+; Or use pat-generator:
+;   dotnet tool install --global Microsoft.DncEng.PatGeneratorTool --add-source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease
+;   pat-generator --scopes build code test --organizations dnceng devdiv dnceng-public --expires-in 7
 azdo-token=
 
-; The helix token can be overriden by using %RUNFO_HELIX_TOKEN% or passing 
+; The helix token can be overridden by using %RUNFO_HELIX_TOKEN% or passing 
 ; --helix-token to the command line 
 ;
 ; Create new tokens here: https://helix.dot.net/Account/Tokens
